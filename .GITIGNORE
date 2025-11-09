@@ -6,6 +6,7 @@
 
 # Ignore text output files
 *.txt
+!requirements.txt
 
 # Ignore Python cache
 __pycache__/
