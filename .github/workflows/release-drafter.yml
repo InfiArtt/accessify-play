@@ -1,0 +1,20 @@
+name: Draft a new release
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  draft_release:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      pull-requests: write # Diperlukan untuk membaca data PR
+      releases: write      # Diperlukan untuk menulis/mengedit Rilis
+
+    steps:
+      - uses: release-drafter/release-drafter@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,53 @@
+# Nama workflow (bebas)
+name: Code Quality Linting
+
+# Pemicu: Kapan robot ini harus "bangun"?
+on:
+  # Saat ada push...
+  push:
+    # ...ke branch apa saja, KECUALI 'main'
+    # (Ini agar dia cek di branch fitur-mu)
+    branches-ignore:
+      - 'main'
+  # DAN saat ada Pull Request...
+  pull_request:
+    # ...yang targetnya adalah 'main'
+    branches:
+      - 'main'
+
+# Pekerjaan yang harus dilakukan
+jobs:
+  # Nama pekerjaannya (bebas)
+  lint:
+    # Menggunakan "komputer" Linux (Ubuntu) terbaru
+    runs-on: ubuntu-latest
+
+    # Langkah-langkahnya
+    steps:
+      # 1. Ambil (checkout) kode dari repositorimu
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Siapkan Python
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          # Ganti '3.11' dengan versi Python yang kamu pakai
+          python-version: '3.11'
+
+      # 3. Install library yang dibutuhkan (si linter-nya)
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8
+          # Jika kamu punya requirements.txt, install juga:
+          pip install -r requirements.txt
+
+      # 4. Jalankan Linter!
+      - name: Run Flake8 linter
+        run: |
+          # Perintah ini akan:
+          #   flake8 .          -> Cek semua file di folder ini
+          #   --exclude=...     -> Abaikan folder-folder ini
+          #   --statistics      -> Tampilkan statistik jumlah error
+          flake8 . --exclude=.github,archives,build,dist,venv --statistics
