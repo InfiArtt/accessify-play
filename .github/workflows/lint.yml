@@ -50,4 +50,4 @@ jobs:
           #   flake8 .          -> Cek semua file di folder ini
           #   --exclude=...     -> Abaikan folder-folder ini
           #   --statistics      -> Tampilkan statistik jumlah error
-          flake8 . --exclude=.github,archives,build,dist,venv --statistics
+          flake8 . --exclude=.github,archives,build,dist,addon/lib,venv --statistics
