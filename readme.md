@@ -89,10 +89,14 @@ To use this addon, you need to get a **Client ID** and **Client Secret** from th
 1.  Go to the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) and log in.
 2.  Click the "Create app" button.
 3.  Fill out the form:
-    *   **App name:** Give it a name (e.g., "NVDA Controller").
-    *   **App description:** A short description is fine.
-    *   **Redirect URI:** **This is the most important step.** The addon listens on your local machine for the authentication callback. You must enter this URI exactly: `http://127.0.0.1:8888/callback`
-4.  Agree to the terms and click "Save".
+    * **App name:** Give it a name (e.g., "NVDA Controller").
+    * **App description:** A short description is fine.
+    * **Redirect URI:** **This is the most important step.** The addon listens on your local machine for the authentication callback. You must enter this URI exactly: `http://127.0.0.1:8888/callback`
+        > **Note on Port 8888:** Based on private reports, some users experience validation failures. This can happen if another application on your computer (often a local development server) is already using port `8888`.
+        >
+        > **Future Update:** To prevent this conflict, the default port for the addon **will be changed to `8539` in a future version.**
+4.  You may be asked which API to use. **Please select "Web API"**.
+5.  Agree to the terms and click "Save".
 
 ### Step 2: Get Your Credentials
 
@@ -106,8 +110,8 @@ To use this addon, you need to get a **Client ID** and **Client Secret** from th
 2.  In the categories list, select "Accessify Play".
 3.  Paste your **Client ID** and **Client Secret** into the fields.
 4.  Review the other settings:
-    *   **Callback Port:** Only change this if you have a port conflict and you have also changed it in the Spotify Dashboard.
-    *   **Announce track changes automatically:** Check this box if you want NVDA to announce every new song as it begins playing.
+    * **Callback Port:** Only change this if you have a port conflict and you have also changed it in the Spotify Dashboard. *(See note in Step 1)*.
+    * **Announce track changes automatically:** Check this box if you want NVDA to announce every new song as it begins playing.
 5.  Press the **"Validate Credentials"** button. Your web browser will open and ask you to grant permissions. Click "Agree".
 6.  If successful, you will see a "Validation successful!" message. If not, carefully re-check all steps, especially the Redirect URI.
 7.  Click "OK" to save and close the settings. The addon is now ready to use!
@@ -124,5 +128,5 @@ This project wouldn't be where it is today without the incredible support and de
 
 If you find this addon useful, please consider supporting its development. Every little bit helps!
 
-*   [**Donate via PayPal**](https://www.paypal.com/paypalme/rafli23115)
-*   For alternative donation methods, please contact: [rafli08523717409@gmail.com](mailto:rafli08523717409@gmail.com)
+* [**Donate via PayPal**](https://www.paypal.com/paypalme/rafli23115)
+* For alternative donation methods, please contact: [rafli08523717409@gmail.com](mailto:rafli08523717409@gmail.com)
