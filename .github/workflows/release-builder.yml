@@ -1,37 +1,20 @@
-name: Build and Upload Release
+name: Draft a new release
 
 on:
-  release:
-    types: [created]
+  push:
+    branches:
+      - main
 
 jobs:
-  build:
+  draft_release:
     runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      pull-requests: write
+      releases: write
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: release-drafter/release-drafter@v6
         with:
-          python-version: '3.11'
-
-      - name: Build NVDA addon
-        run: |
-          VERSION_TAG=${{ github.event.release.tag_name }}
-          VERSION_NUMBER=${VERSION_TAG#v}
-
-          ADDON_NAME="accessify-play_${VERSION_NUMBER}.nvda-addon"
-          
-          echo "ADDON_NAME=$ADDON_NAME" >> $GITHUB_ENV
-
-          cd addon
-          zip -r ../$ADDON_NAME . -x ".*" -x "__pycache__/*"
-          cd ..
-
-      - name: Upload Release Asset
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release upload ${{ github.event.release.tag_name }} ${{ env.ADDON_NAME }} --clobber
+          token: ${{ secrets.GITHUB_TOKEN }}
