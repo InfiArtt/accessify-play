@@ -1,0 +1,405 @@
+# English translations for AccessifyPlay.
+# Copyright (C) 2025 ORGANIZATION
+# This file is distributed under the same license as the AccessifyPlay
+# project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2025.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2025-11-08 19:19+0700\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: en\n"
+"Language-Team: en <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.14.0\n"
+
+#: globalPlugins/accesifyPlay/__init__.py:45
+#: globalPlugins/accesifyPlay/__init__.py:562
+msgid "Accessify Play"
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:54
+msgid "Client ID:"
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:56
+msgid "Client Secret:"
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:60
+msgid "Callback Port (must be between 1024 and 65535)"
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:66
+msgid "Search Results Limit (1 to 50)"
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:72
+msgid "Seek Duration (seconds, 1 to 60)"
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:79
+msgid "Language:"
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:93
+msgid "Validate Credentials"
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:97
+msgid "Clear Credentials"
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:101
+msgid "Donate"
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:118
+msgid "Validating credentials with Spotify..."
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:127
+msgid ""
+"Are you sure you want to clear your Spotify Client ID, Client Secret, and"
+" delete the stored access token? You will need to re-enter your "
+"credentials and re-authenticate with Spotify to use the addon again."
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:133
+msgid "Confirm Clear Credentials"
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:138
+msgid "Clearing credentials and cache..."
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:152
+msgid "Validation successful!"
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:152
+msgid "Success"
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:158
+msgid ""
+"Validation failed. Please check the following:\n"
+"\n"
+"1. Your Client ID and Client Secret are correct.\n"
+"2. In your Spotify App settings, the Redirect URI is set to exactly:\n"
+"{uri}"
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:163
+msgid "Validation Failed"
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:169
+msgid "Search Spotify"
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:184
+#: globalPlugins/accesifyPlay/__init__.py:186
+msgid "Song"
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:184
+msgid "Album"
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:184
+msgid "Artist"
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:184
+msgid "Playlist"
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:184
+msgid "Podcast"
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:193
+msgid "&Search"
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:205
+msgid "&Play"
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:210
+msgid "Add to &Queue"
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:214
+msgid "&Close"
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:234
+msgid "Searching..."
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:240
+msgid "Loading more results..."
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:291
+msgid "No results found."
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:310
+#: globalPlugins/accesifyPlay/__init__.py:412
+#: globalPlugins/accesifyPlay/__init__.py:484
+msgid "Playing..."
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:317
+msgid "No item selected."
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:328
+msgid "Unknown Track"
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:331
+msgid "Adding to queue..."
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:334
+#: globalPlugins/accesifyPlay/__init__.py:559
+msgid "Could not get URI for selected item."
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:341
+msgid "{name} added to queue."
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:346
+#: globalPlugins/accesifyPlay/__init__.py:418
+msgid "Play from Spotify Link"
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:354
+#: globalPlugins/accesifyPlay/__init__.py:426
+msgid "Spotify URL:"
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:359
+#: globalPlugins/accesifyPlay/__init__.py:431
+msgid "Check"
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:365
+#: globalPlugins/accesifyPlay/__init__.py:437
+msgid "Track Details:"
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:373
+#: globalPlugins/accesifyPlay/__init__.py:445
+msgid "Play"
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:378
+#: globalPlugins/accesifyPlay/__init__.py:450
+#: globalPlugins/accesifyPlay/__init__.py:506
+msgid "Close"
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:391
+#: globalPlugins/accesifyPlay/__init__.py:463
+msgid "Checking..."
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:405
+#: globalPlugins/accesifyPlay/__init__.py:477
+msgid ""
+"Title: {name}\n"
+"Artist: {artists}\n"
+"Duration: {duration}"
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:490
+msgid "Spotify Queue"
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:501
+msgid "Play Selected"
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:515
+msgid "Loading queue..."
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:531
+#: globalPlugins/accesifyPlay/spotify_client.py:352
+msgid "Queue is empty."
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:537
+msgid "Playing: {name} by {artists}"
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:539
+msgid "Queue: {name} by {artists}"
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:555
+msgid "Playing selected item..."
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:625
+msgid "Link copied"
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:627
+msgid "Could not open clipboard."
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:630
+msgid "Clipboard error"
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:647
+msgid "Play a track from a Spotify URL."
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:653
+#: globalPlugins/accesifyPlay/__init__.py:669
+#: globalPlugins/accesifyPlay/__init__.py:745
+#: globalPlugins/accesifyPlay/spotify_client.py:104
+msgid "Spotify client not ready. Please validate your credentials."
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:659
+msgid "Copy the URL of the current track."
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:663
+msgid "Search for a track on Spotify."
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:675
+msgid "Announce the currently playing track."
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:679
+msgid "Play or pause the current track on Spotify."
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:687
+msgid "Paused"
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:690
+msgid "Playing"
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:693
+msgid "Skip to the next track on Spotify."
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:702
+msgid "Skip to the previous track on Spotify."
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:711
+msgid "Increase Spotify volume."
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:723
+msgid "Decrease Spotify volume."
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:735
+msgid "Announce the next track in the queue."
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:739
+msgid "Show the Spotify queue list."
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:751
+msgid "Seek forward in the current track by configurable duration."
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:758
+msgid "Seeked forward {duration} seconds."
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:761
+msgid "Seek backward in the current track by configurable duration."
+msgstr ""
+
+#: globalPlugins/accesifyPlay/__init__.py:768
+msgid "Seeked backward {duration} seconds."
+msgstr ""
+
+#: globalPlugins/accesifyPlay/spotify_client.py:110
+msgid "No active Spotify device found. Please start playback in your Spotify app."
+msgstr ""
+
+#: globalPlugins/accesifyPlay/spotify_client.py:134
+msgid "Token expired, please try again."
+msgstr ""
+
+#: globalPlugins/accesifyPlay/spotify_client.py:136
+msgid "Spotify command failed."
+msgstr ""
+
+#: globalPlugins/accesifyPlay/spotify_client.py:142
+msgid "An unexpected error occurred."
+msgstr ""
+
+#: globalPlugins/accesifyPlay/spotify_client.py:166
+msgid "Spotify: No active device, searching for one."
+msgstr ""
+
+#: globalPlugins/accesifyPlay/spotify_client.py:204
+#: globalPlugins/accesifyPlay/spotify_client.py:232
+#: globalPlugins/accesifyPlay/spotify_client.py:472
+msgid "Nothing is currently playing."
+msgstr ""
+
+#: globalPlugins/accesifyPlay/spotify_client.py:240
+msgid "Could not find URL for the current track."
+msgstr ""
+
+#: globalPlugins/accesifyPlay/spotify_client.py:288
+msgid "Spotify client not ready."
+msgstr ""
+
+#: globalPlugins/accesifyPlay/spotify_client.py:300
+msgid "Invalid Spotify track URL."
+msgstr ""
+
+#: globalPlugins/accesifyPlay/spotify_client.py:310
+msgid "Track not found."
+msgstr ""
+
+#: globalPlugins/accesifyPlay/spotify_client.py:338
+msgid "Failed to fetch track details."
+msgstr ""
+
+#: globalPlugins/accesifyPlay/spotify_client.py:362
+msgid "Next in queue: {track_name} by {artists}"
+msgstr ""
+
+#: globalPlugins/accesifyPlay/spotify_client.py:434
+msgid "Spotify: clientID and clientSecret cleared from config.conf."
+msgstr ""
+
+#: globalPlugins/accesifyPlay/spotify_client.py:454
+msgid "Spotify credentials and cache cleared successfully."
+msgstr ""
+
+#: globalPlugins/accesifyPlay/spotify_client.py:460
+msgid "Failed to clear Spotify credentials and cache: {error}"
+msgstr ""
+

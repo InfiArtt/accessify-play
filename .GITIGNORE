@@ -1,0 +1,16 @@
+# Ignore generated NVDA addon packages
+*.nvda-addon
+
+# Ignore logs
+*.log
+
+# Ignore text output files
+*.txt
+
+# Ignore Python cache
+__pycache__/
+*.pyc
+
+# Ignore build folders
+build/
+dist/
