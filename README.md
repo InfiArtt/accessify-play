@@ -1,4 +1,7 @@
 # Accessify Play
+[![Code Quality Linting](https://github.com/InfiArtt/accessify-play/actions/workflows/lint.yml/badge.svg)](https://github.com/InfiArtt/accessify-play/actions/workflows/lint.yml)
+[![Latest Release](https://img.shields.io/github/v/release/InfiArtt/accessify-play)](https://github.com/InfiArtt/accessify-play/releases/latest)
+[![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
 
 <p align="center"><strong>Your Spotify Universe, Commanded by NVDA.</strong></p>
 
