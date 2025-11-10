@@ -50,11 +50,11 @@ class AccessifyDialog(wx.Dialog):
         button.Bind(wx.EVT_BUTTON, self._on_close_button)
 
     def _on_close_button(self, evt):
-        self.Close()
+        self.EndModal(wx.ID_CANCEL)
 
     def _on_char_hook(self, evt):
         if evt.GetKeyCode() == wx.WXK_ESCAPE:
-            self.Close()
+            self.EndModal(wx.ID_CANCEL)
         else:
             evt.Skip()
 
