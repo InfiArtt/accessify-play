@@ -1,5 +1,11 @@
 # Changelog
 
+## Version 1.3.0 (Unreleased)
+- Improvement: Dialogs that depend on Spotify data (Management, Queue List, Add to Playlist, etc.) now preload their content before the window appears, eliminating empty states and making loading progress audible.
+- Improvement: Added centralized helpers to fetch the current user profile, playlists, saved tracks, saved shows, top items, new releases, and recently played items so the multi-tab Management dialog opens fully populated and refreshes consistently.
+- Fix: Resolved multiple tab/spaces indentation issues that previously prevented the add-on from loading and caused TabErrors in both `__init__.py` and `spotify_client.py`.
+- Fix: Ensured modal dialogs are destroyed properly when closed (Space, Esc, Alt+F4) so reopening a dialog creates a new instance and reruns the “Playlists loaded” announcement.
+
 ## Version 1.2.0 (Unreleased)
 
 - New Feature: Set Specific Volume: Added a dialog to set the Spotify volume to a precise percentage (0-100) using the shortcut NVDA+Shift+Alt+V.
