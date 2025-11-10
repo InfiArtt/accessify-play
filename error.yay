@@ -1,0 +1,16 @@
+ERROR - unhandled exception (04:07:11.071) - MainThread (7920):
+Traceback (most recent call last):
+  File "C:\Users\LENOVO\AppData\Roaming\nvda\addons\AccessifyPlay\globalPlugins\accesifyPlay\__init__.py", line 53, in _on_close_button
+    self.EndModal(wx.ID_CANCEL)
+wx._core.wxAssertionError: C++ assertion "IsModal()" failed at ..\..\src\msw\dialog.cpp(197) in wxDialog::EndModal(): EndModal() called for non modal dialog
+IO - inputCore.executeGesture (04:07:11.135) - winInputHook (17792):
+Input: kb(desktop):space
+IO - speech.speech.speak (04:07:11.145) - MainThread (7920):
+Speaking ['pressed']
+ERROR - unhandled exception (04:07:11.215) - MainThread (7920):
+Traceback (most recent call last):
+  File "C:\Users\LENOVO\AppData\Roaming\nvda\addons\AccessifyPlay\globalPlugins\accesifyPlay\__init__.py", line 53, in _on_close_button
+    self.EndModal(wx.ID_CANCEL)
+wx._core.wxAssertionError: C++ assertion "IsModal()" failed at ..\..\src\msw\dialog.cpp(197) in wxDialog::EndModal(): EndModal() called for non modal dialog
+IO - inputCore.executeGesture (04:07:11.278) - winInputHook (17792):
+Input: kb(desktop):space

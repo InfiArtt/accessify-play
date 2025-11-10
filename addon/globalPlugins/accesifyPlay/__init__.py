@@ -50,11 +50,11 @@ class AccessifyDialog(wx.Dialog):
         button.Bind(wx.EVT_BUTTON, self._on_close_button)
 
     def _on_close_button(self, evt):
-        self.EndModal(wx.ID_CANCEL)
+        self.Close()
 
     def _on_char_hook(self, evt):
         if evt.GetKeyCode() == wx.WXK_ESCAPE:
-            self.EndModal(wx.ID_CANCEL)
+            self.Close()
         else:
             evt.Skip()
 
@@ -182,6 +182,16 @@ class ClientIDManagementDialog(AccessifyDialog):
         spotify_client._write_client_id(self.new_client_id)
         ui.message(_("Spotify Client ID saved."))
         self.EndModal(wx.ID_OK)
+
+    # Override base class methods to ensure EndModal is called for this modal dialog
+    def _on_close_button(self, evt):
+        self.EndModal(wx.ID_CANCEL)
+
+    def _on_char_hook(self, evt):
+        if evt.GetKeyCode() == wx.WXK_ESCAPE:
+            self.EndModal(wx.ID_CANCEL)
+        else:
+            evt.Skip()
 
 
 class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
