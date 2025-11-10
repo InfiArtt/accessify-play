@@ -15,7 +15,7 @@
 - New Feature: Implemented a "Migrate Old Credentials" button in the Accessify Play settings panel. This button appears if old Client ID or Secret Key data is detected in NVDA's configuration, allowing users to seamlessly migrate their Client ID to the new portable storage location and remove obsolete credentials.
 - New Feature: Added a "Go to Developer Dashboard" button to the Accessify Play settings panel, providing quick access to the Spotify Developer Dashboard for managing Client IDs.
 
-## Version 1.2.0 (Unreleased)
+## Version 1.2.0
 
 - New Feature: Set Specific Volume: Added a dialog to set the Spotify volume to a precise percentage (0-100) using the shortcut NVDA+Shift+Alt+V.
 - New Feature: Comprehensive Library Management: Introduced a new multi-tabbed "Management" dialog (NVDA+Alt+Shift+M) for full control over your Spotify library.
@@ -36,7 +36,7 @@
 - Fix: Corrected a critical indentation error in spotify_client.py that prevented several API calls (like getting artist albums and related artists) from working.
 - Fix (Accessibility): Ensured labels for checkboxes in the Settings and Create Playlist panels are integrated directly into the control, making them readable by NVDA.
 
-## Version 1.0.1 (Unreleased)
+## Version 1.0.1
 
 - New Feature: Added a command to announce the next track in the Spotify queue (NVDA+Shift+Alt+N).
 - New Feature: Implemented a dialog to show the full Spotify queue, allowing users to view and play selected items (NVDA+Shift+Alt+Q).
