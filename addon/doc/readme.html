@@ -223,7 +223,8 @@
 
     <h3>Step 1: Create a Spotify App</h3>
     <ol>
-        <li>Go to the <a href="https://developer.spotify.com/dashboard" target="_blank">Spotify Developer Dashboard</a> and log in.</li>
+        <li>Open the Accessify Play settings in NVDA (NVDA menu -> Preferences -> Settings -> Accessify Play).</li>
+        <li>Click the <strong>"Go to Developer Dashboard"</strong> button. This will open the <a href="https://developer.spotify.com/dashboard" target="_blank">Spotify Developer Dashboard</a> in your web browser. Log in if prompted.</li>
         <li>Click the "Create app" button.</li>
         <li>Fill out the form:
             <ul>
@@ -232,21 +233,22 @@
                 <li><strong>Redirect URI:</strong> <span class="warning">This is the most important step.</span> The addon listens on your local machine for the authentication callback. You must enter this URI exactly: <code>http://127.0.0.1:8888/callback</code></li>
             </ul>
         </li>
+        <li>You may be asked which API to use. <strong>Please select "Web API"</strong>.</li>
         <li>Agree to the terms and click "Save".</li>
     </ol>
 
     <h3>Step 2: Get Your Credentials</h3>
     <ol>
         <li>On your new app's dashboard, click "Settings".</li>
-        <li>You will see your <strong>Client ID</strong>. You may need to click "View client secret" to see the <strong>Client Secret</strong>.</li>
-        <li>Copy both of these long strings of text.</li>
+        <li>You will see your <strong>Client ID</strong>.</li>
+        <li>Copy this long string of text.</li>
     </ol>
 
     <h3>Step 3: Configure the Addon in NVDA</h3>
     <ol>
         <li>Open the NVDA menu (<code>NVDA+N</code>), go to Preferences, then Settings.</li>
         <li>In the categories list, select "Accessify Play".</li>
-        <li>Paste your <strong>Client ID</strong> and <strong>Client Secret</strong> into the fields.</li>
+        <li>Locate the <strong>"Add Client ID"</strong> (or "Display/Edit Client ID") button. Click it to open a dialog where you can paste your <strong>Client ID</strong>.</li>
         <li>Review the other settings:
             <ul>
                 <li><strong>Callback Port:</strong> Only change this if you have a port conflict and you have also changed it in the Spotify Dashboard.</li>
@@ -254,9 +256,38 @@
             </ul>
         </li>
         <li>Press the <strong>"Validate Credentials"</strong> button. Your web browser will open and ask you to grant permissions. Click "Agree".</li>
-        <li>If successful, you will see a "Validation successful!" message. If not, carefully re-check all steps, especially the Redirect URI.</li>
+        <li>If successful, you will see a "Validation successful!" message. If not, carefully re-check all steps, especially the Redirect URI and your Client ID.</li>
         <li>Click "OK" to save and close the settings. The addon is now ready to use!</li>
     </ol>
+
+    <h2>Authentication & Migration Update (Version 1.3.0)</h2>
+    <p>With version 1.3.0, Accessify Play has undergone a significant update to its authentication system to enhance security and improve user experience, especially for portable NVDA installations.</p>
+    <ul>
+        <li><strong>Enhanced Security with PKCE:</strong> The addon now utilizes the Proof Key for Code Exchange (PKCE) authentication flow. This modern and more secure method eliminates the need for a <code>Client Secret</code>, making your Spotify integration safer.</li>
+        <li><strong>Portable Client ID Storage:</strong> Your Spotify Client ID is no longer stored within NVDA's configuration files. Instead, it is now saved in a dedicated, portable file located at <code>%userprofile%/.spotify_client_id.json</code>. This ensures your Client ID remains intact even if you move or reinstall NVDA, and it's easier to manage.</li>
+        <li><strong>Simplified Settings:</strong> The 'Client Secret' field has been removed from the Accessify Play settings panel, streamlining the setup process. The 'Client ID' input is now managed via a dynamic button that allows you to easily add, view, or edit your Client ID.</li>
+        <li><strong>Seamless Migration:</strong> If you are upgrading from an older version of Accessify Play and have your Client ID (or Client Secret) still stored in NVDA's configuration, a new <strong>"Migrate Old Credentials"</strong> button will appear in the Accessify Play settings panel. Clicking this button will automatically:
+            <ol>
+                <li>Move your existing Client ID to the new portable <code>%userprofile%/.spotify_client_id.json</code> file.</li>
+                <li>Remove both the old Client ID and the obsolete Client Secret from NVDA's configuration.</li>
+            </ol>
+            This ensures a smooth transition to the new, more secure system.
+        </li>
+    </ul>
+
+    <hr>
+
+    <h2>🤔 Why This Authentication Method? (Instead of a Simple Login Button)</h2>
+    <p>You might be wondering why Accessify Play requires you to create your own Spotify application and input a Client ID, instead of offering a simple "Login to Spotify" button like many other apps (e.g., Alexa, Google Home, etc.). The answer lies in Spotify's API policies and the challenges faced by independent developers.</p>
+    <p>To provide a seamless "Login to Spotify" experience without requiring users to become "mini-developers," an application needs to apply for and be granted an <strong>Extended Quota</strong> from Spotify. The requirements for obtaining such an extended quota are quite extraordinary and often include:</p>
+    <ul>
+        <li><strong>Significant User Base:</strong> Demonstrating a large and active user base.</li>
+        <li><strong>Business Model:</strong> A clear and sustainable business model.</li>
+        <li><strong>Legal & Security Reviews:</strong> Extensive legal and security reviews by Spotify.</li>
+        <li><strong>Brand Alignment:</strong> Strong alignment with Spotify's brand and strategic goals.</li>
+    </ul>
+    <p>For a small, independent, and open-source accessibility addon like Accessify Play, meeting these stringent requirements is <strong>almost impossible</strong>. The resources, legal overhead, and user base needed are far beyond what this project can realistically achieve.</p>
+    <p>Therefore, the current method, while requiring a few extra steps from the user, is a necessary workaround. It allows Accessify Play to function and provide its valuable accessibility features by leveraging Spotify's standard developer access, without needing to meet the prohibitive criteria for extended quotas. This approach empowers you, the user, to directly control your Spotify API access, ensuring the addon remains functional and accessible.</p>
 
     <hr>
 

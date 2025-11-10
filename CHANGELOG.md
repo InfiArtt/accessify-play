@@ -7,8 +7,13 @@
 - Improvement: Reworked the Search dialog, Management tabs, and Queue window with context menus, keyboard shortcuts, and smarter focus handling so actions like Play/Add to Queue/Copy Link/Follow are discoverable without cluttering the UI.
 - Improvement: Management tabs (Manage Playlists, Saved Tracks, Followed Artists, Top Items, Saved Shows, New Releases, Recently Played) now drive all actions through context menus, support Enter-to-play, and offer Copy Link commands for every row.
 - New Feature: The Queue dialog exposes a context menu with Play, Copy Link, and Remove actions; removing entries rebuilds the playback queue so you can curate Spotify’s upcoming tracks directly from NVDA.
-- Fix: Resolved multiple tab/spaces indentation issues that previously prevented the add-on from loading and caused TabErrors in both `__init__.py` and `spotify_client.py`.
 - Fix: Ensured modal dialogs are destroyed properly when closed (Space, Esc, Alt+F4) so reopening a dialog creates a new instance and reruns the “Playlists loaded” announcement.
+- Security: Implemented the more secure Proof Key for Code Exchange (PKCE) authentication flow, replacing the less secure `client_secret` method. This enhances the security of user authentication with Spotify.
+- Improvement: Removed the 'Client Secret' field from the Accessify Play settings panel, simplifying the authentication setup process for users.
+- Fix: Provided a fallback implementation for the standard Python 'secrets' module, resolving 'ModuleNotFoundError' issues in environments with older Python versions and improving addon compatibility.
+- New Feature: Added a `privacy-policy.html` file to the project doc, detailing the addon's data handling practices.
+- New Feature: Implemented a "Migrate Old Credentials" button in the Accessify Play settings panel. This button appears if old Client ID or Secret Key data is detected in NVDA's configuration, allowing users to seamlessly migrate their Client ID to the new portable storage location and remove obsolete credentials.
+- New Feature: Added a "Go to Developer Dashboard" button to the Accessify Play settings panel, providing quick access to the Spotify Developer Dashboard for managing Client IDs.
 
 ## Version 1.2.0 (Unreleased)
 

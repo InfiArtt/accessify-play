@@ -14,6 +14,7 @@ import threading
 import time  # Import the time module
 from logHandler import log
 import addonHandler  # Import addonHandler
+import webbrowser # Added for opening URLs
 
 # Add the 'lib' folder to sys.path before other imports
 lib_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "lib"))
@@ -26,8 +27,6 @@ from . import spotify_client
 
 # Define the configuration specification
 confspec = {
-    "clientID": "string(default='')",
-    "clientSecret": "string(default='')",
     "port": "integer(min=1024, max=65535, default=8888)",
     "searchLimit": "integer(min=1, max=50, default=20)",
     "seekDuration": "integer(min=1, max=60, default=15)",
@@ -148,6 +147,43 @@ class AccessifyDialog(wx.Dialog):
             wx.CallAfter(ui.message, _("Cannot add this item to the queue."))
 
 
+class ClientIDManagementDialog(AccessifyDialog):
+    def __init__(self, parent, current_client_id):
+        super().__init__(parent, title=_("Manage Spotify Client ID"))
+        self.current_client_id = current_client_id
+        self.new_client_id = current_client_id
+
+        mainSizer = wx.BoxSizer(wx.VERTICAL)
+        sHelper = guiHelper.BoxSizerHelper(self, sizer=mainSizer)
+
+        # Client ID input
+        label = wx.StaticText(self, label=_("Spotify Client ID:"))
+        sHelper.addItem(label)
+        self.clientIDText = wx.TextCtrl(self, value=self.current_client_id)
+        sHelper.addItem(self.clientIDText, proportion=1, flag=wx.EXPAND)
+
+        # Buttons
+        buttonsSizer = wx.StdDialogButtonSizer()
+        saveButton = wx.Button(self, wx.ID_OK, label=_("&Save"))
+        saveButton.Bind(wx.EVT_BUTTON, self.onSave)
+        buttonsSizer.AddButton(saveButton)
+
+        cancelButton = wx.Button(self, wx.ID_CANCEL, label=_("&Cancel"))
+        self.bind_close_button(cancelButton)
+        buttonsSizer.AddButton(cancelButton)
+        buttonsSizer.Realize()
+        sHelper.addItem(buttonsSizer, flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
+
+        self.SetSizerAndFit(mainSizer)
+        self.clientIDText.SetFocus()
+
+    def onSave(self, evt):
+        self.new_client_id = self.clientIDText.GetValue()
+        spotify_client._write_client_id(self.new_client_id)
+        ui.message(_("Spotify Client ID saved."))
+        self.EndModal(wx.ID_OK)
+
+
 class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
     title = _("Accessify Play")
 
@@ -158,12 +194,9 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
     def makeSettings(self, settingsSizer):
         sHelper = guiHelper.BoxSizerHelper(self, sizer=settingsSizer)
 
-        self.clientID = sHelper.addLabeledControl(_("Client ID:"), wx.TextCtrl)
-        self.clientID.Value = config.conf["spotify"]["clientID"]
-        self.clientSecret = sHelper.addLabeledControl(
-            _("Client Secret:"), wx.TextCtrl, style=wx.TE_PASSWORD
-        )
-        self.clientSecret.Value = config.conf["spotify"]["clientSecret"]
+        self.clientIDButton = sHelper.addItem(wx.Button(self, label=""))
+        self.clientIDButton.Bind(wx.EVT_BUTTON, self.onManageClientID)
+        self.updateClientIDButtonLabel()
 
         # Translators: Label for a setting to choose the network port for Spotify authentication.
         port_label = _("Callback Port (must be between 1024 and 65535)")
@@ -214,6 +247,10 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
         )
 
         buttonsSizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.migrateButton = wx.Button(self, label=_("Migrate Old Credentials"))
+        self.migrateButton.Bind(wx.EVT_BUTTON, self.onMigrateCredentials)
+        buttonsSizer.Add(self.migrateButton, flag=wx.LEFT, border=5)
+
         self.validateButton = wx.Button(self, label=_("Validate Credentials"))
         self.validateButton.Bind(wx.EVT_BUTTON, self.onValidate)
         buttonsSizer.Add(self.validateButton)
@@ -222,14 +259,83 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
         self.clearCredentialsButton.Bind(wx.EVT_BUTTON, self.onClearCredentials)
         buttonsSizer.Add(self.clearCredentialsButton, flag=wx.LEFT, border=5)
 
+        self.developerDashboardButton = wx.Button(self, label=_("Go to Developer Dashboard"))
+        self.developerDashboardButton.Bind(wx.EVT_BUTTON, self.onGoToDeveloperDashboard)
+        buttonsSizer.Add(self.developerDashboardButton, flag=wx.LEFT, border=5)
+
         self.donateButton = wx.Button(self, label=_("Donate"))
         self.donateButton.Bind(wx.EVT_BUTTON, lambda evt: donate.open_donate_link())
         buttonsSizer.Add(self.donateButton, flag=wx.LEFT, border=5)
         sHelper.addItem(buttonsSizer)
+        self.updateMigrateButtonVisibility() # Set initial visibility of migrate button
+
+    def updateClientIDButtonLabel(self):
+        current_client_id = spotify_client._read_client_id()
+        if current_client_id:
+            self.clientIDButton.SetLabel(_("Display/Edit Client ID"))
+        else:
+            self.clientIDButton.SetLabel(_("Add Client ID"))
+
+    def onManageClientID(self, evt):
+        current_client_id = spotify_client._read_client_id()
+        dialog = ClientIDManagementDialog(self, current_client_id)
+        if dialog.ShowModal() == wx.ID_OK:
+            self.updateClientIDButtonLabel() # Refresh button label after dialog closes
+            self.client.initialize() # Re-initialize client with potentially new ID
+        dialog.Destroy()
+
+    def updateMigrateButtonVisibility(self):
+        old_client_id_exists = "clientID" in config.conf["spotify"] and config.conf["spotify"]["clientID"]
+        old_client_secret_exists = "clientSecret" in config.conf["spotify"] and config.conf["spotify"]["clientSecret"]
+        if old_client_id_exists or old_client_secret_exists:
+            self.migrateButton.Show()
+        else:
+            self.migrateButton.Hide()
+        self.Layout() # Re-layout the sizer to reflect visibility changes
+
+    def onMigrateCredentials(self, evt):
+        # Migration logic (similar to installTasks.py)
+        old_client_id = config.conf["spotify"].get("clientID", "")
+        old_client_secret = config.conf["spotify"].get("clientSecret", "")
+        
+        message_parts = []
+        migration_performed = False
+
+        if old_client_id:
+            current_new_client_id = spotify_client._read_client_id()
+            if not current_new_client_id:
+                spotify_client._write_client_id(old_client_id)
+                message_parts.append(_("Your Spotify Client ID has been migrated from NVDA's configuration to a new, more portable file."))
+                migration_performed = True
+            else:
+                message_parts.append(_("An existing Spotify Client ID was found in the new portable file. The old Client ID from NVDA's configuration was not migrated to avoid overwriting."))
+
+        if "clientID" in config.conf["spotify"]:
+            config.conf["spotify"]["clientID"] = ""
+            migration_performed = True
+        if "clientSecret" in config.conf["spotify"]:
+            config.conf["spotify"]["clientSecret"] = ""
+            message_parts.append(_("The 'Client Secret' is no longer used and has been removed from NVDA's configuration."))
+            migration_performed = True
+        
+        if migration_performed:
+            config.conf.save()
+            final_message = _("AccessifyPlay Migration Complete\n\n")
+            final_message += "\n".join(message_parts)
+            final_message += _("\n\nThese changes improve security and portability. Please restart NVDA for all changes to take full effect.")
+            ui.message(final_message)
+            self.updateMigrateButtonVisibility() # Hide button after migration
+            self.updateClientIDButtonLabel() # Refresh Client ID button
+            self.client.initialize() # Re-initialize client with potentially new ID
+        else:
+            ui.message(_("No old Spotify credentials found to migrate."))
+            self.updateMigrateButtonVisibility() # Hide button if no migration needed
+
+    def onGoToDeveloperDashboard(self, evt):
+        webbrowser.open("https://developer.spotify.com/dashboard")
+
 
     def onSave(self):
-        config.conf["spotify"]["clientID"] = self.clientID.GetValue()
-        config.conf["spotify"]["clientSecret"] = self.clientSecret.GetValue()
         config.conf["spotify"]["port"] = self.portCtrl.GetValue()
         config.conf["spotify"]["searchLimit"] = self.limitCtrl.GetValue()
         config.conf["spotify"]["seekDuration"] = self.seekDurationCtrl.GetValue()
@@ -254,7 +360,7 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
     def onClearCredentials(self, evt):
         # Translators: Confirmation message before clearing Spotify credentials and cache.
         confirmation_msg = _(
-            "Are you sure you want to clear your Spotify Client ID, Client Secret, "
+            "Are you sure you want to clear your Spotify Client ID, "
             "and delete the stored access token? You will need to re-enter your credentials "
             "and re-authenticate with Spotify to use the addon again."
         )
@@ -275,8 +381,8 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 
     def _update_ui_after_clear(self, message):
         self.clientID.SetValue("")
-        self.clientSecret.SetValue("")
         ui.message(message)
+        self.updateClientIDButtonLabel()
 
     def showValidationResult(self, success):
         if success:
@@ -290,10 +396,11 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
             # It gives the user instructions on how to fix it, including a redirect URI that they must copy.
             error_message = _(
                 "Validation failed. Please check the following:\n\n"
-                "1. Your Client ID and Client Secret are correct.\n"
+                "1. Your Client ID is correct.\n"
                 "2. In your Spotify App settings, the Redirect URI is set to exactly:\n{uri}"
             ).format(uri=redirect_uri)
             messageBox(error_message, _("Validation Failed"), wx.OK | wx.ICON_ERROR)
+        self.updateClientIDButtonLabel()
 
 
 class SearchDialog(AccessifyDialog):

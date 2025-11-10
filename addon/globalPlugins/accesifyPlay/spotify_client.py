@@ -3,10 +3,11 @@
 import os
 import webbrowser
 import spotipy
-from spotipy.oauth2 import SpotifyOAuth, CacheFileHandler
+from spotipy.oauth2 import SpotifyPKCE, CacheFileHandler
 from spotipy.exceptions import SpotifyException
 import config
 from logHandler import log
+import json # Added for Client ID file handling
 
 # This will be the single, shared instance of the client
 _instance = None
@@ -16,6 +17,37 @@ def _get_cache_path():
     """Returns the path to the Spotify token cache file, in the user's %USERPROFILE% directory."""
     return os.path.join(os.path.expandvars("%USERPROFILE%"), ".spotify_cache.json")
 
+def _get_client_id_path():
+    """Returns the path to the Spotify Client ID file, in the user's %USERPROFILE% directory."""
+    return os.path.join(os.path.expandvars("%USERPROFILE%"), ".spotify_client_id.json")
+
+def _read_client_id():
+    """Reads the Client ID from the dedicated JSON file."""
+    path = _get_client_id_path()
+    if os.path.exists(path):
+        try:
+            with open(path, "r") as f:
+                data = json.load(f)
+                return data.get("clientID", "")
+        except json.JSONDecodeError:
+            log.error(f"Error decoding client ID file: {path}", exc_info=True)
+            return ""
+    return ""
+
+def _write_client_id(client_id):
+    """Writes the Client ID to the dedicated JSON file."""
+    path = _get_client_id_path()
+    with open(path, "w") as f:
+        json.dump({"clientID": client_id}, f)
+
+def _clear_client_id_file():
+    """Deletes the Client ID JSON file."""
+    path = _get_client_id_path()
+    if os.path.exists(path):
+        os.remove(path)
+        log.info(f"Spotify: Client ID file deleted: {path}")
+    else:
+        log.info(f"Spotify: Client ID file not found at {path}, no deletion needed.")
 
 def get_client():
     """Returns the shared instance of the SpotifyClient."""
@@ -35,23 +67,20 @@ class SpotifyClient:
         return CacheFileHandler(cache_path=_get_cache_path())
 
     def _get_auth_manager(self, open_browser=False):
-        """Creates a SpotifyOAuth manager."""
-        clientID = config.conf["spotify"]["clientID"]
-        clientSecret = config.conf["spotify"]["clientSecret"]
-        if not clientID or not clientSecret:
+        """Creates a SpotifyPKCE manager."""
+        clientID = _read_client_id()
+        if not clientID:
             return None
 
         port = config.conf["spotify"]["port"]
         redirect_uri = f"http://127.0.0.1:{port}/callback"
 
-        return SpotifyOAuth(
+        return SpotifyPKCE(
             client_id=clientID,
-            client_secret=clientSecret,
             redirect_uri=redirect_uri,
             scope="user-read-playback-state user-modify-playback-state user-read-currently-playing user-library-modify user-library-read playlist-read-private playlist-read-collaborative playlist-modify-public playlist-modify-private user-top-read user-read-recently-played user-follow-read user-follow-modify",
             cache_handler=self._get_cache_handler(),
             open_browser=webbrowser.open if open_browser else False,
-            show_dialog=open_browser,
         )
 
     def initialize(self):
@@ -343,12 +372,11 @@ class SpotifyClient:
         return True
 
     def clear_credentials_and_cache(self):
-        """Clears clientID, clientSecret from config.conf and deletes the Spotify token cache."""
+        """Clears clientID from its dedicated file and deletes the Spotify token cache."""
         try:
-            config.conf["spotify"]["clientID"] = ""
-            config.conf["spotify"]["clientSecret"] = ""
-            config.conf.save()
-            log.info(_("Spotify: clientID and clientSecret cleared from config.conf."))
+            _clear_client_id_file()
+            config.conf.save() # Save config to ensure other settings are persisted
+            log.info(_("Spotify: clientID cleared from its dedicated file."))
 
             cache_path = _get_cache_path()
             if os.path.exists(cache_path):
