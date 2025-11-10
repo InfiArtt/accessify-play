@@ -315,6 +315,7 @@ class SpotifyClient:
                     "name": track_name,
                     "artists": artists,
                     "uri": currently_playing.get("uri"),
+                    "link": currently_playing.get("external_urls", {}).get("spotify"),
                 }
             )
 
@@ -327,10 +328,19 @@ class SpotifyClient:
                     "name": track_name,
                     "artists": artists,
                     "uri": track.get("uri"),
+                    "link": track.get("external_urls", {}).get("spotify"),
                 }
             )
 
         return full_queue
+
+    def rebuild_queue(self, uris, progress_ms=0):
+        result = self._execute(self.client.start_playback, uris=uris)
+        if isinstance(result, str):
+            return result
+        if progress_ms:
+            self.seek_track(progress_ms)
+        return True
 
     def clear_credentials_and_cache(self):
         """Clears clientID, clientSecret from config.conf and deletes the Spotify token cache."""
