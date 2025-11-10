@@ -1,6 +1,12 @@
 # Changelog
 
 ## Version 1.3.0 (Unreleased)
+
+- Improvement: Dialogs that depend on Spotify data (Management, Queue List, Add to Playlist, etc.) now preload their content before the window appears, eliminating empty states and making loading progress audible.
+- Improvement: Added centralized helpers to fetch the current user profile, playlists, saved tracks, saved shows, top items, new releases, and recently played items so the multi-tab Management dialog opens fully populated and refreshes consistently.
+- Improvement: Reworked the Search dialog, Management tabs, and Queue window with context menus, keyboard shortcuts, and smarter focus handling so actions like Play/Add to Queue/Copy Link/Follow are discoverable without cluttering the UI.
+- Improvement: Management tabs (Manage Playlists, Saved Tracks, Followed Artists, Top Items, Saved Shows, New Releases, Recently Played) now drive all actions through context menus, support Enter-to-play, and offer Copy Link commands for every row.
+- New Feature: The Queue dialog exposes a context menu with Play, Copy Link, and Remove actions; removing entries rebuilds the playback queue so you can curate Spotify’s upcoming tracks directly from NVDA.
 - Improvement: Dialogs that depend on Spotify data (Management, Queue List, Add to Playlist, etc.) now preload their content before the window appears, eliminating empty states and making loading progress audible.
 - Improvement: Added centralized helpers to fetch the current user profile, playlists, saved tracks, saved shows, top items, new releases, and recently played items so the multi-tab Management dialog opens fully populated and refreshes consistently.
 - Fix: Resolved multiple tab/spaces indentation issues that previously prevented the add-on from loading and caused TabErrors in both `__init__.py` and `spotify_client.py`.

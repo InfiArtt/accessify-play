@@ -41,8 +41,11 @@ class AccessifyDialog(wx.Dialog):
     """Common base dialog with consistent close/escape handling."""
 
     def __init__(self, *args, **kwargs):
+        parent = args[0] if args else kwargs.get("parent")
         super().__init__(*args, **kwargs)
+        self._parentDialog = parent if isinstance(parent, wx.Dialog) else None
         self.Bind(wx.EVT_CHAR_HOOK, self._on_char_hook)
+        self.Bind(wx.EVT_CLOSE, self._on_dialog_close, self)
 
     def bind_close_button(self, button):
         button.Bind(wx.EVT_BUTTON, self._on_close_button)
@@ -55,6 +58,94 @@ class AccessifyDialog(wx.Dialog):
             self.Close()
         else:
             evt.Skip()
+
+    def _on_dialog_close(self, evt):
+        evt.Skip()
+        wx.CallAfter(self._raise_parent_dialog)
+
+    def _raise_parent_dialog(self):
+        if self._parentDialog and self._parentDialog:
+            try:
+                self._parentDialog.Raise()
+            except Exception:
+                pass
+    def copy_link(self, link):
+        if not link:
+            ui.message(_("Link not available."))
+            return
+        try:
+            if wx.TheClipboard.Open():
+                wx.TheClipboard.SetData(wx.TextDataObject(link))
+                wx.TheClipboard.Close()
+                ui.message(_("Link copied"))
+            else:
+                ui.message(_("Could not open clipboard."))
+        except Exception:
+            ui.message(_("Clipboard error"))
+
+    def _queue_add_track(self, uri, name):
+        if not uri:
+            ui.message(_("Could not get URI for selected item."))
+            return
+        threading.Thread(
+            target=self._queue_add_track_thread, args=(uri, name)
+        ).start()
+
+    def _queue_add_track_thread(self, uri, name):
+        result = self.client.add_to_queue(uri)
+        if isinstance(result, str):
+            wx.CallAfter(ui.message, result)
+        else:
+            wx.CallAfter(ui.message, _("{name} added to queue.").format(name=name))
+
+    def _queue_add_context(self, uri, item_type, name):
+        if not uri:
+            ui.message(_("Unable to add {name} to queue.").format(name=name))
+            return
+        threading.Thread(
+            target=self._queue_add_context_thread,
+            args=(uri, item_type, name),
+        ).start()
+
+    def _queue_add_context_thread(self, uri, item_type, name):
+        if item_type in ("album", "playlist"):
+            result = self.client.play_item(uri)
+            if isinstance(result, str):
+                wx.CallAfter(ui.message, result)
+                return
+            queue_data = self.client.get_full_queue()
+            if isinstance(queue_data, str):
+                wx.CallAfter(ui.message, queue_data)
+                return
+            queue_tracks = [
+                entry["uri"]
+                for entry in queue_data
+                if entry.get("type") == "queue_item"
+            ]
+            if not queue_tracks:
+                wx.CallAfter(ui.message, _("No tracks were queued."))
+                return
+            rebuild = self.client.rebuild_queue(queue_tracks)
+            if isinstance(rebuild, str):
+                wx.CallAfter(ui.message, rebuild)
+                return
+            wx.CallAfter(
+                ui.message,
+                _("Tracks from {name} added to queue.").format(name=name),
+            )
+        elif item_type in ("artist", "show"):
+            result = self.client.play_item(uri)
+            if isinstance(result, str):
+                wx.CallAfter(ui.message, result)
+            else:
+                wx.CallAfter(
+                    ui.message,
+                    _("Started radio for {name}. You can add tracks individually.").format(
+                        name=name
+                    ),
+                )
+        else:
+            wx.CallAfter(ui.message, _("Cannot add this item to the queue."))
 
 
 class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
@@ -207,6 +298,11 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 
 class SearchDialog(AccessifyDialog):
     LOAD_MORE_ID = "spotify:loadmore"
+    MENU_PLAY = wx.NewIdRef()
+    MENU_ADD_QUEUE = wx.NewIdRef()
+    MENU_FOLLOW = wx.NewIdRef()
+    MENU_DISCO = wx.NewIdRef()
+    MENU_COPY_LINK = wx.NewIdRef()
 
     def __init__(self, parent, client):
         super(SearchDialog, self).__init__(parent, title=_("Search Spotify"))
@@ -252,53 +348,46 @@ class SearchDialog(AccessifyDialog):
         # Results list
         self.resultsList = wx.ListBox(self)
         self.resultsList.Bind(wx.EVT_LISTBOX_DCLICK, self.onPlay)
+        self.resultsList.Bind(wx.EVT_CONTEXT_MENU, self.on_results_context_menu)
+        self.resultsList.Bind(wx.EVT_KEY_DOWN, self.on_results_list_key_down)
         mainSizer.Add(self.resultsList, proportion=1, flag=wx.EXPAND | wx.ALL, border=5)
 
-        # Action buttons
-        self.buttonsSizer = wx.StdDialogButtonSizer()
-        self.playButton = wx.Button(self, wx.ID_OK, label=_("&Play"))
-        self.playButton.SetDefault()
-        self.playButton.Bind(wx.EVT_BUTTON, self.onPlay)
-        self.buttonsSizer.AddButton(self.playButton)
-
-        self.addToQueueButton = wx.Button(self, label=_("Add to &Queue"))
-        self.addToQueueButton.Bind(wx.EVT_BUTTON, self.onAddToQueue)
-        self.buttonsSizer.AddButton(self.addToQueueButton)
-
-        self.followArtistButton = wx.Button(self, label=_("Follow Artist"))
-        self.followArtistButton.Bind(wx.EVT_BUTTON, self.on_follow_artist)
-        self.buttonsSizer.AddButton(self.followArtistButton)
-        self.followArtistButton.Hide()  # Hide by default
-
-        self.discographyButton = wx.Button(self, label=_("View Discography"))
-        self.discographyButton.Bind(wx.EVT_BUTTON, self.on_view_discography)
-        self.buttonsSizer.AddButton(self.discographyButton)
-        self.discographyButton.Hide()  # Hide by default
-
+        # Close button
+        buttonsSizer = wx.StdDialogButtonSizer()
         cancelButton = wx.Button(self, wx.ID_CANCEL, label=_("&Close"))
         self.bind_close_button(cancelButton)
-        self.buttonsSizer.AddButton(cancelButton)
-        self.buttonsSizer.Realize()
-        mainSizer.Add(self.buttonsSizer, flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
+        buttonsSizer.AddButton(cancelButton)
+        buttonsSizer.Realize()
+        mainSizer.Add(buttonsSizer, flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
 
         self.SetSizerAndFit(mainSizer)
         self.queryText.SetFocus()
+        self._create_accelerators()
+
+    def _create_accelerators(self):
+        accel_entries = [
+            (wx.ACCEL_ALT, ord("P"), self.MENU_PLAY.GetId()),
+            (wx.ACCEL_ALT, ord("Q"), self.MENU_ADD_QUEUE.GetId()),
+            (wx.ACCEL_ALT, ord("F"), self.MENU_FOLLOW.GetId()),
+            (wx.ACCEL_ALT, ord("D"), self.MENU_DISCO.GetId()),
+            (wx.ACCEL_ALT, ord("C"), self.MENU_COPY_LINK.GetId()),
+        ]
+        self.SetAcceleratorTable(wx.AcceleratorTable(accel_entries))
+        self.Bind(wx.EVT_MENU, lambda evt: self.onPlay(evt), id=self.MENU_PLAY.GetId())
+        self.Bind(
+            wx.EVT_MENU, self.onAddToQueue, id=self.MENU_ADD_QUEUE.GetId()
+        )
+        self.Bind(wx.EVT_MENU, self.on_follow_artist, id=self.MENU_FOLLOW.GetId())
+        self.Bind(wx.EVT_MENU, self.on_view_discography, id=self.MENU_DISCO.GetId())
+        self.Bind(wx.EVT_MENU, self.copy_selected_link, id=self.MENU_COPY_LINK.GetId())
 
     def on_search_type_changed(self, evt):
-        is_artist_search = self.typeBox.GetValue() == _("Artist")
-        self.followArtistButton.Show(is_artist_search)
-        self.discographyButton.Show(is_artist_search)
-        self.buttonsSizer.Layout()
+        pass
 
-    def on_view_discography(self, evt):
-        selection = self.resultsList.GetSelection()
-        if selection == wx.NOT_FOUND:
+    def on_view_discography(self, evt=None):
+        item = self._get_selected_item()
+        if not item:
             return
-
-        if selection >= len(self.results):
-            return
-
-        item = self.results[selection]
         if item["type"] != "artist":
             return
 
@@ -308,15 +397,10 @@ class SearchDialog(AccessifyDialog):
         dialog = ArtistDiscographyDialog(self, self.client, artist_id, artist_name)
         dialog.Show()
 
-    def on_follow_artist(self, evt):
-        selection = self.resultsList.GetSelection()
-        if selection == wx.NOT_FOUND:
+    def on_follow_artist(self, evt=None):
+        item = self._get_selected_item()
+        if not item:
             return
-
-        if selection >= len(self.results):
-            return
-
-        item = self.results[selection]
         if item["type"] != "artist":
             return
 
@@ -386,16 +470,8 @@ class SearchDialog(AccessifyDialog):
         wx.CallAfter(self.update_results_list)
 
     def update_results_list(self):
-        # Don't clear the list, just remove the "Load More" item if it exists
-        last_item_index = self.resultsList.GetCount() - 1
-        if last_item_index >= 0 and self.resultsList.GetString(
-            last_item_index
-        ).startswith("---"):
-            self.resultsList.Delete(last_item_index)
-
-        # Append new results
-        start_index = self.resultsList.GetCount()
-        for item in self.results[start_index:]:
+        self.resultsList.Clear()
+        for item in self.results:
             display = item.get("name", "Unknown")
             if item["type"] == "track":
                 artists = ", ".join([a["name"] for a in item.get("artists", [])])
@@ -410,60 +486,99 @@ class SearchDialog(AccessifyDialog):
 
         if not self.results:
             self.resultsList.Append(_("No results found."))
+            return
 
         if self.can_load_more:
             self.resultsList.Append(f"--- {_('Load More')} ---")
+        if self.results:
+            self.resultsList.SetSelection(0)
+            self.resultsList.SetFocus()
 
     def onPlay(self, evt):
-        selection = self.resultsList.GetSelection()
-        if selection == wx.NOT_FOUND:
+        item = self._get_selected_item()
+        if not item:
             return
-
-        # Check if "Load More" was selected
-        if self.can_load_more and selection == len(self.results):
-            self.onLoadMore()
-            return
-
-        if selection >= len(self.results):
-            return
-
-        item_uri = self.results[selection].get("uri")
+        item_uri = item.get("uri")
         if item_uri:
             ui.message(_("Playing..."))
             threading.Thread(target=self.client.play_item, args=(item_uri,)).start()
-            self.Close()
+        else:
+            ui.message(_("Unable to play the selected item."))
 
     def onAddToQueue(self, evt):
-        selection = self.resultsList.GetSelection()
-        if selection == wx.NOT_FOUND:
+        item = self._get_selected_item()
+        if not item:
             ui.message(_("No item selected."))
             return
-
-        if self.can_load_more and selection == len(self.results):
-            self.onLoadMore()
-            return
-
-        if selection >= len(self.results):
-            return
-
-        item = self.results[selection]
+        item_type = item.get("type")
         item_uri = item.get("uri")
-        item_name = item.get("name", _("Unknown Track"))
+        item_name = item.get("name", _("Unknown Item"))
 
-        if item_uri:
-            ui.message(_("Adding to queue..."))
-            threading.Thread(
-                target=self._add_to_queue_thread, args=(item_uri, item_name)
-            ).start()
-        else:
+        if not item_uri:
             ui.message(_("Could not get URI for selected item."))
+            return
 
-    def _add_to_queue_thread(self, uri, name):
-        result = self.client.add_to_queue(uri)
-        if isinstance(result, str):  # Error message
-            wx.CallAfter(ui.message, result)
+        ui.message(_("Adding to queue..."))
+        if item_type == "track":
+            self._queue_add_track(item_uri, item_name)
         else:
-            wx.CallAfter(ui.message, _("{name} added to queue.").format(name=name))
+            self._queue_add_context(item_uri, item_type, item_name)
+
+    def on_results_context_menu(self, evt):
+        item = self._get_selected_item(activate_load_more=False)
+        if not item:
+            return
+        menu = wx.Menu()
+        if item.get("uri"):
+            menu.Append(self.MENU_PLAY.GetId(), _("Play\tAlt+P"))
+        if item.get("type") == "track":
+            menu.Append(self.MENU_ADD_QUEUE.GetId(), _("Add to Queue\tAlt+Q"))
+        if item.get("type") == "artist":
+            menu.Append(self.MENU_FOLLOW.GetId(), _("Follow Artist\tAlt+F"))
+            menu.Append(self.MENU_DISCO.GetId(), _("View Discography\tAlt+D"))
+        link = self._get_result_link(item)
+        if link:
+            menu.Append(self.MENU_COPY_LINK.GetId(), _("Copy Link\tAlt+C"))
+        if not menu.GetMenuItemCount():
+            menu.Destroy()
+            return
+        self.PopupMenu(menu)
+        menu.Destroy()
+
+    def on_results_list_key_down(self, evt):
+        if evt.GetKeyCode() in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER):
+            self.onPlay(None)
+        else:
+            evt.Skip()
+
+    def copy_selected_link(self, evt=None):
+        item = self._get_selected_item(activate_load_more=False)
+        if not item:
+            ui.message(_("No item selected."))
+            return
+        link = self._get_result_link(item)
+        self.copy_link(link)
+
+    def _get_selected_index(self, activate_load_more=True):
+        selection = self.resultsList.GetSelection()
+        if selection == wx.NOT_FOUND:
+            return None
+        if self.can_load_more and selection == len(self.results):
+            if activate_load_more:
+                self.onLoadMore()
+            return None
+        if selection >= len(self.results):
+            return None
+        return selection
+
+    def _get_selected_item(self, activate_load_more=True):
+        index = self._get_selected_index(activate_load_more=activate_load_more)
+        if index is None:
+            return None
+        return self.results[index]
+
+    def _get_result_link(self, item):
+        return item.get("external_urls", {}).get("spotify")
 
 
 class PlayFromLinkDialog(AccessifyDialog):
@@ -553,6 +668,7 @@ class TrackTreeItemData:  # No longer inherits from wx.TreeItemData
         self.track_uri = track_data["uri"]
         self.name = track_data["name"]
         self.artists = ", ".join([a["name"] for a in track_data.get("artists", [])])
+        self.link = track_data.get("external_urls", {}).get("spotify")
 
 
 class PlaylistTreeItemData:  # No longer inherits from wx.TreeItemData
@@ -562,6 +678,8 @@ class PlaylistTreeItemData:  # No longer inherits from wx.TreeItemData
         self.description = playlist_data.get("description", "")
         self.public = playlist_data.get("public", True)
         self.collaborative = playlist_data.get("collaborative", False)
+        self.uri = playlist_data.get("uri")
+        self.link = playlist_data.get("external_urls", {}).get("spotify")
 
 
 class AddToPlaylistDialog(AccessifyDialog):
@@ -662,15 +780,12 @@ class QueueListDialog(AccessifyDialog):
         mainSizer = wx.BoxSizer(wx.VERTICAL)
 
         self.queueList = wx.ListBox(self)
-        self.queueList.Bind(wx.EVT_LISTBOX_DCLICK, self.onPlay)
+        self.queueList.Bind(wx.EVT_LISTBOX_DCLICK, self.on_queue_item_activate)
+        self.queueList.Bind(wx.EVT_CONTEXT_MENU, self.on_queue_context_menu)
+        self.queueList.Bind(wx.EVT_KEY_DOWN, self.on_queue_key_down)
         mainSizer.Add(self.queueList, proportion=1, flag=wx.EXPAND | wx.ALL, border=5)
 
         buttonsSizer = wx.StdDialogButtonSizer()
-        self.playButton = wx.Button(self, wx.ID_OK, label=_("Play Selected"))
-        self.playButton.SetDefault()
-        self.playButton.Bind(wx.EVT_BUTTON, self.onPlay)
-        buttonsSizer.AddButton(self.playButton)
-
         cancelButton = wx.Button(self, wx.ID_CANCEL, label=_("Close"))
         self.bind_close_button(cancelButton)
         buttonsSizer.AddButton(cancelButton)
@@ -679,12 +794,29 @@ class QueueListDialog(AccessifyDialog):
 
         self.SetSizerAndFit(mainSizer)
         self.update_queue_list(queue_data)
+        self._init_shortcuts()
+
+    def _init_shortcuts(self):
+        self._queuePlayId = wx.NewIdRef()
+        self._queueCopyId = wx.NewIdRef()
+        self._queueRemoveId = wx.NewIdRef()
+        accel = wx.AcceleratorTable(
+            [
+                (wx.ACCEL_ALT, ord("P"), self._queuePlayId.GetId()),
+                (wx.ACCEL_ALT, ord("C"), self._queueCopyId.GetId()),
+                (wx.ACCEL_ALT, ord("R"), self._queueRemoveId.GetId()),
+            ]
+        )
+        self.SetAcceleratorTable(accel)
+        self.Bind(wx.EVT_MENU, lambda evt: self.play_selected_queue_item(), id=self._queuePlayId.GetId())
+        self.Bind(wx.EVT_MENU, lambda evt: self.copy_selected_queue_link(), id=self._queueCopyId.GetId())
+        self.Bind(wx.EVT_MENU, lambda evt: self.remove_selected_queue_item(), id=self._queueRemoveId.GetId())
 
     def update_queue_list(self, queue_data):
         self.queueList.Clear()
         self.queue_items = []
 
-        if isinstance(queue_data, str):  # Error message
+        if isinstance(queue_data, str):
             self.queueList.Append(queue_data)
             return
 
@@ -692,38 +824,128 @@ class QueueListDialog(AccessifyDialog):
             self.queueList.Append(_("Queue is empty."))
             return
 
-        for item in queue_data:
-            display_text = ""
+        self.queue_items = queue_data
+        for item in self.queue_items:
             if item["type"] == "currently_playing":
                 display_text = _("Playing: {name} by {artists}").format(
                     name=item["name"], artists=item["artists"]
                 )
-            else:  # queue_item
+            else:
                 display_text = _("Queue: {name} by {artists}").format(
                     name=item["name"], artists=item["artists"]
                 )
             self.queueList.Append(display_text)
-            self.queue_items.append(item)
 
         if self.queue_items:
-            self.queueList.SetSelection(0)  # Select first item by default
+            self.queueList.SetSelection(0)
 
-    def onPlay(self, evt):
+    def _get_queue_selection(self):
         selection = self.queueList.GetSelection()
         if selection == wx.NOT_FOUND or not self.queue_items:
+            return None
+        if selection >= len(self.queue_items):
+            return None
+        return self.queue_items[selection]
+
+    def on_queue_item_activate(self, evt):
+        self.play_selected_queue_item()
+
+    def on_queue_key_down(self, evt):
+        if evt.GetKeyCode() in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER):
+            self.play_selected_queue_item()
+        else:
+            evt.Skip()
+
+    def on_queue_context_menu(self, evt):
+        item = self._get_queue_selection()
+        if not item:
+            return
+        menu = wx.Menu()
+        self._append_queue_menu_item(menu, _("Play"), self.play_selected_queue_item)
+        self._append_queue_menu_item(menu, _("Copy Link"), self.copy_selected_queue_link)
+        self._append_queue_menu_item(
+            menu, _("Remove from Queue"), self.remove_selected_queue_item
+        )
+        self.PopupMenu(menu)
+        menu.Destroy()
+
+    def _append_queue_menu_item(self, menu, label, handler):
+        menu_item = menu.Append(wx.ID_ANY, label)
+        menu.Bind(wx.EVT_MENU, handler, menu_item)
+        return menu_item
+
+    def play_selected_queue_item(self, evt=None):
+        item = self._get_queue_selection()
+        if not item:
+            return
+        self._play_queue_uri(item.get("uri"))
+
+    def copy_selected_queue_link(self, evt=None):
+        item = self._get_queue_selection()
+        if not item:
+            return
+        self.copy_link(item.get("link"))
+
+    def remove_selected_queue_item(self, evt=None):
+        item = self._get_queue_selection()
+        if not item:
+            return
+        threading.Thread(target=self._remove_queue_item_thread, args=(item,)).start()
+
+    def _remove_queue_item_thread(self, item):
+        if item["type"] == "currently_playing":
+            result = self.client._execute(self.client.client.next_track)
+            if isinstance(result, str):
+                wx.CallAfter(ui.message, result)
+            else:
+                wx.CallAfter(ui.message, _("Skipped current track."))
+                wx.CallAfter(self.reload_queue)
             return
 
-        selected_item = self.queue_items[selection]
-        item_uri = selected_item.get("uri")
+        queue_data = self.client.get_full_queue()
+        if isinstance(queue_data, str):
+            wx.CallAfter(ui.message, queue_data)
+            return
+        playback = self.client._execute(self.client.client.current_playback)
+        if isinstance(playback, str):
+            wx.CallAfter(ui.message, playback)
+            return
 
-        if item_uri:
-            ui.message(_("Playing selected item..."))
-            threading.Thread(target=self.client.play_item, args=(item_uri,)).start()
-            self.Close()
+        current_uri = playback.get("item", {}).get("uri")
+        progress_ms = playback.get("progress_ms", 0)
+        queue_uris = []
+        for entry in queue_data:
+            if entry["type"] != "queue_item":
+                continue
+            if entry["uri"] == item["uri"]:
+                continue
+            queue_uris.append(entry["uri"])
+
+        if not current_uri:
+            wx.CallAfter(ui.message, _("Unable to determine current track."))
+            return
+
+        uris = [current_uri] + queue_uris
+        result = self.client.rebuild_queue(uris, progress_ms)
+        if isinstance(result, str):
+            wx.CallAfter(ui.message, result)
         else:
+            wx.CallAfter(ui.message, _("Queue updated."))
+            wx.CallAfter(self.reload_queue)
+
+    def reload_queue(self):
+        threading.Thread(target=self._reload_queue_thread).start()
+
+    def _reload_queue_thread(self):
+        queue_data = self.client.get_full_queue()
+        wx.CallAfter(self.update_queue_list, queue_data)
+
+    def _play_queue_uri(self, uri):
+        if not uri:
             ui.message(_("Could not get URI for selected item."))
-
-
+            return
+        ui.message(_("Playing selected item..."))
+        threading.Thread(target=self.client.play_item, args=(uri,)).start()
 class PodcastEpisodesDialog(AccessifyDialog):
     def __init__(self, parent, client, show_id, show_name):
         # Translators: Title for the Podcast Episodes dialog. {show_name} is the name of the podcast.
@@ -912,6 +1134,7 @@ class RelatedArtistsDialog(AccessifyDialog):
         buttons_sizer.Add(follow_button, 0, wx.ALL, 5)
 
         close_button = wx.Button(panel, id=wx.ID_CANCEL, label=_("Close"))
+        self.bind_close_button(close_button)
         buttons_sizer.Add(close_button, 0, wx.ALL, 5)
 
         sizer.Add(buttons_sizer, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
@@ -1034,6 +1257,7 @@ class ManagementDialog(AccessifyDialog):
         self.recently_played_panel = wx.Panel(self.notebook)
         self.notebook.AddPage(self.recently_played_panel, _("Recently Played"))
         self.init_recently_played_tab(self.recently_played_panel)
+        self._init_shortcuts()
 
         # Add a close button
         buttons_sizer = wx.StdDialogButtonSizer()
@@ -1058,25 +1282,12 @@ class ManagementDialog(AccessifyDialog):
         )
         sizer.Add(self.playlist_tree, 1, wx.EXPAND | wx.ALL, 5)
         self.playlist_tree.Bind(wx.EVT_TREE_ITEM_EXPANDING, self.on_tree_item_expanding)
+        self.playlist_tree.Bind(wx.EVT_CONTEXT_MENU, self.on_playlist_tree_context_menu)
+        self.playlist_tree.Bind(wx.EVT_TREE_ITEM_ACTIVATED, self.on_playlist_tree_activate)
+        self.playlist_tree.Bind(wx.EVT_KEY_DOWN, self.on_playlist_tree_key_down)
 
         # Buttons for actions
         buttons_sizer = wx.BoxSizer(wx.HORIZONTAL)
-
-        play_button = wx.Button(parent_panel, label=_("Play"))
-        play_button.Bind(wx.EVT_BUTTON, self.on_play_selected)
-        buttons_sizer.Add(play_button, 0, wx.ALL, 5)
-
-        update_button = wx.Button(parent_panel, label=_("Update Details"))
-        update_button.Bind(wx.EVT_BUTTON, self.on_update_playlist)
-        buttons_sizer.Add(update_button, 0, wx.ALL, 5)
-
-        delete_button = wx.Button(parent_panel, label=_("Delete"))
-        delete_button.Bind(wx.EVT_BUTTON, self.on_delete_playlist)
-        buttons_sizer.Add(delete_button, 0, wx.ALL, 5)
-
-        remove_track_button = wx.Button(parent_panel, label=_("Remove Track"))
-        remove_track_button.Bind(wx.EVT_BUTTON, self.on_remove_track_from_playlist)
-        buttons_sizer.Add(remove_track_button, 0, wx.ALL, 5)
 
         refresh_button = wx.Button(parent_panel, label=_("Refresh Playlists"))
         refresh_button.Bind(wx.EVT_BUTTON, self.on_refresh_playlists)
@@ -1160,6 +1371,98 @@ class ManagementDialog(AccessifyDialog):
             self.playlist_tree.SetItemHasChildren(item_id, True)
 
         ui.message(_("Playlists loaded."))
+
+    def _append_menu_item(self, menu, label, handler):
+        item = menu.Append(wx.ID_ANY, label)
+        menu.Bind(wx.EVT_MENU, handler, item)
+        return item
+
+    def _play_uri(self, uri):
+        if not uri:
+            ui.message(_("Unable to play selection."))
+            return
+        ui.message(_("Playing..."))
+        threading.Thread(target=self.client.play_item, args=(uri,)).start()
+
+    def on_playlist_tree_context_menu(self, evt):
+        item = self._get_tree_item_from_event(self.playlist_tree, evt)
+        if not item:
+            return
+        data = self.playlist_tree.GetItemData(item)
+        menu = wx.Menu()
+        if isinstance(data, (PlaylistTreeItemData, TrackTreeItemData)):
+            self._append_menu_item(menu, _("Play"), self.play_selected_playlist_item)
+            self._append_menu_item(menu, _("Add to Queue"), self.add_selected_playlist_item_to_queue)
+        if isinstance(data, PlaylistTreeItemData):
+            self._append_menu_item(menu, _("Update Details"), self.on_update_playlist)
+            self._append_menu_item(menu, _("Delete"), self.on_delete_playlist)
+        if isinstance(data, TrackTreeItemData):
+            self._append_menu_item(
+                menu, _("Remove Track"), self.on_remove_track_from_playlist
+            )
+        if isinstance(data, (PlaylistTreeItemData, TrackTreeItemData)):
+            self._append_menu_item(menu, _("Copy Link"), self.copy_selected_playlist_link)
+        if not menu.GetMenuItemCount():
+            menu.Destroy()
+            return
+        self.PopupMenu(menu)
+        menu.Destroy()
+
+    def _get_tree_item_from_event(self, control, evt):
+        item = None
+        if evt:
+            pos = control.ScreenToClient(evt.GetPosition())
+            item, _ = control.HitTest(pos)
+        if not item or not item.IsOk():
+            item = control.GetSelection()
+        if item and item.IsOk():
+            control.SelectItem(item)
+            return item
+        return None
+
+    def on_playlist_tree_activate(self, evt):
+        self.play_selected_playlist_item()
+
+    def on_playlist_tree_key_down(self, evt):
+        if evt.GetKeyCode() in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER):
+            self.play_selected_playlist_item()
+        else:
+            evt.Skip()
+
+    def play_selected_playlist_item(self, evt=None):
+        item = self.playlist_tree.GetSelection()
+        if not item or not item.IsOk():
+            return
+        data = self.playlist_tree.GetItemData(item)
+        uri = None
+        if isinstance(data, TrackTreeItemData):
+            uri = data.track_uri
+        elif isinstance(data, PlaylistTreeItemData):
+            uri = data.uri or f"spotify:playlist:{data.playlist_id}"
+        self._play_uri(uri)
+
+    def add_selected_playlist_item_to_queue(self, evt=None):
+        item = self.playlist_tree.GetSelection()
+        if not item or not item.IsOk():
+            return
+        data = self.playlist_tree.GetItemData(item)
+        if isinstance(data, TrackTreeItemData):
+            self._queue_add_track(data.track_uri, data.name)
+        elif isinstance(data, PlaylistTreeItemData):
+            context_uri = data.uri or f"spotify:playlist:{data.playlist_id}"
+            self._queue_add_context(context_uri, "playlist", data.name)
+
+    def copy_selected_playlist_link(self, evt=None):
+        item = self.playlist_tree.GetSelection()
+        if not item or not item.IsOk():
+            return
+        data = self.playlist_tree.GetItemData(item)
+        link = None
+        if isinstance(data, TrackTreeItemData):
+            link = data.link
+        elif isinstance(data, PlaylistTreeItemData):
+            link = data.link
+        self.copy_link(link)
 
     def on_refresh_playlists(self, evt):
         ui.message(_("Refreshing playlists..."))
@@ -1359,16 +1662,10 @@ class ManagementDialog(AccessifyDialog):
 
         self.saved_tracks_list = wx.ListBox(parent_panel)
         sizer.Add(self.saved_tracks_list, 1, wx.EXPAND | wx.ALL, 5)
+        self.saved_tracks_list.Bind(wx.EVT_CONTEXT_MENU, self.on_saved_tracks_context_menu)
+        self.saved_tracks_list.Bind(wx.EVT_KEY_DOWN, self.on_saved_tracks_key_down)
 
         buttons_sizer = wx.BoxSizer(wx.HORIZONTAL)
-
-        play_button = wx.Button(parent_panel, label=_("Play"))
-        play_button.Bind(wx.EVT_BUTTON, self.on_play_selected)
-        buttons_sizer.Add(play_button, 0, wx.ALL, 5)
-
-        remove_button = wx.Button(parent_panel, label=_("Remove from Library"))
-        remove_button.Bind(wx.EVT_BUTTON, self.on_remove_from_library)
-        buttons_sizer.Add(remove_button, 0, wx.ALL, 5)
 
         refresh_button = wx.Button(parent_panel, label=_("Refresh"))
         refresh_button.Bind(wx.EVT_BUTTON, self.on_refresh_saved_tracks)
@@ -1383,20 +1680,10 @@ class ManagementDialog(AccessifyDialog):
 
         self.followed_artists_list = wx.ListBox(parent_panel)
         sizer.Add(self.followed_artists_list, 1, wx.EXPAND | wx.ALL, 5)
+        self.followed_artists_list.Bind(wx.EVT_CONTEXT_MENU, self.on_followed_artists_context_menu)
+        self.followed_artists_list.Bind(wx.EVT_KEY_DOWN, self.on_followed_artists_key_down)
 
         buttons_sizer = wx.BoxSizer(wx.HORIZONTAL)
-
-        play_button = wx.Button(parent_panel, label=_("Play"))
-        play_button.Bind(wx.EVT_BUTTON, self.on_play_selected)
-        buttons_sizer.Add(play_button, 0, wx.ALL, 5)
-
-        unfollow_button = wx.Button(parent_panel, label=_("Unfollow"))
-        unfollow_button.Bind(wx.EVT_BUTTON, self.on_unfollow_artist)
-        buttons_sizer.Add(unfollow_button, 0, wx.ALL, 5)
-
-        discography_button = wx.Button(parent_panel, label=_("View Discography"))
-        discography_button.Bind(wx.EVT_BUTTON, self.on_view_discography)
-        buttons_sizer.Add(discography_button, 0, wx.ALL, 5)
 
         refresh_button = wx.Button(parent_panel, label=_("Refresh"))
         refresh_button.Bind(wx.EVT_BUTTON, self.on_refresh_followed_artists)
@@ -1493,6 +1780,58 @@ class ManagementDialog(AccessifyDialog):
             display = f"{track['name']} - {', '.join([a['name'] for a in track['artists']])}"
             self.saved_tracks_list.Append(display)
 
+    def _get_saved_track_selection(self):
+        index = self.saved_tracks_list.GetSelection()
+        if index == wx.NOT_FOUND:
+            return None
+        if not self.saved_tracks or index >= len(self.saved_tracks):
+            return None
+        return self.saved_tracks[index]["track"]
+
+    def on_saved_tracks_context_menu(self, evt):
+        track = self._get_saved_track_selection()
+        if not track:
+            return
+        menu = wx.Menu()
+        self._append_menu_item(menu, _("Play"), self.play_selected_saved_track)
+        self._append_menu_item(menu, _("Add to Queue"), self.add_selected_saved_track_to_queue)
+        self._append_menu_item(
+            menu, _("Remove from Library"), self.on_remove_from_library
+        )
+        self._append_menu_item(menu, _("Copy Link"), self.copy_selected_saved_track_link)
+        self.PopupMenu(menu)
+        menu.Destroy()
+
+    def play_selected_saved_track(self, evt=None):
+        track = self._get_saved_track_selection()
+        if not track:
+            return
+        self._play_uri(track.get("uri"))
+
+    def add_selected_saved_track_to_queue(self, evt=None):
+        track = self._get_saved_track_selection()
+        if not track:
+            return
+        uri = track.get("uri")
+        name = track.get("name")
+        if not uri:
+            ui.message(_("Could not get URI for selected item."))
+            return
+        self._queue_add_track(uri, name)
+
+    def copy_selected_saved_track_link(self, evt=None):
+        track = self._get_saved_track_selection()
+        if not track:
+            return
+        link = track.get("external_urls", {}).get("spotify")
+        self.copy_link(link)
+
+    def on_saved_tracks_key_down(self, evt):
+        if evt.GetKeyCode() in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER):
+            self.play_selected_saved_track()
+        else:
+            evt.Skip()
+
     def on_refresh_saved_tracks(self, evt):
         self.load_saved_tracks()
 
@@ -1557,13 +1896,57 @@ class ManagementDialog(AccessifyDialog):
         for artist in self.followed_artists:
             self.followed_artists_list.Append(artist["name"])
 
+    def _get_followed_artist_selection(self):
+        selection = self.followed_artists_list.GetSelection()
+        if selection == wx.NOT_FOUND:
+            return None
+        if not self.followed_artists or selection >= len(self.followed_artists):
+            return None
+        return self.followed_artists[selection]
+
+    def on_followed_artists_context_menu(self, evt):
+        artist = self._get_followed_artist_selection()
+        if not artist:
+            return
+        menu = wx.Menu()
+        self._append_menu_item(menu, _("Play"), self.play_selected_followed_artist)
+        self._append_menu_item(menu, _("Add to Queue"), self.add_selected_followed_artist_to_queue)
+        self._append_menu_item(menu, _("View Discography"), self.on_view_discography)
+        self._append_menu_item(menu, _("Unfollow"), self.on_unfollow_artist)
+        self._append_menu_item(menu, _("Copy Link"), self.copy_selected_followed_artist_link)
+        self.PopupMenu(menu)
+        menu.Destroy()
+
+    def add_selected_followed_artist_to_queue(self, evt=None):
+        artist = self._get_followed_artist_selection()
+        if not artist:
+            return
+        self._queue_add_context(artist.get("uri"), "artist", artist.get("name"))
+
+    def play_selected_followed_artist(self, evt=None):
+        artist = self._get_followed_artist_selection()
+        if not artist:
+            return
+        self._play_uri(artist.get("uri"))
+
+    def copy_selected_followed_artist_link(self, evt=None):
+        artist = self._get_followed_artist_selection()
+        if not artist:
+            return
+        link = artist.get("external_urls", {}).get("spotify")
+        self.copy_link(link)
+
+    def on_followed_artists_key_down(self, evt):
+        if evt.GetKeyCode() in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER):
+            self.play_selected_followed_artist()
+        else:
+            evt.Skip()
+
     def on_refresh_followed_artists(self, evt):
         self.load_followed_artists()
 
     def on_top_item_type_changed(self, evt):
-        is_artists = self.top_item_type_box.GetValue() == _("Top Artists")
-        self.discography_button_top.Show(is_artists)
-        self.Layout()
+        pass
 
     def init_top_items_tab(self, parent_panel):
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -1602,19 +1985,11 @@ class ManagementDialog(AccessifyDialog):
         # Results list
         self.top_items_list = wx.ListBox(parent_panel)
         sizer.Add(self.top_items_list, 1, wx.EXPAND | wx.ALL, 5)
+        self.top_items_list.Bind(wx.EVT_CONTEXT_MENU, self.on_top_items_context_menu)
+        self.top_items_list.Bind(wx.EVT_KEY_DOWN, self.on_top_items_key_down)
 
         # Action buttons
         buttons_sizer = wx.BoxSizer(wx.HORIZONTAL)
-
-        play_button = wx.Button(parent_panel, label=_("Play"))
-        play_button.Bind(wx.EVT_BUTTON, self.on_play_selected)
-        buttons_sizer.Add(play_button, 0, wx.ALL, 5)
-
-        self.discography_button_top = wx.Button(
-            parent_panel, label=_("View Discography")
-        )
-        self.discography_button_top.Bind(wx.EVT_BUTTON, self.on_view_discography)
-        buttons_sizer.Add(self.discography_button_top, 0, wx.ALL, 5)
 
         refresh_button = wx.Button(parent_panel, label=_("Refresh"))
         refresh_button.Bind(wx.EVT_BUTTON, self.load_top_items)
@@ -1664,22 +2039,77 @@ class ManagementDialog(AccessifyDialog):
                 display = item["name"]
             self.top_items_list.Append(display)
 
+    def _get_top_item_selection(self):
+        if not self.top_items or not self.top_items.get("items"):
+            return None
+        selection = self.top_items_list.GetSelection()
+        if selection == wx.NOT_FOUND:
+            return None
+        items = self.top_items.get("items", [])
+        if selection >= len(items):
+            return None
+        return items[selection]
+
+    def on_top_items_context_menu(self, evt):
+        item = self._get_top_item_selection()
+        if not item:
+            return
+        menu = wx.Menu()
+        if item.get("uri"):
+            self._append_menu_item(menu, _("Play"), self.play_selected_top_item)
+            self._append_menu_item(menu, _("Add to Queue"), self.add_selected_top_item_to_queue)
+        if item.get("type") == "artist":
+            self._append_menu_item(menu, _("View Discography"), self.on_view_discography)
+        link = item.get("external_urls", {}).get("spotify")
+        if link:
+            self._append_menu_item(menu, _("Copy Link"), self.copy_selected_top_item_link)
+        if not menu.GetMenuItemCount():
+            menu.Destroy()
+            return
+        self.PopupMenu(menu)
+        menu.Destroy()
+
+    def add_selected_top_item_to_queue(self, evt=None):
+        item = self._get_top_item_selection()
+        if not item:
+            return
+        item_type = item.get("type")
+        uri = item.get("uri")
+        name = item.get("name")
+        if item_type == "track":
+            self._queue_add_track(uri, name)
+        else:
+            self._queue_add_context(uri, item_type, name)
+
+    def play_selected_top_item(self, evt=None):
+        item = self._get_top_item_selection()
+        if not item:
+            return
+        self._play_uri(item.get("uri"))
+
+    def copy_selected_top_item_link(self, evt=None):
+        item = self._get_top_item_selection()
+        if not item:
+            return
+        link = item.get("external_urls", {}).get("spotify")
+        self.copy_link(link)
+
+    def on_top_items_key_down(self, evt):
+        if evt.GetKeyCode() in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER):
+            self.play_selected_top_item()
+        else:
+            evt.Skip()
+
     def init_saved_shows_tab(self, parent_panel):
         sizer = wx.BoxSizer(wx.VERTICAL)
         parent_panel.SetSizer(sizer)
 
         self.saved_shows_list = wx.ListBox(parent_panel)
         sizer.Add(self.saved_shows_list, 1, wx.EXPAND | wx.ALL, 5)
+        self.saved_shows_list.Bind(wx.EVT_CONTEXT_MENU, self.on_saved_shows_context_menu)
+        self.saved_shows_list.Bind(wx.EVT_KEY_DOWN, self.on_saved_shows_key_down)
 
         buttons_sizer = wx.BoxSizer(wx.HORIZONTAL)
-
-        play_button = wx.Button(parent_panel, label=_("Play"))
-        play_button.Bind(wx.EVT_BUTTON, self.on_play_selected)
-        buttons_sizer.Add(play_button, 0, wx.ALL, 5)
-
-        view_episodes_button = wx.Button(parent_panel, label=_("View Episodes"))
-        view_episodes_button.Bind(wx.EVT_BUTTON, self.on_view_episodes)
-        buttons_sizer.Add(view_episodes_button, 0, wx.ALL, 5)
 
         refresh_button = wx.Button(parent_panel, label=_("Refresh"))
         refresh_button.Bind(wx.EVT_BUTTON, self.load_saved_shows)
@@ -1728,18 +2158,61 @@ class ManagementDialog(AccessifyDialog):
             display = f"{show['name']} - {show['publisher']}"
             self.saved_shows_list.Append(display)
 
+    def _get_saved_show_selection(self):
+        selection = self.saved_shows_list.GetSelection()
+        if selection == wx.NOT_FOUND:
+            return None
+        if not self.saved_shows or selection >= len(self.saved_shows):
+            return None
+        return self.saved_shows[selection]["show"]
+
+    def on_saved_shows_context_menu(self, evt):
+        show = self._get_saved_show_selection()
+        if not show:
+            return
+        menu = wx.Menu()
+        self._append_menu_item(menu, _("Play"), self.play_selected_saved_show)
+        self._append_menu_item(menu, _("Add to Queue"), self.add_selected_saved_show_to_queue)
+        self._append_menu_item(menu, _("View Episodes"), self.on_view_episodes)
+        self._append_menu_item(menu, _("Copy Link"), self.copy_selected_saved_show_link)
+        self.PopupMenu(menu)
+        menu.Destroy()
+
+    def add_selected_saved_show_to_queue(self, evt=None):
+        show = self._get_saved_show_selection()
+        if not show:
+            return
+        self._queue_add_context(show.get("uri"), "show", show.get("name"))
+
+    def play_selected_saved_show(self, evt=None):
+        show = self._get_saved_show_selection()
+        if not show:
+            return
+        self._play_uri(show.get("uri"))
+
+    def copy_selected_saved_show_link(self, evt=None):
+        show = self._get_saved_show_selection()
+        if not show:
+            return
+        link = show.get("external_urls", {}).get("spotify")
+        self.copy_link(link)
+
+    def on_saved_shows_key_down(self, evt):
+        if evt.GetKeyCode() in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER):
+            self.play_selected_saved_show()
+        else:
+            evt.Skip()
+
     def init_new_releases_tab(self, parent_panel):
         sizer = wx.BoxSizer(wx.VERTICAL)
         parent_panel.SetSizer(sizer)
 
         self.new_releases_list = wx.ListBox(parent_panel)
         sizer.Add(self.new_releases_list, 1, wx.EXPAND | wx.ALL, 5)
+        self.new_releases_list.Bind(wx.EVT_CONTEXT_MENU, self.on_new_releases_context_menu)
+        self.new_releases_list.Bind(wx.EVT_KEY_DOWN, self.on_new_releases_key_down)
 
         buttons_sizer = wx.BoxSizer(wx.HORIZONTAL)
-
-        play_button = wx.Button(parent_panel, label=_("Play"))
-        play_button.Bind(wx.EVT_BUTTON, self.on_play_selected)
-        buttons_sizer.Add(play_button, 0, wx.ALL, 5)
 
         refresh_button = wx.Button(parent_panel, label=_("Refresh"))
         refresh_button.Bind(wx.EVT_BUTTON, self.load_new_releases)
@@ -1776,18 +2249,60 @@ class ManagementDialog(AccessifyDialog):
             display = f"{album['name']} - {', '.join([a['name'] for a in album['artists']])}"
             self.new_releases_list.Append(display)
 
+    def _get_new_release_selection(self):
+        selection = self.new_releases_list.GetSelection()
+        if selection == wx.NOT_FOUND:
+            return None
+        if not hasattr(self, "new_releases") or selection >= len(self.new_releases):
+            return None
+        return self.new_releases[selection]
+
+    def on_new_releases_context_menu(self, evt):
+        album = self._get_new_release_selection()
+        if not album:
+            return
+        menu = wx.Menu()
+        self._append_menu_item(menu, _("Play"), self.play_selected_new_release)
+        self._append_menu_item(menu, _("Add to Queue"), self.add_selected_new_release_to_queue)
+        self._append_menu_item(menu, _("Copy Link"), self.copy_selected_new_release_link)
+        self.PopupMenu(menu)
+        menu.Destroy()
+
+    def play_selected_new_release(self, evt=None):
+        album = self._get_new_release_selection()
+        if not album:
+            return
+        self._play_uri(album.get("uri"))
+
+    def copy_selected_new_release_link(self, evt=None):
+        album = self._get_new_release_selection()
+        if not album:
+            return
+        link = album.get("external_urls", {}).get("spotify")
+        self.copy_link(link)
+
+    def add_selected_new_release_to_queue(self, evt=None):
+        album = self._get_new_release_selection()
+        if not album:
+            return
+        self._queue_add_context(album.get("uri"), "album", album.get("name"))
+
+    def on_new_releases_key_down(self, evt):
+        if evt.GetKeyCode() in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER):
+            self.play_selected_new_release()
+        else:
+            evt.Skip()
+
     def init_recently_played_tab(self, parent_panel):
         sizer = wx.BoxSizer(wx.VERTICAL)
         parent_panel.SetSizer(sizer)
 
         self.recently_played_list = wx.ListBox(parent_panel)
         sizer.Add(self.recently_played_list, 1, wx.EXPAND | wx.ALL, 5)
+        self.recently_played_list.Bind(wx.EVT_CONTEXT_MENU, self.on_recently_played_context_menu)
+        self.recently_played_list.Bind(wx.EVT_KEY_DOWN, self.on_recently_played_key_down)
 
         buttons_sizer = wx.BoxSizer(wx.HORIZONTAL)
-
-        play_button = wx.Button(parent_panel, label=_("Play"))
-        play_button.Bind(wx.EVT_BUTTON, self.on_play_selected)
-        buttons_sizer.Add(play_button, 0, wx.ALL, 5)
 
         refresh_button = wx.Button(parent_panel, label=_("Refresh"))
         refresh_button.Bind(wx.EVT_BUTTON, self.load_recently_played)
@@ -1796,6 +2311,81 @@ class ManagementDialog(AccessifyDialog):
         sizer.Add(buttons_sizer, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
 
         self.load_recently_played(initial_data=self.preloaded_data.get("recently_played"))
+        self._init_shortcuts()
+
+    def _init_shortcuts(self):
+        self._shortcutPlayId = wx.NewIdRef()
+        self._shortcutAddId = wx.NewIdRef()
+        self._shortcutCopyId = wx.NewIdRef()
+        accel = wx.AcceleratorTable(
+            [
+                (wx.ACCEL_ALT, ord("P"), self._shortcutPlayId.GetId()),
+                (wx.ACCEL_ALT, ord("Q"), self._shortcutAddId.GetId()),
+                (wx.ACCEL_ALT, ord("C"), self._shortcutCopyId.GetId()),
+            ]
+        )
+        self.SetAcceleratorTable(accel)
+        self.Bind(wx.EVT_MENU, self._handle_play_shortcut, id=self._shortcutPlayId.GetId())
+        self.Bind(wx.EVT_MENU, self._handle_add_shortcut, id=self._shortcutAddId.GetId())
+        self.Bind(wx.EVT_MENU, self._handle_copy_shortcut, id=self._shortcutCopyId.GetId())
+
+    def _handle_play_shortcut(self, evt):
+        handler = self._get_action_handler("play")
+        if handler:
+            handler()
+
+    def _handle_add_shortcut(self, evt):
+        handler = self._get_action_handler("add")
+        if handler:
+            handler()
+        else:
+            ui.message(_("Add to queue is not available here."))
+
+    def _handle_copy_shortcut(self, evt):
+        handler = self._get_action_handler("copy")
+        if handler:
+            handler()
+
+    def _get_action_handler(self, action):
+        focus = self.FindFocus()
+        mapping = {
+            self.playlist_tree: {
+                "play": self.play_selected_playlist_item,
+                "add": self.add_selected_playlist_item_to_queue,
+                "copy": self.copy_selected_playlist_link,
+            },
+            self.saved_tracks_list: {
+                "play": self.play_selected_saved_track,
+                "add": self.add_selected_saved_track_to_queue,
+                "copy": self.copy_selected_saved_track_link,
+            },
+            self.followed_artists_list: {
+                "play": self.play_selected_followed_artist,
+                "add": self.add_selected_followed_artist_to_queue,
+                "copy": self.copy_selected_followed_artist_link,
+            },
+            self.top_items_list: {
+                "play": self.play_selected_top_item,
+                "add": self.add_selected_top_item_to_queue,
+                "copy": self.copy_selected_top_item_link,
+            },
+            self.saved_shows_list: {
+                "play": self.play_selected_saved_show,
+                "add": self.add_selected_saved_show_to_queue,
+                "copy": self.copy_selected_saved_show_link,
+            },
+            self.new_releases_list: {
+                "play": self.play_selected_new_release,
+                "add": self.add_selected_new_release_to_queue,
+                "copy": self.copy_selected_new_release_link,
+            },
+            self.recently_played_list: {
+                "play": self.play_selected_recently_played,
+                "copy": self.copy_selected_recently_played_link,
+            },
+        }
+        return mapping.get(focus, {}).get(action)
+        self._init_shortcuts()
 
     def load_recently_played(self, evt=None, initial_data=None):
         self.recently_played_list.Clear()
@@ -1825,6 +2415,43 @@ class ManagementDialog(AccessifyDialog):
             track = item["track"]
             display = f"{track['name']} - {', '.join([a['name'] for a in track['artists']])}"
             self.recently_played_list.Append(display)
+
+    def _get_recently_played_selection(self):
+        selection = self.recently_played_list.GetSelection()
+        if selection == wx.NOT_FOUND:
+            return None
+        if not self.recently_played or selection >= len(self.recently_played):
+            return None
+        return self.recently_played[selection]["track"]
+
+    def on_recently_played_context_menu(self, evt):
+        track = self._get_recently_played_selection()
+        if not track:
+            return
+        menu = wx.Menu()
+        self._append_menu_item(menu, _("Play"), self.play_selected_recently_played)
+        self._append_menu_item(menu, _("Copy Link"), self.copy_selected_recently_played_link)
+        self.PopupMenu(menu)
+        menu.Destroy()
+
+    def play_selected_recently_played(self, evt=None):
+        track = self._get_recently_played_selection()
+        if not track:
+            return
+        self._play_uri(track.get("uri"))
+
+    def copy_selected_recently_played_link(self, evt=None):
+        track = self._get_recently_played_selection()
+        if not track:
+            return
+        link = track.get("external_urls", {}).get("spotify")
+        self.copy_link(link)
+
+    def on_recently_played_key_down(self, evt):
+        if evt.GetKeyCode() in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER):
+            self.play_selected_recently_played()
+        else:
+            evt.Skip()
 
     def on_play_selected(self, evt):
         current_tab_index = self.notebook.GetSelection()
