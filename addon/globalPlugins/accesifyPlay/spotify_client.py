@@ -610,3 +610,7 @@ class SpotifyClient:
         return self._execute_web_api(
             self.client.show_episodes, show_id=show_id, limit=50
         )
+
+    def get_current_user_profile(self):
+        """Returns information about the current Spotify user."""
+        return self._execute_web_api(self.client.current_user)

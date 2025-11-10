@@ -37,6 +37,26 @@ confspec = {
 config.conf.spec["spotify"] = confspec
 
 
+class AccessifyDialog(wx.Dialog):
+    """Common base dialog with consistent close/escape handling."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.Bind(wx.EVT_CHAR_HOOK, self._on_char_hook)
+
+    def bind_close_button(self, button):
+        button.Bind(wx.EVT_BUTTON, self._on_close_button)
+
+    def _on_close_button(self, evt):
+        self.Close()
+
+    def _on_char_hook(self, evt):
+        if evt.GetKeyCode() == wx.WXK_ESCAPE:
+            self.Close()
+        else:
+            evt.Skip()
+
+
 class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
     title = _("Accessify Play")
 
@@ -185,7 +205,7 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
             messageBox(error_message, _("Validation Failed"), wx.OK | wx.ICON_ERROR)
 
 
-class SearchDialog(wx.Dialog):
+class SearchDialog(AccessifyDialog):
     LOAD_MORE_ID = "spotify:loadmore"
 
     def __init__(self, parent, client):
@@ -256,6 +276,7 @@ class SearchDialog(wx.Dialog):
         self.discographyButton.Hide()  # Hide by default
 
         cancelButton = wx.Button(self, wx.ID_CANCEL, label=_("&Close"))
+        self.bind_close_button(cancelButton)
         self.buttonsSizer.AddButton(cancelButton)
         self.buttonsSizer.Realize()
         mainSizer.Add(self.buttonsSizer, flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
@@ -445,7 +466,7 @@ class SearchDialog(wx.Dialog):
             wx.CallAfter(ui.message, _("{name} added to queue.").format(name=name))
 
 
-class PlayFromLinkDialog(wx.Dialog):
+class PlayFromLinkDialog(AccessifyDialog):
     def __init__(self, parent, client):
         super(PlayFromLinkDialog, self).__init__(
             parent, title=_("Play from Spotify Link")
@@ -484,6 +505,7 @@ class PlayFromLinkDialog(wx.Dialog):
         buttonsSizer.AddButton(self.playButton)
 
         cancelButton = wx.Button(self, wx.ID_CANCEL, label=_("Close"))
+        self.bind_close_button(cancelButton)
         buttonsSizer.AddButton(cancelButton)
         buttonsSizer.Realize()
         mainSizer.Add(buttonsSizer, flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
@@ -542,32 +564,49 @@ class PlaylistTreeItemData:  # No longer inherits from wx.TreeItemData
         self.collaborative = playlist_data.get("collaborative", False)
 
 
-class AddToPlaylistDialog(wx.Dialog):
-    def __init__(self, parent, client):
+class AddToPlaylistDialog(AccessifyDialog):
+    def __init__(self, parent, client, current_track, playlists):
         # Translators: Title for the "Add to Playlist" dialog.
         super().__init__(parent, title=_("Add Current Track to Playlist"))
         self.client = client
-        self.current_track_uri = None
-        self.playlists = []
+        self.current_track = current_track
+        self.current_track_uri = current_track.get("uri")
+        self.playlists = playlists
         self.selected_playlist_id = None
         self.init_ui()
-        self.load_data()
 
     def init_ui(self):
         panel = wx.Panel(self)
         sizer = wx.BoxSizer(wx.VERTICAL)
 
+        track_name = self.current_track.get("name", _("Unknown Track"))
+        artists = ", ".join(
+            [a["name"] for a in self.current_track.get("artists", [])]
+        )
+
         # Translators: Label for the current track in the "Add to Playlist" dialog.
-        self.track_label = wx.StaticText(panel, label=_("Current Track: Loading..."))
+        self.track_label = wx.StaticText(
+            panel,
+            label=_("Current Track: {track_name} by {artists}").format(
+                track_name=track_name, artists=artists
+            ),
+        )
         sizer.Add(self.track_label, 0, wx.ALL | wx.EXPAND, 10)
 
         # Translators: Label for the playlist selection combobox in the "Add to Playlist" dialog.
         playlist_label = wx.StaticText(panel, label=_("Select Playlist:"))
         sizer.Add(playlist_label, 0, wx.LEFT | wx.RIGHT | wx.TOP, 10)
 
-        self.playlist_combobox = wx.ComboBox(panel, choices=[], style=wx.CB_READONLY)
+        playlist_names = [p["name"] for p in self.playlists]
+        self.playlist_combobox = wx.ComboBox(
+            panel, choices=playlist_names, style=wx.CB_READONLY
+        )
         sizer.Add(self.playlist_combobox, 0, wx.ALL | wx.EXPAND, 10)
         self.playlist_combobox.Bind(wx.EVT_COMBOBOX, self.on_playlist_selected)
+
+        if playlist_names:
+            self.playlist_combobox.SetSelection(0)
+            self.selected_playlist_id = self.playlists[0]["id"]
 
         buttons_sizer = wx.BoxSizer(wx.HORIZONTAL)
         # Translators: Label for the "Add" button in the "Add to Playlist" dialog.
@@ -577,67 +616,13 @@ class AddToPlaylistDialog(wx.Dialog):
 
         # Translators: Label for the "Cancel" button in the "Add to Playlist" dialog.
         cancel_button = wx.Button(panel, label=_("Cancel"))
-        cancel_button.Bind(wx.EVT_BUTTON, lambda evt: self.Destroy())
+        self.bind_close_button(cancel_button)
         buttons_sizer.Add(cancel_button, 0, wx.ALL, 5)
 
         sizer.Add(buttons_sizer, 0, wx.ALIGN_CENTER | wx.ALL, 5)
 
         panel.SetSizer(sizer)
         sizer.Fit(self)
-
-    def load_data(self):
-        def _load():
-            # Get current track
-            playback = self.client._execute(self.client.client.current_playback)
-            if isinstance(playback, str):
-                wx.CallAfter(ui.message, playback)
-                wx.CallAfter(self.Destroy)
-                return
-            if not playback or not playback.get("item"):
-                wx.CallAfter(ui.message, _("Nothing is currently playing."))
-                wx.CallAfter(self.Destroy)
-                return
-
-            item = playback["item"]
-            self.current_track_uri = item.get("uri")
-            track_name = item.get("name")
-            artists = ", ".join([a["name"] for a in item.get("artists", [])])
-            wx.CallAfter(
-                self.track_label.SetLabel,
-                _("Current Track: {track_name} by {artists}").format(
-                    track_name=track_name, artists=artists
-                ),
-            )
-
-            # Get user playlists
-            playlists_data = self.client.get_user_playlists()
-            if isinstance(playlists_data, str):
-                wx.CallAfter(ui.message, playlists_data)
-                wx.CallAfter(self.Destroy)
-                return
-
-            # Filter for playlists owned by the current user
-            current_user_id = self.client._execute_web_api(
-                self.client.client.current_user
-            ).get("id")
-            self.playlists = [
-                p
-                for p in playlists_data
-                if p.get("owner", {}).get("id") == current_user_id
-            ]
-
-            if not self.playlists:
-                wx.CallAfter(ui.message, _("No playlists found."))
-                wx.CallAfter(self.Destroy)
-                return
-
-            playlist_names = [p["name"] for p in self.playlists]
-            wx.CallAfter(self.playlist_combobox.SetItems, playlist_names)
-            if playlist_names:
-                wx.CallAfter(self.playlist_combobox.SetSelection, 0)
-                self.selected_playlist_id = self.playlists[0]["id"]
-
-        threading.Thread(target=_load).start()
 
     def on_playlist_selected(self, evt):
         selection_index = self.playlist_combobox.GetSelection()
@@ -668,8 +653,8 @@ class AddToPlaylistDialog(wx.Dialog):
         threading.Thread(target=_add).start()
 
 
-class QueueListDialog(wx.Dialog):
-    def __init__(self, parent, client):
+class QueueListDialog(AccessifyDialog):
+    def __init__(self, parent, client, queue_data):
         super(QueueListDialog, self).__init__(parent, title=_("Spotify Queue"))
         self.client = client
         self.queue_items = []
@@ -687,20 +672,13 @@ class QueueListDialog(wx.Dialog):
         buttonsSizer.AddButton(self.playButton)
 
         cancelButton = wx.Button(self, wx.ID_CANCEL, label=_("Close"))
+        self.bind_close_button(cancelButton)
         buttonsSizer.AddButton(cancelButton)
         buttonsSizer.Realize()
         mainSizer.Add(buttonsSizer, flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
 
         self.SetSizerAndFit(mainSizer)
-        self.load_queue()
-
-    def load_queue(self):
-        ui.message(_("Loading queue..."))
-        threading.Thread(target=self._load_queue_thread).start()
-
-    def _load_queue_thread(self):
-        queue_data = self.client.get_full_queue()
-        wx.CallAfter(self.update_queue_list, queue_data)
+        self.update_queue_list(queue_data)
 
     def update_queue_list(self, queue_data):
         self.queueList.Clear()
@@ -746,7 +724,7 @@ class QueueListDialog(wx.Dialog):
             ui.message(_("Could not get URI for selected item."))
 
 
-class PodcastEpisodesDialog(wx.Dialog):
+class PodcastEpisodesDialog(AccessifyDialog):
     def __init__(self, parent, client, show_id, show_name):
         # Translators: Title for the Podcast Episodes dialog. {show_name} is the name of the podcast.
         title = _("Episodes for {show_name}").format(show_name=show_name)
@@ -772,6 +750,7 @@ class PodcastEpisodesDialog(wx.Dialog):
         buttons_sizer.AddButton(play_button)
 
         close_button = wx.Button(panel, wx.ID_CANCEL, label=_("Close"))
+        self.bind_close_button(close_button)
         buttons_sizer.AddButton(close_button)
         buttons_sizer.Realize()
 
@@ -813,7 +792,7 @@ class PodcastEpisodesDialog(wx.Dialog):
             self.Close()
 
 
-class ArtistDiscographyDialog(wx.Dialog):
+class ArtistDiscographyDialog(AccessifyDialog):
     def __init__(self, parent, client, artist_id, artist_name):
         # Translators: Title for the Artist Discography dialog. {artist_name} is the name of the artist.
         title = _("Discography for {artist_name}").format(artist_name=artist_name)
@@ -849,6 +828,7 @@ class ArtistDiscographyDialog(wx.Dialog):
         buttons_sizer.AddButton(play_button)
 
         close_button = wx.Button(panel, wx.ID_CANCEL, label=_("Close"))
+        self.bind_close_button(close_button)
         buttons_sizer.AddButton(close_button)
         buttons_sizer.Realize()
 
@@ -899,7 +879,7 @@ class ArtistDiscographyDialog(wx.Dialog):
             ui.message(_("Please select an item to play."))
 
 
-class RelatedArtistsDialog(wx.Dialog):
+class RelatedArtistsDialog(AccessifyDialog):
     def __init__(self, parent, client, artist_id, artist_name):
         # Translators: Title for the Related Artists dialog. {artist_name} is the name of the original artist.
         title = _("Artists Related to {artist_name}").format(artist_name=artist_name)
@@ -999,11 +979,13 @@ class RelatedArtistsDialog(wx.Dialog):
             threading.Thread(target=_follow).start()
 
 
-class ManagementDialog(wx.Dialog):
-    def __init__(self, parent, client):
+class ManagementDialog(AccessifyDialog):
+    def __init__(self, parent, client, preloaded_data):
         # Translators: Title for the "Management" dialog.
         super().__init__(parent, title=_("Spotify Management"), size=(600, 500))
         self.client = client
+        self.preloaded_data = preloaded_data or {}
+        self.current_user_id = self.preloaded_data.get("user_profile", {}).get("id")
         self.init_ui()
 
     def init_ui(self):
@@ -1056,6 +1038,7 @@ class ManagementDialog(wx.Dialog):
         # Add a close button
         buttons_sizer = wx.StdDialogButtonSizer()
         close_button = wx.Button(panel, wx.ID_CANCEL, label=_("Close"))
+        self.bind_close_button(close_button)
         buttons_sizer.AddButton(close_button)
         buttons_sizer.Realize()
         main_sizer.Add(buttons_sizer, 0, wx.ALIGN_CENTER | wx.ALL, 10)
@@ -1101,7 +1084,7 @@ class ManagementDialog(wx.Dialog):
 
         sizer.Add(buttons_sizer, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
 
-        self.load_playlists_to_tree()
+        self.load_playlists_to_tree(initial_data=self.preloaded_data.get("playlists"))
 
     def init_create_playlist_tab(self, parent_panel):
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -1134,43 +1117,49 @@ class ManagementDialog(wx.Dialog):
         create_button.Bind(wx.EVT_BUTTON, self.on_create_playlist)
         sizer.Add(create_button, 0, wx.ALIGN_CENTER | wx.ALL, 10)
 
-    def load_playlists_to_tree(self):
-        self.playlist_tree.DeleteAllItems()
-        root = self.playlist_tree.AddRoot(_("My Playlists"))
-        self.playlist_tree.SetItemData(root, None)  # No data for root
+    def load_playlists_to_tree(self, initial_data=None):
+        if initial_data is not None:
+            self._populate_playlists_tree(initial_data)
+            return
 
         def _load():
             playlists_data = self.client.get_user_playlists()
             if isinstance(playlists_data, str):
                 wx.CallAfter(ui.message, playlists_data)
                 return
-
-            current_user_id = self.client._execute_web_api(
-                self.client.client.current_user
-            ).get("id")
-            self.user_owned_playlists = [
-                p
-                for p in playlists_data
-                if p.get("owner", {}).get("id") == current_user_id
-            ]
-
-            if not self.user_owned_playlists:
-                wx.CallAfter(ui.message, _("No user-owned playlists found."))
-                return
-
-            def add_playlist_to_tree(playlist):
-                item_id = self.playlist_tree.AppendItem(
-                    root, playlist["name"], data=PlaylistTreeItemData(playlist)
-                )
-                self.playlist_tree.SetItemHasChildren(item_id, True)
-
-            for playlist in self.user_owned_playlists:
-                wx.CallAfter(add_playlist_to_tree, playlist)
-
-            wx.CallAfter(self.playlist_tree.Expand, root)
-            wx.CallAfter(ui.message, _("Playlists loaded."))
+            wx.CallAfter(self._populate_playlists_tree, playlists_data)
 
         threading.Thread(target=_load).start()
+
+    def _populate_playlists_tree(self, playlists_data):
+        self.playlist_tree.DeleteAllItems()
+        root = self.playlist_tree.AddRoot(_("My Playlists"))
+        self.playlist_tree.SetItemData(root, None)
+
+        current_user_id = self.current_user_id
+        if not current_user_id:
+            profile = self.client.get_current_user_profile()
+            if isinstance(profile, str):
+                ui.message(profile)
+                return
+            current_user_id = profile.get("id")
+            self.current_user_id = current_user_id
+
+        self.user_owned_playlists = [
+            p for p in playlists_data if p.get("owner", {}).get("id") == current_user_id
+        ]
+
+        if not self.user_owned_playlists:
+            ui.message(_("No user-owned playlists found."))
+            return
+
+        for playlist in self.user_owned_playlists:
+            item_id = self.playlist_tree.AppendItem(
+                root, playlist["name"], data=PlaylistTreeItemData(playlist)
+            )
+            self.playlist_tree.SetItemHasChildren(item_id, True)
+
+        ui.message(_("Playlists loaded."))
 
     def on_refresh_playlists(self, evt):
         ui.message(_("Refreshing playlists..."))
@@ -1386,7 +1375,7 @@ class ManagementDialog(wx.Dialog):
         buttons_sizer.Add(refresh_button, 0, wx.ALL, 5)
         sizer.Add(buttons_sizer, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
 
-        self.load_saved_tracks()
+        self.load_saved_tracks(initial_data=self.preloaded_data.get("saved_tracks"))
 
     def init_followed_artists_tab(self, parent_panel):
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -1415,7 +1404,7 @@ class ManagementDialog(wx.Dialog):
 
         sizer.Add(buttons_sizer, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
 
-        self.load_followed_artists()
+        self.load_followed_artists(initial_data=self.preloaded_data.get("followed_artists"))
 
     def on_unfollow_artist(self, evt):
         selection = self.followed_artists_list.GetSelection()
@@ -1477,26 +1466,32 @@ class ManagementDialog(wx.Dialog):
         else:
             ui.message(_("Please select an artist to view their discography."))
 
-    def load_saved_tracks(self):
+    def load_saved_tracks(self, evt=None, initial_data=None):
         self.saved_tracks_list.Clear()
+
+        if initial_data is not None:
+            self._populate_saved_tracks(initial_data)
+            return
 
         def _load():
             tracks_data = self.client.get_saved_tracks()
             if isinstance(tracks_data, str):
                 wx.CallAfter(ui.message, tracks_data)
                 return
-
-            self.saved_tracks = tracks_data
-            if not self.saved_tracks:
-                wx.CallAfter(self.saved_tracks_list.Append, _("No saved tracks found."))
-                return
-
-            for item in self.saved_tracks:
-                track = item["track"]
-                display = f"{track['name']} - {', '.join([a['name'] for a in track['artists']])}"
-                wx.CallAfter(self.saved_tracks_list.Append, display)
+            wx.CallAfter(self._populate_saved_tracks, tracks_data)
 
         threading.Thread(target=_load).start()
+
+    def _populate_saved_tracks(self, tracks_data):
+        self.saved_tracks = tracks_data
+        if not self.saved_tracks:
+            self.saved_tracks_list.Append(_("No saved tracks found."))
+            return
+
+        for item in self.saved_tracks:
+            track = item["track"]
+            display = f"{track['name']} - {', '.join([a['name'] for a in track['artists']])}"
+            self.saved_tracks_list.Append(display)
 
     def on_refresh_saved_tracks(self, evt):
         self.load_saved_tracks()
@@ -1537,26 +1532,30 @@ class ManagementDialog(wx.Dialog):
 
             threading.Thread(target=_remove).start()
 
-    def load_followed_artists(self):
+    def load_followed_artists(self, initial_data=None):
         self.followed_artists_list.Clear()
+
+        if initial_data is not None:
+            self._populate_followed_artists(initial_data)
+            return
 
         def _load():
             artists_data = self.client.get_followed_artists()
             if isinstance(artists_data, str):
                 wx.CallAfter(ui.message, artists_data)
                 return
-
-            self.followed_artists = artists_data
-            if not self.followed_artists:
-                wx.CallAfter(
-                    self.followed_artists_list.Append, _("No followed artists found.")
-                )
-                return
-
-            for artist in self.followed_artists:
-                wx.CallAfter(self.followed_artists_list.Append, artist["name"])
+            wx.CallAfter(self._populate_followed_artists, artists_data)
 
         threading.Thread(target=_load).start()
+
+    def _populate_followed_artists(self, artists_data):
+        self.followed_artists = artists_data
+        if not self.followed_artists:
+            self.followed_artists_list.Append(_("No followed artists found."))
+            return
+
+        for artist in self.followed_artists:
+            self.followed_artists_list.Append(artist["name"])
 
     def on_refresh_followed_artists(self, evt):
         self.load_followed_artists()
@@ -1623,10 +1622,10 @@ class ManagementDialog(wx.Dialog):
 
         sizer.Add(buttons_sizer, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
 
-        self.load_top_items()
+        self.load_top_items(initial_data=self.preloaded_data.get("top_items"))
         self.on_top_item_type_changed(None)  # Set initial state
 
-    def load_top_items(self, evt=None):
+    def load_top_items(self, evt=None, initial_data=None):
         self.top_items_list.Clear()
 
         item_type_label = self.top_item_type_box.GetValue()
@@ -1635,6 +1634,10 @@ class ManagementDialog(wx.Dialog):
         time_range_label = self.time_range_box.GetValue()
         time_range = self.time_range_choices[time_range_label]
 
+        if initial_data is not None:
+            self._populate_top_items(initial_data)
+            return
+
         def _load():
             results = self.client.get_top_items(
                 item_type=item_type, time_range=time_range
@@ -1642,23 +1645,24 @@ class ManagementDialog(wx.Dialog):
             if isinstance(results, str):
                 wx.CallAfter(ui.message, results)
                 return
-
-            self.top_items = results
-            if not self.top_items or not self.top_items.get("items"):
-                wx.CallAfter(
-                    self.top_items_list.Append,
-                    _("No items found for the selected criteria."),
-                )
-                return
-
-            for item in self.top_items["items"]:
-                if item["type"] == "track":
-                    display = f"{item['name']} - {', '.join([a['name'] for a in item['artists']])} (Popularity: {item['popularity']})"
-                else:  # artist
-                    display = item["name"]
-                wx.CallAfter(self.top_items_list.Append, display)
+            wx.CallAfter(self._populate_top_items, results)
 
         threading.Thread(target=_load).start()
+
+    def _populate_top_items(self, results):
+        self.top_items = results
+        if not self.top_items or not self.top_items.get("items"):
+            self.top_items_list.Append(
+                _("No items found for the selected criteria.")
+            )
+            return
+
+        for item in self.top_items["items"]:
+            if item["type"] == "track":
+                display = f"{item['name']} - {', '.join([a['name'] for a in item['artists']])} (Popularity: {item['popularity']})"
+            else:
+                display = item["name"]
+            self.top_items_list.Append(display)
 
     def init_saved_shows_tab(self, parent_panel):
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -1683,7 +1687,7 @@ class ManagementDialog(wx.Dialog):
 
         sizer.Add(buttons_sizer, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
 
-        self.load_saved_shows()
+        self.load_saved_shows(initial_data=self.preloaded_data.get("saved_shows"))
 
     def on_view_episodes(self, evt):
         selection = self.saved_shows_list.GetSelection()
@@ -1697,26 +1701,32 @@ class ManagementDialog(wx.Dialog):
         dialog = PodcastEpisodesDialog(self, self.client, show_id, show_name)
         dialog.Show()
 
-    def load_saved_shows(self, evt=None):
+    def load_saved_shows(self, evt=None, initial_data=None):
         self.saved_shows_list.Clear()
+
+        if initial_data is not None:
+            self._populate_saved_shows(initial_data)
+            return
 
         def _load():
             results = self.client.get_saved_shows()
             if isinstance(results, str):
                 wx.CallAfter(ui.message, results)
                 return
-
-            self.saved_shows = results
-            if not self.saved_shows:
-                wx.CallAfter(self.saved_shows_list.Append, _("No saved shows found."))
-                return
-
-            for item in self.saved_shows:
-                show = item["show"]
-                display = f"{show['name']} - {show['publisher']}"
-                wx.CallAfter(self.saved_shows_list.Append, display)
+            wx.CallAfter(self._populate_saved_shows, results)
 
         threading.Thread(target=_load).start()
+
+    def _populate_saved_shows(self, results):
+        self.saved_shows = results
+        if not self.saved_shows:
+            self.saved_shows_list.Append(_("No saved shows found."))
+            return
+
+        for item in self.saved_shows:
+            show = item["show"]
+            display = f"{show['name']} - {show['publisher']}"
+            self.saved_shows_list.Append(display)
 
     def init_new_releases_tab(self, parent_panel):
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -1737,27 +1747,34 @@ class ManagementDialog(wx.Dialog):
 
         sizer.Add(buttons_sizer, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
 
-        self.load_new_releases()
+        self.load_new_releases(initial_data=self.preloaded_data.get("new_releases"))
 
-    def load_new_releases(self, evt=None):
+    def load_new_releases(self, evt=None, initial_data=None):
         self.new_releases_list.Clear()
+
+        if initial_data is not None:
+            self._populate_new_releases(initial_data)
+            return
 
         def _load():
             results = self.client.get_new_releases()
             if isinstance(results, str):
                 wx.CallAfter(ui.message, results)
                 return
-
-            self.new_releases = results["albums"]["items"]
-            if not self.new_releases:
-                wx.CallAfter(self.new_releases_list.Append, _("No new releases found."))
-                return
-
-            for album in self.new_releases:
-                display = f"{album['name']} - {', '.join([a['name'] for a in album['artists']])}"
-                wx.CallAfter(self.new_releases_list.Append, display)
+            wx.CallAfter(self._populate_new_releases, results)
 
         threading.Thread(target=_load).start()
+
+    def _populate_new_releases(self, results):
+        items = results.get("albums", {}).get("items", [])
+        self.new_releases = items
+        if not self.new_releases:
+            self.new_releases_list.Append(_("No new releases found."))
+            return
+
+        for album in self.new_releases:
+            display = f"{album['name']} - {', '.join([a['name'] for a in album['artists']])}"
+            self.new_releases_list.Append(display)
 
     def init_recently_played_tab(self, parent_panel):
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -1778,31 +1795,36 @@ class ManagementDialog(wx.Dialog):
 
         sizer.Add(buttons_sizer, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
 
-        self.load_recently_played()
+        self.load_recently_played(initial_data=self.preloaded_data.get("recently_played"))
 
-    def load_recently_played(self, evt=None):
+    def load_recently_played(self, evt=None, initial_data=None):
         self.recently_played_list.Clear()
+
+        if initial_data is not None:
+            self._populate_recently_played(initial_data)
+            return
 
         def _load():
             results = self.client.get_recently_played()
             if isinstance(results, str):
                 wx.CallAfter(ui.message, results)
                 return
-
-            self.recently_played = results.get("items", [])
-            if not self.recently_played:
-                wx.CallAfter(
-                    self.recently_played_list.Append,
-                    _("No recently played tracks found."),
-                )
-                return
-
-            for item in self.recently_played:
-                track = item["track"]
-                display = f"{track['name']} - {', '.join([a['name'] for a in track['artists']])}"
-                wx.CallAfter(self.recently_played_list.Append, display)
+            wx.CallAfter(self._populate_recently_played, results)
 
         threading.Thread(target=_load).start()
+
+    def _populate_recently_played(self, results):
+        self.recently_played = results.get("items", [])
+        if not self.recently_played:
+            self.recently_played_list.Append(
+                _("No recently played tracks found.")
+            )
+            return
+
+        for item in self.recently_played:
+            track = item["track"]
+            display = f"{track['name']} - {', '.join([a['name'] for a in track['artists']])}"
+            self.recently_played_list.Append(display)
 
     def on_play_selected(self, evt):
         current_tab_index = self.notebook.GetSelection()
@@ -1856,7 +1878,7 @@ class ManagementDialog(wx.Dialog):
             ui.message(_("Please select an item to play."))
 
 
-class SetVolumeDialog(wx.Dialog):
+class SetVolumeDialog(AccessifyDialog):
     def __init__(self, parent, client):
         super(SetVolumeDialog, self).__init__(parent, title=_("Set Spotify Volume"))
         self.client = client
@@ -1877,6 +1899,7 @@ class SetVolumeDialog(wx.Dialog):
         buttonsSizer.AddButton(okButton)
 
         cancelButton = wx.Button(self, wx.ID_CANCEL, label=_("Cancel"))
+        self.bind_close_button(cancelButton)
         buttonsSizer.AddButton(cancelButton)
         buttonsSizer.Realize()
         mainSizer.Add(buttonsSizer, flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
@@ -1907,31 +1930,26 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         self.searchDialog = None
         self.playFromLinkDialog = None
         self.addToPlaylistDialog = None
-        self.queueListDialog = None  # Initialize new dialog
-        self.managementDialog = None  # Initialize new dialog for playlist management
+        self.queueListDialog = None
+        self.managementDialog = None
         self.setVolumeDialog = None
+        self._queueDialogLoading = False
+        self._addToPlaylistLoading = False
+        self._managementDialogLoading = False
         settingsDialogs.NVDASettingsDialog.categoryClasses.append(SpotifySettingsPanel)
 
-        # Polling for track changes
-
-        if self.managementDialog:  # Destroy new dialog
-            self.managementDialog.Destroy()
-        if self.setVolumeDialog:
-            self.setVolumeDialog.Destroy()
         self.last_track_id = None
         self.is_running = True
         self.polling_thread = threading.Thread(target=self.track_change_poller)
         self.polling_thread.daemon = True
         self.polling_thread.start()
 
-        # Initialize translation for the addon
-        addonHandler.initTranslation()  # Call without arguments
-
+        addonHandler.initTranslation()
         threading.Thread(target=self.client.initialize).start()
 
     def terminate(self):
         super(GlobalPlugin, self).terminate()
-        self.is_running = False  # Signal the polling thread to stop
+        self.is_running = False
         try:
             settingsDialogs.NVDASettingsDialog.categoryClasses.remove(
                 SpotifySettingsPanel
@@ -2019,29 +2037,152 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
             # It's an error message from the client, speak it
             ui.message(text)
 
+    def _destroy_dialog(self, attr_name, evt):
+        dialog = getattr(self, attr_name, None)
+        if dialog:
+            setattr(self, attr_name, None)
+            dialog.Destroy()
+        if evt:
+            evt.Skip(False)
+
+    def _prepare_queue_dialog(self):
+        queue_data = self.client.get_full_queue()
+        wx.CallAfter(self._finish_queue_dialog_load, queue_data)
+
+    def _finish_queue_dialog_load(self, queue_data):
+        self._queueDialogLoading = False
+        if isinstance(queue_data, str):
+            ui.message(queue_data)
+            return
+        if self.queueListDialog:
+            self.queueListDialog.Raise()
+            return
+        self.queueListDialog = QueueListDialog(
+            gui.mainFrame, self.client, queue_data
+        )
+        self.queueListDialog.Bind(wx.EVT_CLOSE, self.onQueueListDialogClose)
+        self.queueListDialog.Show()
+
+    def _prepare_add_to_playlist_dialog(self):
+        playback = self.client._execute(self.client.client.current_playback)
+        if isinstance(playback, str):
+            wx.CallAfter(self._finish_add_to_playlist_dialog, playback)
+            return
+        if not playback or not playback.get("item"):
+            wx.CallAfter(
+                self._finish_add_to_playlist_dialog, _("Nothing is currently playing.")
+            )
+            return
+
+        playlists_data = self.client.get_user_playlists()
+        if isinstance(playlists_data, str):
+            wx.CallAfter(self._finish_add_to_playlist_dialog, playlists_data)
+            return
+
+        user_profile = self.client.get_current_user_profile()
+        if isinstance(user_profile, str):
+            wx.CallAfter(self._finish_add_to_playlist_dialog, user_profile)
+            return
+
+        user_id = user_profile.get("id")
+        if not user_id:
+            wx.CallAfter(
+                self._finish_add_to_playlist_dialog,
+                _("Could not determine the current Spotify user."),
+            )
+            return
+
+        user_playlists = [
+            p for p in playlists_data if p.get("owner", {}).get("id") == user_id
+        ]
+        if not user_playlists:
+            wx.CallAfter(
+                self._finish_add_to_playlist_dialog,
+                _("No playlists owned by your account were found."),
+            )
+            return
+
+        track = playback["item"]
+        payload = {"track": track, "playlists": user_playlists}
+        wx.CallAfter(self._finish_add_to_playlist_dialog, payload)
+
+    def _finish_add_to_playlist_dialog(self, payload):
+        self._addToPlaylistLoading = False
+        if isinstance(payload, str):
+            ui.message(payload)
+            return
+        if self.addToPlaylistDialog:
+            self.addToPlaylistDialog.Raise()
+            return
+        self.addToPlaylistDialog = AddToPlaylistDialog(
+            gui.mainFrame, self.client, payload["track"], payload["playlists"]
+        )
+        self.addToPlaylistDialog.Bind(wx.EVT_CLOSE, self.onAddToPlaylistDialogClose)
+        self.addToPlaylistDialog.Show()
+
+    def _prepare_management_dialog(self):
+        data = self._fetch_management_data()
+        wx.CallAfter(self._finish_management_dialog_load, data)
+
+    def _finish_management_dialog_load(self, data):
+        self._managementDialogLoading = False
+        if isinstance(data, str):
+            ui.message(data)
+            return
+        if self.managementDialog:
+            self.managementDialog.Raise()
+            return
+        self.managementDialog = ManagementDialog(
+            gui.mainFrame, self.client, data
+        )
+        self.managementDialog.Bind(wx.EVT_CLOSE, self.onManagementDialogClose)
+        self.managementDialog.Show()
+
+    def _fetch_management_data(self):
+        if not self.client.client:
+            return _("Spotify client not ready. Please validate your credentials.")
+
+        data = {}
+        steps = [
+            ("user_profile", self.client.get_current_user_profile),
+            ("playlists", self.client.get_user_playlists),
+            ("saved_tracks", self.client.get_saved_tracks),
+            ("followed_artists", self.client.get_followed_artists),
+            (
+                "top_items",
+                lambda: self.client.get_top_items(
+                    item_type="tracks", time_range="medium_term"
+                ),
+            ),
+            ("saved_shows", self.client.get_saved_shows),
+            ("new_releases", self.client.get_new_releases),
+            ("recently_played", self.client.get_recently_played),
+        ]
+
+        for key, loader in steps:
+            result = loader()
+            if isinstance(result, str):
+                return result
+            data[key] = result
+        return data
+
     def onSearchDialogClose(self, evt):
-        self.searchDialog = None
-        evt.Skip()
+        self._destroy_dialog("searchDialog", evt)
 
     def onPlayFromLinkDialogClose(self, evt):
-        self.playFromLinkDialog = None
-        evt.Skip()
+        self._destroy_dialog("playFromLinkDialog", evt)
 
     def onQueueListDialogClose(self, evt):  # New dialog close handler
-        self.queueListDialog = None
-        evt.Skip()
+        self._destroy_dialog("queueListDialog", evt)
 
     def onManagementDialogClose(self, evt):  # New dialog close handler
-        self.managementDialog = None
-        evt.Skip()
+        self._destroy_dialog("managementDialog", evt)
 
     def onSetVolumeDialogClose(self, evt):
-        self.setVolumeDialog = None
-        evt.Skip()
+        self._destroy_dialog("setVolumeDialog", evt)
 
     def onAddToPlaylistDialogClose(self, evt):
-        self.addToPlaylistDialog = None
-        evt.Skip()
+        self._destroy_dialog("addToPlaylistDialog", evt)
 
     @scriptHandler.script(
         description=_("Set Spotify volume to a specific percentage."),
@@ -2095,13 +2236,16 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         if self.addToPlaylistDialog:
             self.addToPlaylistDialog.Raise()
             return
+        if self._addToPlaylistLoading:
+            ui.message(_("Add to playlist dialog is still loading, please wait."))
+            return
         if not self.client.client:
             ui.message(_("Spotify client not ready. Please validate your credentials."))
             return
 
-        self.addToPlaylistDialog = AddToPlaylistDialog(gui.mainFrame, self.client)
-        self.addToPlaylistDialog.Bind(wx.EVT_CLOSE, self.onAddToPlaylistDialogClose)
-        self.addToPlaylistDialog.Show()
+        self._addToPlaylistLoading = True
+        ui.message(_("Preparing playlists..."))
+        threading.Thread(target=self._prepare_add_to_playlist_dialog).start()
 
     @scriptHandler.script(
         description=_("Manage Spotify playlists, library, and more."),
@@ -2111,12 +2255,15 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         if self.managementDialog:
             self.managementDialog.Raise()
             return
+        if self._managementDialogLoading:
+            ui.message(_("Spotify management data is still loading, please wait."))
+            return
         if not self.client.client:
             ui.message(_("Spotify client not ready. Please validate your credentials."))
             return
-        self.managementDialog = ManagementDialog(gui.mainFrame, self.client)
-        self.managementDialog.Bind(wx.EVT_CLOSE, self.onManagementDialogClose)
-        self.managementDialog.Show()
+        self._managementDialogLoading = True
+        ui.message(_("Loading Spotify library data..."))
+        threading.Thread(target=self._prepare_management_dialog).start()
 
     @scriptHandler.script(
         description=_("Play a track from a Spotify URL."), gesture="kb:nvda+shift+alt+p"
@@ -2253,12 +2400,15 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         if self.queueListDialog:
             self.queueListDialog.Raise()
             return
+        if self._queueDialogLoading:
+            ui.message(_("Queue dialog is still loading, please wait."))
+            return
         if not self.client.client:
             ui.message(_("Spotify client not ready. Please validate your credentials."))
             return
-        self.queueListDialog = QueueListDialog(gui.mainFrame, self.client)
-        self.queueListDialog.Bind(wx.EVT_CLOSE, self.onQueueListDialogClose)
-        self.queueListDialog.Show()
+        self._queueDialogLoading = True
+        ui.message(_("Loading Spotify queue..."))
+        threading.Thread(target=self._prepare_queue_dialog).start()
 
     @scriptHandler.script(
         description=_("Seek forward in the current track by configurable duration."),
