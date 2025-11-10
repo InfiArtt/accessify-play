@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy for AccessifyPlay</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 2em;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            color: #333;
+        }
+        h1, h2, h3 {
+            color: #1DB954; /* Spotify Green */
+        }
+        a {
+            color: #1DB954;
+        }
+        .container {
+            padding: 2em;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+        strong {
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Privacy Policy for AccessifyPlay</h1>
+        <p><strong>Effective Date:</strong> November 10, 2025</p>
+
+        <h2>1. Introduction</h2>
+        <p>
+            Welcome to <strong>AccessifyPlay</strong> (the "Addon"), a third-party accessibility addon for the NVDA screen reader. This Addon is designed to provide enhanced control over the Spotify desktop application and Spotify Connect-enabled devices.
+        </p>
+        <p>
+            This Privacy Policy outlines our principles and practices regarding data. Our core principle is to respect your privacy. We have designed the Addon with privacy as a top priority, and our policy is simple: <strong>we do not collect, store, transmit, or have access to any of your personal data.</strong>
+        </p>
+        <p>
+            This document explains the nature of the Addon's interaction with the Spotify service and clarifies what data is handled and by whom.
+        </p>
+
+        <h2>2. Information We Do Not Collect</h2>
+        <p>
+            AccessifyPlay is a client-side application. It operates entirely on your local machine. We explicitly state that we <strong>DO NOT</strong>:
+        </p>
+        <ul>
+            <li><strong>Collect Personal Information:</strong> We do not collect any personally identifiable information (PII) such as your name, email address, location, or IP address.</li>
+            <li><strong>Track Your Activity:</strong> We do not track your listening habits, your search queries, the playlists you create, or any other interactions you have with Spotify through the Addon.</li>
+            <li><strong>Store Your Data:</strong> The Addon does not have a backend server or database to store any user information. All data processed by the Addon is handled in-memory during an active session or stored locally on your computer, under your control.</li>
+            <li><strong>Access Your Spotify Account:</strong> We, the developers of AccessifyPlay, have no access to your Spotify account, your credentials, or your listening data.</li>
+        </ul>
+
+        <h2>3. How the Addon Interacts with Spotify</h2>
+        <h3>3.1. Data Flow</h3>
+        <p>
+            The Addon functions as an intermediary between you and the official Spotify API. When you perform an action (e.g., play a track, search for an artist), the Addon constructs a request that is sent directly from your computer to Spotify's servers. Spotify's servers then process the request and send a response directly back to your computer. At no point does this data pass through any servers owned or operated by the developers of AccessifyPlay.
+        </p>
+
+        <h3>3.2. Authentication and Authorization</h3>
+        <p>
+            To interact with your Spotify account, the Addon requires authorization. This is handled using the industry-standard <strong>OAuth 2.0 protocol</strong> provided by Spotify.
+        </p>
+        <ul>
+            <li>When you first authorize the Addon, you are redirected to the official Spotify website to log in and grant permissions. Your Spotify credentials are never exposed to the Addon.</li>
+            <li>Upon successful authorization, Spotify provides the Addon with an <strong>access token</strong> and a <strong>refresh token</strong>.</li>
+            <li>These tokens are stored locally on your computer within your user directory. They are your property and under your control.</li>
+            <li>The access token is used to authenticate your requests to the Spotify API. The refresh token is used to obtain a new access token when the old one expires, allowing for a persistent session.</li>
+            <li><strong>Crucially, these tokens are only ever stored on your local machine and are never transmitted to, stored by, or accessible to the developers of AccessifyPlay.</strong></li>
+        </ul>
+
+        <h2>4. Third-Party Services</h2>
+        <p>
+            The Addon is a client for the Spotify service. Your use of the Spotify service is governed by Spotify's own terms of service and privacy policy. All data related to your Spotify account, including your profile information, playlists, and listening history, is managed by Spotify.
+        </p>
+        <p>
+            We strongly encourage you to review Spotify's Privacy Policy to understand how they collect, use, and protect your data.
+        </p>
+        <p>
+            You can find Spotify's Privacy Policy here: <a href="https://www.spotify.com/legal/privacy-policy/" target="_blank">https://www.spotify.com/legal/privacy-policy/</a>
+        </p>
+
+        <h2>5. Data Security</h2>
+        <p>
+            The security of your data depends on two main factors: the security of your local machine and the security of the Spotify service. The Addon relies on the security measures of your operating system to protect your local files, including the stored authentication tokens. We have built the Addon using standard libraries and practices, but we do not add an extra layer of encryption for the tokens stored locally, as they are expected to be protected by user-level file permissions.
+        </p>
+
+        <h2>6. Children's Privacy</h2>
+        <p>
+            The Addon is not intended for use by children under the age of 13 (or the equivalent minimum age in your jurisdiction). We do not knowingly engage with or collect information from children.
+        </p>
+
+        <h2>7. Changes to This Privacy Policy</h2>
+        <p>
+            We may update this Privacy Policy from time to time. Any changes will be reflected in the Addon's documentation and on our official project page. We encourage you to review this policy periodically. Your continued use of the Addon after any changes constitutes your acceptance of the new policy.
+        </p>
+
+        <h2>8. Contact Us</h2>
+        <p>
+            If you have any questions or concerns about this Privacy Policy or the Addon's practices, please feel free to contact the developers:
+        </p>
+        <p>
+            Rafli I. at <a href="mailto:rafli08523717409@gmail.com">rafli08523717409@gmail.com</a> or Rexya at <a href="mailto:rexya2017@gmail.com">rexya2017@gmail.com</a>.
+        </p>
+    </div>
+</body>
+</html>
