@@ -1298,8 +1298,13 @@ class ArtistDiscographyDialog(AccessifyDialog):
             self.copy_link(link)
 
 class RelatedArtistsDialog(AccessifyDialog):
+    MENU_PLAY = wx.NewIdRef()
+    MENU_ADD_QUEUE = wx.NewIdRef()
+    MENU_COPY_LINK = wx.NewIdRef()
+    MENU_DISCOGRAPHY = wx.NewIdRef()
+    MENU_FOLLOW = wx.NewIdRef()
+
     def __init__(self, parent, client, artist_id, artist_name):
-        # Translators: Title for the Related Artists dialog. {artist_name} is the name of the original artist.
         title = _("Artists Related to {artist_name}").format(artist_name=artist_name)
         super(RelatedArtistsDialog, self).__init__(parent, title=title, size=(500, 400))
         self.client = client
@@ -1307,6 +1312,7 @@ class RelatedArtistsDialog(AccessifyDialog):
         self.related_artists = []
         self.init_ui()
         self.load_data()
+        self._create_accelerators()
 
     def init_ui(self):
         panel = wx.Panel(self)
@@ -1314,9 +1320,10 @@ class RelatedArtistsDialog(AccessifyDialog):
 
         self.artists_list = wx.ListBox(panel)
         sizer.Add(self.artists_list, 1, wx.EXPAND | wx.ALL, 5)
+        self._bind_list_activation(self.artists_list, self.on_play)
+        self.artists_list.Bind(wx.EVT_CONTEXT_MENU, self.on_context_menu)
 
         buttons_sizer = wx.BoxSizer(wx.HORIZONTAL)
-
         play_button = wx.Button(panel, label=_("Play"))
         play_button.Bind(wx.EVT_BUTTON, self.on_play)
         buttons_sizer.Add(play_button, 0, wx.ALL, 5)
@@ -1336,23 +1343,33 @@ class RelatedArtistsDialog(AccessifyDialog):
         sizer.Add(buttons_sizer, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
         panel.SetSizer(sizer)
 
+    def _create_accelerators(self):
+        accel_entries = [
+            (wx.ACCEL_ALT, ord("P"), self.MENU_PLAY.GetId()),
+            (wx.ACCEL_ALT, ord("Q"), self.MENU_ADD_QUEUE.GetId()),
+            (wx.ACCEL_ALT, ord("C"), self.MENU_COPY_LINK.GetId()),
+            (wx.ACCEL_ALT, ord("D"), self.MENU_DISCOGRAPHY.GetId()),
+            (wx.ACCEL_ALT, ord("F"), self.MENU_FOLLOW.GetId()),
+        ]
+        self.SetAcceleratorTable(wx.AcceleratorTable(accel_entries))
+        self.Bind(wx.EVT_MENU, self.on_play, id=self.MENU_PLAY.GetId())
+        self.Bind(wx.EVT_MENU, self.on_add_to_queue, id=self.MENU_ADD_QUEUE.GetId())
+        self.Bind(wx.EVT_MENU, self.on_copy_link, id=self.MENU_COPY_LINK.GetId())
+        self.Bind(wx.EVT_MENU, self.on_view_discography, id=self.MENU_DISCOGRAPHY.GetId())
+        self.Bind(wx.EVT_MENU, self.on_follow, id=self.MENU_FOLLOW.GetId())
+
     def load_data(self):
         self.artists_list.Clear()
-
         def _load():
             results = self.client.get_related_artists(self.artist_id)
-            if isinstance(results, str):
-                wx.CallAfter(ui.message, results)
-                return
-
-            self.related_artists = results.get("artists", [])
-            if not self.related_artists:
-                wx.CallAfter(self.artists_list.Append, _("No related artists found."))
-                return
-
-            for artist in self.related_artists:
-                wx.CallAfter(self.artists_list.Append, artist["name"])
-
+            if isinstance(results, str): wx.CallAfter(ui.message, results)
+            else:
+                self.related_artists = results.get("artists", [])
+                if not self.related_artists:
+                    wx.CallAfter(self.artists_list.Append, _("No related artists found."))
+                else:
+                    for artist in self.related_artists:
+                        wx.CallAfter(self.artists_list.Append, artist["name"])
         threading.Thread(target=_load).start()
 
     def get_selected_artist(self):
@@ -1362,39 +1379,51 @@ class RelatedArtistsDialog(AccessifyDialog):
             return None
         return self.related_artists[selection]
 
-    def on_play(self, evt):
+    def on_context_menu(self, evt):
+        artist = self.get_selected_artist()
+        if not artist:
+            return
+        menu = wx.Menu()
+        menu.Append(self.MENU_PLAY.GetId(), _("Play Artist Radio\tAlt+P"))
+        menu.Append(self.MENU_ADD_QUEUE.GetId(), _("Add to Queue\tAlt+Q"))
+        menu.Append(self.MENU_COPY_LINK.GetId(), _("Copy Link\tAlt+C"))
+        menu.AppendSeparator()
+        menu.Append(self.MENU_DISCOGRAPHY.GetId(), _("View Discography\tAlt+D"))
+        menu.Append(self.MENU_FOLLOW.GetId(), _("Follow Artist\tAlt+F"))
+        self.PopupMenu(menu)
+        menu.Destroy()
+
+    def on_play(self, evt=None):
         artist = self.get_selected_artist()
         if artist:
-            ui.message(_("Playing {artist_name}...").format(artist_name=artist["name"]))
-            threading.Thread(
-                target=self.client.play_item, args=(artist["uri"],)
-            ).start()
+            self._play_uri(artist.get("uri"))
             self.Close()
 
-    def on_view_discography(self, evt):
+    def on_add_to_queue(self, evt=None):
         artist = self.get_selected_artist()
         if artist:
-            dialog = ArtistDiscographyDialog(
-                self, self.client, artist["id"], artist["name"]
-            )
+            self._queue_add_context(artist.get("uri"), "artist", artist.get("name"))
+
+    def on_copy_link(self, evt=None):
+        artist = self.get_selected_artist()
+        if artist:
+            link = artist.get("external_urls", {}).get("spotify")
+            self.copy_link(link)
+
+    def on_view_discography(self, evt=None):
+        artist = self.get_selected_artist()
+        if artist:
+            dialog = ArtistDiscographyDialog(self, self.client, artist["id"], artist["name"])
             dialog.Show()
 
-    def on_follow(self, evt):
+    def on_follow(self, evt=None):
         artist = self.get_selected_artist()
         if artist:
-
             def _follow():
                 result = self.client.follow_artists([artist["id"]])
-                if isinstance(result, str):
-                    wx.CallAfter(ui.message, result)
+                if isinstance(result, str): wx.CallAfter(ui.message, result)
                 else:
-                    wx.CallAfter(
-                        ui.message,
-                        _("You are now following {artist_name}.").format(
-                            artist_name=artist["name"]
-                        ),
-                    )
-
+                    wx.CallAfter(ui.message, _("You are now following {artist_name}.").format(artist_name=artist["name"]))
             threading.Thread(target=_follow).start()
 
 class ManagementDialog(AccessifyDialog):
