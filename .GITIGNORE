@@ -16,6 +16,7 @@ __pycache__/
 build/
 dist/
 archives/
+DevGuide.wiki/
 
 # Build/translation scripts
 pybabel.py
