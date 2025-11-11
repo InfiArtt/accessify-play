@@ -2,6 +2,7 @@
 
 ## Version 1.3.0 (Unreleased)
 
+- New Feature: Added a command to announce the current track's progress and total duration (e.g., "1min 23sec out of 3min 45sec") using the shortcut `NVDA+Alt+Shift+T`.
 - Improvement: Dialogs that depend on Spotify data (Management, Queue List, Add to Playlist, etc.) now preload their content before the window appears, eliminating empty states and making loading progress audible.
 - Improvement: Added centralized helpers to fetch the current user profile, playlists, saved tracks, saved shows, top items, new releases, and recently played items so the multi-tab Management dialog opens fully populated and refreshes consistently.
 - Improvement: Reworked the Search dialog, Management tabs, and Queue window with context menus, keyboard shortcuts, and smarter focus handling so actions like Play/Add to Queue/Copy Link/Follow are discoverable without cluttering the UI.

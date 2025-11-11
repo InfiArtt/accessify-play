@@ -251,6 +251,30 @@ class SpotifyClient:
             return _("Could not find URL for the current track.")
         return url
 
+    def get_playback_time_info(self):
+        """
+        Retrieves the current playback position and the track's total duration,
+        formats them, and returns a descriptive string.
+        """
+        playback = self._execute(self.client.current_playback)
+        if isinstance(playback, str):
+            return playback
+        if not playback or not playback.get("item"):
+            return _("Nothing is currently playing.")
+
+        progress_ms = playback.get("progress_ms", 0)
+        duration_ms = playback["item"].get("duration_ms", 0)
+
+        current_min, current_sec = divmod(progress_ms // 1000, 60)
+        total_min, total_sec = divmod(duration_ms // 1000, 60)
+
+        return _("{current_min}min {current_sec}sec out of {total_min}min {total_sec}sec").format(
+            current_min=current_min,
+            current_sec=current_sec,
+            total_min=total_min,
+            total_sec=total_sec
+        )
+
     def search(self, query, search_type="track", offset=0):
         if not query:
             return None

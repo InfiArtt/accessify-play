@@ -2252,6 +2252,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         )
         self.managementDialog.Bind(wx.EVT_CLOSE, self.onManagementDialogClose)
         self.managementDialog.Show()
+        ui.message(_("UI Ready."))
 
     def _fetch_management_data(self):
         if not self.client.client:
@@ -2377,8 +2378,21 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
             ui.message(_("Spotify client not ready. Please validate your credentials."))
             return
         self._managementDialogLoading = True
-        ui.message(_("Loading Spotify library data..."))
+        ui.message(_("Please Wait..."))
         threading.Thread(target=self._prepare_management_dialog).start()
+
+
+    @scriptHandler.script(
+        description=_("Announces the current track's playback time."),
+        gesture="kb:NVDA+Alt+Shift+T",
+    )
+    def script_announcePlaybackTime(self, gesture):
+        """Announces the current track's playback time."""
+        threading.Thread(target=self._get_and_announce_playback_time).start()
+
+    def _get_and_announce_playback_time(self):
+        result = self.client.get_playback_time_info()
+        wx.CallAfter(ui.message, result)
 
     @scriptHandler.script(
         description=_("Play a track from a Spotify URL."), gesture="kb:nvda+shift+alt+p"
