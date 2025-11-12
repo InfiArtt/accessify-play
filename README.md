@@ -72,6 +72,7 @@ Accessify Play is packed with features, organized for your convenience:
 | Seek Forward (configurable)  | `Control+Alt+NVDA+RightArrow`        |
 | Seek Backward (configurable) | `Control+Alt+NVDA+LeftArrow`         |
 | Announce Current Track       | `NVDA+Shift+Alt+I`                   |
+| Announce Playback Time       | `NVDA+Alt+Shift+T`                   |
 | Copy Track URL               | `NVDA+Shift+Alt+C`                   |
 | Open Search Dialog           | `NVDA+Shift+Alt+S`                   |
 | Play from Link Dialog        | `NVDA+Shift+Alt+P`                   |

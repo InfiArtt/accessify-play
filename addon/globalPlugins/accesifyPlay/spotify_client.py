@@ -2,6 +2,7 @@
 
 import os
 import webbrowser
+from urllib.parse import urlparse
 import spotipy
 from spotipy.oauth2 import SpotifyPKCE, CacheFileHandler
 from spotipy.exceptions import SpotifyException
@@ -250,6 +251,30 @@ class SpotifyClient:
             return _("Could not find URL for the current track.")
         return url
 
+    def get_playback_time_info(self):
+        """
+        Retrieves the current playback position and the track's total duration,
+        formats them, and returns a descriptive string.
+        """
+        playback = self._execute(self.client.current_playback)
+        if isinstance(playback, str):
+            return playback
+        if not playback or not playback.get("item"):
+            return _("Nothing is currently playing.")
+
+        progress_ms = playback.get("progress_ms", 0)
+        duration_ms = playback["item"].get("duration_ms", 0)
+
+        current_min, current_sec = divmod(progress_ms // 1000, 60)
+        total_min, total_sec = divmod(duration_ms // 1000, 60)
+
+        return _("{current_min}min {current_sec}sec out of {total_min}min {total_sec}sec").format(
+            current_min=current_min,
+            current_sec=current_sec,
+            total_min=total_min,
+            total_sec=total_sec
+        )
+
     def search(self, query, search_type="track", offset=0):
         if not query:
             return None
@@ -281,35 +306,18 @@ class SpotifyClient:
         return self._execute(self.client.add_to_queue, uri=uri)
 
     def get_track_details_from_url(self, url):
-        if not self.client:
-            return {"error": _("Spotify client not ready.")}
-
-        try:
-            path = url.split("spotify.com/track/")[1]
-            track_id = path.split("?")[0]
-        except IndexError:
-            return {"error": _("Invalid Spotify track URL.")}
-
-        try:
-            track = self.client.track(track_id)
-            if not track:
-                return {"error": _("Track not found.")}
-
-            artists = ", ".join([a["name"] for a in track.get("artists", [])])
-            duration_ms = track.get("duration_ms", 0)
-            minutes, seconds = divmod(duration_ms / 1000, 60)
-
-            return {
-                "uri": track.get("uri"),
-                "name": track.get("name"),
-                "artists": artists,
-                "duration": f"{int(minutes)}:{int(seconds):02d}",
-            }
-        except Exception as e:
-            log.error(
-                f"{_('Failed to get track details from URL:')} {e}", exc_info=True
-            )
-            return {"error": _("Failed to fetch track details.")}
+        info = self.get_link_details(url)
+        if "error" in info:
+            return info
+        if info.get("type") != "track":
+            return {"error": _("The provided link is not a track link.")}
+        metadata = info.get("metadata", {})
+        return {
+            "uri": info.get("uri"),
+            "name": metadata.get("name"),
+            "artists": metadata.get("artists"),
+            "duration": metadata.get("duration"),
+        }
 
     def get_next_track_in_queue(self):
         queue_data = self._execute_web_api(self.client.queue)
@@ -519,6 +527,56 @@ class SpotifyClient:
             items=track_uris,
         )
 
+    def get_link_details(self, url: str) -> dict:
+        """Returns metadata for a spotify link (track, playlist, album, artist, show, episode)."""
+        if not self.client:
+            return {
+                "error": _("Spotify client not ready. Please validate your credentials.")
+            }
+        parsed = self._parse_spotify_url(url)
+        if not parsed:
+            return {"error": _("Invalid Spotify link.")}
+        entity_type, entity_id = parsed
+        entity_type = entity_type.lower()
+        alias_map = {
+            "tracks": "track",
+            "albums": "album",
+            "artists": "artist",
+            "playlists": "playlist",
+            "shows": "show",
+            "episodes": "episode",
+        }
+        entity_type = alias_map.get(entity_type, entity_type)
+        fetchers = {
+            "track": lambda: self._execute_web_api(self.client.track, entity_id),
+            "album": lambda: self._execute_web_api(self.client.album, entity_id),
+            "artist": lambda: self._execute_web_api(self.client.artist, entity_id),
+            "playlist": lambda: self._execute_web_api(self.client.playlist, entity_id),
+            "show": lambda: self._execute_web_api(self.client.show, entity_id),
+            "episode": lambda: self._execute_web_api(self.client.episode, entity_id),
+        }
+        fetcher = fetchers.get(entity_type)
+        if not fetcher:
+            return {"error": _("Links of this type are not supported yet.")}
+        data = fetcher()
+        if isinstance(data, str):
+            return {"error": data}
+        builders = {
+            "track": self._build_track_link_details,
+            "album": self._build_album_link_details,
+            "artist": self._build_artist_link_details,
+            "playlist": self._build_playlist_link_details,
+            "show": self._build_show_link_details,
+            "episode": self._build_episode_link_details,
+        }
+        builder = builders.get(entity_type)
+        if not builder:
+            return {"error": _("Links of this type are not supported yet.")}
+        info = builder(data)
+        info["type"] = entity_type
+        info["typeLabel"] = self._get_type_label(entity_type)
+        return info
+
     def get_saved_tracks(self):
         """Fetches all saved tracks from the user's library."""
         tracks = []
@@ -652,3 +710,206 @@ class SpotifyClient:
     def get_current_user_profile(self):
         """Returns information about the current Spotify user."""
         return self._execute_web_api(self.client.current_user)
+
+    @staticmethod
+    def _format_duration(duration_ms):
+        if not duration_ms:
+            return "0:00"
+        minutes, seconds = divmod(duration_ms // 1000, 60)
+        return f"{minutes}:{seconds:02d}"
+
+    @staticmethod
+    def _format_followers(total):
+        if total is None:
+            return ""
+        return f"{total:,}"
+
+    def _get_type_label(self, entity_type):
+        labels = {
+            "track": _("Track"),
+            "album": _("Album"),
+            "artist": _("Artist"),
+            "playlist": _("Playlist"),
+            "show": _("Show"),
+            "episode": _("Episode"),
+        }
+        return labels.get(entity_type, entity_type.title())
+
+    def _parse_spotify_url(self, raw_url):
+        if not raw_url:
+            return None
+        url = raw_url.strip()
+        if not url:
+            return None
+        if url.lower().startswith("spotify:"):
+            parts = [p for p in url.split(":") if p and p.lower() != "spotify"]
+            if not parts:
+                return None
+            if len(parts) >= 4 and parts[-2] == "playlist":
+                return "playlist", parts[-1]
+            if len(parts) >= 2:
+                return parts[0], parts[1]
+            return None
+        parsed = urlparse(url if "://" in url else f"https://{url}")
+        host = parsed.netloc.lower()
+        if "spotify" not in host:
+            return None
+        segments = [seg for seg in parsed.path.strip("/").split("/") if seg]
+        if not segments:
+            return None
+        if segments[0] == "user" and len(segments) >= 4 and segments[2] == "playlist":
+            return "playlist", segments[3]
+        if len(segments) < 2:
+            return None
+        return segments[0], segments[1].split("?")[0]
+
+    def _build_track_link_details(self, data):
+        artists = ", ".join([a["name"] for a in data.get("artists", [])])
+        album = data.get("album", {}).get("name", "")
+        duration = self._format_duration(data.get("duration_ms", 0))
+        lines = [
+            _("Type: Track"),
+            _("Title: {name}").format(name=data.get("name", "")),
+        ]
+        if artists:
+            lines.append(_("Artists: {artists}").format(artists=artists))
+        if album:
+            lines.append(_("Album: {album}").format(album=album))
+        lines.append(_("Duration: {duration}").format(duration=duration))
+        return {
+            "uri": data.get("uri"),
+            "lines": lines,
+            "metadata": {
+                "name": data.get("name"),
+                "artists": artists,
+                "album": album,
+                "duration": duration,
+            },
+        }
+
+    def _build_album_link_details(self, data):
+        artists = ", ".join([a["name"] for a in data.get("artists", [])])
+        release = data.get("release_date", "")
+        total_tracks = data.get("total_tracks", 0)
+        lines = [
+            _("Type: Album"),
+            _("Title: {name}").format(name=data.get("name", "")),
+        ]
+        if artists:
+            lines.append(_("Artists: {artists}").format(artists=artists))
+        if release:
+            lines.append(_("Release date: {date}").format(date=release))
+        lines.append(_("Tracks: {count}").format(count=total_tracks))
+        return {
+            "uri": data.get("uri"),
+            "lines": lines,
+            "metadata": {
+                "name": data.get("name"),
+                "artists": artists,
+                "release": release,
+                "trackCount": total_tracks,
+            },
+        }
+
+    def _build_artist_link_details(self, data):
+        genres = ", ".join(data.get("genres", []))
+        followers = self._format_followers(
+            data.get("followers", {}).get("total")
+        )
+        popularity = data.get("popularity")
+        lines = [
+            _("Type: Artist"),
+            _("Name: {name}").format(name=data.get("name", "")),
+        ]
+        if followers:
+            lines.append(_("Followers: {count}").format(count=followers))
+        if genres:
+            lines.append(_("Genres: {genres}").format(genres=genres))
+        if popularity is not None:
+            lines.append(_("Popularity: {score}/100").format(score=popularity))
+        return {
+            "uri": data.get("uri"),
+            "lines": lines,
+            "metadata": {
+                "name": data.get("name"),
+                "followers": followers,
+                "genres": genres,
+            },
+        }
+
+    def _build_playlist_link_details(self, data):
+        owner = data.get("owner", {}).get("display_name") or data.get("owner", {}).get("id")
+        total = data.get("tracks", {}).get("total", 0)
+        public = data.get("public")
+        description = (data.get("description") or "").strip()
+        lines = [
+            _("Type: Playlist"),
+            _("Title: {name}").format(name=data.get("name", "")),
+        ]
+        if owner:
+            lines.append(_("Owner: {owner}").format(owner=owner))
+        lines.append(_("Tracks: {count}").format(count=total))
+        if public is not None:
+            lines.append(
+                _("Public: {state}").format(
+                    state=_("Yes") if public else _("No")
+                )
+            )
+        if description:
+            lines.append(_("Description: {text}").format(text=description))
+        return {
+            "uri": data.get("uri"),
+            "lines": lines,
+            "metadata": {
+                "name": data.get("name"),
+                "owner": owner,
+                "trackCount": total,
+                "description": description,
+            },
+        }
+
+    def _build_show_link_details(self, data):
+        publisher = data.get("publisher")
+        episodes = data.get("total_episodes", 0)
+        lines = [
+            _("Type: Show"),
+            _("Title: {name}").format(name=data.get("name", "")),
+        ]
+        if publisher:
+            lines.append(_("Publisher: {name}").format(name=publisher))
+        lines.append(_("Episodes: {count}").format(count=episodes))
+        if data.get("explicit"):
+            lines.append(_("Explicit content"))
+        return {
+            "uri": data.get("uri"),
+            "lines": lines,
+            "metadata": {
+                "name": data.get("name"),
+                "publisher": publisher,
+                "episodeCount": episodes,
+            },
+        }
+
+    def _build_episode_link_details(self, data):
+        show = data.get("show", {})
+        show_name = show.get("name")
+        release_date = data.get("release_date", "")
+        duration = self._format_duration(data.get("duration_ms", 0))
+        lines = [
+            _("Type: Episode"),
+            _("Title: {name}").format(name=data.get("name", "")),
+        ]
+        if show_name:
+            lines.append(_("Show: {name}").format(name=show_name))
+        if release_date:
+            lines.append(_("Release date: {date}").format(date=release_date))
+        lines.append(_("Duration: {duration}").format(duration=duration))
+        return {
+            "uri": data.get("uri"),
+            "lines": lines,
+            "metadata": {
+                "name": data.get("name"),
+                "show": show_name,
+                "duration": duration,
+            },
+        }
