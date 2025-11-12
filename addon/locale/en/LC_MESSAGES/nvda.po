@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2025-11-12 18:23+0700\n"
+"POT-Creation-Date: 2025-11-12 18:54+0700\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -1282,5 +1282,70 @@ msgstr ""
 #: addon/globalPlugins/accesifyPlay/spotify_client.py:903
 #, python-brace-format
 msgid "Show: {name}"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/updater.py:64
+msgid "No updates available."
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/updater.py:65
+#: addon/globalPlugins/accesifyPlay/updater.py:81
+msgid "AccessifyPlay Update"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/updater.py:80
+msgid "You are running the latest version of AccessifyPlay."
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/updater.py:90
+msgid ""
+"Failed to check for updates. Please check your internet connection or try"
+" again later."
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/updater.py:91
+msgid "Update Check Failed"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/updater.py:113
+msgid "AccessifyPlay Update Available"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/updater.py:119
+#, python-brace-format
+msgid ""
+"A new version of AccessifyPlay is available: {version}\n"
+"\n"
+"Changes in this version:\n"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/updater.py:124
+msgid "No changelog provided."
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/updater.py:127
+msgid "Download and Install"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/updater.py:131
+msgid "Later"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/updater.py:142
+msgid "Downloading update... Please wait."
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/updater.py:158
+msgid "Update failed: No add-on file found in the release."
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/updater.py:158
+#: addon/globalPlugins/accesifyPlay/updater.py:192
+msgid "Error"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/updater.py:192
+#, python-brace-format
+msgid "Update failed: {error}"
 msgstr ""
 
