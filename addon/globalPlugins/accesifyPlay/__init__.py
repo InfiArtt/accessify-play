@@ -694,7 +694,7 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
             self.languageCtrl.SetValue("Bahasa Indonesia")
         else:
             self.languageCtrl.SetValue("English")  # Default to English if unknown
-
+        self._originalLanguage = current_lang_code
         # Announce track changes checkbox (Fixed for accessibility)
         self.announceTrackChanges = sHelper.addItem(
             wx.CheckBox(self, label=_("Announce track changes automatically:"))
@@ -833,7 +833,7 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
         config.conf["spotify"]["seekDuration"] = self.seekDurationCtrl.GetValue()
 
         selected_lang_display = self.languageCtrl.GetValue()
-        selected_code = self.languageCodeByLabel.get(
+        selected_code = self.languageCodes.get(
             selected_lang_display, LANGUAGE_AUTO
         )
         config.conf["spotify"]["language"] = selected_code
