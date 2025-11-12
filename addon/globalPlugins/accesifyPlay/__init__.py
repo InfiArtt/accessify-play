@@ -24,6 +24,7 @@ if lib_path not in sys.path:
 # Local addon modules
 from . import donate
 from . import spotify_client
+from . import updater
 
 # Define the configuration specification
 confspec = {
@@ -32,6 +33,9 @@ confspec = {
     "seekDuration": "integer(min=1, max=60, default=15)",
     "language": "string(default='en')",  # New setting for language
     "announceTrackChanges": "boolean(default=False)",
+    "updateChannel": "string(default='stable')",
+    "isAutomaticallyCheckForUpdates": "boolean(default=True)",
+    "lastUpdateCheck": "integer(default=0)",
 }
 config.conf.spec["spotify"] = confspec
 
@@ -291,6 +295,26 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
             config.conf["spotify"]["announceTrackChanges"]
         )
 
+        # Updater settings
+        self.updateChannelCtrl = sHelper.addLabeledControl(
+            _("Update Channel:"),
+            wx.ComboBox,
+            choices=[_("Stable"), _("Beta")],
+            style=wx.CB_READONLY,
+        )
+        self.updateChannelCtrl.SetValue(
+            _("Beta")
+            if config.conf["spotify"]["updateChannel"] == "beta"
+            else _("Stable")
+        )
+
+        self.autoCheckUpdatesCtrl = sHelper.addItem(
+            wx.CheckBox(self, label=_("Check for updates automatically"))
+        )
+        self.autoCheckUpdatesCtrl.SetValue(
+            config.conf["spotify"]["isAutomaticallyCheckForUpdates"]
+        )
+
         buttonsSizer = wx.BoxSizer(wx.HORIZONTAL)
         self.migrateButton = wx.Button(self, label=_("Migrate Old Credentials"))
         self.migrateButton.Bind(wx.EVT_BUTTON, self.onMigrateCredentials)
@@ -311,6 +335,13 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
         self.donateButton = wx.Button(self, label=_("Donate"))
         self.donateButton.Bind(wx.EVT_BUTTON, lambda evt: donate.open_donate_link())
         buttonsSizer.Add(self.donateButton, flag=wx.LEFT, border=5)
+
+        self.checkUpdatesButton = wx.Button(self, label=_("Check for Updates"))
+        self.checkUpdatesButton.Bind(
+            wx.EVT_BUTTON, lambda evt: updater.check_for_updates(is_manual=True)
+        )
+        buttonsSizer.Add(self.checkUpdatesButton, flag=wx.LEFT, border=5)
+
         sHelper.addItem(buttonsSizer)
         self.updateMigrateButtonVisibility() # Set initial visibility of migrate button
 
@@ -392,6 +423,12 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
         config.conf["spotify"][
             "announceTrackChanges"
         ] = self.announceTrackChanges.IsChecked()
+        config.conf["spotify"]["updateChannel"] = (
+            "beta" if self.updateChannelCtrl.GetValue() == _("Beta") else "stable"
+        )
+        config.conf["spotify"][
+            "isAutomaticallyCheckForUpdates"
+        ] = self.autoCheckUpdatesCtrl.IsChecked()
 
     def onValidate(self, evt):
         self.onSave()  # Save current UI values to config.conf before validating
@@ -2200,6 +2237,10 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
         addonHandler.initTranslation()
         threading.Thread(target=self.client.initialize).start()
+
+        # Automatic update check on startup
+        if config.conf["spotify"]["isAutomaticallyCheckForUpdates"]:
+            threading.Thread(target=updater.check_for_updates, args=(False,)).start()
 
     def terminate(self):
         super(GlobalPlugin, self).terminate()
