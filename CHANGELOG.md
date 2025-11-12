@@ -1,20 +1,36 @@
 # Changelog
 
-## Version 1.3.0 (Unreleased)
+## Version 1.3.0
 
-- New Feature: Added a command to announce the current track's progress and total duration (e.g., "1min 23sec out of 3min 45sec") using the shortcut `NVDA+Alt+Shift+T`.
-- Improvement: Dialogs that depend on Spotify data (Management, Queue List, Add to Playlist, etc.) now preload their content before the window appears, eliminating empty states and making loading progress audible.
-- Improvement: Added centralized helpers to fetch the current user profile, playlists, saved tracks, saved shows, top items, new releases, and recently played items so the multi-tab Management dialog opens fully populated and refreshes consistently.
-- Improvement: Reworked the Search dialog, Management tabs, and Queue window with context menus, keyboard shortcuts, and smarter focus handling so actions like Play/Add to Queue/Copy Link/Follow are discoverable without cluttering the UI.
-- Improvement: Management tabs (Manage Playlists, Saved Tracks, Followed Artists, Top Items, Saved Shows, New Releases, Recently Played) now drive all actions through context menus, support Enter-to-play, and offer Copy Link commands for every row.
-- New Feature: The Queue dialog exposes a context menu with Play, Copy Link, and Remove actions; removing entries rebuilds the playback queue so you can curate Spotify’s upcoming tracks directly from NVDA.
-- Fix: Ensured modal dialogs are destroyed properly when closed (Space, Esc, Alt+F4) so reopening a dialog creates a new instance and reruns the “Playlists loaded” announcement.
-- Security: Implemented the more secure Proof Key for Code Exchange (PKCE) authentication flow, replacing the less secure `client_secret` method. This enhances the security of user authentication with Spotify.
-- Improvement: Removed the 'Client Secret' field from the Accessify Play settings panel, simplifying the authentication setup process for users.
-- Fix: Provided a fallback implementation for the standard Python 'secrets' module, resolving 'ModuleNotFoundError' issues in environments with older Python versions and improving addon compatibility.
-- New Feature: Added a `privacy-policy.html` file to the project doc, detailing the addon's data handling practices.
-- New Feature: Implemented a "Migrate Old Credentials" button in the Accessify Play settings panel. This button appears if old Client ID or Secret Key data is detected in NVDA's configuration, allowing users to seamlessly migrate their Client ID to the new portable storage location and remove obsolete credentials.
-- New Feature: Added a "Go to Developer Dashboard" button to the Accessify Play settings panel, providing quick access to the Spotify Developer Dashboard for managing Client IDs.
+This is a major release focusing on security, usability, and new features, representing the most significant update to the addon yet.
+
+#### ✨ New Features
+
+- **Automatic & Manual Updater**: The addon can now check for updates directly from GitHub. Enable automatic checks on NVDA startup or trigger them manually from the settings panel, with support for `Stable` and `Beta` release channels.
+- **Announce Playback Time**: A new command (`NVDA+Alt+Shift+T`) announces the current track's progress and total duration (e.g., "1min 23sec out of 3min 45sec").
+- **Advanced Queue Management**: The Queue dialog now features a context menu with `Play`, `Copy Link`, and `Remove` actions. Removing an item rebuilds Spotify's playback queue, giving you direct control over upcoming tracks.
+- **Flexible Language Options**: You can now have the addon follow NVDA's language or override it with a specific language (e.g., keep the addon in English even if NVDA is set to another locale).
+- **Seamless Credential Migration**: A "Migrate Old Credentials" button now appears in settings if legacy `Client ID` or `Client Secret` data is found, allowing for a one-click migration to the new, more secure storage system.
+- **Quick Developer Access**: A "Go to Developer Dashboard" button has been added to the settings panel for easy access to manage your Spotify Client ID.
+
+#### 🔐 Security Enhancements
+
+- **Modernized PKCE Authentication**: The addon now uses Spotify's more secure **Proof Key for Code Exchange (PKCE)** authentication flow. This significantly enhances security and **removes the need for a `Client Secret`**, simplifying the setup process.
+
+#### 🚀 Improvements
+
+- **Enhanced User Interface & Experience**:
+  - **Context Menus Everywhere**: All lists (Search Results, Saved Tracks, Queue, etc.) now feature context menus for quick access to actions like `Play`, `Add to Queue`, `Copy Link`, and more, creating a cleaner and more powerful UI.
+  - **Smarter Focus Handling**: When using "Load More" in the Search dialog, focus is now intelligently moved to the first new result, enabling a seamless browsing experience without losing your place.
+  - **Responsive Data Loading**: Dialogs that rely on Spotify data (like Management and Queue) now preload content *before* appearing, providing a faster and more fluid user experience.
+- **Reliable Playback Commands**: All playback-related shortcuts (Play/Pause, Next/Previous, Volume, etc.) are now more stable. The addon prevents overlapping commands; if a shortcut is pressed while another is processing, a "Please wait..." message is announced, ensuring each action completes successfully.
+- **Full Internationalization Support**: The translation system has been standardized, ensuring that all text is translatable and that non-English locales (including Bahasa Indonesia) load correctly.
+
+#### 🛠️ Fixes
+
+- **Podcast & Show Information Now Works**: Fixed a critical issue where information for currently playing podcasts or shows could not be retrieved. The addon can now correctly identify and announce details for both music tracks and podcast episodes.
+- **Search Dialog Stability**: Resolved a crash that could occur if Spotify's search results contained invalid or empty data.
+- **Dialog Management**: Ensured all dialogs are properly destroyed when closed, so reopening them always presents fresh data.
 
 ## Version 1.2.0
 

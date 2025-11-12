@@ -257,12 +257,37 @@
             <ul>
                 <li><strong>Callback Port:</strong> Only change this if you have a port conflict and you have also changed it in the Spotify Dashboard.</li>
                 <li><strong>Announce track changes automatically:</strong> Check this box if you want NVDA to announce every new song as it begins playing.</li>
+                <li><strong>Language:</strong> Choose the display language for the add-on. This setting allows Accessify Play to use a different language than NVDA's main interface. You can select "Follow NVDA language (default)" or force a specific language like "Bahasa Indonesia".</li>
+                <li><strong>Update Channel:</strong> Select your preferred update channel.
+                    <ul>
+                        <li><strong>Stable:</strong> Receive only stable, well-tested updates. These correspond to releases from the `main` branch on GitHub.</li>
+                        <li><strong>Beta:</strong> Receive pre-release versions with the latest features and bug fixes, but potentially less stability. These correspond to releases from the `dev` branch on GitHub.</li>
+                    </ul>
+                </li>
+                <li><strong>Check for updates automatically:</strong> If checked, the add-on will silently check for new versions every time NVDA starts. If an update is available, a pop-up window will appear. If unchecked, you will only receive updates when you manually check.</li>
             </ul>
         </li>
         <li>Press the <strong>"Validate Credentials"</strong> button. Your web browser will open and ask you to grant permissions. Click "Agree".</li>
         <li>If successful, you will see a "Validation successful!" message. If not, carefully re-check all steps, especially the Redirect URI and your Client ID.</li>
         <li>Click "OK" to save and close the settings. The addon is now ready to use!</li>
     </ol>
+
+    <h2>Update System</h2>
+    <p>Accessify Play includes a built-in update system to keep your add-on up-to-date with the latest features and bug fixes. Updates are sourced directly from <a href="https://github.com/InfiArtt/accessify-play/releases" target="_blank">GitHub Releases</a>.</p>
+
+    <h3>Automatic Updates</h3>
+    <p>If "Check for updates automatically" is enabled in the settings, Accessify Play will perform a silent check for new versions every time NVDA starts. If an update is available for your selected channel (Stable or Beta), a pop-up window will appear, showing the new version and its changelog. You can then choose to download and install the update or postpone it.</p>
+    <p>If no update is available, or if an error occurs during the background check (e.g., no internet connection), the add-on will remain silent and not display any messages.</p>
+
+    <h3>Manual Updates</h3>
+    <p>You can manually check for updates at any time by navigating to the Accessify Play settings panel (NVDA menu -> Preferences -> Settings -> Accessify Play) and clicking the <strong>"Check for Updates"</strong> button. The process is similar to automatic updates: if a new version is found, a pop-up will appear; otherwise, a message will confirm that you are running the latest version.</p>
+
+    <h3>Update Channels</h3>
+    <p>You can choose between two update channels in the settings:</p>
+    <ul>
+        <li><strong>Stable:</strong> This is the recommended channel for most users. You will receive only stable, thoroughly tested releases. These updates correspond to releases published from the add-on's `main` branch on GitHub.</li>
+        <li><strong>Beta:</strong> This channel provides access to pre-release versions, offering the latest features and bug fixes before they are officially released. Beta versions correspond to releases from the `dev` branch on GitHub. While they offer early access, they might be less stable than official releases.</li>
+    </ul>
 
     <h2>Authentication & Migration Update (Version 1.3.0)</h2>
     <p>With version 1.3.0, Accessify Play has undergone a significant update to its authentication system to enhance security and improve user experience, especially for portable NVDA installations.</p>

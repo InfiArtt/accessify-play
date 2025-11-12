@@ -1,34 +1,36 @@
-# Accessify Play
-[![Code Quality Linting](https://github.com/InfiArtt/accessify-play/actions/workflows/lint.yml/badge.svg)](https://github.com/InfiArtt/accessify-play/actions/workflows/lint.yml)
-[![Latest Release](https://img.shields.io/github/v/release/InfiArtt/accessify-play)](https://github.com/InfiArtt/accessify-play/releases/latest)
-[![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
+  Accessify Play for NVDA body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"; line-height: 1.7; padding: 25px; max-width: 850px; margin: 0 auto; color: #333; } h1, h2, h3 { color: #1DB954; /\* Spotify Green \*/ border-bottom: 2px solid #1DB954; padding-bottom: 10px; margin-top: 40px; } h1 { font-size: 2.5em; text-align: center; border-bottom: none; margin-bottom: 30px; } code { background-color: #e8e8e8; padding: 3px 7px; border-radius: 5px; font-family: "Courier New", Courier, monospace; font-size: 0.95em; } .warning, .premium-warning { border-left: 5px solid #ffc107; padding: 20px; margin: 25px 0; background-color: #fffbeb; } .warning strong, .premium-warning strong { color: #d97706; display: block; margin-bottom: 10px; font-size: 1.1em; } ol li, ul li { margin-bottom: 12px; } table { width: 100%; border-collapse: collapse; margin-top: 25px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); } th, td { border: 1px solid #ddd; padding: 12px; text-align: left; } th { background-color: #f7f7f7; font-weight: 600; } .container { background: #fff; padding: 20px 40px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); } .center { text-align: center; }
 
-<p align="center"><strong>Your Spotify Universe, Commanded by NVDA.</strong></p>
+Accessify Play
+==============
 
----
+**Your Spotify Universe, Commanded by NVDA.**
 
-Go beyond simple playback. Accessify Play transforms NVDA into a powerful command center for your entire Spotify experience. Control what's playing on *any* of your devices—your PC, phone, smart speaker, or console—directly from your keyboard, without ever touching the Spotify app.
+Go beyond simple playback. Accessify Play transforms NVDA into a powerful command center for your entire Spotify experience. Control what's playing on _any_ of your devices—your PC, phone, smart speaker, or console—directly from your keyboard, without ever touching the Spotify app.
 
 Search, discover, manage playlists, and control your music with unparalleled freedom. This is how Spotify was meant to be experienced with a screen reader.
 
-> **⚠️ Important: Spotify Premium Required!**
->
-> Due to Spotify API limitations, this addon requires an active **Spotify Premium** subscription for playback control features. Free accounts have restricted API access and will not work correctly with this addon.
+**Important: Spotify Premium Required!**
 
-## Prerequisites
+Due to Spotify API limitations, this addon requires an active **Spotify Premium** subscription for playback control features. Free accounts have restricted API access and will not work correctly with this addon.
+
+Prerequisites
+-------------
 
 *   An active **Spotify Premium** subscription.
 *   NVDA version **2024.4** or later.
 
-## A Note on Lyrics
+A Note on Lyrics
+----------------
 
 This addon does not, and will not, include a feature to display song lyrics. Most methods for obtaining lyrics, such as scraping websites, are done without a proper license from the copyright holders. This is an illegal practice that violates the terms of service of lyrics providers and may infringe on copyright law, potentially leading to legal consequences under regulations like the DMCA (Digital Millennium Copyright Act) in the United States and similar laws worldwide. To ensure this addon remains legal, distributable, and respectful of copyright, this feature is intentionally omitted.
 
-## License
+License
+-------
 
 This addon is licensed under the [GNU General Public License v2.0](https://www.gnu.org/licenses/gpl-2.0.html).
 
-## ✨ Feature Universe
+Feature Universe
+----------------
 
 Accessify Play is packed with features, organized for your convenience:
 
@@ -59,32 +61,89 @@ Accessify Play is packed with features, organized for your convenience:
 *   **Deep Dives:** From an artist search result, dive into their full discography, or discover related artists.
 *   **Podcast Explorer:** View and play any episode from a podcast you've found.
 
-## ⌨️ Keyboard Command Center
+Keyboard Command Center
+-----------------------
 
-| Command                      | Shortcut                             |
-| :--------------------------- | :----------------------------------- |
-| Play/Pause                   | `NVDA+Shift+Alt+Space`               |
-| Next Track                   | `NVDA+Shift+Alt+RightArrow`          |
-| Previous Track               | `NVDA+Shift+Alt+LeftArrow`           |
-| Volume Up                    | `NVDA+Shift+Alt+UpArrow`             |
-| Volume Down                  | `NVDA+Shift+Alt+DownArrow`           |
-| Set Specific Volume          | `NVDA+Shift+Alt+V`                   |
-| Seek Forward (configurable)  | `Control+Alt+NVDA+RightArrow`        |
-| Seek Backward (configurable) | `Control+Alt+NVDA+LeftArrow`         |
-| Announce Current Track       | `NVDA+Shift+Alt+I`                   |
-| Announce Playback Time       | `NVDA+Alt+Shift+T`                   |
-| Copy Track URL               | `NVDA+Shift+Alt+C`                   |
-| Open Search Dialog           | `NVDA+Shift+Alt+S`                   |
-| Play from Link Dialog        | `NVDA+Shift+Alt+P`                   |
-| Open Queue List              | `NVDA+Shift+Alt+Q`                   |
-| Announce Next in Queue       | `NVDA+Shift+Alt+N`                   |
-| Save Track to Library        | `NVDA+Alt+Shift+L`                   |
-| Add Track to Playlist        | `NVDA+Alt+Shift+A`                   |
-| Open Management Dialog       | `NVDA+Alt+Shift+M`                   |
+Command
 
----
+Shortcut
 
-## ⚙️ Configuration Guide
+Play/Pause
+
+`NVDA+Shift+Alt+Space`
+
+Next Track
+
+`NVDA+Shift+Alt+RightArrow`
+
+Previous Track
+
+`NVDA+Shift+Alt+LeftArrow`
+
+Volume Up
+
+`NVDA+Shift+Alt+UpArrow`
+
+Volume Down
+
+`NVDA+Shift+Alt+DownArrow`
+
+Set Specific Volume
+
+`NVDA+Shift+Alt+V`
+
+Seek Forward (configurable)
+
+`Control+Alt+NVDA+RightArrow`
+
+Seek Backward (configurable)
+
+`Control+Alt+NVDA+LeftArrow`
+
+Announce Current Track
+
+`NVDA+Shift+Alt+I`
+
+Announce Playback Time
+
+`NVDA+Alt+Shift+T`
+
+Copy Track URL
+
+`NVDA+Shift+Alt+C`
+
+Open Search Dialog
+
+`NVDA+Shift+Alt+S`
+
+Play from Link Dialog
+
+`NVDA+Shift+Alt+P`
+
+Open Queue List
+
+`NVDA+Shift+Alt+Q`
+
+Announce Next in Queue
+
+`NVDA+Shift+Alt+N`
+
+Save Track to Library
+
+`NVDA+Alt+Shift+L`
+
+Add Track to Playlist
+
+`NVDA+Alt+Shift+A`
+
+Open Management Dialog
+
+`NVDA+Alt+Shift+M`
+
+* * *
+
+Configuration Guide
+-------------------
 
 To use this addon, you need to get a **Client ID** and **Client Secret** from the Spotify Developer Dashboard. Follow these steps carefully.
 
@@ -94,12 +153,9 @@ To use this addon, you need to get a **Client ID** and **Client Secret** from th
 2.  Click the **"Go to Developer Dashboard"** button. This will open the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) in your web browser. Log in if prompted.
 3.  Click the "Create app" button.
 4.  Fill out the form:
-    * **App name:** Give it a name (e.g., "NVDA Controller").
-    * **App description:** A short description is fine.
-    * **Redirect URI:** **This is the most important step.** The addon listens on your local machine for the authentication callback. You must enter this URI exactly: `http://127.0.0.1:8888/callback`
-        > **Note on Port 8888:** Based on private reports, some users experience validation failures. This can happen if another application on your computer (often a local development server) is already using port `8888`.
-        >
-        > **Future Update:** To prevent this conflict, the default port for the addon **will be changed to `8539` in a future version.**
+    *   **App name:** Give it a name (e.g., "NVDA Controller").
+    *   **App description:** A short description is fine.
+    *   **Redirect URI:** This is the most important step. The addon listens on your local machine for the authentication callback. You must enter this URI exactly: `http://127.0.0.1:8888/callback`
 5.  You may be asked which API to use. **Please select "Web API"**.
 6.  Agree to the terms and click "Save".
 
@@ -115,43 +171,14 @@ To use this addon, you need to get a **Client ID** and **Client Secret** from th
 2.  In the categories list, select "Accessify Play".
 3.  Locate the **"Add Client ID"** (or "Display/Edit Client ID") button. Click it to open a dialog where you can paste your **Client ID**.
 4.  Review the other settings:
-    * **Callback Port:** Only change this if you have a port conflict and you have also changed it in the Spotify Dashboard. *(See note in Step 1)*.
-    * **Announce track changes automatically:** Check this box if you want NVDA to announce every new song as it begins playing.
-    * **Language:** Choose the display language for the add-on. This setting allows Accessify Play to use a different language than NVDA's main interface. You can select "Follow NVDA language (default)" or force a specific language like "Bahasa Indonesia".
-    * **Update Channel:** Select your preferred update channel.
-        * **Stable:** Receive only stable, well-tested updates. These correspond to releases from the `main` branch on GitHub.
-        * **Beta:** Receive pre-release versions with the latest features and bug fixes, but potentially less stability. These correspond to releases from the `dev` branch on GitHub.
-    * **Check for updates automatically:** If checked, the add-on will silently check for new versions every time NVDA starts. If an update is available, a pop-up window will appear. If unchecked, you will only receive updates when you manually check.
+    *   **Callback Port:** Only change this if you have a port conflict and you have also changed it in the Spotify Dashboard.
+    *   **Announce track changes automatically:** Check this box if you want NVDA to announce every new song as it begins playing.
 5.  Press the **"Validate Credentials"** button. Your web browser will open and ask you to grant permissions. Click "Agree".
 6.  If successful, you will see a "Validation successful!" message. If not, carefully re-check all steps, especially the Redirect URI and your Client ID.
 7.  Click "OK" to save and close the settings. The addon is now ready to use!
 
----
-
-## ✨ Update System
-
-Accessify Play includes a built-in update system to keep your add-on up-to-date with the latest features and bug fixes. Updates are sourced directly from [GitHub Releases](https://github.com/InfiArtt/accessify-play/releases).
-
-### Automatic Updates
-
-If "Check for updates automatically" is enabled in the settings, Accessify Play will perform a silent check for new versions every time NVDA starts. If an update is available for your selected channel (Stable or Beta), a pop-up window will appear, showing the new version and its changelog. You can then choose to download and install the update or postpone it.
-
-If no update is available, or if an error occurs during the background check (e.g., no internet connection), the add-on will remain silent and not display any messages.
-
-### Manual Updates
-
-You can manually check for updates at any time by navigating to the Accessify Play settings panel (NVDA menu -> Preferences -> Settings -> Accessify Play) and clicking the **"Check for Updates"** button. The process is similar to automatic updates: if a new version is found, a pop-up will appear; otherwise, a message will confirm that you are running the latest version.
-
-### Update Channels
-
-You can choose between two update channels in the settings:
-
-*   **Stable:** This is the recommended channel for most users. You will receive only stable, thoroughly tested releases. These updates correspond to releases published from the add-on's `main` branch on GitHub.
-*   **Beta:** This channel provides access to pre-release versions, offering the latest features and bug fixes before they are officially released. Beta versions correspond to releases from the `dev` branch on GitHub. While they offer early access, they might be less stable than official releases.
-
----
-
-## 🔒 Authentication & Migration Update (Version 1.3.0)
+Authentication & Migration Update (Version 1.3.0)
+-------------------------------------------------
 
 With version 1.3.0, Accessify Play has undergone a significant update to its authentication system to enhance security and improve user experience, especially for portable NVDA installations.
 
@@ -160,12 +187,12 @@ With version 1.3.0, Accessify Play has undergone a significant update to its aut
 *   **Simplified Settings:** The 'Client Secret' field has been removed from the Accessify Play settings panel, streamlining the setup process. The 'Client ID' input is now managed via a dynamic button that allows you to easily add, view, or edit your Client ID.
 *   **Seamless Migration:** If you are upgrading from an older version of Accessify Play and have your Client ID (or Client Secret) still stored in NVDA's configuration, a new **"Migrate Old Credentials"** button will appear in the Accessify Play settings panel. Clicking this button will automatically:
     1.  Move your existing Client ID to the new portable `%userprofile%/.spotify_client_id.json` file.
-    2.  Remove both the old Client ID and the obsolete Client Secret from NVDA's configuration.
-    This ensures a smooth transition to the new, more secure system.
+    2.  Remove both the old Client ID and the obsolete Client Secret from NVDA's configuration.This ensures a smooth transition to the new, more secure system.
 
----
+* * *
 
-## 🤔 Why This Authentication Method? (Instead of a Simple Login Button)
+🤔 Why This Authentication Method? (Instead of a Simple Login Button)
+---------------------------------------------------------------------
 
 You might be wondering why Accessify Play requires you to create your own Spotify application and input a Client ID, instead of offering a simple "Login to Spotify" button like many other apps (e.g., Alexa, Google Home, etc.). The answer lies in Spotify's API policies and the challenges faced by independent developers.
 
@@ -180,16 +207,20 @@ For a small, independent, and open-source accessibility addon like Accessify Pla
 
 Therefore, the current method, while requiring a few extra steps from the user, is a necessary workaround. It allows Accessify Play to function and provide its valuable accessibility features by leveraging Spotify's standard developer access, without needing to meet the prohibitive criteria for extended quotas. This approach empowers you, the user, to directly control your Spotify API access, ensuring the addon remains functional and accessible.
 
+* * *
 
-## 🙏 Acknowledgements
+Acknowledgements
+----------------
 
 This project wouldn't be where it is today without the incredible support and dedication of our community. A heartfelt thank you to all the testers who provided invaluable ideas, helped tirelessly with debugging, and offered supportive encouragement throughout the development process. Your contributions have been instrumental in shaping Accessify Play into what it is. Thank you for making this project a success!
 
----
+* * *
 
-## ❤️ Support the Developer
+Support the Developer
+---------------------
 
 If you find this addon useful, please consider supporting its development. Every little bit helps!
 
-* [**Donate via PayPal**](https://www.paypal.com/paypalme/rafli23115)
-* For alternative donation methods, please contact: [rafli08523717409@gmail.com](mailto:rafli08523717409@gmail.com)
+[Donate via PayPal](https://www.paypal.com/paypalme/rafli23115)
+
+For alternative donation methods, please contact: [rafli08523717409@gmail.com](mailto:rafli08523717409@gmail.com)    

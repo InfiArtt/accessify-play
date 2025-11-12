@@ -145,6 +145,8 @@ class SpotifyClient:
             )
 
         try:
+            if command.__name__ == 'current_playback':
+                kwargs['additional_types'] = 'episode'
             if "device_id" in command.__code__.co_varnames:
                 kwargs["device_id"] = self.device_id
 
@@ -171,6 +173,8 @@ class SpotifyClient:
             return _("Spotify client not ready. Please validate your credentials.")
 
         try:
+            if command.__name__ == 'current_playback':
+                kwargs['additional_types'] = 'episode'
             result = command(*args, **kwargs)
             return result
         except SpotifyException as e:
@@ -221,23 +225,51 @@ class SpotifyClient:
         if not playback or not playback.get("item"):
             return _("Nothing is currently playing.")
 
+        item_type = playback.get("currently_playing_type")
         item = playback["item"]
-        track = item.get("name")
-        artists = ", ".join([a["name"] for a in item.get("artists", [])])
-        album = item.get("album", {}).get("name")
 
-        parts = [f"{_('Currently playing:')} {track} {_('by')} {artists}"]
-        if album:
-            parts.append(f"{_('from the album')} {album}")
-        return " ".join(parts)
+        if item_type == "track":
+            track_name = item.get("name")
+            artists = ", ".join([a["name"] for a in item.get("artists", [])])
+            album = item.get("album", {}).get("name")
+
+            parts = [f"{_('Currently playing:')} {track_name} {_('by')} {artists}"]
+            if album:
+                parts.append(f"{_('from the album')} {album}")
+            return " ".join(parts)
+
+        elif item_type == "episode":
+            episode_name = item.get("name")
+            show_info = item.get("show", {})
+            show_name = show_info.get("name")
+
+            return _("Playing episode: {episode_name} from the show {show_name}").format(
+                episode_name=episode_name, show_name=show_name
+            )
+
+        else:
+            name = item.get("name", _("Unknown Item"))
+            return _("Currently playing: {name}").format(name=name)
 
     def get_simple_track_string(self, item):
-        """Returns a simple 'Track - Artist' string from a playback item."""
+        """Returns a simple 'Title - Artist/Show' string from a playback item."""
         if not item:
             return ""
-        track = item.get("name")
-        artists = ", ".join([a["name"] for a in item.get("artists", [])])
-        return f"{track} - {artists}"
+
+        item_type = item.get("type") # 'type' ada di dalam objek 'item' itu sendiri
+
+        if item_type == "track":
+            track = item.get("name")
+            artists = ", ".join([a["name"] for a in item.get("artists", [])])
+            return f"{track} - {artists}"
+
+        elif item_type == "episode":
+            episode_name = item.get("name")
+            show_name = item.get("show", {}).get("name")
+            return f"{episode_name} - {show_name}"
+            
+        else:
+            return item.get("name", "")
 
     def get_current_track_url(self):
         playback = self._execute(self.client.current_playback)

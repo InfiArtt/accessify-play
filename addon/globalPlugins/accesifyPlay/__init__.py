@@ -2,6 +2,8 @@
 
 import os
 import sys
+import builtins
+import gettext
 import globalPluginHandler
 import scriptHandler
 import ui
@@ -17,6 +19,412 @@ import addonHandler  # Import addonHandler
 import webbrowser # Added for opening URLs
 
 # Add the 'lib' folder to sys.path before other imports
+addon_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+lib_path = os.path.join(addon_root, "lib")
+if lib_path not in sys.path:
+    sys.path.insert(0, lib_path)
+
+# Local addon modules
+from . import donate
+from . import spotify_client
+from . import updater
+
+# Define the configuration specification
+locale_path = os.path.join(addon_root, "locale")
+LANGUAGE_AUTO = "auto"
+# Friendly display names for known language codes; fall back to the raw code when unknown.
+LANGUAGE_DISPLAY_OVERRIDES = {
+    "en": "English",
+    "id": "Bahasa Indonesia",
+}
+confspec = {
+    "port": "integer(min=1024, max=65535, default=8888)",
+    "searchLimit": "integer(min=1, max=50, default=20)",
+    "seekDuration": "integer(min=1, max=60, default=15)",
+    "language": "string(default='auto')",
+    "announceTrackChanges": "boolean(default=False)",
+    "updateChannel": "string(default='stable')",
+    "isAutomaticallyCheckForUpdates": "boolean(default=True)",
+    "lastUpdateCheck": "integer(default=0)",
+}
+config.conf.spec["spotify"] = confspec
+DEFAULT_SPOTIFY_CONFIG = {
+    "port": 8888,
+    "searchLimit": 20,
+    "seekDuration": 15,
+    "language": LANGUAGE_AUTO,
+    "announceTrackChanges": False,
+}
+
+
+def _discover_language_codes():
+    if not os.path.isdir(locale_path):
+        return []
+    codes = []
+    for entry in os.listdir(locale_path):
+        lang_dir = os.path.join(locale_path, entry)
+        if not os.path.isdir(lang_dir):
+            continue
+        messages_dir = os.path.join(lang_dir, "LC_MESSAGES")
+        if not os.path.isdir(messages_dir):
+            continue
+        po_path = os.path.join(messages_dir, "nvda.po")
+        mo_path = os.path.join(messages_dir, "nvda.mo")
+        if os.path.isfile(po_path) or os.path.isfile(mo_path):
+            codes.append(entry)
+    return sorted(codes)
+
+
+AVAILABLE_LANGUAGE_CODES = _discover_language_codes()
+
+
+def _get_spotify_config():
+    try:
+        section = config.conf["spotify"]
+    except KeyError:
+        config.conf["spotify"] = {}
+        section = config.conf["spotify"]
+    for key, default_value in DEFAULT_SPOTIFY_CONFIG.items():
+        try:
+            section[key]
+        except KeyError:
+            section[key] = default_value
+    return section
+
+
+def _normalize_language_setting(lang_code):
+    if not lang_code or lang_code == LANGUAGE_AUTO:
+        return LANGUAGE_AUTO
+    if lang_code in AVAILABLE_LANGUAGE_CODES:
+        return lang_code
+    return LANGUAGE_AUTO
+
+
+def _apply_language_preference():
+    spotify_conf = _get_spotify_config()
+    current_setting = _normalize_language_setting(spotify_conf.get("language"))
+    if current_setting != spotify_conf.get("language"):
+        spotify_conf["language"] = current_setting
+    if current_setting == LANGUAGE_AUTO:
+        addonHandler.initTranslation()
+        return
+    translator = gettext.translation(
+        "nvda", localedir=locale_path, languages=[current_setting], fallback=True
+    )
+    builtins.__dict__["_"] = translator.gettext
+
+
+_apply_language_preference()
+
+# Local addon modules
+from . import donate
+from . import spotify_client
+
+class AccessifyDialog(wx.Dialog):
+    """
+    Common base dialog with consistent close/escape handling and
+    shared Spotify action logic.
+    """
+
+    def __init__(self, *args, **kwargs):
+        parent = args[0] if args else kwargs.get("parent")
+        super().__init__(*args, **kwargs)
+        self._parentDialog = parent if isinstance(parent, wx.Dialog) else None
+        self.Bind(wx.EVT_CHAR_HOOK, self._on_char_hook)
+        self.Bind(wx.EVT_CLOSE, self._on_dialog_close, self)
+
+        # Setiap dialog yang dibuat harus memiliki atribut 'client'
+        # Biasanya diatur di __init__ anak kelas: self.client = client
+        self.client = None
+
+    def bind_close_button(self, button):
+        button.Bind(wx.EVT_BUTTON, self._on_close_button)
+
+    def _on_close_button(self, evt):
+        self.Close()
+
+    def _on_char_hook(self, evt):
+        if evt.GetKeyCode() == wx.WXK_ESCAPE:
+            self.Close()
+        else:
+            evt.Skip()
+
+    def _on_dialog_close(self, evt):
+        evt.Skip()
+        wx.CallAfter(self._raise_parent_dialog)
+
+    def _raise_parent_dialog(self):
+        if self._parentDialog:
+            try:
+                self._parentDialog.Raise()
+            except Exception:
+                pass
+
+    # --- KOTAK PERALATAN AKSI SPOTIFY TERPUSAT ---
+
+    def _play_uri(self, uri):
+        """Plays a Spotify URI. Can be called from any child dialog."""
+        if not self.client: return
+        if not uri:
+            ui.message(_("Unable to play selection. URI not found."))
+            return
+        ui.message(_("Playing..."))
+        threading.Thread(target=self.client.play_item, args=(uri,)).start()
+
+    def _queue_add_track(self, uri, name):
+        """Adds a single track to the queue."""
+        if not self.client: return
+        if not uri:
+            ui.message(_("Could not get URI for selected item."))
+            return
+        threading.Thread(
+            target=self._queue_add_track_thread, args=(uri, name)
+        ).start()
+
+    def _queue_add_track_thread(self, uri, name):
+        result = self.client.add_to_queue(uri)
+        if isinstance(result, str):
+            wx.CallAfter(ui.message, result)
+        else:
+            wx.CallAfter(ui.message, _("{name} added to queue.").format(name=name))
+
+    def _queue_add_context(self, uri, item_type, name):
+        """Adds a context (album, artist radio, etc.) to the queue."""
+        if not self.client: return
+        if not uri:
+            ui.message(_("Unable to add {name} to queue.").format(name=name))
+            return
+        ui.message(_("Adding to queue...")) # Give user feedback
+        threading.Thread(
+            target=self._queue_add_context_thread,
+            args=(uri, item_type, name),
+        ).start()
+
+    def _queue_add_context_thread(self, uri, item_type, name):
+        if item_type in ("album", "playlist"):
+            result = self.client.play_item(uri)
+            if isinstance(result, str):
+                wx.CallAfter(ui.message, result)
+                return
+            queue_data = self.client.get_full_queue()
+            if isinstance(queue_data, str):
+                wx.CallAfter(ui.message, queue_data)
+                return
+            queue_tracks = [
+                entry["uri"]
+                for entry in queue_data
+                if entry.get("type") == "queue_item"
+            ]
+            if not queue_tracks:
+                wx.CallAfter(ui.message, _("No tracks were queued."))
+                return
+            rebuild = self.client.rebuild_queue(queue_tracks)
+            if isinstance(rebuild, str):
+                wx.CallAfter(ui.message, rebuild)
+                return
+            wx.CallAfter(
+                ui.message,
+                _("Tracks from {name} added to queue.").format(name=name),
+            )
+        elif item_type in ("artist", "show"):
+            result = self.client.play_item(uri)
+            if isinstance(result, str):
+                wx.CallAfter(ui.message, result)
+            else:
+                wx.CallAfter(
+                    ui.message,
+                    _("Started radio for {name}. You can add tracks individually.").format(
+                        name=name
+                    ),
+                )
+        else:
+            wx.CallAfter(ui.message, _("Cannot add this item to the queue."))
+
+    
+    def copy_link(self, link):
+        """Copies a given link to the clipboard."""
+        if not link:
+            ui.message(_("Link not available."))
+            return
+        try:
+            if wx.TheClipboard.Open():
+                wx.TheClipboard.SetData(wx.TextDataObject(link))
+                wx.TheClipboard.Close()
+                ui.message(_("Link copied"))
+            else:
+                ui.message(_("Could not open clipboard."))
+        except Exception:
+            ui.message(_("Clipboard error"))
+
+    def _bind_list_activation(self, control, activate_callback):
+        """Helper to bind Double-Click and Enter key for list-like controls."""
+        control.Bind(wx.EVT_LISTBOX_DCLICK, lambda evt: activate_callback())
+
+        def on_char(evt):
+            if evt.GetKeyCode() in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER):
+                activate_callback()
+            else:
+                evt.Skip()
+        control.Bind(wx.EVT_CHAR_HOOK, on_char)
+
+class ClientIDManagementDialog(AccessifyDialog):
+    def __init__(self, parent, current_client_id):
+        super().__init__(parent, title=_("Manage Spotify Client ID"))
+        self.current_client_id = current_client_id
+        self.new_client_id = current_client_id
+
+        mainSizer = wx.BoxSizer(wx.VERTICAL)
+        sHelper = guiHelper.BoxSizerHelper(self, sizer=mainSizer)
+
+        # Client ID input
+        label = wx.StaticText(self, label=_("Spotify Client ID:"))
+        sHelper.addItem(label)
+        self.clientIDText = wx.TextCtrl(self, value=self.current_client_id)
+        sHelper.addItem(self.clientIDText, proportion=1, flag=wx.EXPAND)
+
+        # Buttons
+        buttonsSizer = wx.StdDialogButtonSizer()
+        saveButton = wx.Button(self, wx.ID_OK, label=_("&Save"))
+        saveButton.Bind(wx.EVT_BUTTON, self.onSave)
+        buttonsSizer.AddButton(saveButton)
+
+        cancelButton = wx.Button(self, wx.ID_CANCEL, label=_("&Cancel"))
+        self.bind_close_button(cancelButton)
+        buttonsSizer.AddButton(cancelButton)
+        buttonsSizer.Realize()
+        sHelper.addItem(buttonsSizer, flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
+
+        self.SetSizerAndFit(mainSizer)
+        self.clientIDText.SetFocus()
+
+    def onSave(self, evt):
+        self.new_client_id = self.clientIDText.GetValue()
+        spotify_client._write_client_id(self.new_client_id)
+        ui.message(_("Spotify Client ID saved."))
+        self.EndModal(wx.ID_OK)
+
+    def _on_close_button(self, evt):
+        self.EndModal(wx.ID_CANCEL)
+
+    def _on_char_hook(self, evt):
+        if evt.GetKeyCode() == wx.WXK_ESCAPE:
+            self.EndModal(wx.ID_CANCEL)
+        else:
+            evt.Skip()
+
+
+class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
+    title = _("Accessify Play")
+
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.client = spotify_client.get_client()
+
+    def makeSettings(self, settingsSizer):
+        sHelper = guiHelper.BoxSizerHelper(self, sizer=settingsSizer)
+
+        self.clientIDButton = sHelper.addItem(wx.Button(self, label=""))
+        self.clientIDButton.Bind(wx.EVT_BUTTON, self.onManageClientID)
+        self.updateClientIDButtonLabel()
+
+        # Translators: Label for a setting to choose the network port for Spotify authentication.
+        port_label = _("Callback Port (must be between 1024 and 65535)")
+        self.portCtrl = sHelper.addLabeledControl(port_label, wx.SpinCtrl)
+        self.portCtrl.SetRange(1024, 65535)
+        self.portCtrl.SetValue(config.conf["spotify"]["port"])
+
+        # Translators: Label for a setting to choose how many search results to load at a time.
+        limit_label = _("Search Results Limit (1 to 50)")
+        self.limitCtrl = sHelper.addLabeledControl(limit_label, wx.SpinCtrl)
+        self.limitCtrl.SetRange(1, 50)
+        self.limitCtrl.SetValue(config.conf["spotify"]["searchLimit"])
+
+        # Translators: Label for a setting to choose the duration for seek forward/backward actions.
+        seek_duration_label = _("Seek Duration (seconds, 1 to 60)")
+        self.seekDurationCtrl = sHelper.addLabeledControl(
+            seek_duration_label, wx.SpinCtrl
+        )
+        self.seekDurationCtrl.SetRange(1, 60)
+        self.seekDurationCtrl.SetValue(config.conf["spotify"]["seekDuration"])
+
+        # Translators: Label for a setting to choose the display language for the addon.
+        language_label = _("Language:")
+        self.languageEntries = self._buildLanguageEntries()
+        language_choices = [label for _, label in self.languageEntries]
+        self.languageCodeByLabel = {label: code for code, label in self.languageEntries}
+        self.languageLabelByCode = {code: label for code, label in self.languageEntries}
+        self.languageCtrl = sHelper.addLabeledControl(
+            language_label,
+            wx.ComboBox,
+            choices=language_choices,
+            style=wx.CB_READONLY,
+        )
+
+        current_lang_code = config.conf["spotify"]["language"]
+        current_label = self.languageLabelByCode.get(
+            current_lang_code,
+            self.languageLabelByCode.get(LANGUAGE_AUTO, language_choices[0])
+        )
+        self.languageCtrl.SetValue(current_label)
+        self._originalLanguage = current_lang_code
+
+        # Announce track changes checkbox (Fixed for accessibility)
+        self.announceTrackChanges = sHelper.addItem(
+            wx.CheckBox(self, label=_("Announce track changes automatically:"))
+        )
+        self.announceTrackChanges.SetValue(
+            config.conf["spotify"]["announceTrackChanges"]
+        )
+
+        # Updater settings
+        self.updateChannelCtrl = sHelper.addLabeledControl(
+            _("Update Channel:"),
+            wx.ComboBox,
+            choices=[_("Stable"), _("Beta")],
+            style=wx.CB_READONLY,
+        )
+        self.updateChannelCtrl.SetValue(
+            _("Beta")
+            if config.conf["spotify"]["updateChannel"] == "beta"
+            else _("Stable")
+        )
+
+        self.autoCheckUpdatesCtrl = sHelper.addItem(
+            wx.CheckBox(self, label=_("Check for updates automatically"))
+        )
+        self.autoCheckUpdatesCtrl.SetValue(
+            config.conf["spotify"]["isAutomaticallyCheckForUpdates"]
+        )
+
+        self.lastCheckLabel = sHelper.addItem(wx.StaticText(self, label=""))
+
+        buttonsSizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.migrateButton = wx.Button(self, label=_("Migrate Old Credentials"))
+        self.migrateButton.Bind(wx.EVT_BUTTON, self.onMigrateCredentials)
+        buttonsSizer.Add(self.migrateButton, flag=wx.LEFT, border=5)
+
+        self.validateButton = wx.Button(self, label=_("Validate Credentials"))
+        self.validateButton.Bind(wx.EVT_BUTTON, self.onValidate)
+        buttonsSizer.Add(self.validateButton)
+
+        self.clearCredentialsButton = wx.Button(self, label=_("Clear Credentials"))
+        self.clearCredentialsButton.Bind(wx.EVT_BUTTON, self.onClearCredentials)
+        buttonsSizer.Add(self.clearCredentialsButton, flag=wx.LEFT, border=5)
+
+        self.developerDashboardButton = wx.Button(self, label=_("Go to Developer Dashboard"))
+        self.developerDashboardButton.Bind(wx.EVT_BUTTON, self.onGoToDeveloperDashboard)
+        buttonsSizer.Add(self.developerDashboardButton, flag=wx.LEFT, border=5)
+
+        self.donateButton = wx.Button(self, label=_("Donate"))
+        self.donateButton.Bind(wx.EVT_BUTTON, lambda evt: donate.open_donate_link())
+        buttonsSizer.Add(self.donateButton, flag=wx.LEFT, border=5)
+
+import time  # Import the time module
+from logHandler import log
+import addonHandler  # Import addonHandler
+import webbrowser # Added for opening URLs
+
+# Add the 'lib' folder to sys.path before other imports
 lib_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "lib"))
 if lib_path not in sys.path:
     sys.path.insert(0, lib_path)
@@ -24,6 +432,7 @@ if lib_path not in sys.path:
 # Local addon modules
 from . import donate
 from . import spotify_client
+from . import updater
 
 # Define the configuration specification
 confspec = {
@@ -32,6 +441,9 @@ confspec = {
     "seekDuration": "integer(min=1, max=60, default=15)",
     "language": "string(default='en')",  # New setting for language
     "announceTrackChanges": "boolean(default=False)",
+    "updateChannel": "string(default='stable')",
+    "isAutomaticallyCheckForUpdates": "boolean(default=True)",
+    "lastUpdateCheck": "integer(default=0)",
 }
 config.conf.spec["spotify"] = confspec
 
@@ -291,6 +703,26 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
             config.conf["spotify"]["announceTrackChanges"]
         )
 
+        # Updater settings
+        self.updateChannelCtrl = sHelper.addLabeledControl(
+            _("Update Channel:"),
+            wx.ComboBox,
+            choices=[_("Stable"), _("Beta")],
+            style=wx.CB_READONLY,
+        )
+        self.updateChannelCtrl.SetValue(
+            _("Beta")
+            if config.conf["spotify"]["updateChannel"] == "beta"
+            else _("Stable")
+        )
+
+        self.autoCheckUpdatesCtrl = sHelper.addItem(
+            wx.CheckBox(self, label=_("Check for updates automatically"))
+        )
+        self.autoCheckUpdatesCtrl.SetValue(
+            config.conf["spotify"]["isAutomaticallyCheckForUpdates"]
+        )
+
         buttonsSizer = wx.BoxSizer(wx.HORIZONTAL)
         self.migrateButton = wx.Button(self, label=_("Migrate Old Credentials"))
         self.migrateButton.Bind(wx.EVT_BUTTON, self.onMigrateCredentials)
@@ -311,8 +743,16 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
         self.donateButton = wx.Button(self, label=_("Donate"))
         self.donateButton.Bind(wx.EVT_BUTTON, lambda evt: donate.open_donate_link())
         buttonsSizer.Add(self.donateButton, flag=wx.LEFT, border=5)
+
+        self.checkUpdatesButton = wx.Button(self, label=_("Check for Updates"))
+        self.checkUpdatesButton.Bind(
+            wx.EVT_BUTTON, lambda evt: updater.check_for_updates(is_manual=True)
+        )
+        buttonsSizer.Add(self.checkUpdatesButton, flag=wx.LEFT, border=5)
+
         sHelper.addItem(buttonsSizer)
         self.updateMigrateButtonVisibility() # Set initial visibility of migrate button
+        self.Layout() # Ensure all elements are properly laid out
 
     def updateClientIDButtonLabel(self):
         current_client_id = spotify_client._read_client_id()
@@ -337,6 +777,13 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
         else:
             self.migrateButton.Hide()
         self.Layout() # Re-layout the sizer to reflect visibility changes
+
+    def _buildLanguageEntries(self):
+        entries = [(LANGUAGE_AUTO, _("Follow NVDA language (default)"))]
+        for code in AVAILABLE_LANGUAGE_CODES:
+            label = LANGUAGE_DISPLAY_OVERRIDES.get(code, code)
+            entries.append((code, label))
+        return entries
 
     def onMigrateCredentials(self, evt):
         # Migration logic (similar to installTasks.py)
@@ -386,12 +833,23 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
         config.conf["spotify"]["seekDuration"] = self.seekDurationCtrl.GetValue()
 
         selected_lang_display = self.languageCtrl.GetValue()
-        config.conf["spotify"]["language"] = self.languageCodes.get(
-            selected_lang_display, "en"
+        selected_code = self.languageCodeByLabel.get(
+            selected_lang_display, LANGUAGE_AUTO
         )
+        config.conf["spotify"]["language"] = selected_code
+
+        if selected_code != self._originalLanguage:
+            ui.message(_("Language changes will take effect after restarting NVDA."))
+            self._originalLanguage = selected_code
         config.conf["spotify"][
             "announceTrackChanges"
         ] = self.announceTrackChanges.IsChecked()
+        config.conf["spotify"]["updateChannel"] = (
+            "beta" if self.updateChannelCtrl.GetValue() == _("Beta") else "stable"
+        )
+        config.conf["spotify"][
+            "isAutomaticallyCheckForUpdates"
+        ] = self.autoCheckUpdatesCtrl.IsChecked()
 
     def onValidate(self, evt):
         self.onSave()  # Save current UI values to config.conf before validating
@@ -447,8 +905,6 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
             messageBox(error_message, _("Validation Failed"), wx.OK | wx.ICON_ERROR)
         self.updateClientIDButtonLabel()
 
-# VERSI LENGKAP - GANTI SELURUH KELAS SEARCHDIALOG ANDA DENGAN INI
-
 class SearchDialog(AccessifyDialog):
     LOAD_MORE_ID = "spotify:loadmore"
     MENU_PLAY = wx.NewIdRef()
@@ -493,7 +949,6 @@ class SearchDialog(AccessifyDialog):
         # Results list
         self.resultsList = wx.ListBox(self)
         
-        # Menggunakan helper _bind_list_activation dari kelas dasar
         self._bind_list_activation(self.resultsList, self._on_item_activated)
         
         self.resultsList.Bind(wx.EVT_CONTEXT_MENU, self.on_results_context_menu)
@@ -549,8 +1004,8 @@ class SearchDialog(AccessifyDialog):
             return
         artist_id = item["id"]
         artist_name = item["name"]
-        # dialog = ArtistDiscographyDialog(self, self.client, artist_id, artist_name)
-        # dialog.Show()
+        dialog = ArtistDiscographyDialog(self, self.client, artist_id, artist_name)
+        dialog.Show()
 
     def on_follow_artist(self, evt=None):
         item = self._get_selected_item()
@@ -584,9 +1039,10 @@ class SearchDialog(AccessifyDialog):
         self.perform_search()
 
     def perform_search(self):
-        threading.Thread(target=self._search_thread).start()
+        index_to_focus = len(self.results)
+        threading.Thread(target=self._search_thread, args=(index_to_focus,)).start()
 
-    def _search_thread(self):
+    def _search_thread(self, index_to_focus):
         result_data = self.client.search(self.current_query, self.current_type, offset=self.next_offset)
         if isinstance(result_data, str):
             wx.CallAfter(ui.message, result_data)
@@ -601,31 +1057,37 @@ class SearchDialog(AccessifyDialog):
             self.next_offset = search_results.get("offset", 0) + limit
         else:
             self.can_load_more = False
-        wx.CallAfter(self.update_results_list)
+        wx.CallAfter(self.update_results_list, index_to_focus)
 
-    def update_results_list(self):
+    def update_results_list(self, focus_index=0):
         self.resultsList.Clear()
         for item in self.results:
+            if not item:
+                continue
+            
             display = item.get("name", "Unknown")
-            if item["type"] == "track":
+            item_type = item.get("type")
+            if item_type == "track":
                 artists = ", ".join([a["name"] for a in item.get("artists", [])])
                 display = f"{display} - {artists}"
-            elif item["type"] == "playlist":
+            elif item_type == "playlist":
                 owner = item.get("owner", {}).get("display_name", "Unknown")
                 display = f"{display} - by {owner}"
-            elif item["type"] == "show":
+            elif item_type == "show":
                 publisher = item.get("publisher", "")
                 display = f"{display} - {publisher}"
             self.resultsList.Append(display)
+
         if not self.results:
             self.resultsList.Append(_("No results found."))
             self._lastResultsSelection = None
             return
         if self.can_load_more:
             self.resultsList.Append(f"--- {_('Load More')} ---")
+        
         if self.results:
-            self.resultsList.SetSelection(0)
-            self._lastResultsSelection = 0
+            self.resultsList.SetSelection(focus_index)
+            self._lastResultsSelection = focus_index
             self.resultsList.SetFocus()
 
     def onPlay(self, evt=None):
@@ -2173,9 +2635,9 @@ class SetVolumeDialog(AccessifyDialog):
 
 class GlobalPlugin(globalPluginHandler.GlobalPlugin):
     scriptCategory = _("Accessify Play")
-
     def __init__(self):
         super(GlobalPlugin, self).__init__()
+        self._is_modifying_playback = False
         self.client = spotify_client.get_client()
         self.searchDialog = None
         self.playFromLinkDialog = None
@@ -2194,8 +2656,12 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         self.polling_thread.daemon = True
         self.polling_thread.start()
 
-        addonHandler.initTranslation()
+        _apply_language_preference()
         threading.Thread(target=self.client.initialize).start()
+
+        # Automatic update check on startup
+        if config.conf["spotify"]["isAutomaticallyCheckForUpdates"]:
+            threading.Thread(target=updater.check_for_updates, args=(False,)).start()
 
     def terminate(self):
         super(GlobalPlugin, self).terminate()
@@ -2577,18 +3043,23 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         gesture="kb:nvda+shift+alt+space",
     )
     def script_playPause(self, gesture):
+        if self._is_modifying_playback:
+            ui.message(_("Please wait..."))
+            return
         def logic():
-            playback = self.client._execute(self.client.client.current_playback)
-            if not isinstance(playback, dict):
-                return playback
-
-            if playback and playback.get("is_playing"):
-                self.client._execute(self.client.client.pause_playback)
-                return _("Paused")
-            else:
-                self.client._execute(self.client.client.start_playback)
-                return _("Playing")
-
+            try:
+                self._is_modifying_playback = True
+                playback = self.client._execute(self.client.client.current_playback)
+                if not isinstance(playback, dict):
+                    return playback
+                if playback and playback.get("is_playing"):
+                    self.client._execute(self.client.client.pause_playback)
+                    return _("Paused")
+                else:
+                    self.client._execute(self.client.client.start_playback)
+                    return _("Playing")
+            finally:
+                self._is_modifying_playback = False
         self._speak_in_thread(logic)
 
     @scriptHandler.script(
@@ -2596,12 +3067,20 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         gesture="kb:nvda+shift+alt+rightArrow",
     )
     def script_nextTrack(self, gesture):
+        if self._is_modifying_playback:
+            ui.message(_("Please wait..."))
+            return
+
         def logic():
-            result = self.client._execute(self.client.client.next_track)
-            if isinstance(result, str):
-                return result  # Error message
-            time.sleep(0.5)  # Give Spotify a moment to update
-            return self.client.get_current_track_info()
+            try:
+                self._is_modifying_playback = True
+                result = self.client._execute(self.client.client.next_track)
+                if isinstance(result, str):
+                    return result  # Error message
+                time.sleep(0.1)  # Give Spotify a moment to update
+                return self.client.get_current_track_info()
+            finally:
+                self._is_modifying_playback = False
 
         self._speak_in_thread(logic)
 
@@ -2610,12 +3089,20 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         gesture="kb:nvda+shift+alt+leftArrow",
     )
     def script_previousTrack(self, gesture):
+        if self._is_modifying_playback:
+            ui.message(_("Please Wait..."))
+            return
+            
         def logic():
-            result = self.client._execute(self.client.client.previous_track)
-            if isinstance(result, str):
-                return result  # Error message
-            time.sleep(0.5)  # Give Spotify a moment to update
-            return self.client.get_current_track_info()
+            try:
+                self._is_modifying_playback = True
+                result = self.client._execute(self.client.client.previous_track)
+                if isinstance(result, str):
+                    return result  # Error message
+                time.sleep(0.1)  # Give Spotify a moment to update
+                return self.client.get_current_track_info()
+            finally:
+                self._is_modifying_playback = False
 
         self._speak_in_thread(logic)
 
@@ -2623,32 +3110,53 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         description=_("Increase Spotify volume."), gesture="kb:nvda+shift+alt+upArrow"
     )
     def script_volumeUp(self, gesture):
-        def logic():
-            playback = self.client._execute(self.client.client.current_playback)
-            if not isinstance(playback, dict):
-                return playback
-            if playback and playback.get("device"):
-                current_volume = playback["device"]["volume_percent"]
-                new_volume = min(current_volume + 5, 100)
-                self.client._execute(self.client.client.volume, new_volume)
-                return f"{_('Volume')} {new_volume}%"
+        if self._is_modifying_playback:
+            ui.message(_("Please wait..."))
+            return
 
+        def logic():
+            try:
+                self._is_modifying_playback = True
+                
+                playback = self.client._execute(self.client.client.current_playback)
+                if not isinstance(playback, dict):
+                    return playback # Mengembalikan pesan error jika ada
+                if playback and playback.get("device"):
+                    current_volume = playback["device"]["volume_percent"]
+                    new_volume = min(current_volume + 5, 100)
+                    self.client._execute(self.client.client.volume, new_volume)
+                    return f"{_('Volume')} {new_volume}%"
+                else:
+                    return _("No active device found.")
+            finally:
+                self._is_modifying_playback = False
         self._speak_in_thread(logic)
 
     @scriptHandler.script(
         description=_("Decrease Spotify volume."), gesture="kb:nvda+shift+alt+downArrow"
     )
     def script_volumeDown(self, gesture):
-        def logic():
-            playback = self.client._execute(self.client.client.current_playback)
-            if not isinstance(playback, dict):
-                return playback
-            if playback and playback.get("device"):
-                current_volume = playback["device"]["volume_percent"]
-                new_volume = max(current_volume - 5, 0)
-                self.client._execute(self.client.client.volume, new_volume)
-                return f"{_('Volume')} {new_volume}%"
+        if self._is_modifying_playback:
+            ui.message(_("Please wait..."))
+            return
 
+        def logic():
+            try:
+                self._is_modifying_playback = True
+
+                playback = self.client._execute(self.client.client.current_playback)
+                if not isinstance(playback, dict):
+                    return playback # Mengembalikan pesan error jika ada
+                if playback and playback.get("device"):
+                    current_volume = playback["device"]["volume_percent"]
+                    new_volume = max(current_volume - 5, 0)
+                    self.client._execute(self.client.client.volume, new_volume)
+                    return f"{_('Volume')} {new_volume}%"
+                else:
+                    return _("No active device found.")
+            finally:
+                # 3. Buka kunci setelah proses selesai (baik berhasil maupun gagal)
+                self._is_modifying_playback = False
         self._speak_in_thread(logic)
 
     @scriptHandler.script(
@@ -2680,15 +3188,23 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         gesture="kb:control+alt+nvda+rightArrow",
     )
     def script_seekForward(self, gesture):
+        if self._is_modifying_playback:
+            ui.message(_("Please Wait..."))
+            return
+            
         def logic():
-            seek_duration_seconds = config.conf["spotify"]["seekDuration"]
-            seek_duration_ms = seek_duration_seconds * 1000
-            result = self.client.seek_track(seek_duration_ms)
-            if isinstance(result, str):
-                return result  # Error message
-            return _("Seeked forward {duration} seconds.").format(
-                duration=seek_duration_seconds
-            )
+            try:
+                self._is_modifying_playback = True
+                seek_duration_seconds = config.conf["spotify"]["seekDuration"]
+                seek_duration_ms = seek_duration_seconds * 1000
+                result = self.client.seek_track(seek_duration_ms)
+                if isinstance(result, str):
+                    return result  # Error message
+                return _("Seeked forward {duration} seconds.").format(
+                    duration=seek_duration_seconds
+                )
+            finally:
+                self._is_modifying_playback = False
 
         self._speak_in_thread(logic)
 
@@ -2697,14 +3213,22 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         gesture="kb:control+alt+nvda+leftArrow",
     )
     def script_seekBackward(self, gesture):
+        if self._is_modifying_playback:
+            ui.message(_("Please Wait..."))
+            return
+
         def logic():
-            seek_duration_seconds = config.conf["spotify"]["seekDuration"]
-            seek_duration_ms = seek_duration_seconds * 1000
-            result = self.client.seek_track(-seek_duration_ms)
-            if isinstance(result, str):
-                return result  # Error message
-            return _("Seeked backward {duration} seconds.").format(
-                duration=seek_duration_seconds
-            )
+            try:
+                self._is_modifying_playback = True
+                seek_duration_seconds = config.conf["spotify"]["seekDuration"]
+                seek_duration_ms = seek_duration_seconds * 1000
+                result = self.client.seek_track(-seek_duration_ms)
+                if isinstance(result, str):
+                    return result  # Error message
+                return _("Seeked backward {duration} seconds.").format(
+                    duration=seek_duration_seconds
+                )
+            finally:
+                self._is_modifying_playback = False
 
         self._speak_in_thread(logic)
