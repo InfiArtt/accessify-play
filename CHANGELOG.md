@@ -1,5 +1,19 @@
 # Changelog
 
+## Version 1.3.2 (Required Hotfix)
+
+This is an essential hotfix release to address a critical bug that prevented credential validation in version 1.3.1. This update is solely focused on restoring core functionality.
+
+#### 🛠️ Critical Fix
+
+-   **Restored Credential Validation**: Fixed a critical `AttributeError` that occurred when pressing the "Validate Credentials" button in the settings panel. This bug made it impossible for users to authenticate with Spotify. With this fix, the validation process now works as expected, allowing the addon to be used.
+
+#### 📝 Developer Notes
+
+-   **Code Quality**: Please be aware that this release contains known code duplication and other structural issues. The immediate priority was to fix the validation bug.
+-   **Future Cleanup**: A follow-up release (version 1.3.3 or newer) is planned to address these underlying code quality problems, refactor duplicated logic, and ensure long-term stability.
+
+
 ## Version 1.3.1
 
 This is a major release focusing on security, usability, and new features, representing the most significant update to the addon yet.
