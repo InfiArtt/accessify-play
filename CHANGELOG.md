@@ -9,6 +9,8 @@
 - Improvement: Dialogs that depend on Spotify data (Management, Queue List, Add to Playlist, etc.) now preload their content before the window appears, eliminating empty states and making loading progress audible.
 - Improvement: Added centralized helpers to fetch the current user profile, playlists, saved tracks, saved shows, top items, new releases, and recently played items so the multi-tab Management dialog opens fully populated and refreshes consistently.
 - Improvement: Reworked the Search dialog, Management tabs, and Queue window with context menus, keyboard shortcuts, and smarter focus handling so actions like Play/Add to Queue/Copy Link/Follow are discoverable without cluttering the UI.
+- Improvement: Standardized the translation bundle to the NVDA `nvda.*` domain, restored the Bahasa Indonesia catalog, and ensured all strings use the correct `.mo` so non-English locales load as expected.
+- New Feature: Added a “Follow NVDA language (default)” option plus per-language overrides in the settings panel, letting the add-on keep its own language (e.g., force Bahasa Indonesia) even if NVDA itself stays on another locale.
 - Improvement: Management tabs (Manage Playlists, Saved Tracks, Followed Artists, Top Items, Saved Shows, New Releases, Recently Played) now drive all actions through context menus, support Enter-to-play, and offer Copy Link commands for every row.
 - New Feature: The Queue dialog exposes a context menu with Play, Copy Link, and Remove actions; removing entries rebuilds the playback queue so you can curate Spotify’s upcoming tracks directly from NVDA.
 - Fix: Ensured modal dialogs are destroyed properly when closed (Space, Esc, Alt+F4) so reopening a dialog creates a new instance and reruns the “Playlists loaded” announcement.
