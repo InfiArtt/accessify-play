@@ -9,184 +9,206 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2025-11-12 16:10+0700\n"
-"PO-Revision-Date: 2025-11-12 16:08+0700\n"
+"POT-Creation-Date: 2025-11-12 18:23+0700\n"
+"PO-Revision-Date: 2025-11-12 18:37+0700\n"
 "Last-Translator: \n"
-"Language: id\n"
 "Language-Team: id <LL@li.org>\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"Language: id\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "Generated-By: Babel 2.17.0\n"
+"X-Generator: Poedit 3.8\n"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:160
+#: addon/globalPlugins/accesifyPlay/__init__.py:169
 msgid "Unable to play selection. URI not found."
 msgstr "Tidak dapat memutar pilihan. URI tidak ditemukan."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:162
+#: addon/globalPlugins/accesifyPlay/__init__.py:171
 msgid "Playing..."
 msgstr "Memutar..."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:169
+#: addon/globalPlugins/accesifyPlay/__init__.py:178
 msgid "Could not get URI for selected item."
 msgstr "Tidak bisa mendapatkan URI untuk item yang dipilih."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:180
+#: addon/globalPlugins/accesifyPlay/__init__.py:189
 #, python-brace-format
 msgid "{name} added to queue."
 msgstr "{name} ditambahkan ke antrean."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:186
+#: addon/globalPlugins/accesifyPlay/__init__.py:195
 #, python-brace-format
 msgid "Unable to add {name} to queue."
 msgstr "Tidak dapat menambahkan {name} ke antrean."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:188
+#: addon/globalPlugins/accesifyPlay/__init__.py:197
 msgid "Adding to queue..."
 msgstr "Menambahkan ke  antrean..."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:210
+#: addon/globalPlugins/accesifyPlay/__init__.py:219
 msgid "No tracks were queued."
 msgstr "Tidak ada trek dalam antrean."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:218
+#: addon/globalPlugins/accesifyPlay/__init__.py:227
 #, python-brace-format
 msgid "Tracks from {name} added to queue."
 msgstr "Trek dari {name} ditambahkan ke antrian."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:227
+#: addon/globalPlugins/accesifyPlay/__init__.py:236
 #, python-brace-format
 msgid "Started radio for {name}. You can add tracks individually."
 msgstr "Memulai radio untuk {name}. Anda dapat menambahkan trek satu per satu."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:232
+#: addon/globalPlugins/accesifyPlay/__init__.py:241
 msgid "Cannot add this item to the queue."
 msgstr "Tidak dapat menambahkan item ini ke antrean."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:238
+#: addon/globalPlugins/accesifyPlay/__init__.py:247
 msgid "Link not available."
 msgstr "Tautan tidak tersedia."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:244
-#: addon/globalPlugins/accesifyPlay/__init__.py:2372
+#: addon/globalPlugins/accesifyPlay/__init__.py:253
+#: addon/globalPlugins/accesifyPlay/__init__.py:2418
 msgid "Link copied"
 msgstr "Tautan disalin"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:246
-#: addon/globalPlugins/accesifyPlay/__init__.py:2374
+#: addon/globalPlugins/accesifyPlay/__init__.py:255
+#: addon/globalPlugins/accesifyPlay/__init__.py:2420
 msgid "Could not open clipboard."
 msgstr "Tidak dapat membuka papan klip."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:248
-#: addon/globalPlugins/accesifyPlay/__init__.py:2377
+#: addon/globalPlugins/accesifyPlay/__init__.py:257
+#: addon/globalPlugins/accesifyPlay/__init__.py:2423
 msgid "Clipboard error"
 msgstr "Kesalahan papan klip"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:263
+#: addon/globalPlugins/accesifyPlay/__init__.py:272
 msgid "Manage Spotify Client ID"
 msgstr "Kelola ID Klien Spotify"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:271
+#: addon/globalPlugins/accesifyPlay/__init__.py:280
 msgid "Spotify Client ID:"
 msgstr "ID Klien Spotify:"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:278
+#: addon/globalPlugins/accesifyPlay/__init__.py:287
 msgid "&Save"
 msgstr "&Simpan"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:282
+#: addon/globalPlugins/accesifyPlay/__init__.py:291
 msgid "&Cancel"
 msgstr "&Batal"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:294
+#: addon/globalPlugins/accesifyPlay/__init__.py:303
 msgid "Spotify Client ID saved."
 msgstr "ID Klien Spotify disimpan."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:308
-#: addon/globalPlugins/accesifyPlay/__init__.py:2267
+#: addon/globalPlugins/accesifyPlay/__init__.py:317
+#: addon/globalPlugins/accesifyPlay/__init__.py:2309
 msgid "Accessify Play"
 msgstr "Accessify Play"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:322
+#: addon/globalPlugins/accesifyPlay/__init__.py:331
 msgid "Callback Port (must be between 1024 and 65535)"
 msgstr "Callback Port (harus antara 1024 dan 65535)"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:328
+#: addon/globalPlugins/accesifyPlay/__init__.py:337
 msgid "Search Results Limit (1 to 50)"
 msgstr "Batas Hasil Pencarian (1 hingga 50)"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:334
+#: addon/globalPlugins/accesifyPlay/__init__.py:343
 msgid "Seek Duration (seconds, 1 to 60)"
 msgstr "Durasi Lompat (detik, 1–60)"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:342
+#: addon/globalPlugins/accesifyPlay/__init__.py:351
 msgid "Language:"
 msgstr "Bahasa:"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:364
+#: addon/globalPlugins/accesifyPlay/__init__.py:373
 msgid "Announce track changes automatically:"
 msgstr "Umumkan perubahan trek secara otomatis:"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:371
+#: addon/globalPlugins/accesifyPlay/__init__.py:381
+msgid "Update Channel:"
+msgstr "Saluran pembaruan:"
+
+#: addon/globalPlugins/accesifyPlay/__init__.py:383
+#: addon/globalPlugins/accesifyPlay/__init__.py:389
+msgid "Stable"
+msgstr "Stabil"
+
+#: addon/globalPlugins/accesifyPlay/__init__.py:383
+#: addon/globalPlugins/accesifyPlay/__init__.py:387
+#: addon/globalPlugins/accesifyPlay/__init__.py:520
+msgid "Beta"
+msgstr "Beta"
+
+#: addon/globalPlugins/accesifyPlay/__init__.py:393
+msgid "Check for updates automatically"
+msgstr "Periksa pembaruan secara otomatis"
+
+#: addon/globalPlugins/accesifyPlay/__init__.py:400
 msgid "Migrate Old Credentials"
 msgstr "Migrasi Kredensial Lama"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:375
+#: addon/globalPlugins/accesifyPlay/__init__.py:404
 msgid "Validate Credentials"
 msgstr "Validasi Kredensial"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:379
+#: addon/globalPlugins/accesifyPlay/__init__.py:408
 msgid "Clear Credentials"
 msgstr "Hapus Kredensial"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:383
+#: addon/globalPlugins/accesifyPlay/__init__.py:412
 msgid "Go to Developer Dashboard"
 msgstr "Buka Dasbor Pengembang"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:387
+#: addon/globalPlugins/accesifyPlay/__init__.py:416
 #: addon/globalPlugins/accesifyPlay/donate.py:18
 msgid "Donate"
 msgstr "Donasi"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:396
+#: addon/globalPlugins/accesifyPlay/__init__.py:420
+msgid "Check for Updates"
+msgstr "Periksa Pembaruan"
+
+#: addon/globalPlugins/accesifyPlay/__init__.py:432
 msgid "Display/Edit Client ID"
 msgstr "Tampilkan/Edit ID Klien"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:398
+#: addon/globalPlugins/accesifyPlay/__init__.py:434
 msgid "Add Client ID"
 msgstr "Tambahkan ID Klien"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:418
+#: addon/globalPlugins/accesifyPlay/__init__.py:454
 msgid "Follow NVDA language (default)"
 msgstr "Ikuti bahasa NVDA (default)"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:436
+#: addon/globalPlugins/accesifyPlay/__init__.py:472
 msgid ""
-"Your Spotify Client ID has been migrated from NVDA's configuration to a "
-"new, more portable file."
+"Your Spotify Client ID has been migrated from NVDA's configuration to a new, "
+"more portable file."
 msgstr ""
-"ID Klien Spotify Anda telah dimigrasikan dari konfigurasi NVDA ke file "
-"baru yang lebih portabel."
+"ID Klien Spotify Anda telah dimigrasikan dari konfigurasi NVDA ke file baru yang "
+"lebih portabel."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:439
+#: addon/globalPlugins/accesifyPlay/__init__.py:475
 msgid ""
-"An existing Spotify Client ID was found in the new portable file. The old"
-" Client ID from NVDA's configuration was not migrated to avoid "
-"overwriting."
+"An existing Spotify Client ID was found in the new portable file. The old Client "
+"ID from NVDA's configuration was not migrated to avoid overwriting."
 msgstr ""
-"ID Klien Spotify yang ada ditemukan di file portabel baru. ID Klien lama "
-"dari konfigurasi NVDA tidak dimigrasikan untuk menghindari penimpaan."
+"ID Klien Spotify yang ada ditemukan di file portabel baru. ID Klien lama dari "
+"konfigurasi NVDA tidak dimigrasikan untuk menghindari penimpaan."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:446
+#: addon/globalPlugins/accesifyPlay/__init__.py:482
 msgid ""
 "The 'Client Secret' is no longer used and has been removed from NVDA's "
 "configuration."
 msgstr ""
-"'Rahasia Klien' tidak lagi digunakan dan telah dihapus dari konfigurasi "
-"NVDA."
+"'Rahasia Klien' tidak lagi digunakan dan telah dihapus dari konfigurasi NVDA."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:451
+#: addon/globalPlugins/accesifyPlay/__init__.py:487
 msgid ""
 "AccessifyPlay Migration Complete\n"
 "\n"
@@ -194,57 +216,57 @@ msgstr ""
 "Migrasi AccessifyPlay Selesai\n"
 "\n"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:453
+#: addon/globalPlugins/accesifyPlay/__init__.py:489
 msgid ""
 "\n"
 "\n"
-"These changes improve security and portability. Please restart NVDA for "
-"all changes to take full effect."
+"These changes improve security and portability. Please restart NVDA for all "
+"changes to take full effect."
 msgstr ""
 "\n"
 "\n"
-"Perubahan ini meningkatkan keamanan dan portabilitas. Silakan mulai ulang"
-" NVDA agar semua perubahan diterapkan sepenuhnya."
+"Perubahan ini meningkatkan keamanan dan portabilitas. Silakan mulai ulang NVDA "
+"agar semua perubahan diterapkan sepenuhnya."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:459
+#: addon/globalPlugins/accesifyPlay/__init__.py:495
 msgid "No old Spotify credentials found to migrate."
 msgstr "Tidak ditemukan kredensial Spotify lama untuk dimigrasikan."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:478
+#: addon/globalPlugins/accesifyPlay/__init__.py:514
 msgid "Language changes will take effect after restarting NVDA."
 msgstr "Perubahan bahasa akan berlaku setelah NVDA dimulai ulang."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:486
+#: addon/globalPlugins/accesifyPlay/__init__.py:528
 msgid "Validating credentials with Spotify..."
 msgstr "Memvalidasi kredensial dengan Spotify..."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:496
+#: addon/globalPlugins/accesifyPlay/__init__.py:538
 msgid ""
-"Are you sure you want to clear your Spotify Client ID, and delete the "
-"stored access token? You will need to re-enter your credentials and re-"
-"authenticate with Spotify to use the addon again."
+"Are you sure you want to clear your Spotify Client ID, and delete the stored "
+"access token? You will need to re-enter your credentials and re-authenticate "
+"with Spotify to use the addon again."
 msgstr ""
-"Apakah Anda yakin ingin menghapus ID Klien Spotify, dan menghapus token "
-"akses yang tersimpan? Anda harus memasukkan kembali kredensial dan "
-"mengautentikasi ulang dengan Spotify untuk menggunakan add-on ini lagi."
+"Apakah Anda yakin ingin menghapus ID Klien Spotify, dan menghapus token akses "
+"yang tersimpan? Anda harus memasukkan kembali kredensial dan mengautentikasi "
+"ulang dengan Spotify untuk menggunakan add-on ini lagi."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:501
+#: addon/globalPlugins/accesifyPlay/__init__.py:543
 msgid "Confirm Clear Credentials"
 msgstr "Konfirmasikan Hapus Kredensial"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:508
+#: addon/globalPlugins/accesifyPlay/__init__.py:550
 msgid "Clearing credentials and cache..."
 msgstr "Menghapus kredensial dan cache..."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:523
+#: addon/globalPlugins/accesifyPlay/__init__.py:565
 msgid "Validation successful!"
 msgstr "Validasi berhasil!"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:523
+#: addon/globalPlugins/accesifyPlay/__init__.py:565
 msgid "Success"
 msgstr "Berhasil"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:531
+#: addon/globalPlugins/accesifyPlay/__init__.py:573
 #, python-brace-format
 msgid ""
 "Validation failed. Please check the following:\n"
@@ -259,583 +281,580 @@ msgstr ""
 "2. Di pengaturan Aplikasi Spotify Anda, URI Pengalihan diatur ke:\n"
 "{uri}"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:535
+#: addon/globalPlugins/accesifyPlay/__init__.py:577
 msgid "Validation Failed"
 msgstr "Validasi Gagal"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:547
+#: addon/globalPlugins/accesifyPlay/__init__.py:589
 msgid "Search Spotify"
 msgstr "Pencarian Spotify"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:562
-#: addon/globalPlugins/accesifyPlay/__init__.py:566
+#: addon/globalPlugins/accesifyPlay/__init__.py:604
+#: addon/globalPlugins/accesifyPlay/__init__.py:608
 msgid "Song"
 msgstr "Lagu"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:562
+#: addon/globalPlugins/accesifyPlay/__init__.py:604
 #: addon/globalPlugins/accesifyPlay/spotify_client.py:730
 msgid "Album"
 msgstr "Album"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:562
+#: addon/globalPlugins/accesifyPlay/__init__.py:604
 #: addon/globalPlugins/accesifyPlay/spotify_client.py:731
 msgid "Artist"
 msgstr "Artis"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:563
+#: addon/globalPlugins/accesifyPlay/__init__.py:605
 #: addon/globalPlugins/accesifyPlay/spotify_client.py:732
 msgid "Playlist"
 msgstr "Daftar putar"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:563
+#: addon/globalPlugins/accesifyPlay/__init__.py:605
 msgid "Podcast"
 msgstr "Podcast"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:574
+#: addon/globalPlugins/accesifyPlay/__init__.py:616
 msgid "&Search"
 msgstr "&Cari"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:590
+#: addon/globalPlugins/accesifyPlay/__init__.py:632
 msgid "&Close"
 msgstr "&Tutup"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:651
-#: addon/globalPlugins/accesifyPlay/__init__.py:1653
+#: addon/globalPlugins/accesifyPlay/__init__.py:693
+#: addon/globalPlugins/accesifyPlay/__init__.py:1695
 #, python-brace-format
 msgid "You are now following {artist_name}."
 msgstr "Anda sekarang mengikuti {artist_name}."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:663
+#: addon/globalPlugins/accesifyPlay/__init__.py:705
 msgid "Searching..."
 msgstr "Mencari..."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:712
+#: addon/globalPlugins/accesifyPlay/__init__.py:754
 msgid "No results found."
 msgstr "Tidak ada hasil yang ditemukan."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:716
+#: addon/globalPlugins/accesifyPlay/__init__.py:758
 msgid "Load More"
 msgstr "Muat Lebih Banyak"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:733
-#: addon/globalPlugins/accesifyPlay/__init__.py:764
+#: addon/globalPlugins/accesifyPlay/__init__.py:775
+#: addon/globalPlugins/accesifyPlay/__init__.py:806
 msgid "No item selected."
 msgstr "Tidak ada item yang dipilih."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:737
+#: addon/globalPlugins/accesifyPlay/__init__.py:779
 msgid "Unknown Item"
 msgstr "Item Tidak Diketahui"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:741
+#: addon/globalPlugins/accesifyPlay/__init__.py:783
 msgid "Only individual tracks can be added to the queue from search results."
 msgstr ""
-"Hanya individual trek yang dapat ditambahkan ke antrean dari hasil "
-"pencarian."
+"Hanya individual trek yang dapat ditambahkan ke antrean dari hasil pencarian."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:748
-#: addon/globalPlugins/accesifyPlay/__init__.py:1494
+#: addon/globalPlugins/accesifyPlay/__init__.py:790
+#: addon/globalPlugins/accesifyPlay/__init__.py:1536
 msgid "Play\tAlt+P"
 msgstr "Putar\tAlt+P"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:749
-#: addon/globalPlugins/accesifyPlay/__init__.py:1229
-#: addon/globalPlugins/accesifyPlay/__init__.py:1495
-#: addon/globalPlugins/accesifyPlay/__init__.py:1615
+#: addon/globalPlugins/accesifyPlay/__init__.py:791
+#: addon/globalPlugins/accesifyPlay/__init__.py:1271
+#: addon/globalPlugins/accesifyPlay/__init__.py:1537
+#: addon/globalPlugins/accesifyPlay/__init__.py:1657
 msgid "Add to Queue\tAlt+Q"
 msgstr "Tambahkan ke Antrean\tAlt+Q"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:751
-#: addon/globalPlugins/accesifyPlay/__init__.py:1619
+#: addon/globalPlugins/accesifyPlay/__init__.py:793
+#: addon/globalPlugins/accesifyPlay/__init__.py:1661
 msgid "Follow Artist\tAlt+F"
 msgstr "Ikuti Artis\tAlt+F"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:752
-#: addon/globalPlugins/accesifyPlay/__init__.py:1618
+#: addon/globalPlugins/accesifyPlay/__init__.py:794
+#: addon/globalPlugins/accesifyPlay/__init__.py:1660
 msgid "View Discography\tAlt+D"
 msgstr "Lihat Diskografi\tAlt+D"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:754
+#: addon/globalPlugins/accesifyPlay/__init__.py:796
 msgid "Copy Link\tAlt+L"
 msgstr "Salin Tautan\tAlt+L"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:808
+#: addon/globalPlugins/accesifyPlay/__init__.py:850
 msgid "Play from Spotify Link"
 msgstr "Putar dari Tautan Spotify"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:815
+#: addon/globalPlugins/accesifyPlay/__init__.py:857
 msgid "Spotify URL:"
 msgstr "URL Spotify:"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:820
+#: addon/globalPlugins/accesifyPlay/__init__.py:862
 msgid "Check"
 msgstr "Periksa"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:827
+#: addon/globalPlugins/accesifyPlay/__init__.py:869
 msgid "Link Details:"
 msgstr "Detail Tautan:"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:834
-#: addon/globalPlugins/accesifyPlay/__init__.py:1323
-#: addon/globalPlugins/accesifyPlay/__init__.py:1554
-#: addon/globalPlugins/accesifyPlay/__init__.py:2127
-#: addon/globalPlugins/accesifyPlay/__init__.py:2151
+#: addon/globalPlugins/accesifyPlay/__init__.py:876
+#: addon/globalPlugins/accesifyPlay/__init__.py:1365
+#: addon/globalPlugins/accesifyPlay/__init__.py:1596
+#: addon/globalPlugins/accesifyPlay/__init__.py:2169
+#: addon/globalPlugins/accesifyPlay/__init__.py:2193
 msgid "Play"
 msgstr "Putar"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:839
-#: addon/globalPlugins/accesifyPlay/__init__.py:1179
-#: addon/globalPlugins/accesifyPlay/__init__.py:1266
-#: addon/globalPlugins/accesifyPlay/__init__.py:1437
-#: addon/globalPlugins/accesifyPlay/__init__.py:1566
-#: addon/globalPlugins/accesifyPlay/__init__.py:1793
+#: addon/globalPlugins/accesifyPlay/__init__.py:881
+#: addon/globalPlugins/accesifyPlay/__init__.py:1221
+#: addon/globalPlugins/accesifyPlay/__init__.py:1308
+#: addon/globalPlugins/accesifyPlay/__init__.py:1479
+#: addon/globalPlugins/accesifyPlay/__init__.py:1608
+#: addon/globalPlugins/accesifyPlay/__init__.py:1835
 msgid "Close"
 msgstr "Tutup"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:853
+#: addon/globalPlugins/accesifyPlay/__init__.py:895
 msgid "Checking..."
 msgstr "Memeriksa..."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:873
+#: addon/globalPlugins/accesifyPlay/__init__.py:915
 msgid "Please check a Spotify link first."
 msgstr "Silakan periksa tautan Spotify terlebih dahulu."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:901
+#: addon/globalPlugins/accesifyPlay/__init__.py:943
 msgid "Create Spotify Playlist"
 msgstr "Buat Daftar Putar Spotify"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:909
+#: addon/globalPlugins/accesifyPlay/__init__.py:951
 msgid "Playlist Name:"
 msgstr "Nama Daftar Putar:"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:911
-#: addon/globalPlugins/accesifyPlay/__init__.py:986
+#: addon/globalPlugins/accesifyPlay/__init__.py:953
+#: addon/globalPlugins/accesifyPlay/__init__.py:1028
 msgid "Description:"
 msgstr "Keterangan:"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:914
-#: addon/globalPlugins/accesifyPlay/__init__.py:990
+#: addon/globalPlugins/accesifyPlay/__init__.py:956
+#: addon/globalPlugins/accesifyPlay/__init__.py:1032
 msgid "Public playlist"
 msgstr "Daftar putar publik"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:917
+#: addon/globalPlugins/accesifyPlay/__init__.py:959
 msgid "Collaborative (requires public off)"
 msgstr "Kolaboratif (memerlukan nonaktif publik)"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:921
+#: addon/globalPlugins/accesifyPlay/__init__.py:963
 msgid "Create"
 msgstr "Buat"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:925
-#: addon/globalPlugins/accesifyPlay/__init__.py:999
-#: addon/globalPlugins/accesifyPlay/__init__.py:1111
-#: addon/globalPlugins/accesifyPlay/__init__.py:2243
+#: addon/globalPlugins/accesifyPlay/__init__.py:967
+#: addon/globalPlugins/accesifyPlay/__init__.py:1041
+#: addon/globalPlugins/accesifyPlay/__init__.py:1153
+#: addon/globalPlugins/accesifyPlay/__init__.py:2285
 msgid "Cancel"
 msgstr "Batal"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:942
+#: addon/globalPlugins/accesifyPlay/__init__.py:984
 msgid "Playlist name cannot be empty."
 msgstr "Nama daftar putar tidak boleh kosong."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:945
-#: addon/globalPlugins/accesifyPlay/__init__.py:1016
+#: addon/globalPlugins/accesifyPlay/__init__.py:987
+#: addon/globalPlugins/accesifyPlay/__init__.py:1058
 msgid "Collaborative playlists must be private."
 msgstr "Daftar putar kolaboratif harus bersifat pribadi."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:964
+#: addon/globalPlugins/accesifyPlay/__init__.py:1006
 #, python-brace-format
 msgid "Playlist '{name}' created successfully."
 msgstr "Daftar putar '{name}' berhasil dibuat."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:973
+#: addon/globalPlugins/accesifyPlay/__init__.py:1015
 msgid "Edit Playlist Details"
 msgstr "Edit Detail Daftar Putar"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:983
+#: addon/globalPlugins/accesifyPlay/__init__.py:1025
 msgid "Name:"
 msgstr "Nama:"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:992
+#: addon/globalPlugins/accesifyPlay/__init__.py:1034
 msgid "Collaborative"
 msgstr "Kolaboratif"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:996
+#: addon/globalPlugins/accesifyPlay/__init__.py:1038
 msgid "Save"
 msgstr "Simpan"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1024
+#: addon/globalPlugins/accesifyPlay/__init__.py:1066
 msgid "No changes to save."
 msgstr "Tidak ada perubahan untuk disimpan."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1056
+#: addon/globalPlugins/accesifyPlay/__init__.py:1098
 msgid "Playlist updated."
 msgstr "Daftar putar diperbarui."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1063
+#: addon/globalPlugins/accesifyPlay/__init__.py:1105
 msgid "Add Current Track to Playlist"
 msgstr "Tambahkan trek Saat Ini ke Daftar Putar"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1075
+#: addon/globalPlugins/accesifyPlay/__init__.py:1117
 msgid "Unknown Track"
 msgstr "Trek Tidak Dikenal"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1083
+#: addon/globalPlugins/accesifyPlay/__init__.py:1125
 #, python-brace-format
 msgid "Current Track: {track_name} by {artists}"
 msgstr "Trek saat ini: {track_name} oleh {artists}"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1090
+#: addon/globalPlugins/accesifyPlay/__init__.py:1132
 msgid "Select Playlist:"
 msgstr "Pilih Daftar Putar:"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1106
+#: addon/globalPlugins/accesifyPlay/__init__.py:1148
 msgid "Add to Playlist"
 msgstr "Tambahkan ke Daftar Putar"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1127
+#: addon/globalPlugins/accesifyPlay/__init__.py:1169
 msgid "Please select a playlist and ensure a track is playing."
 msgstr "Silakan pilih daftar putar dan pastikan trek sedang diputar."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1140
+#: addon/globalPlugins/accesifyPlay/__init__.py:1182
 #, python-brace-format
 msgid "Track added to playlist '{playlist_name}'."
-msgstr "'{playlist_name}' ditambahkan ke daftar putar."
+msgstr "Trek berhasil ditambahkan ke daftar putar '{playlist_name}'."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1154
+#: addon/globalPlugins/accesifyPlay/__init__.py:1196
 #, python-brace-format
 msgid "Episodes for {show_name}"
 msgstr "Episode untuk {show_name}"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1175
+#: addon/globalPlugins/accesifyPlay/__init__.py:1217
 msgid "Play Episode"
 msgstr "Putar Episode"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1208
+#: addon/globalPlugins/accesifyPlay/__init__.py:1250
 msgid "No episodes found for this show."
 msgstr "Tidak ada episode yang ditemukan untuk acara ini."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1228
+#: addon/globalPlugins/accesifyPlay/__init__.py:1270
 msgid "Play Episode\tAlt+P"
 msgstr "Putar Episode\tAlt+P"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1230
-#: addon/globalPlugins/accesifyPlay/__init__.py:1496
-#: addon/globalPlugins/accesifyPlay/__init__.py:1616
+#: addon/globalPlugins/accesifyPlay/__init__.py:1272
+#: addon/globalPlugins/accesifyPlay/__init__.py:1538
+#: addon/globalPlugins/accesifyPlay/__init__.py:1658
 msgid "Copy Link\tAlt+C"
 msgstr "Salin Tautan\tAlt+C"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1254
+#: addon/globalPlugins/accesifyPlay/__init__.py:1296
 msgid "Spotify Queue"
 msgstr "Antrean Spotify"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1297
+#: addon/globalPlugins/accesifyPlay/__init__.py:1339
 #: addon/globalPlugins/accesifyPlay/spotify_client.py:328
 msgid "Queue is empty."
 msgstr "Antrian kosong."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1301
-#: addon/globalPlugins/accesifyPlay/__init__.py:2686
+#: addon/globalPlugins/accesifyPlay/__init__.py:1343
+#: addon/globalPlugins/accesifyPlay/__init__.py:2732
 msgid "Playing"
 msgstr "Memutar"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1301
+#: addon/globalPlugins/accesifyPlay/__init__.py:1343
 msgid "Queue"
 msgstr "Antrean"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1324
-#: addon/globalPlugins/accesifyPlay/__init__.py:2130
-#: addon/globalPlugins/accesifyPlay/__init__.py:2153
+#: addon/globalPlugins/accesifyPlay/__init__.py:1366
+#: addon/globalPlugins/accesifyPlay/__init__.py:2172
+#: addon/globalPlugins/accesifyPlay/__init__.py:2195
 msgid "Copy Link"
 msgstr "Salin Tautan"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1325
+#: addon/globalPlugins/accesifyPlay/__init__.py:1367
 msgid "Remove from Queue"
 msgstr "Hapus dari Antrean"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1351
+#: addon/globalPlugins/accesifyPlay/__init__.py:1393
 msgid "Skipped current track."
 msgstr "Lewati trek saat ini."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1369
+#: addon/globalPlugins/accesifyPlay/__init__.py:1411
 msgid "Unable to determine current track."
 msgstr "Tidak dapat menentukan trek saat ini."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1377
+#: addon/globalPlugins/accesifyPlay/__init__.py:1419
 msgid "Queue updated."
 msgstr "Antrean diperbarui."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1393
+#: addon/globalPlugins/accesifyPlay/__init__.py:1435
 #, python-brace-format
 msgid "Discography for {artist_name}"
 msgstr "Diskografi untuk {artist_name}"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1417
-#: addon/globalPlugins/accesifyPlay/__init__.py:2062
+#: addon/globalPlugins/accesifyPlay/__init__.py:1459
+#: addon/globalPlugins/accesifyPlay/__init__.py:2104
 msgid "Top Tracks"
 msgstr "Trek Teratas"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1426
+#: addon/globalPlugins/accesifyPlay/__init__.py:1468
 msgid "Albums and Singles"
 msgstr "Album dan Single"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1433
+#: addon/globalPlugins/accesifyPlay/__init__.py:1475
 msgid "Play Selected"
 msgstr "Putar yang dipilih"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1485
+#: addon/globalPlugins/accesifyPlay/__init__.py:1527
 msgid "Please select an item from the active tab first."
 msgstr "Silakan pilih item dari tab aktif terlebih dahulu."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1535
+#: addon/globalPlugins/accesifyPlay/__init__.py:1577
 #, python-brace-format
 msgid "Artists Related to {artist_name}"
 msgstr "Artis Terkait dengan {artist_name}"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1558
-#: addon/globalPlugins/accesifyPlay/__init__.py:2136
-#: addon/globalPlugins/accesifyPlay/__init__.py:2139
+#: addon/globalPlugins/accesifyPlay/__init__.py:1600
+#: addon/globalPlugins/accesifyPlay/__init__.py:2178
+#: addon/globalPlugins/accesifyPlay/__init__.py:2181
 msgid "View Discography"
 msgstr "Lihat Diskografi"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1562
+#: addon/globalPlugins/accesifyPlay/__init__.py:1604
 msgid "Follow"
 msgstr "Ikuti"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1596
+#: addon/globalPlugins/accesifyPlay/__init__.py:1638
 msgid "No related artists found."
 msgstr "Tidak ditemukan artis terkait."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1605
+#: addon/globalPlugins/accesifyPlay/__init__.py:1647
 msgid "Please select an artist."
 msgstr "Silakan pilih artis."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1614
+#: addon/globalPlugins/accesifyPlay/__init__.py:1656
 msgid "Play Artist Radio\tAlt+P"
 msgstr "Putar Radio Artis\tAlt+P"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1658
+#: addon/globalPlugins/accesifyPlay/__init__.py:1700
 msgid "Spotify Management"
 msgstr "Manajemen Spotify"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1735
+#: addon/globalPlugins/accesifyPlay/__init__.py:1777
 msgid "This item cannot be added to the queue."
 msgstr "Item ini tidak dapat ditambahkan ke antrian."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1772
+#: addon/globalPlugins/accesifyPlay/__init__.py:1814
 msgid "Saved Tracks"
 msgstr "Trek yang disimpan"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1776
+#: addon/globalPlugins/accesifyPlay/__init__.py:1818
 msgid "Followed Artists"
 msgstr "Artis yang Diikuti"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1780
+#: addon/globalPlugins/accesifyPlay/__init__.py:1822
 msgid "Saved Shows"
 msgstr "Acara yang disimpan"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1784
+#: addon/globalPlugins/accesifyPlay/__init__.py:1826
 msgid "New Releases"
 msgstr "Rilis Baru"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1787
+#: addon/globalPlugins/accesifyPlay/__init__.py:1829
 msgid "Recently Played"
 msgstr "Baru-baru ini diputar"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1818
-#: addon/globalPlugins/accesifyPlay/__init__.py:2084
+#: addon/globalPlugins/accesifyPlay/__init__.py:1860
+#: addon/globalPlugins/accesifyPlay/__init__.py:2126
 msgid "Refresh"
 msgstr "Segarkan"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1833
+#: addon/globalPlugins/accesifyPlay/__init__.py:1875
 msgid "No items found."
 msgstr "Tidak ada item yang ditemukan."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1884
+#: addon/globalPlugins/accesifyPlay/__init__.py:1926
 msgid "Manage Playlists"
 msgstr "Kelola Daftar Putar"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1893
+#: addon/globalPlugins/accesifyPlay/__init__.py:1935
 msgid "Refresh Playlists"
 msgstr "Segarkan Daftar Putar"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1899
+#: addon/globalPlugins/accesifyPlay/__init__.py:1941
 msgid "Refreshing playlists..."
 msgstr "Menyegarkan daftar putar..."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1913
+#: addon/globalPlugins/accesifyPlay/__init__.py:1955
 msgid "My Playlists"
 msgstr "Daftar Putar Saya"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1946
+#: addon/globalPlugins/accesifyPlay/__init__.py:1988
 msgid "Please select a playlist to update."
 msgstr "Silakan pilih daftar putar yang akan diperbarui."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1964
+#: addon/globalPlugins/accesifyPlay/__init__.py:2006
 msgid "Please select a playlist to delete."
 msgstr "Silakan pilih daftar putar yang akan dihapus."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1970
+#: addon/globalPlugins/accesifyPlay/__init__.py:2012
 #, python-brace-format
 msgid ""
-"Are you sure you want to delete playlist '{name}'? This action cannot be "
-"undone."
+"Are you sure you want to delete playlist '{name}'? This action cannot be undone."
 msgstr ""
-"Apakah Anda yakin ingin menghapus daftar putar  '{name}'? Tindakan ini "
-"tidak dapat dibatalkan."
+"Apakah Anda yakin ingin menghapus daftar putar  '{name}'? Tindakan ini tidak "
+"dapat dibatalkan."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1973
+#: addon/globalPlugins/accesifyPlay/__init__.py:2015
 msgid "Confirm Delete Playlist"
 msgstr "Konfirmasikan Hapus Daftar Putar"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:1987
+#: addon/globalPlugins/accesifyPlay/__init__.py:2029
 #, python-brace-format
 msgid "Playlist '{name}' deleted successfully."
 msgstr "Daftar putar '{name}' berhasil dihapus."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2002
+#: addon/globalPlugins/accesifyPlay/__init__.py:2044
 msgid "Please select a track to remove."
 msgstr "Silakan pilih trek yang ingin dihapus."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2008
+#: addon/globalPlugins/accesifyPlay/__init__.py:2050
 #, python-brace-format
 msgid ""
-"Are you sure you want to remove '{track_name}' by {artists} from this "
-"playlist?"
+"Are you sure you want to remove '{track_name}' by {artists} from this playlist?"
 msgstr ""
-"Apakah Anda yakin ingin menghapus '{track_name}' oleh {artists} dari "
-"daftar putar ini?"
+"Apakah Anda yakin ingin menghapus '{track_name}' oleh {artists} dari daftar "
+"putar ini?"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2011
-#: addon/globalPlugins/accesifyPlay/__init__.py:2168
+#: addon/globalPlugins/accesifyPlay/__init__.py:2053
+#: addon/globalPlugins/accesifyPlay/__init__.py:2210
 msgid "Confirm Remove Track"
 msgstr "Konfirmasikan Hapus trek"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2020
+#: addon/globalPlugins/accesifyPlay/__init__.py:2062
 msgid "Error: Could not determine parent playlist."
 msgstr "Kesalahan: Tidak dapat menentukan playlist induk."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2032
+#: addon/globalPlugins/accesifyPlay/__init__.py:2074
 #, python-brace-format
 msgid "Track '{track_name}' removed from playlist."
 msgstr "Trek '{track_name}' dihapus dari playlist."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2057
+#: addon/globalPlugins/accesifyPlay/__init__.py:2099
 msgid "Top Items"
 msgstr "Item Teratas"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2062
+#: addon/globalPlugins/accesifyPlay/__init__.py:2104
 msgid "Top Artists"
 msgstr "Artis Teratas"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2063
+#: addon/globalPlugins/accesifyPlay/__init__.py:2105
 msgid "Show:"
 msgstr "Acara:"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2066
+#: addon/globalPlugins/accesifyPlay/__init__.py:2108
 msgid "Last 4 Weeks"
 msgstr "4 Minggu Terakhir"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2066
+#: addon/globalPlugins/accesifyPlay/__init__.py:2108
 msgid "Last 6 Months"
 msgstr "6 Bulan Terakhir"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2066
+#: addon/globalPlugins/accesifyPlay/__init__.py:2108
 msgid "All Time"
 msgstr "Sepanjang Waktu"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2067
+#: addon/globalPlugins/accesifyPlay/__init__.py:2109
 msgid "Time Range:"
 msgstr "Rentang Waktu:"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2128
-#: addon/globalPlugins/accesifyPlay/__init__.py:2152
+#: addon/globalPlugins/accesifyPlay/__init__.py:2170
+#: addon/globalPlugins/accesifyPlay/__init__.py:2194
 msgid "Add to Queue"
 msgstr "Tambahkan ke Antrean"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2134
+#: addon/globalPlugins/accesifyPlay/__init__.py:2176
 msgid "Remove from Library"
 msgstr "Hapus dari Perpustakaan"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2137
+#: addon/globalPlugins/accesifyPlay/__init__.py:2179
 msgid "Unfollow"
 msgstr "Berhenti mengikuti"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2141
+#: addon/globalPlugins/accesifyPlay/__init__.py:2183
 msgid "View Episodes"
 msgstr "Lihat Episode"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2155
+#: addon/globalPlugins/accesifyPlay/__init__.py:2197
 msgid "Update Details"
 msgstr "Perbarui Detail"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2156
+#: addon/globalPlugins/accesifyPlay/__init__.py:2198
 msgid "Delete"
 msgstr "Hapus"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2158
+#: addon/globalPlugins/accesifyPlay/__init__.py:2200
 msgid "Remove Track"
 msgstr "Hapus trek"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2167
+#: addon/globalPlugins/accesifyPlay/__init__.py:2209
 #, python-brace-format
 msgid "Are you sure you want to remove '{track_name}' from your library?"
 msgstr "Apakah Anda yakin ingin menghapus '{track_name}' dari perpustakaan Anda?"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2175
+#: addon/globalPlugins/accesifyPlay/__init__.py:2217
 #, python-brace-format
 msgid "Track '{track_name}' removed from your library."
 msgstr "Trek '{track_name}' dihapus dari perpustakaan Anda."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2181
+#: addon/globalPlugins/accesifyPlay/__init__.py:2223
 #, python-brace-format
 msgid "Are you sure you want to unfollow {artist_name}?"
 msgstr "Apakah Anda yakin ingin berhenti mengikuti {artist_name}?"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2182
+#: addon/globalPlugins/accesifyPlay/__init__.py:2224
 msgid "Confirm Unfollow"
 msgstr "Konfirmasikan Berhenti Mengikuti"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2189
+#: addon/globalPlugins/accesifyPlay/__init__.py:2231
 #, python-brace-format
 msgid "You have unfollowed {artist_name}."
 msgstr "Anda telah berhenti mengikuti {artist_name}."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2198
+#: addon/globalPlugins/accesifyPlay/__init__.py:2240
 msgid "Please select an artist to view their discography."
 msgstr "Silakan pilih artis untuk melihat diskografinya."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2206
+#: addon/globalPlugins/accesifyPlay/__init__.py:2248
 msgid "Please select a show to view episodes."
 msgstr "Silakan pilih acara untuk melihat episode."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2225
+#: addon/globalPlugins/accesifyPlay/__init__.py:2267
 msgid "Set Spotify Volume"
 msgstr "Atur Volume Spotify"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2231
+#: addon/globalPlugins/accesifyPlay/__init__.py:2273
 msgid "Volume (0-100):"
 msgstr "Volume (0-100):"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2238
+#: addon/globalPlugins/accesifyPlay/__init__.py:2280
 msgid "Set"
 msgstr "Atur"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2254
+#: addon/globalPlugins/accesifyPlay/__init__.py:2296
 #, python-brace-format
 msgid "Setting volume to {volume}%..."
 msgstr "Mengatur volume ke {volume}%..."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2263
+#: addon/globalPlugins/accesifyPlay/__init__.py:2305
 #, python-brace-format
 msgid "Volume set to {volume}%"
 msgstr "Volume berhasil diatur ke  {volume}%"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2407
-#: addon/globalPlugins/accesifyPlay/__init__.py:2483
+#: addon/globalPlugins/accesifyPlay/__init__.py:2453
+#: addon/globalPlugins/accesifyPlay/__init__.py:2529
 msgid "UI Ready."
 msgstr "UI Siap."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2416
-#: addon/globalPlugins/accesifyPlay/__init__.py:2557
+#: addon/globalPlugins/accesifyPlay/__init__.py:2462
+#: addon/globalPlugins/accesifyPlay/__init__.py:2603
 #: addon/globalPlugins/accesifyPlay/spotify_client.py:222
 #: addon/globalPlugins/accesifyPlay/spotify_client.py:247
 #: addon/globalPlugins/accesifyPlay/spotify_client.py:263
@@ -843,21 +862,21 @@ msgstr "UI Siap."
 msgid "Nothing is currently playing."
 msgstr "Tidak ada yang sedang diputar."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2434
+#: addon/globalPlugins/accesifyPlay/__init__.py:2480
 msgid "Could not determine the current Spotify user."
 msgstr "Tidak dapat menentukan pengguna Spotify saat ini."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2444
+#: addon/globalPlugins/accesifyPlay/__init__.py:2490
 msgid "No playlists owned by your account were found."
 msgstr "Tidak ada playlist milik akun Anda yang ditemukan."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2487
-#: addon/globalPlugins/accesifyPlay/__init__.py:2540
-#: addon/globalPlugins/accesifyPlay/__init__.py:2587
-#: addon/globalPlugins/accesifyPlay/__init__.py:2606
+#: addon/globalPlugins/accesifyPlay/__init__.py:2533
+#: addon/globalPlugins/accesifyPlay/__init__.py:2586
 #: addon/globalPlugins/accesifyPlay/__init__.py:2633
-#: addon/globalPlugins/accesifyPlay/__init__.py:2654
-#: addon/globalPlugins/accesifyPlay/__init__.py:2806
+#: addon/globalPlugins/accesifyPlay/__init__.py:2652
+#: addon/globalPlugins/accesifyPlay/__init__.py:2679
+#: addon/globalPlugins/accesifyPlay/__init__.py:2700
+#: addon/globalPlugins/accesifyPlay/__init__.py:2852
 #: addon/globalPlugins/accesifyPlay/spotify_client.py:140
 #: addon/globalPlugins/accesifyPlay/spotify_client.py:171
 #: addon/globalPlugins/accesifyPlay/spotify_client.py:455
@@ -866,145 +885,144 @@ msgstr "Tidak ada playlist milik akun Anda yang ditemukan."
 msgid "Spotify client not ready. Please validate your credentials."
 msgstr "Klien Spotify belum siap. Harap validasi kredensial Anda."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2532
+#: addon/globalPlugins/accesifyPlay/__init__.py:2578
 msgid "Set Spotify volume to a specific percentage."
 msgstr "Atur volume Spotify ke persentase tertentu."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2547
+#: addon/globalPlugins/accesifyPlay/__init__.py:2593
 msgid "Save the currently playing track to your Library."
 msgstr "Simpan trek yang sedang diputar ke Perpustakaan Anda."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2568
+#: addon/globalPlugins/accesifyPlay/__init__.py:2614
 #, python-brace-format
 msgid "Track '{track_name}' saved to your library."
 msgstr "Trek '{track_name}' disimpan ke perpustakaan Anda."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2576
+#: addon/globalPlugins/accesifyPlay/__init__.py:2622
 msgid "Add the currently playing track to a selected playlist."
 msgstr "Tambahkan trek yang sedang diputar ke daftar putar yang dipilih."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2584
+#: addon/globalPlugins/accesifyPlay/__init__.py:2630
 msgid "Add to playlist dialog is still loading, please wait."
 msgstr "Dialog tambahkan ke daftar putar masih dimuat, harap tunggu."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2591
+#: addon/globalPlugins/accesifyPlay/__init__.py:2637
 msgid "Preparing playlists..."
 msgstr "Mempersiapkan daftar putar..."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2595
+#: addon/globalPlugins/accesifyPlay/__init__.py:2641
 msgid "Manage Spotify playlists, library, and more."
 msgstr "Kelola daftar putar Spotify, perpustakaan, dan lainnya."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2603
+#: addon/globalPlugins/accesifyPlay/__init__.py:2649
 msgid "Spotify management data is still loading, please wait."
 msgstr "Data pengelolaan Spotify masih dimuat, harap tunggu."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2609
-#: addon/globalPlugins/accesifyPlay/__init__.py:2719
-#: addon/globalPlugins/accesifyPlay/__init__.py:2809
-#: addon/globalPlugins/accesifyPlay/__init__.py:2818
-#: addon/globalPlugins/accesifyPlay/__init__.py:2843
+#: addon/globalPlugins/accesifyPlay/__init__.py:2655
+#: addon/globalPlugins/accesifyPlay/__init__.py:2765
+#: addon/globalPlugins/accesifyPlay/__init__.py:2855
+#: addon/globalPlugins/accesifyPlay/__init__.py:2864
+#: addon/globalPlugins/accesifyPlay/__init__.py:2889
 msgid "Please Wait..."
 msgstr "Harap tunggu..."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2614
+#: addon/globalPlugins/accesifyPlay/__init__.py:2660
 msgid "Announces the current track's playback time."
 msgstr "Umumkan waktu pemutaran trek saat ini."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2626
+#: addon/globalPlugins/accesifyPlay/__init__.py:2672
 msgid "Play a track from a Spotify URL."
 msgstr "Putar trek dari URL Spotify."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2640
+#: addon/globalPlugins/accesifyPlay/__init__.py:2686
 msgid "Copy the URL of the current track."
 msgstr "Salin URL trek saat ini."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2647
+#: addon/globalPlugins/accesifyPlay/__init__.py:2693
 msgid "Search for a track on Spotify."
 msgstr "Cari trek di Spotify."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2661
+#: addon/globalPlugins/accesifyPlay/__init__.py:2707
 msgid "Announce the currently playing track."
 msgstr "Umumkan trek yang sedang diputar."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2668
+#: addon/globalPlugins/accesifyPlay/__init__.py:2714
 msgid "Play or pause the current track on Spotify."
 msgstr "Putar atau jeda lagu saat ini di Spotify."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2673
-#: addon/globalPlugins/accesifyPlay/__init__.py:2697
-#: addon/globalPlugins/accesifyPlay/__init__.py:2740
-#: addon/globalPlugins/accesifyPlay/__init__.py:2766
+#: addon/globalPlugins/accesifyPlay/__init__.py:2719
+#: addon/globalPlugins/accesifyPlay/__init__.py:2743
+#: addon/globalPlugins/accesifyPlay/__init__.py:2786
+#: addon/globalPlugins/accesifyPlay/__init__.py:2812
 msgid "Please wait..."
 msgstr "Harap tunggu..."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2683
+#: addon/globalPlugins/accesifyPlay/__init__.py:2729
 msgid "Paused"
 msgstr "Dijeda"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2692
+#: addon/globalPlugins/accesifyPlay/__init__.py:2738
 msgid "Skip to the next track on Spotify."
 msgstr "Putar trek berikutnya di Spotify."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2714
+#: addon/globalPlugins/accesifyPlay/__init__.py:2760
 msgid "Skip to the previous track on Spotify."
 msgstr "Putar trek sebelumnya di Spotify."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2736
+#: addon/globalPlugins/accesifyPlay/__init__.py:2782
 msgid "Increase Spotify volume."
 msgstr "Tingkatkan volume Spotify."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2754
-#: addon/globalPlugins/accesifyPlay/__init__.py:2780
+#: addon/globalPlugins/accesifyPlay/__init__.py:2800
+#: addon/globalPlugins/accesifyPlay/__init__.py:2826
 msgid "Volume"
 msgstr "Volume"
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2756
-#: addon/globalPlugins/accesifyPlay/__init__.py:2782
+#: addon/globalPlugins/accesifyPlay/__init__.py:2802
+#: addon/globalPlugins/accesifyPlay/__init__.py:2828
 msgid "No active device found."
 msgstr "Tidak ada perangkat aktif yang ditemukan."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2762
+#: addon/globalPlugins/accesifyPlay/__init__.py:2808
 msgid "Decrease Spotify volume."
 msgstr "Kurangi volume Spotify."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2789
+#: addon/globalPlugins/accesifyPlay/__init__.py:2835
 msgid "Announce the next track in the queue."
 msgstr "Umumkan lagu berikutnya dalam antrean."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2796
+#: addon/globalPlugins/accesifyPlay/__init__.py:2842
 msgid "Show the Spotify queue list."
 msgstr "Tampilkan daftar antrian Spotify."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2803
+#: addon/globalPlugins/accesifyPlay/__init__.py:2849
 msgid "Queue dialog is still loading, please wait."
 msgstr "Dialog antrian masih dimuat, harap tunggu."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2813
+#: addon/globalPlugins/accesifyPlay/__init__.py:2859
 msgid "Seek forward in the current track by configurable duration."
 msgstr "Lompat maju dalam trek saat ini berdasarkan durasi yang dapat diatur."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2829
+#: addon/globalPlugins/accesifyPlay/__init__.py:2875
 #, python-brace-format
 msgid "Seeked forward {duration} seconds."
 msgstr "Lompat maju {duration} seconds."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2838
+#: addon/globalPlugins/accesifyPlay/__init__.py:2884
 msgid "Seek backward in the current track by configurable duration."
 msgstr "Lompat mundur dalam trek saat ini berdasarkan durasi yang dapat diatur."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:2854
+#: addon/globalPlugins/accesifyPlay/__init__.py:2900
 #, python-brace-format
 msgid "Seeked backward {duration} seconds."
 msgstr "Lompat mundur {duration} seconds."
 
 #: addon/globalPlugins/accesifyPlay/donate.py:16
 msgid ""
-"Thank you for considering a donation! This will open a link in your web "
-"browser."
+"Thank you for considering a donation! This will open a link in your web browser."
 msgstr ""
-"Terima kasih telah mempertimbangkan untuk melakukan donasi! Ini akan "
-"membuka tautan di browser web Anda."
+"Terima kasih telah mempertimbangkan untuk melakukan donasi! Ini akan membuka "
+"tautan di browser web Anda."
 
 #: addon/globalPlugins/accesifyPlay/spotify_client.py:89
 msgid "Spotify: Attempting silent initialization."
@@ -1049,8 +1067,8 @@ msgstr "Spotify: Validasi interaktif gagal:"
 #: addon/globalPlugins/accesifyPlay/spotify_client.py:144
 msgid "No active Spotify device found. Please start playback in your Spotify app."
 msgstr ""
-"Tidak ditemukan perangkat Spotify aktif. Silakan mulai pemutaran di "
-"aplikasi Spotify Anda."
+"Tidak ditemukan perangkat Spotify aktif. Silakan mulai pemutaran di aplikasi "
+"Spotify Anda."
 
 #: addon/globalPlugins/accesifyPlay/spotify_client.py:154
 #: addon/globalPlugins/accesifyPlay/spotify_client.py:177
@@ -1102,8 +1120,7 @@ msgstr "Tidak dapat menemukan URL untuk trek saat ini."
 #, python-brace-format
 msgid "{current_min}min {current_sec}sec out of {total_min}min {total_sec}sec"
 msgstr ""
-"{current_min} menit {current_sec} detik dari {total_min} menit "
-"{total_sec} detik"
+"{current_min} menit {current_sec} detik dari {total_min} menit {total_sec} detik"
 
 #: addon/globalPlugins/accesifyPlay/spotify_client.py:313
 msgid "The provided link is not a track link."
@@ -1292,4 +1309,3 @@ msgstr "Jenis: Episode"
 #, python-brace-format
 msgid "Show: {name}"
 msgstr "Acara: {name}"
-
