@@ -2,6 +2,9 @@
 
 ## Version 1.3.0 (Unreleased)
 
+- Improvement: Improved the focus behavior in the Search dialog when using the "Load More" feature. Instead of resetting the focus to the top of the list, it now intelligently places the focus on the first of the newly added results. This provides a seamless browsing experience, allowing users to continue exploring search results without losing their place.
+- Improvement: Enhanced the stability and reliability of all playback-related shortcuts (Play/Pause, Next/Previous, Seek, and Volume). The addon now prevents sending rapid, overlapping commands to Spotify. If a command is pressed while another is still processing, a "Please wait" message will be announced, ensuring each action completes successfully before the next one is sent.
+- Fix: Resolved a crash in the Search dialog that could occur when Spotify's search results contained invalid or empty items. The dialog is now more robust and handles unexpected data gracefully.
 - New Feature: Added a command to announce the current track's progress and total duration (e.g., "1min 23sec out of 3min 45sec") using the shortcut `NVDA+Alt+Shift+T`.
 - Improvement: Dialogs that depend on Spotify data (Management, Queue List, Add to Playlist, etc.) now preload their content before the window appears, eliminating empty states and making loading progress audible.
 - Improvement: Added centralized helpers to fetch the current user profile, playlists, saved tracks, saved shows, top items, new releases, and recently played items so the multi-tab Management dialog opens fully populated and refreshes consistently.

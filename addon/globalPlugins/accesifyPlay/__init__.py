@@ -447,8 +447,6 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
             messageBox(error_message, _("Validation Failed"), wx.OK | wx.ICON_ERROR)
         self.updateClientIDButtonLabel()
 
-# VERSI LENGKAP - GANTI SELURUH KELAS SEARCHDIALOG ANDA DENGAN INI
-
 class SearchDialog(AccessifyDialog):
     LOAD_MORE_ID = "spotify:loadmore"
     MENU_PLAY = wx.NewIdRef()
@@ -493,7 +491,6 @@ class SearchDialog(AccessifyDialog):
         # Results list
         self.resultsList = wx.ListBox(self)
         
-        # Menggunakan helper _bind_list_activation dari kelas dasar
         self._bind_list_activation(self.resultsList, self._on_item_activated)
         
         self.resultsList.Bind(wx.EVT_CONTEXT_MENU, self.on_results_context_menu)
@@ -549,8 +546,8 @@ class SearchDialog(AccessifyDialog):
             return
         artist_id = item["id"]
         artist_name = item["name"]
-        # dialog = ArtistDiscographyDialog(self, self.client, artist_id, artist_name)
-        # dialog.Show()
+        dialog = ArtistDiscographyDialog(self, self.client, artist_id, artist_name)
+        dialog.Show()
 
     def on_follow_artist(self, evt=None):
         item = self._get_selected_item()
@@ -584,9 +581,10 @@ class SearchDialog(AccessifyDialog):
         self.perform_search()
 
     def perform_search(self):
-        threading.Thread(target=self._search_thread).start()
+        index_to_focus = len(self.results)
+        threading.Thread(target=self._search_thread, args=(index_to_focus,)).start()
 
-    def _search_thread(self):
+    def _search_thread(self, index_to_focus):
         result_data = self.client.search(self.current_query, self.current_type, offset=self.next_offset)
         if isinstance(result_data, str):
             wx.CallAfter(ui.message, result_data)
@@ -601,31 +599,37 @@ class SearchDialog(AccessifyDialog):
             self.next_offset = search_results.get("offset", 0) + limit
         else:
             self.can_load_more = False
-        wx.CallAfter(self.update_results_list)
+        wx.CallAfter(self.update_results_list, index_to_focus)
 
-    def update_results_list(self):
+    def update_results_list(self, focus_index=0):
         self.resultsList.Clear()
         for item in self.results:
+            if not item:
+                continue
+            
             display = item.get("name", "Unknown")
-            if item["type"] == "track":
+            item_type = item.get("type")
+            if item_type == "track":
                 artists = ", ".join([a["name"] for a in item.get("artists", [])])
                 display = f"{display} - {artists}"
-            elif item["type"] == "playlist":
+            elif item_type == "playlist":
                 owner = item.get("owner", {}).get("display_name", "Unknown")
                 display = f"{display} - by {owner}"
-            elif item["type"] == "show":
+            elif item_type == "show":
                 publisher = item.get("publisher", "")
                 display = f"{display} - {publisher}"
             self.resultsList.Append(display)
+
         if not self.results:
             self.resultsList.Append(_("No results found."))
             self._lastResultsSelection = None
             return
         if self.can_load_more:
             self.resultsList.Append(f"--- {_('Load More')} ---")
+        
         if self.results:
-            self.resultsList.SetSelection(0)
-            self._lastResultsSelection = 0
+            self.resultsList.SetSelection(focus_index)
+            self._lastResultsSelection = focus_index
             self.resultsList.SetFocus()
 
     def onPlay(self, evt=None):
@@ -2173,9 +2177,9 @@ class SetVolumeDialog(AccessifyDialog):
 
 class GlobalPlugin(globalPluginHandler.GlobalPlugin):
     scriptCategory = _("Accessify Play")
-
     def __init__(self):
         super(GlobalPlugin, self).__init__()
+        self._is_modifying_playback = False
         self.client = spotify_client.get_client()
         self.searchDialog = None
         self.playFromLinkDialog = None
@@ -2577,18 +2581,23 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         gesture="kb:nvda+shift+alt+space",
     )
     def script_playPause(self, gesture):
+        if self._is_modifying_playback:
+            ui.message(_("Please wait..."))
+            return
         def logic():
-            playback = self.client._execute(self.client.client.current_playback)
-            if not isinstance(playback, dict):
-                return playback
-
-            if playback and playback.get("is_playing"):
-                self.client._execute(self.client.client.pause_playback)
-                return _("Paused")
-            else:
-                self.client._execute(self.client.client.start_playback)
-                return _("Playing")
-
+            try:
+                self._is_modifying_playback = True
+                playback = self.client._execute(self.client.client.current_playback)
+                if not isinstance(playback, dict):
+                    return playback
+                if playback and playback.get("is_playing"):
+                    self.client._execute(self.client.client.pause_playback)
+                    return _("Paused")
+                else:
+                    self.client._execute(self.client.client.start_playback)
+                    return _("Playing")
+            finally:
+                self._is_modifying_playback = False
         self._speak_in_thread(logic)
 
     @scriptHandler.script(
@@ -2596,12 +2605,20 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         gesture="kb:nvda+shift+alt+rightArrow",
     )
     def script_nextTrack(self, gesture):
+        if self._is_modifying_playback:
+            ui.message(_("Please wait..."))
+            return
+
         def logic():
-            result = self.client._execute(self.client.client.next_track)
-            if isinstance(result, str):
-                return result  # Error message
-            time.sleep(0.5)  # Give Spotify a moment to update
-            return self.client.get_current_track_info()
+            try:
+                self._is_modifying_playback = True
+                result = self.client._execute(self.client.client.next_track)
+                if isinstance(result, str):
+                    return result  # Error message
+                time.sleep(0.1)  # Give Spotify a moment to update
+                return self.client.get_current_track_info()
+            finally:
+                self._is_modifying_playback = False
 
         self._speak_in_thread(logic)
 
@@ -2610,12 +2627,20 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         gesture="kb:nvda+shift+alt+leftArrow",
     )
     def script_previousTrack(self, gesture):
+        if self._is_modifying_playback:
+            ui.message(_("Please Wait..."))
+            return
+            
         def logic():
-            result = self.client._execute(self.client.client.previous_track)
-            if isinstance(result, str):
-                return result  # Error message
-            time.sleep(0.5)  # Give Spotify a moment to update
-            return self.client.get_current_track_info()
+            try:
+                self._is_modifying_playback = True
+                result = self.client._execute(self.client.client.previous_track)
+                if isinstance(result, str):
+                    return result  # Error message
+                time.sleep(0.1)  # Give Spotify a moment to update
+                return self.client.get_current_track_info()
+            finally:
+                self._is_modifying_playback = False
 
         self._speak_in_thread(logic)
 
@@ -2623,32 +2648,53 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         description=_("Increase Spotify volume."), gesture="kb:nvda+shift+alt+upArrow"
     )
     def script_volumeUp(self, gesture):
-        def logic():
-            playback = self.client._execute(self.client.client.current_playback)
-            if not isinstance(playback, dict):
-                return playback
-            if playback and playback.get("device"):
-                current_volume = playback["device"]["volume_percent"]
-                new_volume = min(current_volume + 5, 100)
-                self.client._execute(self.client.client.volume, new_volume)
-                return f"{_('Volume')} {new_volume}%"
+        if self._is_modifying_playback:
+            ui.message(_("Please wait..."))
+            return
 
+        def logic():
+            try:
+                self._is_modifying_playback = True
+                
+                playback = self.client._execute(self.client.client.current_playback)
+                if not isinstance(playback, dict):
+                    return playback # Mengembalikan pesan error jika ada
+                if playback and playback.get("device"):
+                    current_volume = playback["device"]["volume_percent"]
+                    new_volume = min(current_volume + 5, 100)
+                    self.client._execute(self.client.client.volume, new_volume)
+                    return f"{_('Volume')} {new_volume}%"
+                else:
+                    return _("No active device found.")
+            finally:
+                self._is_modifying_playback = False
         self._speak_in_thread(logic)
 
     @scriptHandler.script(
         description=_("Decrease Spotify volume."), gesture="kb:nvda+shift+alt+downArrow"
     )
     def script_volumeDown(self, gesture):
-        def logic():
-            playback = self.client._execute(self.client.client.current_playback)
-            if not isinstance(playback, dict):
-                return playback
-            if playback and playback.get("device"):
-                current_volume = playback["device"]["volume_percent"]
-                new_volume = max(current_volume - 5, 0)
-                self.client._execute(self.client.client.volume, new_volume)
-                return f"{_('Volume')} {new_volume}%"
+        if self._is_modifying_playback:
+            ui.message(_("Please wait..."))
+            return
 
+        def logic():
+            try:
+                self._is_modifying_playback = True
+
+                playback = self.client._execute(self.client.client.current_playback)
+                if not isinstance(playback, dict):
+                    return playback # Mengembalikan pesan error jika ada
+                if playback and playback.get("device"):
+                    current_volume = playback["device"]["volume_percent"]
+                    new_volume = max(current_volume - 5, 0)
+                    self.client._execute(self.client.client.volume, new_volume)
+                    return f"{_('Volume')} {new_volume}%"
+                else:
+                    return _("No active device found.")
+            finally:
+                # 3. Buka kunci setelah proses selesai (baik berhasil maupun gagal)
+                self._is_modifying_playback = False
         self._speak_in_thread(logic)
 
     @scriptHandler.script(
@@ -2680,15 +2726,23 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         gesture="kb:control+alt+nvda+rightArrow",
     )
     def script_seekForward(self, gesture):
+        if self._is_modifying_playback:
+            ui.message(_("Please Wait..."))
+            return
+            
         def logic():
-            seek_duration_seconds = config.conf["spotify"]["seekDuration"]
-            seek_duration_ms = seek_duration_seconds * 1000
-            result = self.client.seek_track(seek_duration_ms)
-            if isinstance(result, str):
-                return result  # Error message
-            return _("Seeked forward {duration} seconds.").format(
-                duration=seek_duration_seconds
-            )
+            try:
+                self._is_modifying_playback = True
+                seek_duration_seconds = config.conf["spotify"]["seekDuration"]
+                seek_duration_ms = seek_duration_seconds * 1000
+                result = self.client.seek_track(seek_duration_ms)
+                if isinstance(result, str):
+                    return result  # Error message
+                return _("Seeked forward {duration} seconds.").format(
+                    duration=seek_duration_seconds
+                )
+            finally:
+                self._is_modifying_playback = False
 
         self._speak_in_thread(logic)
 
@@ -2697,14 +2751,22 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         gesture="kb:control+alt+nvda+leftArrow",
     )
     def script_seekBackward(self, gesture):
+        if self._is_modifying_playback:
+            ui.message(_("Please Wait..."))
+            return
+
         def logic():
-            seek_duration_seconds = config.conf["spotify"]["seekDuration"]
-            seek_duration_ms = seek_duration_seconds * 1000
-            result = self.client.seek_track(-seek_duration_ms)
-            if isinstance(result, str):
-                return result  # Error message
-            return _("Seeked backward {duration} seconds.").format(
-                duration=seek_duration_seconds
-            )
+            try:
+                self._is_modifying_playback = True
+                seek_duration_seconds = config.conf["spotify"]["seekDuration"]
+                seek_duration_ms = seek_duration_seconds * 1000
+                result = self.client.seek_track(-seek_duration_ms)
+                if isinstance(result, str):
+                    return result  # Error message
+                return _("Seeked backward {duration} seconds.").format(
+                    duration=seek_duration_seconds
+                )
+            finally:
+                self._is_modifying_playback = False
 
         self._speak_in_thread(logic)
