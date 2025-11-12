@@ -2,6 +2,8 @@
 
 import os
 import sys
+import builtins
+import gettext
 import globalPluginHandler
 import scriptHandler
 import ui
@@ -17,24 +19,97 @@ import addonHandler  # Import addonHandler
 import webbrowser # Added for opening URLs
 
 # Add the 'lib' folder to sys.path before other imports
-lib_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "lib"))
+addon_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+lib_path = os.path.join(addon_root, "lib")
 if lib_path not in sys.path:
     sys.path.insert(0, lib_path)
 
-# Local addon modules
-from . import donate
-from . import spotify_client
-
-# Define the configuration specification
+locale_path = os.path.join(addon_root, "locale")
+LANGUAGE_AUTO = "auto"
+# Friendly display names for known language codes; fall back to the raw code when unknown.
+LANGUAGE_DISPLAY_OVERRIDES = {
+    "en": "English",
+    "id": "Bahasa Indonesia",
+}
 confspec = {
     "port": "integer(min=1024, max=65535, default=8888)",
     "searchLimit": "integer(min=1, max=50, default=20)",
     "seekDuration": "integer(min=1, max=60, default=15)",
-    "language": "string(default='en')",  # New setting for language
+    "language": "string(default='auto')",
     "announceTrackChanges": "boolean(default=False)",
 }
 config.conf.spec["spotify"] = confspec
+DEFAULT_SPOTIFY_CONFIG = {
+    "port": 8888,
+    "searchLimit": 20,
+    "seekDuration": 15,
+    "language": LANGUAGE_AUTO,
+    "announceTrackChanges": False,
+}
 
+
+def _discover_language_codes():
+    if not os.path.isdir(locale_path):
+        return []
+    codes = []
+    for entry in os.listdir(locale_path):
+        lang_dir = os.path.join(locale_path, entry)
+        if not os.path.isdir(lang_dir):
+            continue
+        messages_dir = os.path.join(lang_dir, "LC_MESSAGES")
+        if not os.path.isdir(messages_dir):
+            continue
+        po_path = os.path.join(messages_dir, "nvda.po")
+        mo_path = os.path.join(messages_dir, "nvda.mo")
+        if os.path.isfile(po_path) or os.path.isfile(mo_path):
+            codes.append(entry)
+    return sorted(codes)
+
+
+AVAILABLE_LANGUAGE_CODES = _discover_language_codes()
+
+
+def _get_spotify_config():
+    try:
+        section = config.conf["spotify"]
+    except KeyError:
+        config.conf["spotify"] = {}
+        section = config.conf["spotify"]
+    for key, default_value in DEFAULT_SPOTIFY_CONFIG.items():
+        try:
+            section[key]
+        except KeyError:
+            section[key] = default_value
+    return section
+
+
+def _normalize_language_setting(lang_code):
+    if not lang_code or lang_code == LANGUAGE_AUTO:
+        return LANGUAGE_AUTO
+    if lang_code in AVAILABLE_LANGUAGE_CODES:
+        return lang_code
+    return LANGUAGE_AUTO
+
+
+def _apply_language_preference():
+    spotify_conf = _get_spotify_config()
+    current_setting = _normalize_language_setting(spotify_conf.get("language"))
+    if current_setting != spotify_conf.get("language"):
+        spotify_conf["language"] = current_setting
+    if current_setting == LANGUAGE_AUTO:
+        addonHandler.initTranslation()
+        return
+    translator = gettext.translation(
+        "nvda", localedir=locale_path, languages=[current_setting], fallback=True
+    )
+    builtins.__dict__["_"] = translator.gettext
+
+
+_apply_language_preference()
+
+# Local addon modules
+from . import donate
+from . import spotify_client
 
 class AccessifyDialog(wx.Dialog):
     """
@@ -263,25 +338,26 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
         self.seekDurationCtrl.SetRange(1, 60)
         self.seekDurationCtrl.SetValue(config.conf["spotify"]["seekDuration"])
 
-        # New setting for language selection
         # Translators: Label for a setting to choose the display language for the addon.
         language_label = _("Language:")
-        self.languageChoices = ["English", "Bahasa Indonesia"]
-        self.languageCodes = {"English": "en", "Bahasa Indonesia": "id"}
+        self.languageEntries = self._buildLanguageEntries()
+        language_choices = [label for _, label in self.languageEntries]
+        self.languageCodeByLabel = {label: code for code, label in self.languageEntries}
+        self.languageLabelByCode = {code: label for code, label in self.languageEntries}
         self.languageCtrl = sHelper.addLabeledControl(
             language_label,
             wx.ComboBox,
-            choices=self.languageChoices,
+            choices=language_choices,
             style=wx.CB_READONLY,
         )
 
         current_lang_code = config.conf["spotify"]["language"]
-        if current_lang_code == "en":
-            self.languageCtrl.SetValue("English")
-        elif current_lang_code == "id":
-            self.languageCtrl.SetValue("Bahasa Indonesia")
-        else:
-            self.languageCtrl.SetValue("English")  # Default to English if unknown
+        current_label = self.languageLabelByCode.get(
+            current_lang_code,
+            self.languageLabelByCode.get(LANGUAGE_AUTO, language_choices[0])
+        )
+        self.languageCtrl.SetValue(current_label)
+        self._originalLanguage = current_lang_code
 
         # Announce track changes checkbox (Fixed for accessibility)
         self.announceTrackChanges = sHelper.addItem(
@@ -338,6 +414,13 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
             self.migrateButton.Hide()
         self.Layout() # Re-layout the sizer to reflect visibility changes
 
+    def _buildLanguageEntries(self):
+        entries = [(LANGUAGE_AUTO, _("Follow NVDA language (default)"))]
+        for code in AVAILABLE_LANGUAGE_CODES:
+            label = LANGUAGE_DISPLAY_OVERRIDES.get(code, code)
+            entries.append((code, label))
+        return entries
+
     def onMigrateCredentials(self, evt):
         # Migration logic (similar to installTasks.py)
         old_client_id = config.conf["spotify"].get("clientID", "")
@@ -386,9 +469,14 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
         config.conf["spotify"]["seekDuration"] = self.seekDurationCtrl.GetValue()
 
         selected_lang_display = self.languageCtrl.GetValue()
-        config.conf["spotify"]["language"] = self.languageCodes.get(
-            selected_lang_display, "en"
+        selected_code = self.languageCodeByLabel.get(
+            selected_lang_display, LANGUAGE_AUTO
         )
+        config.conf["spotify"]["language"] = selected_code
+
+        if selected_code != self._originalLanguage:
+            ui.message(_("Language changes will take effect after restarting NVDA."))
+            self._originalLanguage = selected_code
         config.conf["spotify"][
             "announceTrackChanges"
         ] = self.announceTrackChanges.IsChecked()
@@ -2198,7 +2286,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         self.polling_thread.daemon = True
         self.polling_thread.start()
 
-        addonHandler.initTranslation()
+        _apply_language_preference()
         threading.Thread(target=self.client.initialize).start()
 
     def terminate(self):

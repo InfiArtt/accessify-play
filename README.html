@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Accessify Play Documentation</title>
+<style>
+body { font-family: system-ui, -apple-system, Segoe UI, sans-serif; line-height: 1.6; margin: 2rem; max-width: 900px; }
+h1, h2, h3, h4 { color: #0d3b66; }
+code { background: #f4f4f4; padding: 0.15rem 0.35rem; border-radius: 4px; }
+pre { background: #f8f8f8; padding: 1rem; border-radius: 6px; overflow-x: auto; }
+ul { padding-left: 1.5rem; }
+a { color: #0d6efd; }
+.table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+.table th, .table td { border: 1px solid #e0e0e0; padding: 0.5rem; text-align: left; }
+.table th { background: #f2f6fc; }
+</style>
+</head>
+<body>
+<h1>Accessify Play</h1>
+<p>Your end-to-end Spotify controller for NVDA.</p>
+
+<h2>Prerequisites</h2>
+<ul>
+  <li>Spotify Premium subscription.</li>
+  <li>NVDA 2024.4 or later.</li>
+</ul>
+
+<h2>Quick Start</h2>
+<ol>
+  <li>Create an app in the <a href="https://developer.spotify.com/dashboard/">Spotify Developer Dashboard</a> and copy the Client ID.</li>
+  <li>Open <code>NVDA → Preferences → Settings → Accessify Play</code>, set the callback port (default 8888) and paste the Client ID via the “Display / Edit Client ID” button.</li>
+  <li>Press “Validate Credentials” to complete the PKCE sign-in flow in your browser.</li>
+  <li>Return to NVDA and use the keyboard shortcuts listed below.</li>
+</ol>
+
+<h2>Core Shortcuts</h2>
+<table class="table">
+  <thead><tr><th>Action</th><th>Shortcut</th></tr></thead>
+  <tbody>
+    <tr><td>Play / Pause</td><td><code>NVDA+Shift+Alt+Space</code></td></tr>
+    <tr><td>Next / Previous Track</td><td><code>NVDA+Shift+Alt+Right/Left</code></td></tr>
+    <tr><td>Seek Forward / Backward</td><td><code>Ctrl+Alt+NVDA+Right/Left</code></td></tr>
+    <tr><td>Volume Up / Down</td><td><code>NVDA+Shift+Alt+Up/Down</code></td></tr>
+    <tr><td>Search Dialog</td><td><code>NVDA+Shift+Alt+S</code></td></tr>
+    <tr><td>Play From Link</td><td><code>NVDA+Shift+Alt+P</code></td></tr>
+    <tr><td>Queue List</td><td><code>NVDA+Shift+Alt+Q</code></td></tr>
+    <tr><td>Management Suite</td><td><code>NVDA+Alt+Shift+M</code></td></tr>
+  </tbody>
+</table>
+
+<h2>Managing Playlists &amp; Library</h2>
+<ul>
+  <li><strong>Create playlist:</strong> In the Management dialog press <code>Ctrl+N</code>, fill in the form, and press <em>Create</em>.</li>
+  <li><strong>Edit playlist:</strong> Focus a playlist, open the context menu, choose <em>Update Details</em>, and adjust the metadata.</li>
+  <li><strong>Add current track:</strong> Use <code>NVDA+Alt+Shift+A</code> to drop the playing song into one of your playlists.</li>
+  <li><strong>Remove entries:</strong> Use the context menu inside the tree or tabs to remove tracks, unfollow artists, or delete playlists.</li>
+  <li>Every tab supports <code>Enter</code> / double-click, <code>Alt+P</code> (play), <code>Alt+Q</code> (add to queue), <code>Alt+Shift+C</code> (copy link), and <code>Alt+R</code> (refresh).</li>
+</ul>
+
+<h2>Search &amp; Discovery</h2>
+<ol>
+  <li>Press <code>NVDA+Shift+Alt+S</code> and choose Song, Album, Artist, Playlist, or Podcast.</li>
+  <li>Enter your query and press Enter. Use the context menu or accelerators (<code>Alt+P/Q/F/D/C</code>) for quick actions.</li>
+  <li>Select the <em>--- Load More ---</em> row to fetch additional pages.</li>
+</ol>
+
+<h2>Queue Management</h2>
+<ul>
+  <li>Open the queue dialog with <code>NVDA+Shift+Alt+Q</code>.</li>
+  <li><code>Enter</code>, double-click, or <code>Alt+P</code> plays the highlighted entry.</li>
+  <li><code>Alt+Shift+C</code> copies its Spotify link; <code>Alt+R</code> removes it (the add-on rebuilds the queue so playback stays coherent).</li>
+</ul>
+
+<h2>Play From Any Spotify Link</h2>
+<ol>
+  <li>Press <code>NVDA+Shift+Alt+P</code> and paste a Spotify URL/URI (track, playlist, album, artist, show, or episode).</li>
+  <li>Press <em>Check</em>. The dialog resolves the link, labels the type, and shows descriptive metadata.</li>
+  <li>Press <em>Play</em> to start the Spotify item on your currently selected Connect device.</li>
+</ol>
+
+<h2>Programmatic Link Resolution</h2>
+<p>Developers can reuse <code>spotify_client.get_link_details(link)</code>, which returns:</p>
+<pre><code>{
+  "type": "playlist",
+  "typeLabel": "Playlist",
+  "uri": "spotify:playlist:...",
+  "lines": ["Type: Playlist", "Title: …"],
+  "metadata": {
+    "name": "…",
+    "owner": "…",
+    "trackCount": 42
+  }
+}
+</code></pre>
+
+<h2>Troubleshooting</h2>
+<table class="table">
+  <thead><tr><th>Scenario</th><th>Resolution</th></tr></thead>
+  <tbody>
+    <tr><td>Validation fails</td><td>Verify the redirect URI in the Spotify dashboard matches <code>http://127.0.0.1:PORT/callback</code> and the same port is configured in Accessify Play.</td></tr>
+    <tr><td>No active device</td><td>Start playback once in the Spotify app so a Connect device is available.</td></tr>
+    <tr><td>Copy Link says “No item selected”</td><td>Ensure the list has focus before triggering the context menu. Press <code>Tab</code> to move focus back if needed.</td></tr>
+    <tr><td>Need to reset credentials</td><td>Use the <em>Clear Credentials</em> button in settings. This deletes both the Client ID and cached token files.</td></tr>
+  </tbody>
+</table>
+
+<p>For additional help, open an issue on the GitHub repository or contact the maintainer via the email address in the README.</p>
+</body>
+</html>
