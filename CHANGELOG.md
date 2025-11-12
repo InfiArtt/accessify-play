@@ -1,6 +1,6 @@
 # Changelog
 
-## Version 1.3.0
+## Version 1.3.1
 
 This is a major release focusing on security, usability, and new features, representing the most significant update to the addon yet.
 
