@@ -117,9 +117,37 @@ To use this addon, you need to get a **Client ID** and **Client Secret** from th
 4.  Review the other settings:
     * **Callback Port:** Only change this if you have a port conflict and you have also changed it in the Spotify Dashboard. *(See note in Step 1)*.
     * **Announce track changes automatically:** Check this box if you want NVDA to announce every new song as it begins playing.
+    * **Language:** Choose the display language for the add-on. This setting allows Accessify Play to use a different language than NVDA's main interface. You can select "Follow NVDA language (default)" or force a specific language like "Bahasa Indonesia".
+    * **Update Channel:** Select your preferred update channel.
+        * **Stable:** Receive only stable, well-tested updates. These correspond to releases from the `main` branch on GitHub.
+        * **Beta:** Receive pre-release versions with the latest features and bug fixes, but potentially less stability. These correspond to releases from the `dev` branch on GitHub.
+    * **Check for updates automatically:** If checked, the add-on will silently check for new versions every time NVDA starts. If an update is available, a pop-up window will appear. If unchecked, you will only receive updates when you manually check.
 5.  Press the **"Validate Credentials"** button. Your web browser will open and ask you to grant permissions. Click "Agree".
 6.  If successful, you will see a "Validation successful!" message. If not, carefully re-check all steps, especially the Redirect URI and your Client ID.
 7.  Click "OK" to save and close the settings. The addon is now ready to use!
+
+---
+
+## ✨ Update System
+
+Accessify Play includes a built-in update system to keep your add-on up-to-date with the latest features and bug fixes. Updates are sourced directly from [GitHub Releases](https://github.com/InfiArtt/accessify-play/releases).
+
+### Automatic Updates
+
+If "Check for updates automatically" is enabled in the settings, Accessify Play will perform a silent check for new versions every time NVDA starts. If an update is available for your selected channel (Stable or Beta), a pop-up window will appear, showing the new version and its changelog. You can then choose to download and install the update or postpone it.
+
+If no update is available, or if an error occurs during the background check (e.g., no internet connection), the add-on will remain silent and not display any messages.
+
+### Manual Updates
+
+You can manually check for updates at any time by navigating to the Accessify Play settings panel (NVDA menu -> Preferences -> Settings -> Accessify Play) and clicking the **"Check for Updates"** button. The process is similar to automatic updates: if a new version is found, a pop-up will appear; otherwise, a message will confirm that you are running the latest version.
+
+### Update Channels
+
+You can choose between two update channels in the settings:
+
+*   **Stable:** This is the recommended channel for most users. You will receive only stable, thoroughly tested releases. These updates correspond to releases published from the add-on's `main` branch on GitHub.
+*   **Beta:** This channel provides access to pre-release versions, offering the latest features and bug fixes before they are officially released. Beta versions correspond to releases from the `dev` branch on GitHub. While they offer early access, they might be less stable than official releases.
 
 ---
 

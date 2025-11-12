@@ -25,12 +25,9 @@ def check_for_updates(is_manual=False):
     if not is_manual:
         if not config.conf["spotify"]["isAutomaticallyCheckForUpdates"]:
             return
-        # Check if a day has passed since the last check
-        if (time.time() - config.conf["spotify"]["lastUpdateCheck"]) < 86400:
-            return
-
+    
     log.info("AccessifyPlay: Checking for updates...")
-    threading.Thread(target=_perform_check, args=[is_manual]).start()
+    threading.Thread(target=_perform_check, args=(is_manual,)).start()
 
 
 def _parse_version(version_string):

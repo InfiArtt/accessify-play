@@ -257,13 +257,38 @@
             <ul>
                 <li><strong>Port Callback:</strong> Hanya ubah ini jika Anda memiliki konflik port dan Anda juga telah mengubahnya di Dasbor Spotify.</li>
                 <li><strong>Umumkan pergantian lagu secara otomatis:</strong> Centang kotak ini jika Anda ingin NVDA mengumumkan setiap lagu baru saat mulai diputar.</li>
+                <li><strong>Bahasa:</strong> Pilih bahasa tampilan untuk add-on. Pengaturan ini memungkinkan Accessify Play menggunakan bahasa yang berbeda dari antarmuka utama NVDA. Anda dapat memilih "Ikuti bahasa NVDA (default)" atau memaksa bahasa tertentu seperti "Bahasa Indonesia".</li>
+                <li><strong>Saluran Pembaruan:</strong> Pilih saluran pembaruan pilihan Anda.
+                    <ul>
+                        <li><strong>Stabil:</strong> Hanya menerima pembaruan yang stabil dan telah diuji dengan baik. Ini sesuai dengan rilis dari cabang `main` di GitHub.</li>
+                        <li><strong>Beta:</strong> Menerima versi pra-rilis dengan fitur dan perbaikan bug terbaru, tetapi berpotensi kurang stabil. Ini sesuai dengan rilis dari cabang `dev` di GitHub.</li>
+                    </ul>
+                </li>
+                <li><strong>Periksa pembaruan secara otomatis:</strong> Jika dicentang, add-on akan secara diam-diam memeriksa versi baru setiap kali NVDA dimulai. Jika pembaruan tersedia untuk saluran yang Anda pilih (Stabil atau Beta), jendela pop-up akan muncul, menampilkan versi baru dan changelog-nya. Anda kemudian dapat memilih untuk mengunduh dan menginstal pembaruan atau menundanya.</li>
             </ul>
         </li>
         <li>Tekan tombol <strong>"Validasi Kredensial"</strong>. Browser web Anda akan terbuka dan meminta Anda untuk memberikan izin. Klik "Agree".</li>
         <li>Jika berhasil, Anda akan melihat pesan "Validasi berhasil!". Jika tidak, periksa kembali semua langkah dengan cermat, terutama Redirect URI dan Client ID Anda.</li>
         <li>Klik "OK" untuk menyimpan dan menutup pengaturan. Add-on sekarang siap digunakan!</li>
     </ol>
-    
+
+    <h2>Sistem Pembaruan</h2>
+    <p>Accessify Play menyertakan sistem pembaruan bawaan untuk menjaga add-on Anda tetap mutakhir dengan fitur dan perbaikan bug terbaru. Pembaruan bersumber langsung dari <a href="https://github.com/InfiArtt/accessify-play/releases" target="_blank">Rilis GitHub</a>.</p>
+
+    <h3>Pembaruan Otomatis</h3>
+    <p>Jika "Periksa pembaruan secara otomatis" diaktifkan di pengaturan, Accessify Play akan melakukan pemeriksaan senyap untuk versi baru setiap kali NVDA dimulai. Jika pembaruan tersedia untuk saluran yang Anda pilih (Stabil atau Beta), jendela pop-up akan muncul, menampilkan versi baru dan changelog-nya. Anda kemudian dapat memilih untuk mengunduh dan menginstal pembaruan atau menundanya.</p>
+    <p>Jika tidak ada pembaruan yang tersedia, atau jika terjadi kesalahan selama pemeriksaan latar belakang (misalnya, tidak ada koneksi internet), add-on akan tetap senyap dan tidak menampilkan pesan apa pun.</p>
+
+    <h3>Pembaruan Manual</h3>
+    <p>Anda dapat secara manual memeriksa pembaruan kapan saja dengan menavigasi ke panel pengaturan Accessify Play (Menu NVDA -> Preferensi -> Pengaturan -> Accessify Play) dan mengklik tombol <strong>"Periksa Pembaruan"</strong>. Prosesnya mirip dengan pembaruan otomatis: jika versi baru ditemukan, pop-up akan muncul; jika tidak, pesan akan mengonfirmasi bahwa Anda menjalankan versi terbaru.</p>
+
+    <h3>Saluran Pembaruan</h3>
+    <p>Anda dapat memilih antara dua saluran pembaruan di pengaturan:</p>
+    <ul>
+        <li><strong>Stabil:</strong> Ini adalah saluran yang direkomendasikan untuk sebagian besar pengguna. Anda hanya akan menerima rilis yang stabil dan telah diuji secara menyeluruh. Pembaruan ini sesuai dengan rilis yang diterbitkan dari cabang `main` add-on di GitHub.</li>
+        <li><strong>Beta:</strong> Saluran ini menyediakan akses ke versi pra-rilis, menawarkan fitur dan perbaikan bug terbaru sebelum dirilis secara resmi. Versi Beta sesuai dengan rilis dari cabang `dev` di GitHub. Meskipun menawarkan akses awal, versi ini mungkin kurang stabil dibandingkan rilis resmi.</li>
+    </ul>
+
     <h2>Pembaruan Otentikasi & Migrasi (Versi 1.3.0)</h2>
     <p>Dengan versi 1.3.0, Accessify Play telah mengalami pembaruan signifikan pada sistem otentikasinya untuk meningkatkan keamanan dan pengalaman pengguna, terutama untuk instalasi NVDA portabel.</p>
     <ul>
