@@ -155,7 +155,7 @@ To use this addon, you need to get a **Client ID** and **Client Secret** from th
 4.  Fill out the form:
     *   **App name:** Give it a name (e.g., "NVDA Controller").
     *   **App description:** A short description is fine.
-    *   **Redirect URI:** This is the most important step. The addon listens on your local machine for the authentication callback. You must enter this URI exactly: `http://127.0.0.1:8888/callback`
+    *   **Redirect URI:** This is the most important step. The addon listens on your local machine for the authentication callback. You must enter this URI exactly: `http://127.0.0.1:8539/callback`
 5.  You may be asked which API to use. **Please select "Web API"**.
 6.  Agree to the terms and click "Save".
 

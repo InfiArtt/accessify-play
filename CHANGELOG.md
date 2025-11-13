@@ -1,5 +1,20 @@
 # Changelog
 
+## Version 1.3.3
+
+This is a maintenance and code quality release that addresses significant structural issues from previous versions. The primary focus is on refactoring duplicated code, cleaning up logic, and improving the overall stability and long-term maintainability of the addon.
+
+#### ✨ Improvements & Refinements
+
+-   **Unified Language System**: The language management system has been completely unified and centralized. The addon now correctly follows NVDA's default language and provides a seamless fallback to English if a translation is not available. The language selection dropdown in the settings panel is now dynamically populated, ensuring all available languages are always displayed correctly.
+-   **Default Port Change**: The default callback port for Spotify authentication has been changed from `8888` to `8539`. This helps prevent potential conflicts with other applications that may use port 8888. New installations will use this port by default.
+#### 🛠️ Code Fixes & Housekeeping
+
+-   **Major Code Refactoring**: Removed a large block of duplicated code within the addon's main file (`__init__.py`). This resolves the primary source of instability from version 1.3.1/1.3.2 and makes the addon significantly easier to maintain and debug.
+-   **Corrected Settings Logic**: Fixed a bug in the settings panel (`onSave` method) where the selected language was not being saved correctly due to an incorrect variable name.
+-   **Cleaned Up UI Logic**: Resolved a minor error in the settings panel that would occur when clearing credentials, which was caused by referencing a non-existent UI element.
+-   **Removed Redundant Imports**: Cleaned up duplicated and unnecessary module imports for a slightly leaner and more organized codebase.
+
 ## Version 1.3.2 (Required Hotfix)
 
 This is an essential hotfix release to address a critical bug that prevented credential validation in version 1.3.1. This update is solely focused on restoring core functionality.

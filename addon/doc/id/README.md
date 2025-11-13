@@ -155,7 +155,7 @@ Untuk menggunakan add-on ini, Anda perlu mendapatkan **Client ID** dan **Client 
 4.  Isi formulir:
     *   **Nama aplikasi:** Beri nama (mis., "NVDA Controller").
     *   **Deskripsi aplikasi:** Deskripsi singkat sudah cukup.
-    *   **Redirect URI:** Ini adalah langkah yang paling penting. Add-on mendengarkan di mesin lokal Anda untuk callback otentikasi. Anda harus memasukkan URI ini dengan tepat: `http://127.0.0.1:8888/callback`
+    *   **Redirect URI:** Ini adalah langkah yang paling penting. Add-on mendengarkan di mesin lokal Anda untuk callback otentikasi. Anda harus memasukkan URI ini dengan tepat: `http://127.0.0.1:8539/callback`
 5.  Anda mungkin akan ditanya API mana yang akan digunakan. **Silakan pilih "Web API"**.
 6.  Setujui persyaratannya dan klik "Save".
 
