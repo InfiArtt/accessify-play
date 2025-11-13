@@ -3,17 +3,18 @@
 import wx
 import ui
 import threading
-import requests  # Use the bundled requests library
+import requests
 import json
 import addonHandler
 import globalVars
 import os
 import core
 import config
+import re
 import time
 from gui import messageBox
 from logHandler import log
-import gui # Import gui module
+import gui
 
 
 # Constants for the GitHub repository
@@ -31,8 +32,40 @@ def check_for_updates(is_manual=False):
 
 
 def _parse_version(version_string):
-    """Parses a version string like 'v1.2.3' into a tuple of integers (1, 2, 3)."""
-    return tuple(map(int, version_string.lstrip("v").split(".")))
+    """
+    Parses a version string like 'v1.2.3-beta.1' into a comparable tuple.
+    Handles pre-release tags according to semantic versioning principles.
+    Stable releases are considered greater than pre-releases.
+    """
+    version_string = version_string.lstrip("v")
+    
+    # Regex to split the main version from the pre-release tag
+    match = re.match(r"(\d+\.\d+\.\d+)(?:-(.*))?", version_string)
+    if not match:
+        return (0, 0, 0), (0,) # Fallback for invalid format
+
+    main_version_str, pre_release_str = match.groups()
+    
+    # Convert main version parts to integers
+    main_version = tuple(map(int, main_version_str.split(".")))
+    
+    if pre_release_str is None:
+        # This is a stable release. We use a tuple (1,) to make it "greater"
+        # than any pre-release tuple, which will start with 0.
+        return main_version, (1,) 
+
+    # This is a pre-release.
+    # We start the pre-release tuple with 0.
+    pre_release_parts = [0]
+    # Split by dot or hyphen to handle tags like "beta.1" or "rc-1"
+    for part in re.split(r'[.-]', pre_release_str):
+        if part.isdigit():
+            pre_release_parts.append(int(part))
+        else:
+            pre_release_parts.append(part)
+            
+    return main_version, tuple(pre_release_parts)
+
 
 
 def _perform_check(is_manual):
