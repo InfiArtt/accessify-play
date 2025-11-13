@@ -1,6 +1,11 @@
 # Changelog
 
-## Version 1.3.3 (Unrelease)
+## Version 1.3.4
+
+#### Code Fixes
+-   **Improved Updater Version Parsing**: Fixed an issue where the updater could not correctly parse and compare semantic versions that included pre-release tags (e.g., `1.3.5-pre`, `1.3.5-beta1`, `1.3.5-rc4`). The version parsing logic has been updated to accurately handle these formats, ensuring that the addon correctly identifies and offers the latest available updates across all release channels.
+
+## Version 1.3.3
 
 This is a maintenance and code quality release that addresses significant structural issues from previous versions. The primary focus is on refactoring duplicated code, cleaning up logic, and improving the overall stability and long-term maintainability of the addon.
 
@@ -10,6 +15,7 @@ This is a maintenance and code quality release that addresses significant struct
 -   **Default Port Change**: The default callback port for Spotify authentication has been changed from `8888` to `8539`. This helps prevent potential conflicts with other applications that may use port 8888. New installations will use this port by default.
 #### 🛠️ Code Fixes & Housekeeping
 
+-   **Improved Updater Version Parsing**: Fixed an issue where the updater could not correctly parse and compare semantic versions that included pre-release tags (e.g., `1.3.5-pre`, `1.3.5-beta1`, `1.3.5-rc4`). The version parsing logic has been updated to accurately handle these formats, ensuring that the addon correctly identifies and offers the latest available updates across all release channels.
 -   **Major Code Refactoring**: Removed a large block of duplicated code within the addon's main file (`__init__.py`). This resolves the primary source of instability from version 1.3.1/1.3.2 and makes the addon significantly easier to maintain and debug.
 -   **Corrected Settings Logic**: Fixed a bug in the settings panel (`onSave` method) where the selected language was not being saved correctly due to an incorrect variable name.
 -   **Cleaned Up UI Logic**: Resolved a minor error in the settings panel that would occur when clearing credentials, which was caused by referencing a non-existent UI element.
