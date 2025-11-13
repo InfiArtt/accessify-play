@@ -1,6 +1,6 @@
 # Changelog
 
-## Version 1.3.3
+## Version 1.3.3 (Unrelease)
 
 This is a maintenance and code quality release that addresses significant structural issues from previous versions. The primary focus is on refactoring duplicated code, cleaning up logic, and improving the overall stability and long-term maintainability of the addon.
 
