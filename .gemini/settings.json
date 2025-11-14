@@ -1,0 +1,8 @@
+{
+  "ui": {
+    "accessibility": {
+      "screenReader": true,
+      "disableLoadingPhrases": true
+    }
+  }
+}

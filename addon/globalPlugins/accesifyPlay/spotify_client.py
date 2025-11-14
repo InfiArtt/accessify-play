@@ -945,3 +945,16 @@ class SpotifyClient:
                 "duration": duration,
             },
         }
+
+    def get_available_devices(self):
+        """Fetches a list of available devices."""
+        result = self._execute_web_api(self.client.devices)
+        if isinstance(result, str):
+            return result
+        return result.get("devices", [])
+
+    def transfer_playback_to_device(self, device_id):
+        """Transfers playback to a specific device ID."""
+        return self._execute_web_api(
+            self.client.transfer_playback, device_id=device_id, force_play=False
+        )
