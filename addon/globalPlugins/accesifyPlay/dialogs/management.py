@@ -45,11 +45,11 @@ class CreatePlaylistDialog(AccessifyDialog):
         )
 
         buttonsSizer = wx.StdDialogButtonSizer()
-        self.createButton = wx.Button(self, wx.ID_OK, label=_("Create"))
+        self.createButton = wx.Button(self, wx.ID_OK, label=_("C&reate"))
         self.createButton.Bind(wx.EVT_BUTTON, self.onCreate)
         buttonsSizer.AddButton(self.createButton)
 
-        cancelButton = wx.Button(self, wx.ID_CANCEL, label=_("Cancel"))
+        cancelButton = wx.Button(self, wx.ID_CANCEL, label=_("&Cancel"))
         self.bind_close_button(cancelButton)
         buttonsSizer.AddButton(cancelButton)
         buttonsSizer.Realize()
@@ -120,10 +120,10 @@ class PlaylistDetailsDialog(AccessifyDialog):
         self.collabCheck.SetValue(bool(playlist_data.collaborative))
 
         buttonsSizer = wx.StdDialogButtonSizer()
-        self.saveButton = wx.Button(self, wx.ID_OK, label=_("Save"))
+        self.saveButton = wx.Button(self, wx.ID_OK, label=_("&Save"))
         self.saveButton.Bind(wx.EVT_BUTTON, self.onSave)
         buttonsSizer.AddButton(self.saveButton)
-        cancelButton = wx.Button(self, wx.ID_CANCEL, label=_("Cancel"))
+        cancelButton = wx.Button(self, wx.ID_CANCEL, label=_("&Cancel"))
         self.bind_close_button(cancelButton)
         buttonsSizer.AddButton(cancelButton)
         buttonsSizer.Realize()
@@ -230,12 +230,12 @@ class AddToPlaylistDialog(AccessifyDialog):
 
         buttons_sizer = wx.BoxSizer(wx.HORIZONTAL)
         # Translators: Label for the "Add" button in the "Add to Playlist" dialog.
-        add_button = wx.Button(panel, label=_("Add to Playlist"))
+        add_button = wx.Button(panel, label=_("&Add to Playlist"))
         add_button.Bind(wx.EVT_BUTTON, self.on_add_to_playlist)
         buttons_sizer.Add(add_button, 0, wx.ALL, 5)
 
         # Translators: Label for the "Cancel" button in the "Add to Playlist" dialog.
-        cancel_button = wx.Button(panel, label=_("Cancel"))
+        cancel_button = wx.Button(panel, label=_("&Cancel"))
         self.bind_close_button(cancel_button)
         buttons_sizer.Add(cancel_button, 0, wx.ALL, 5)
 
@@ -299,11 +299,11 @@ class PodcastEpisodesDialog(AccessifyDialog):
         self.episodes_list.Bind(wx.EVT_CONTEXT_MENU, self.on_context_menu)
 
         buttons_sizer = wx.StdDialogButtonSizer()
-        play_button = wx.Button(panel, wx.ID_OK, label=_("Play Episode"))
+        play_button = wx.Button(panel, wx.ID_OK, label=_("&Play Episode"))
         play_button.Bind(wx.EVT_BUTTON, self.on_play_episode)
         buttons_sizer.AddButton(play_button)
 
-        close_button = wx.Button(panel, wx.ID_CANCEL, label=_("Close"))
+        close_button = wx.Button(panel, wx.ID_CANCEL, label=_("&Close"))
         self.bind_close_button(close_button)
         buttons_sizer.AddButton(close_button)
         buttons_sizer.Realize()
@@ -315,7 +315,7 @@ class PodcastEpisodesDialog(AccessifyDialog):
         accel_entries = [
             (wx.ACCEL_ALT, ord("P"), self.MENU_PLAY_EPISODE.GetId()),
             (wx.ACCEL_ALT, ord("Q"), self.MENU_ADD_QUEUE.GetId()),
-            (wx.ACCEL_ALT, ord("C"), self.MENU_COPY_LINK.GetId()), # 'C' untuk Copy
+            (wx.ACCEL_ALT, ord("L"), self.MENU_COPY_LINK.GetId()),
         ]
         self.SetAcceleratorTable(wx.AcceleratorTable(accel_entries))
 
@@ -354,7 +354,7 @@ class PodcastEpisodesDialog(AccessifyDialog):
         menu = wx.Menu()
         menu.Append(self.MENU_PLAY_EPISODE.GetId(), _("Play Episode\tAlt+P"))
         menu.Append(self.MENU_ADD_QUEUE.GetId(), _("Add to Queue\tAlt+Q"))
-        menu.Append(self.MENU_COPY_LINK.GetId(), _("Copy Link\tAlt+C"))
+        menu.Append(self.MENU_COPY_LINK.GetId(), _("Copy Link\tAlt+L"))
         
         self.PopupMenu(menu)
         menu.Destroy()
@@ -363,7 +363,6 @@ class PodcastEpisodesDialog(AccessifyDialog):
         episode = self._get_selected_episode()
         if episode:
             self._play_uri(episode.get("uri"))
-            self.Close()
 
     def on_add_to_queue(self, evt=None):
         episode = self._get_selected_episode()
@@ -423,11 +422,11 @@ class ArtistDiscographyDialog(AccessifyDialog):
             list_control.Bind(wx.EVT_CONTEXT_MENU, self.on_context_menu)
 
         buttons_sizer = wx.StdDialogButtonSizer()
-        play_button = wx.Button(panel, wx.ID_OK, label=_("Play Selected"))
+        play_button = wx.Button(panel, wx.ID_OK, label=_("&Play Selected"))
         play_button.Bind(wx.EVT_BUTTON, self.on_play_selected)
         buttons_sizer.AddButton(play_button)
 
-        close_button = wx.Button(panel, wx.ID_CANCEL, label=_("Close"))
+        close_button = wx.Button(panel, wx.ID_CANCEL, label=_("&Close"))
         self.bind_close_button(close_button)
         buttons_sizer.AddButton(close_button)
         buttons_sizer.Realize()
@@ -438,7 +437,7 @@ class ArtistDiscographyDialog(AccessifyDialog):
         accel_entries = [
             (wx.ACCEL_ALT, ord("P"), self.MENU_PLAY.GetId()),
             (wx.ACCEL_ALT, ord("Q"), self.MENU_ADD_QUEUE.GetId()),
-            (wx.ACCEL_ALT, ord("C"), self.MENU_COPY_LINK.GetId()),
+            (wx.ACCEL_ALT, ord("L"), self.MENU_COPY_LINK.GetId()),
         ]
         self.SetAcceleratorTable(wx.AcceleratorTable(accel_entries))
         self.Bind(wx.EVT_MENU, self.on_play_selected, id=self.MENU_PLAY.GetId())
@@ -486,7 +485,7 @@ class ArtistDiscographyDialog(AccessifyDialog):
         menu = wx.Menu()
         menu.Append(self.MENU_PLAY.GetId(), _("Play\tAlt+P"))
         menu.Append(self.MENU_ADD_QUEUE.GetId(), _("Add to Queue\tAlt+Q"))
-        menu.Append(self.MENU_COPY_LINK.GetId(), _("Copy Link\tAlt+C"))
+        menu.Append(self.MENU_COPY_LINK.GetId(), _("Copy Link\tAlt+L"))
         
         self.PopupMenu(menu)
         menu.Destroy()
@@ -495,7 +494,6 @@ class ArtistDiscographyDialog(AccessifyDialog):
         item = self._get_selected_item()
         if item:
             self._play_uri(item.get("uri"))
-            self.Close()
 
     def on_add_to_queue(self, evt=None):
         item = self._get_selected_item()
@@ -544,19 +542,19 @@ class RelatedArtistsDialog(AccessifyDialog):
         self.artists_list.Bind(wx.EVT_CONTEXT_MENU, self.on_context_menu)
 
         buttons_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        play_button = wx.Button(panel, label=_("Play"))
+        play_button = wx.Button(panel, label=_("&Play"))
         play_button.Bind(wx.EVT_BUTTON, self.on_play)
         buttons_sizer.Add(play_button, 0, wx.ALL, 5)
 
-        discography_button = wx.Button(panel, label=_("View Discography"))
+        discography_button = wx.Button(panel, label=_("View &Discography"))
         discography_button.Bind(wx.EVT_BUTTON, self.on_view_discography)
         buttons_sizer.Add(discography_button, 0, wx.ALL, 5)
 
-        follow_button = wx.Button(panel, label=_("Follow"))
+        follow_button = wx.Button(panel, label=_("&Follow"))
         follow_button.Bind(wx.EVT_BUTTON, self.on_follow)
         buttons_sizer.Add(follow_button, 0, wx.ALL, 5)
 
-        close_button = wx.Button(panel, id=wx.ID_CANCEL, label=_("Close"))
+        close_button = wx.Button(panel, id=wx.ID_CANCEL, label=_("&Close"))
         self.bind_close_button(close_button)
         buttons_sizer.Add(close_button, 0, wx.ALL, 5)
 
@@ -567,7 +565,7 @@ class RelatedArtistsDialog(AccessifyDialog):
         accel_entries = [
             (wx.ACCEL_ALT, ord("P"), self.MENU_PLAY.GetId()),
             (wx.ACCEL_ALT, ord("Q"), self.MENU_ADD_QUEUE.GetId()),
-            (wx.ACCEL_ALT, ord("C"), self.MENU_COPY_LINK.GetId()),
+            (wx.ACCEL_ALT, ord("L"), self.MENU_COPY_LINK.GetId()),
             (wx.ACCEL_ALT, ord("D"), self.MENU_DISCOGRAPHY.GetId()),
             (wx.ACCEL_ALT, ord("F"), self.MENU_FOLLOW.GetId()),
         ]
@@ -606,7 +604,7 @@ class RelatedArtistsDialog(AccessifyDialog):
         menu = wx.Menu()
         menu.Append(self.MENU_PLAY.GetId(), _("Play Artist Radio\tAlt+P"))
         menu.Append(self.MENU_ADD_QUEUE.GetId(), _("Add to Queue\tAlt+Q"))
-        menu.Append(self.MENU_COPY_LINK.GetId(), _("Copy Link\tAlt+C"))
+        menu.Append(self.MENU_COPY_LINK.GetId(), _("Copy Link\tAlt+L"))
         menu.AppendSeparator()
         menu.Append(self.MENU_DISCOGRAPHY.GetId(), _("View Discography\tAlt+D"))
         menu.Append(self.MENU_FOLLOW.GetId(), _("Follow Artist\tAlt+F"))
@@ -617,7 +615,6 @@ class RelatedArtistsDialog(AccessifyDialog):
         artist = self.get_selected_artist()
         if artist:
             self._play_uri(artist.get("uri"))
-            self.Close()
 
     def on_add_to_queue(self, evt=None):
         artist = self.get_selected_artist()
@@ -783,7 +780,7 @@ class ManagementDialog(AccessifyDialog):
             initial_data_key="recently_played")
 
         buttons_sizer = wx.StdDialogButtonSizer()
-        close_button = wx.Button(panel, wx.ID_CANCEL, label=_("Close"))
+        close_button = wx.Button(panel, wx.ID_CANCEL, label=_("&Close"))
         self.bind_close_button(close_button)
         buttons_sizer.AddButton(close_button)
         buttons_sizer.Realize()
@@ -808,7 +805,7 @@ class ManagementDialog(AccessifyDialog):
         self._bind_list_activation(list_control, self._handle_play)
         list_control.Bind(wx.EVT_CONTEXT_MENU, self._on_list_context_menu)
 
-        refresh_button = wx.Button(panel, label=_("Refresh"))
+        refresh_button = wx.Button(panel, label=_("&Refresh"))
         refresh_button.Bind(wx.EVT_BUTTON, lambda evt, l=loader_func: l())
         sizer.Add(refresh_button, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
         
@@ -883,7 +880,7 @@ class ManagementDialog(AccessifyDialog):
         self.playlist_tree.Bind(wx.EVT_CONTEXT_MENU, self.on_playlist_tree_context_menu)
         self.playlist_tree.Bind(wx.EVT_TREE_ITEM_ACTIVATED, lambda e: self._handle_play())
         self.playlist_tree.Bind(wx.EVT_KEY_DOWN, self.on_playlist_tree_key_down)
-        refresh_button = wx.Button(panel, label=_("Refresh Playlists"))
+        refresh_button = wx.Button(panel, label=_("&Refresh Playlists"))
         refresh_button.Bind(wx.EVT_BUTTON, self.on_refresh_playlists)
         sizer.Add(refresh_button, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
         self.load_playlists_to_tree(initial_data=self.preloaded_data.get("playlists"))
@@ -1074,7 +1071,7 @@ class ManagementDialog(AccessifyDialog):
         self._bind_list_activation(list_control, self._handle_play)
         list_control.Bind(wx.EVT_CONTEXT_MENU, self._on_list_context_menu)
 
-        refresh_button = wx.Button(panel, label=_("Refresh"))
+        refresh_button = wx.Button(panel, label=_("&Refresh"))
         refresh_button.Bind(wx.EVT_BUTTON, self.load_top_items)
         sizer.Add(refresh_button, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
 
@@ -1100,7 +1097,7 @@ class ManagementDialog(AccessifyDialog):
         accel = wx.AcceleratorTable([
             (wx.ACCEL_ALT, ord("P"), self._shortcutPlayId.GetId()),
             (wx.ACCEL_ALT, ord("Q"), self._shortcutAddId.GetId()),
-            (wx.ACCEL_ALT | wx.ACCEL_SHIFT, ord("C"), self._shortcutCopyId.GetId()),
+            (wx.ACCEL_ALT, ord("L"), self._shortcutCopyId.GetId()),
             (wx.ACCEL_ALT, ord("R"), self._shortcutRefreshId.GetId()),
             (wx.ACCEL_CTRL, ord("N"), self._shortcutNewPlaylistId.GetId()),
         ])

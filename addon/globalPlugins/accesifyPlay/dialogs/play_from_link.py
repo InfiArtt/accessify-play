@@ -18,26 +18,26 @@ class PlayFromLinkDialog(AccessifyDialog):
         urlSizer = wx.BoxSizer(wx.HORIZONTAL)
         self.urlText = wx.TextCtrl(self)
         urlSizer.Add(self.urlText, proportion=1, flag=wx.EXPAND)
-        self.checkButton = wx.Button(self, label=_("Check"))
+        self.checkButton = wx.Button(self, label=_("Chec&k"))
         self.checkButton.Bind(wx.EVT_BUTTON, self.onCheck)
         urlSizer.Add(self.checkButton, flag=wx.LEFT, border=5)
         mainSizer.Add(
             urlSizer, flag=wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, border=5
         )
 
-        detailsLabel = wx.StaticText(self, label=_("Link Details:"))
+        detailsLabel = wx.StaticText(self, label=_("Link &Details:"))
         mainSizer.Add(detailsLabel, flag=wx.LEFT, border=5)
         self.detailsText = wx.TextCtrl(self, style=wx.TE_MULTILINE | wx.TE_READONLY)
         self.detailsText.SetMinSize((300, 120))
         mainSizer.Add(self.detailsText, proportion=1, flag=wx.EXPAND | wx.ALL, border=5)
 
         buttonsSizer = wx.StdDialogButtonSizer()
-        self.playButton = wx.Button(self, wx.ID_OK, label=_("Play"))
+        self.playButton = wx.Button(self, wx.ID_OK, label=_("&Play"))
         self.playButton.Disable()
         self.playButton.Bind(wx.EVT_BUTTON, self.onPlay)
         buttonsSizer.AddButton(self.playButton)
 
-        cancelButton = wx.Button(self, wx.ID_CANCEL, label=_("Close"))
+        cancelButton = wx.Button(self, wx.ID_CANCEL, label=_("&Close"))
         self.bind_close_button(cancelButton)
         buttonsSizer.AddButton(cancelButton)
         buttonsSizer.Realize()
