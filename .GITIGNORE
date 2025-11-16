@@ -11,6 +11,7 @@
 # Ignore Python cache
 __pycache__/
 *.pyc
+grabber.py
 
 # Ignore build folders
 build/

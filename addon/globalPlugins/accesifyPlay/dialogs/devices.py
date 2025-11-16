@@ -36,11 +36,11 @@ class DevicesDialog(AccessifyDialog):
         # Tombol-tombol
         buttonsSizer = wx.StdDialogButtonSizer()
         
-        switchButton = wx.Button(self, wx.ID_OK, label=_("&Switch Device"))
+        switchButton = wx.Button(self, wx.ID_OK, label=_("Switch Device"))
         switchButton.Bind(wx.EVT_BUTTON, self.on_change_device)
         buttonsSizer.AddButton(switchButton)
 
-        closeButton = wx.Button(self, wx.ID_CANCEL, label=_("&Close"))
+        closeButton = wx.Button(self, wx.ID_CANCEL, label=_("Close"))
         self.bind_close_button(closeButton)
         buttonsSizer.AddButton(closeButton)
         
