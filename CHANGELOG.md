@@ -1,5 +1,15 @@
 # Changelog
 
+## Version 1.3.5
+
+#### Code Fixes
+- **Reorganized code for better maintainability**: Each class is now separated into its own file, making the codebase easier to maintain and simplifying error tracking.
+- **Improved shortcut implementation**: All UI shortcuts now function consistently across the interface, with clearer usage in search, management, queue, and volume controls.
+- **Richer artist browsing**: Added artist info and a full-track tab with incremental loading in the discography dialog, plus album/show detail dialogs so Enter opens the relevant track list instead of playing immediately.
+- **Search activation enhancements**: Enter on artists, albums, podcasts, or playlists now opens the appropriate dialog (discography, album tracks, episodes, playlist tracks) instead of starting playback, giving a consistent exploration workflow. #19
+- **Playlist & episode pagination**: Introduced Load More support for playlist and podcast dialogs that respects the Search Results Limit setting, reducing initial load times for large catalogs.
+- **Episode playback fix**: Corrected Spotify URI handling so individual podcast episodes now play reliably instead of triggering “Non supported context uri” errors.
+
 ## Version 1.3.4
 
 #### Code Fixes
