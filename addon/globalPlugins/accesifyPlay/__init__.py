@@ -537,11 +537,35 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         def logic():
             try:
                 self._is_modifying_playback = True
+                queue_data = self.client.get_full_queue()
+                if isinstance(queue_data, str):
+                    return queue_data
+                # Determine if there's a next track beyond the current one
+                has_next = False
+                current_uri = None
+                if queue_data:
+                    current = queue_data[0] if queue_data[0]["type"] == "currently_playing" else None
+                    current_uri = current.get("uri") if current else None
+                    for entry in queue_data:
+                        if entry.get("type") != "queue_item":
+                            continue
+                        if entry.get("uri") and entry.get("uri") != current_uri:
+                            has_next = True
+                            break
+                if not has_next:
+                    return _("No next track available.")
                 result = self.client._execute(self.client.client.next_track)
                 if isinstance(result, str):
                     return result  # Error message
                 time.sleep(0.1)  # Give Spotify a moment to update
-                return self.client.get_current_track_info()
+                playback = self.client._execute(self.client.client.current_playback)
+                if isinstance(playback, str):
+                    return playback
+                if not playback or not playback.get("item"):
+                    return _("Nothing is currently playing.")
+                if not playback.get("is_playing"):
+                    return _("No next track available. Playback stopped.")
+                return self.client.get_current_track_info(playback)
             finally:
                 self._is_modifying_playback = False
 
@@ -561,9 +585,16 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
                 self._is_modifying_playback = True
                 result = self.client._execute(self.client.client.previous_track)
                 if isinstance(result, str):
+                    if "restriction" in result.lower():
+                        return _("No previous track available.")
                     return result  # Error message
                 time.sleep(0.1)  # Give Spotify a moment to update
-                return self.client.get_current_track_info()
+                playback = self.client._execute(self.client.client.current_playback)
+                if isinstance(playback, str):
+                    return playback
+                if not playback or not playback.get("item"):
+                    return _("Nothing is currently playing.")
+                return self.client.get_current_track_info(playback)
             finally:
                 self._is_modifying_playback = False
 

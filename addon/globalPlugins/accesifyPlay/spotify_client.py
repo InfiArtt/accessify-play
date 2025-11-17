@@ -153,7 +153,9 @@ class SpotifyClient:
             result = command(*args, **kwargs)
             return result
         except SpotifyException as e:
-            log.error(f"{_('Spotify command failed:')} {e}", exc_info=True)
+            message = str(e).lower()
+            if "restriction" not in message:
+                log.error(f"{_('Spotify command failed:')} {e}", exc_info=True)
             if e.http_status == 401:  # Unauthorized
                 self.initialize()  # Try to refresh the token silently
                 return _("Token expired, please try again.")
@@ -218,11 +220,12 @@ class SpotifyClient:
         except Exception:
             return False
 
-    def get_current_track_info(self):
-        playback = self._execute(self.client.current_playback)
+    def get_current_track_info(self, playback=None):
+        if playback is None:
+            playback = self._execute(self.client.current_playback)
         if isinstance(playback, str):
             return playback
-        if not playback or not playback.get("item"):
+        if not playback or not playback.get("item") or not playback.get("is_playing"):
             return _("Nothing is currently playing.")
 
         item_type = playback.get("currently_playing_type")
@@ -362,15 +365,27 @@ class SpotifyClient:
             "duration": metadata.get("duration"),
         }
 
-    def get_next_track_in_queue(self):
-        queue_data = self._execute_web_api(self.client.queue)
+    def get_next_track_in_queue(self, queue_data=None):
+        if queue_data is None:
+            queue_data = self._execute_web_api(self.client.queue)
         if isinstance(queue_data, str):
             return queue_data
 
         if not queue_data or not queue_data.get("queue"):
             return _("Queue is empty.")
 
-        next_track = queue_data["queue"][0]
+        current_uri = queue_data.get("currently_playing", {}).get("uri")
+        next_track = None
+        for track in queue_data.get("queue", []):
+            track_uri = track.get("uri")
+            if track_uri and track_uri == current_uri:
+                continue
+            next_track = track
+            break
+
+        if not next_track:
+            return _("Queue is empty.")
+
         track_name = next_track.get("name")
         artists = ", ".join([a["name"] for a in next_track.get("artists", [])])
         return _("Next in queue: {track_name} by {artists}").format(
@@ -385,7 +400,7 @@ class SpotifyClient:
         full_queue = []
         currently_playing = queue_data.get("currently_playing")
         seen_uris = set()
-        if currently_playing:
+        if currently_playing and queue_data.get("currently_playing", {}).get("is_playing"):
             track_name = currently_playing.get("name")
             artists = ", ".join(
                 [a["name"] for a in currently_playing.get("artists", [])]
