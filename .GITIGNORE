@@ -21,3 +21,4 @@ DevGuide.wiki/
 
 # Build/translation scripts
 pybabel.py
+.gemini/

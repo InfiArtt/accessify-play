@@ -3,7 +3,12 @@ import wx
 import ui
 import config
 from .base import AccessifyDialog
-from .management import ArtistDiscographyDialog
+from .management import (
+    ArtistDiscographyDialog,
+    AlbumTracksDialog,
+    PodcastEpisodesDialog,
+    PlaylistTracksDialog,
+)
 
 
 class SearchDialog(AccessifyDialog):
@@ -94,7 +99,7 @@ class SearchDialog(AccessifyDialog):
         if self.can_load_more and selection == len(self.results):
             self.onLoadMore()
             return
-        self.onPlay()
+        self._activate_selected_item()
 
     def on_search_type_changed(self, evt):
         pass
@@ -197,6 +202,48 @@ class SearchDialog(AccessifyDialog):
         if not item:
             return
         self._play_uri(item.get("uri"))
+
+    def _activate_selected_item(self):
+        item = self._get_selected_item()
+        if not item:
+            return
+        item_type = item.get("type")
+        if item_type == "track":
+            self._play_uri(item.get("uri"))
+        elif item_type == "artist":
+            self._open_artist_discography(item)
+        elif item_type == "album":
+            self._open_album_tracks(item)
+        elif item_type == "show":
+            self._open_podcast(item)
+        elif item_type == "playlist":
+            self._open_playlist(item)
+        else:
+            self._play_uri(item.get("uri"))
+
+    def _open_artist_discography(self, artist):
+        if not artist:
+            return
+        dialog = ArtistDiscographyDialog(self, self.client, artist["id"], artist.get("name", _("Unknown")))
+        dialog.Show()
+
+    def _open_album_tracks(self, album):
+        if not album:
+            return
+        dialog = AlbumTracksDialog(self, self.client, album)
+        dialog.Show()
+
+    def _open_podcast(self, show):
+        if not show:
+            return
+        dialog = PodcastEpisodesDialog(self, self.client, show["id"], show.get("name", _("Unknown")))
+        dialog.Show()
+
+    def _open_playlist(self, playlist):
+        if not playlist:
+            return
+        dialog = PlaylistTracksDialog(self, self.client, playlist)
+        dialog.Show()
 
     def onAddToQueue(self, evt=None):
         item = self._get_selected_item()

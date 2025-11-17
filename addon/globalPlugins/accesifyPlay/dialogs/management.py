@@ -1,8 +1,19 @@
 import wx
 import ui
 import threading
+import config
 from gui import guiHelper, messageBox
 from .base import AccessifyDialog
+
+def _get_search_limit(default_value):
+    try:
+        spotify_conf = config.conf["spotify"]
+    except Exception:
+        return default_value
+    try:
+        return spotify_conf.get("searchLimit", default_value)
+    except Exception:
+        return default_value
 
 class CreatePlaylistDialog(AccessifyDialog):
     def __init__(self, parent, client):
@@ -71,7 +82,7 @@ class CreatePlaylistDialog(AccessifyDialog):
             return
         ui.message(_("Playlist '{name}' created successfully.").format(name=name))
         parent = self._parentDialog
-        if parent and hasattr(parent, "load_playlists_to_tree"):
+        if parent and hasattr(parent, "load_playlists"):
             parent.load_playlists()
         self.Close()
 
@@ -145,11 +156,9 @@ class PlaylistDetailsDialog(AccessifyDialog):
             collaborative=collaborative,
             description=description,
         )
-        wx.CallAfter(
-            self._finish_save, result, name, description, public, collaborative
-        )
+        wx.CallAfter(self._finish_save, result)
 
-    def _finish_save(self, result, name, description, public, collaborative):
+    def _finish_save(self, result):
         self._saving = False
         self.saveButton.Enable()
         if isinstance(result, str):
@@ -251,6 +260,7 @@ class PodcastEpisodesDialog(AccessifyDialog):
     MENU_PLAY_EPISODE = wx.NewIdRef()
     MENU_ADD_QUEUE = wx.NewIdRef()
     MENU_COPY_LINK = wx.NewIdRef()
+    DEFAULT_EPISODES_PAGE_SIZE = 30
     
     def __init__(self, parent, client, show_id, show_name):
         title = _("Episodes for {show_name}").format(show_name=show_name)
@@ -258,6 +268,11 @@ class PodcastEpisodesDialog(AccessifyDialog):
         self.client = client
         self.show_id = show_id
         self.episodes = []
+        self._episodes_offset = 0
+        self._episodes_loading = False
+        self._episodes_has_more = True
+        self._episodes_load_more_label = f"--- {_('Load More')} ---"
+        self._episodes_page_size = _get_search_limit(self.DEFAULT_EPISODES_PAGE_SIZE)
         self.init_ui()
         self.load_episodes()
         self._create_accelerators()
@@ -269,16 +284,16 @@ class PodcastEpisodesDialog(AccessifyDialog):
         self.episodes_list = wx.ListBox(panel)
         sizer.Add(self.episodes_list, 1, wx.EXPAND | wx.ALL, 5)
 
-        self._bind_list_activation(self.episodes_list, self.on_play_episode)
+        self._bind_list_activation(self.episodes_list, self._on_episode_activate)
         
         self.episodes_list.Bind(wx.EVT_CONTEXT_MENU, self.on_context_menu)
 
         buttons_sizer = wx.StdDialogButtonSizer()
-        play_button = wx.Button(panel, wx.ID_OK, label=_("Play Episode"))
+        play_button = wx.Button(panel, wx.ID_OK, label=_("&Play Episode"))
         play_button.Bind(wx.EVT_BUTTON, self.on_play_episode)
         buttons_sizer.AddButton(play_button)
 
-        close_button = wx.Button(panel, wx.ID_CANCEL, label=_("Close"))
+        close_button = wx.Button(panel, wx.ID_CANCEL, label=_("&Close"))
         self.bind_close_button(close_button)
         buttons_sizer.AddButton(close_button)
         buttons_sizer.Realize()
@@ -299,25 +314,112 @@ class PodcastEpisodesDialog(AccessifyDialog):
         self.Bind(wx.EVT_MENU, self.on_copy_link, id=self.MENU_COPY_LINK.GetId())
 
     def load_episodes(self):
+        self.episodes = []
+        self._episodes_offset = 0
+        self._episodes_has_more = True
         self.episodes_list.Clear()
-        def _load():
-            results = self.client.get_show_episodes(self.show_id)
-            if isinstance(results, str):
-                wx.CallAfter(ui.message, results)
-                return
-            self.episodes = results.get("items", [])
+        self._load_more_episodes()
+
+    def _load_more_episodes(self):
+        if self._episodes_loading or not self._episodes_has_more:
+            return
+        self._episodes_loading = True
+        if not self.episodes:
+            self.episodes_list.Clear()
+            self.episodes_list.Append(_("Loading..."))
+        threading.Thread(target=self._load_more_episodes_thread).start()
+
+    def _load_more_episodes_thread(self):
+        results = self.client.get_show_episodes(
+            self.show_id, limit=self._episodes_page_size, offset=self._episodes_offset
+        )
+        wx.CallAfter(self._finish_load_episodes, results)
+
+    def _finish_load_episodes(self, results):
+        self._episodes_loading = False
+        if isinstance(results, str):
             if not self.episodes:
-                wx.CallAfter(self.episodes_list.Append, _("No episodes found for this show."))
-                return
-            for episode in self.episodes:
-                display = f"{episode['name']} ({episode['release_date']})"
-                wx.CallAfter(self.episodes_list.Append, display)
-        threading.Thread(target=_load).start()
+                self.episodes_list.Clear()
+                self.episodes_list.Append(_("Unable to load episodes."))
+            ui.message(results)
+            return
+
+        items = results.get("items", [])
+        if not items and not self.episodes:
+            self.episodes_list.Clear()
+            self.episodes_list.Append(_("No episodes found for this show."))
+            self._episodes_has_more = False
+            return
+
+        if not items:
+            self._episodes_has_more = False
+            self._refresh_episodes_placeholder()
+            return
+
+        if not self.episodes:
+            self.episodes_list.Clear()
+
+        self.episodes.extend(items)
+        self._episodes_offset += len(items)
+
+        total = results.get("total")
+        if total is not None:
+            self._episodes_has_more = self._episodes_offset < total
+        else:
+            self._episodes_has_more = bool(results.get("next"))
+
+        self._append_episodes_to_list(items)
+
+    def _append_episodes_to_list(self, new_items):
+        if self._has_episodes_placeholder():
+            self.episodes_list.Delete(self.episodes_list.GetCount() - 1)
+
+        for episode in new_items:
+            release = episode.get("release_date")
+            display = episode.get("name", _("Unknown Episode"))
+            if release:
+                display = f"{display} ({release})"
+            self.episodes_list.Append(display)
+
+        self._refresh_episodes_placeholder()
+
+    def _refresh_episodes_placeholder(self):
+        if self._has_episodes_placeholder():
+            self.episodes_list.Delete(self.episodes_list.GetCount() - 1)
+        if self._episodes_has_more:
+            self.episodes_list.Append(self._episodes_load_more_label)
+
+    def _has_episodes_placeholder(self):
+        count = self.episodes_list.GetCount()
+        if count == 0:
+            return False
+        return self.episodes_list.GetString(count - 1) == self._episodes_load_more_label
+
+    def _is_episode_load_more(self, selection):
+        if selection == wx.NOT_FOUND:
+            return False
+        return (
+            self._episodes_has_more
+            and self._has_episodes_placeholder()
+            and selection == self.episodes_list.GetCount() - 1
+        )
+
+    def _on_episode_activate(self):
+        selection = self.episodes_list.GetSelection()
+        if self._is_episode_load_more(selection):
+            self._load_more_episodes()
+            return
+        self.on_play_episode()
         
     def _get_selected_episode(self):
         """Helper untuk mendapatkan data episode yang dipilih."""
         selection = self.episodes_list.GetSelection()
-        if selection == wx.NOT_FOUND or not self.episodes:
+        if (
+            selection == wx.NOT_FOUND
+            or not self.episodes
+            or selection >= len(self.episodes)
+            or self._is_episode_load_more(selection)
+        ):
             return None
         return self.episodes[selection]
 
@@ -353,6 +455,7 @@ class PodcastEpisodesDialog(AccessifyDialog):
 
 
 class ArtistDiscographyDialog(AccessifyDialog):
+    DEFAULT_ALL_TRACKS_BATCH_SIZE = 40
     MENU_PLAY = wx.NewIdRef()
     MENU_ADD_QUEUE = wx.NewIdRef()
     MENU_COPY_LINK = wx.NewIdRef()
@@ -362,8 +465,17 @@ class ArtistDiscographyDialog(AccessifyDialog):
         super(ArtistDiscographyDialog, self).__init__(parent, title=title, size=(600, 500))
         self.client = client
         self.artist_id = artist_id
+        self.all_tracks_batch_size = _get_search_limit(self.DEFAULT_ALL_TRACKS_BATCH_SIZE)
         self.top_tracks = []
         self.albums = []
+        self.all_tracks = []
+        self.artist_info = None
+        self._all_tracks_seen_ids = set()
+        self._all_tracks_album_index = 0
+        self._current_album_tracks = []
+        self._all_tracks_loading = False
+        self._all_tracks_can_load_more = False
+        self._all_tracks_load_more_label = f"--- {_('Load More')} ---"
         self.init_ui()
         self.load_data()
         self._create_accelerators()
@@ -376,33 +488,58 @@ class ArtistDiscographyDialog(AccessifyDialog):
         self.notebook = wx.Notebook(panel)
         main_sizer.Add(self.notebook, 1, wx.EXPAND | wx.ALL, 5)
 
+        panel_info = wx.Panel(self.notebook)
+        sizer_info = wx.BoxSizer(wx.VERTICAL)
+        panel_info.SetSizer(sizer_info)
+
+        self.info_text = wx.TextCtrl(
+            panel_info,
+            style=wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_AUTO_URL,
+        )
+        self.info_text.SetMinSize((-1, 200))
+        sizer_info.Add(self.info_text, 1, wx.EXPAND | wx.ALL, 5)
+        self.info_page_index = self.notebook.GetPageCount()
+        self.notebook.AddPage(panel_info, _("Artist Info"))
+
         panel_tracks = wx.Panel(self.notebook)
         sizer_tracks = wx.BoxSizer(wx.VERTICAL)
         panel_tracks.SetSizer(sizer_tracks)
         
         self.top_tracks_list = wx.ListBox(panel_tracks)
         sizer_tracks.Add(self.top_tracks_list, 1, wx.EXPAND | wx.ALL, 5)
+        self.top_tracks_page_index = self.notebook.GetPageCount()
         self.notebook.AddPage(panel_tracks, _("Top Tracks"))
 
-        # --- Membuat Tab 2: Albums ---
+        panel_all_tracks = wx.Panel(self.notebook)
+        sizer_all_tracks = wx.BoxSizer(wx.VERTICAL)
+        panel_all_tracks.SetSizer(sizer_all_tracks)
+
+        self.all_tracks_list = wx.ListBox(panel_all_tracks)
+        sizer_all_tracks.Add(self.all_tracks_list, 1, wx.EXPAND | wx.ALL, 5)
+        self.all_tracks_page_index = self.notebook.GetPageCount()
+        self.notebook.AddPage(panel_all_tracks, _("All Tracks"))
+
         panel_albums = wx.Panel(self.notebook)
         sizer_albums = wx.BoxSizer(wx.VERTICAL)
         panel_albums.SetSizer(sizer_albums)
 
         self.albums_list = wx.ListBox(panel_albums)
         sizer_albums.Add(self.albums_list, 1, wx.EXPAND | wx.ALL, 5)
+        self.albums_page_index = self.notebook.GetPageCount()
         self.notebook.AddPage(panel_albums, _("Albums and Singles"))
 
-        for list_control in [self.top_tracks_list, self.albums_list]:
-            self._bind_list_activation(list_control, self.on_play_selected)
+        self._bind_list_activation(self.top_tracks_list, self.on_play_selected)
+        self._bind_list_activation(self.albums_list, self._on_album_activate)
+        self._bind_list_activation(self.all_tracks_list, self._on_all_tracks_activate)
+        for list_control in [self.top_tracks_list, self.albums_list, self.all_tracks_list]:
             list_control.Bind(wx.EVT_CONTEXT_MENU, self.on_context_menu)
 
         buttons_sizer = wx.StdDialogButtonSizer()
-        play_button = wx.Button(panel, wx.ID_OK, label=_("Play Selected"))
+        play_button = wx.Button(panel, wx.ID_OK, label=_("&Play Selected"))
         play_button.Bind(wx.EVT_BUTTON, self.on_play_selected)
         buttons_sizer.AddButton(play_button)
 
-        close_button = wx.Button(panel, wx.ID_CANCEL, label=_("Close"))
+        close_button = wx.Button(panel, wx.ID_CANCEL, label=_("&Close"))
         self.bind_close_button(close_button)
         buttons_sizer.AddButton(close_button)
         buttons_sizer.Realize()
@@ -424,6 +561,13 @@ class ArtistDiscographyDialog(AccessifyDialog):
         threading.Thread(target=self._load_data_thread).start()
 
     def _load_data_thread(self):
+        artist_info = self.client.get_artist_details(self.artist_id)
+        if isinstance(artist_info, str):
+            wx.CallAfter(ui.message, artist_info)
+        else:
+            self.artist_info = artist_info
+            wx.CallAfter(self._update_info_tab, artist_info)
+
         top_tracks_results = self.client.get_artist_top_tracks(self.artist_id)
         if not isinstance(top_tracks_results, str):
             self.top_tracks = top_tracks_results.get("tracks", [])
@@ -436,34 +580,212 @@ class ArtistDiscographyDialog(AccessifyDialog):
             for album in self.albums:
                 display = f"{album['name']} ({album['release_date']})"
                 wx.CallAfter(self.albums_list.Append, display)
+            wx.CallAfter(self._prepare_all_tracks_loader)
+        else:
+            wx.CallAfter(ui.message, albums_results)
+
+    def _prepare_all_tracks_loader(self):
+        """Reset state and start batched loading for the All Tracks tab."""
+        self.all_tracks = []
+        self._all_tracks_seen_ids = set()
+        self._all_tracks_album_index = 0
+        self._current_album_tracks = []
+        self._all_tracks_loading = False
+        self._all_tracks_can_load_more = bool(self.albums)
+        self.all_tracks_list.Clear()
+
+        if not self.albums:
+            self.all_tracks_list.Append(_("No tracks available."))
+            return
+        self._load_more_all_tracks()
+
+    def _load_more_all_tracks(self):
+        if self._all_tracks_loading or not self._all_tracks_can_load_more:
+            return
+        self._all_tracks_loading = True
+        threading.Thread(target=self._load_more_all_tracks_thread).start()
+
+    def _load_more_all_tracks_thread(self):
+        batch = []
+        while len(batch) < self.all_tracks_batch_size and (
+            self._current_album_tracks or self._all_tracks_album_index < len(self.albums)
+        ):
+            if not self._current_album_tracks:
+                if self._all_tracks_album_index >= len(self.albums):
+                    break
+                album = self.albums[self._all_tracks_album_index]
+                album_id = album.get("id")
+                if not album_id:
+                    self._all_tracks_album_index += 1
+                    continue
+                album_tracks = self.client.get_album_tracks(album_id)
+                if isinstance(album_tracks, str):
+                    wx.CallAfter(self._handle_all_tracks_error, album_tracks)
+                    return
+                prepared = []
+                for track in album_tracks:
+                    track_id = track.get("id")
+                    if track_id and track_id in self._all_tracks_seen_ids:
+                        continue
+                    prepared.append(self._prepare_track_entry(track, album))
+                self._current_album_tracks = prepared
+                self._all_tracks_album_index += 1
+                continue
+
+            track_entry = self._current_album_tracks.pop(0)
+            track_id = track_entry.get("id")
+            if track_id:
+                self._all_tracks_seen_ids.add(track_id)
+            batch.append(track_entry)
+
+        has_more = bool(self._current_album_tracks) or (
+            self._all_tracks_album_index < len(self.albums)
+        )
+        wx.CallAfter(self._finish_loading_all_tracks, batch, has_more)
+
+    def _handle_all_tracks_error(self, message):
+        self._all_tracks_loading = False
+        self._all_tracks_can_load_more = False
+        ui.message(message)
+        self._refresh_all_tracks_placeholder()
+
+    def _finish_loading_all_tracks(self, new_tracks, has_more):
+        self._all_tracks_loading = False
+        self._all_tracks_can_load_more = has_more
+
+        if new_tracks:
+            self.all_tracks.extend(new_tracks)
+            self._append_all_tracks_to_list(new_tracks)
+        elif not self.all_tracks:
+            self.all_tracks_list.Clear()
+            self.all_tracks_list.Append(_("No tracks available."))
+        else:
+            # No new tracks but still update placeholder if necessary
+            self._refresh_all_tracks_placeholder()
+
+    def _append_all_tracks_to_list(self, new_tracks):
+        if self._has_all_tracks_placeholder():
+            self.all_tracks_list.Delete(self.all_tracks_list.GetCount() - 1)
+
+        for track in new_tracks:
+            self.all_tracks_list.Append(self._format_all_track_display(track))
+
+        self._refresh_all_tracks_placeholder()
+
+    def _refresh_all_tracks_placeholder(self):
+        if self._has_all_tracks_placeholder():
+            self.all_tracks_list.Delete(self.all_tracks_list.GetCount() - 1)
+        if self._all_tracks_can_load_more:
+            self.all_tracks_list.Append(self._all_tracks_load_more_label)
+
+    def _has_all_tracks_placeholder(self):
+        count = self.all_tracks_list.GetCount()
+        if count == 0:
+            return False
+        return self.all_tracks_list.GetString(count - 1) == self._all_tracks_load_more_label
+
+    def _format_all_track_display(self, track):
+        display = track.get("name", _("Unknown"))
+        artists = ", ".join([a["name"] for a in track.get("artists", [])])
+        if artists:
+            display = f"{display} - {artists}"
+        album_part = track.get("album_name") or ""
+        release = track.get("album_release_date")
+        if release:
+            album_part = f"{album_part} ({release})" if album_part else f"({release})"
+        if album_part:
+            display = f"{display} — {album_part}"
+        return display
+
+    def _prepare_track_entry(self, track, album):
+        track_copy = dict(track)
+        track_copy["album_name"] = album.get("name")
+        track_copy["album_release_date"] = album.get("release_date")
+        track_copy["album_id"] = album.get("id")
+        track_copy["type"] = "track"
+        track_copy.setdefault("artists", album.get("artists", []))
+        return track_copy
+
+    def _update_info_tab(self, info):
+        """Render a brief artist profile summary."""
+        followers_total = (info.get("followers") or {}).get("total")
+        followers_text = ""
+        if self.client:
+            followers_text = self.client._format_followers(followers_total)
+        popularity = info.get("popularity")
+        genres = info.get("genres") or []
+        info_lines = [
+            _("Name: {name}").format(name=info.get("name", _("Unknown"))),
+            _("Followers: {count}").format(
+                count=followers_text or _("Unknown")
+            ),
+            _("Popularity: {score}").format(score=popularity if popularity is not None else _("Unknown")),
+            _("Genres: {genres}").format(
+                genres=", ".join(genres) if genres else _("Unknown")
+            ),
+            _("Spotify Link: {link}").format(
+                link=info.get("external_urls", {}).get("spotify", _("Unavailable"))
+            ),
+            _("URI: {uri}").format(uri=info.get("uri", _("Unavailable"))),
+        ]
+        self.info_text.SetValue("\n".join(info_lines))
 
     def _get_selected_item(self):
-        focused_control = self.FindFocus()
+        current_page_index = self.notebook.GetSelection()
         
-        # Kasus khusus untuk tab playlist
-        if focused_control == self.playlist_tracks_list:
-            selection = self.playlist_tracks_list.GetSelection()
-            if selection != wx.NOT_FOUND and selection < len(self.current_playlist_tracks):
-                return self.current_playlist_tracks[selection]
+        if current_page_index == self.info_page_index:
+            ui.message(_("This tab has informational content only."))
             return None
 
-        # Logika generik untuk semua tab ListBox lainnya
-        for config in self.tabs_config.values():
-            if config["control"] == focused_control:
-                list_control = config["control"]
-                data_source_attr = config["data_attr"]
-                item_parser = config.get("item_parser", lambda item: item)
+        if current_page_index == self.top_tracks_page_index:
+            selection = self.top_tracks_list.GetSelection()
+            if selection != wx.NOT_FOUND:
+                return self.top_tracks[selection]
 
-                selection = list_control.GetSelection()
-                if selection == wx.NOT_FOUND:
-                    return None
-                
-                data_source = getattr(self, data_source_attr, [])
-                if not data_source or selection >= len(data_source):
-                    return None
+        elif current_page_index == self.all_tracks_page_index:
+            selection = self.all_tracks_list.GetSelection()
+            if selection != wx.NOT_FOUND and selection < len(self.all_tracks):
+                return self.all_tracks[selection]
+            if self._is_all_tracks_load_more(selection):
+                ui.message(_("Loading more tracks..."))
+                self._load_more_all_tracks()
+                return None
+            if selection != wx.NOT_FOUND:
+                ui.message(_("Please select a track, or load more items."))
+                return None
 
-                return item_parser(data_source[selection])
+        elif current_page_index == self.albums_page_index:
+            selection = self.albums_list.GetSelection()
+            if selection != wx.NOT_FOUND:
+                return self.albums[selection]
+
+        ui.message(_("Please select an item from the active tab first."))
         return None
+
+    def _is_all_tracks_load_more(self, selection):
+        if selection == wx.NOT_FOUND:
+            return False
+        return (
+            self._all_tracks_can_load_more
+            and self._has_all_tracks_placeholder()
+            and selection == self.all_tracks_list.GetCount() - 1
+        )
+
+    def _on_all_tracks_activate(self):
+        selection = self.all_tracks_list.GetSelection()
+        if self._is_all_tracks_load_more(selection):
+            self._load_more_all_tracks()
+            return
+        self.on_play_selected()
+
+    def _on_album_activate(self):
+        selection = self.albums_list.GetSelection()
+        if selection == wx.NOT_FOUND or selection >= len(self.albums):
+            ui.message(_("Please select an album first."))
+            return
+        album = self.albums[selection]
+        dialog = AlbumTracksDialog(self, self.client, album)
+        dialog.Show()
 
     def on_context_menu(self, evt):
         item = self._get_selected_item()
@@ -504,6 +826,383 @@ class ArtistDiscographyDialog(AccessifyDialog):
             link = item.get("external_urls", {}).get("spotify")
             self.copy_link(link)
 
+
+class AlbumTracksDialog(AccessifyDialog):
+    MENU_PLAY = wx.NewIdRef()
+    MENU_ADD_QUEUE = wx.NewIdRef()
+    MENU_COPY_LINK = wx.NewIdRef()
+
+    def __init__(self, parent, client, album):
+        album_name = album.get("name", _("Unknown"))
+        title = _("Tracks in {album}").format(album=album_name)
+        super().__init__(parent, title=title, size=(500, 400))
+        self.client = client
+        self.album = album
+        self.tracks = []
+        self._loading = False
+
+        self._init_ui()
+        self._create_accelerators()
+        self._load_tracks()
+
+    def _init_ui(self):
+        panel = wx.Panel(self)
+        main_sizer = wx.BoxSizer(wx.VERTICAL)
+
+        release = self.album.get("release_date")
+        subtitle = self.album.get("album_type", "").title()
+        info_text = self.album.get("artists", [])
+        artist_names = ", ".join([a.get("name", _("Unknown")) for a in info_text])
+        summary = _("Album: {name}").format(name=self.album.get("name", _("Unknown")))
+        if release:
+            summary += f" — {release}"
+        if artist_names:
+            summary += f"\n{_('Artist(s): {artists}').format(artists=artist_names)}"
+        if subtitle:
+            summary += f"\n{_('Type: {album_type}').format(album_type=subtitle)}"
+        summary_ctrl = wx.StaticText(panel, label=summary)
+        main_sizer.Add(summary_ctrl, 0, wx.ALL, 5)
+
+        self.tracks_list = wx.ListBox(panel)
+        self._bind_list_activation(self.tracks_list, self.on_play_selected)
+        self.tracks_list.Bind(wx.EVT_CONTEXT_MENU, self.on_context_menu)
+        main_sizer.Add(self.tracks_list, 1, wx.EXPAND | wx.ALL, 5)
+
+        buttons_sizer = wx.StdDialogButtonSizer()
+        play_button = wx.Button(panel, wx.ID_OK, label=_("&Play Selected"))
+        play_button.Bind(wx.EVT_BUTTON, self.on_play_selected)
+        buttons_sizer.AddButton(play_button)
+
+        close_button = wx.Button(panel, wx.ID_CANCEL, label=_("&Close"))
+        self.bind_close_button(close_button)
+        buttons_sizer.AddButton(close_button)
+        buttons_sizer.Realize()
+        main_sizer.Add(buttons_sizer, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
+
+        panel.SetSizer(main_sizer)
+
+    def _create_accelerators(self):
+        accel_entries = [
+            (wx.ACCEL_ALT, ord("P"), self.MENU_PLAY.GetId()),
+            (wx.ACCEL_ALT, ord("Q"), self.MENU_ADD_QUEUE.GetId()),
+            (wx.ACCEL_ALT, ord("L"), self.MENU_COPY_LINK.GetId()),
+        ]
+        self.SetAcceleratorTable(wx.AcceleratorTable(accel_entries))
+        self.Bind(wx.EVT_MENU, self.on_play_selected, id=self.MENU_PLAY.GetId())
+        self.Bind(wx.EVT_MENU, self.on_add_to_queue, id=self.MENU_ADD_QUEUE.GetId())
+        self.Bind(wx.EVT_MENU, self.on_copy_link, id=self.MENU_COPY_LINK.GetId())
+
+    def _load_tracks(self):
+        if self._loading:
+            return
+        self._loading = True
+        self.tracks_list.Clear()
+        self.tracks_list.Append(_("Loading..."))
+        threading.Thread(target=self._load_tracks_thread).start()
+
+    def _load_tracks_thread(self):
+        album_id = self.album.get("id")
+        if not album_id:
+            wx.CallAfter(self._handle_tracks_error, _("Album information incomplete."))
+            return
+        tracks = self.client.get_album_tracks(album_id)
+        wx.CallAfter(self._finish_load_tracks, tracks)
+
+    def _handle_tracks_error(self, message):
+        self._loading = False
+        self.tracks_list.Clear()
+        self.tracks_list.Append(message)
+        ui.message(message)
+
+    def _finish_load_tracks(self, result):
+        self._loading = False
+        self.tracks_list.Clear()
+        if isinstance(result, str):
+            self.tracks_list.Append(_("Unable to load tracks."))
+            ui.message(result)
+            return
+        self.tracks = result or []
+        if not self.tracks:
+            self.tracks_list.Append(_("No tracks available."))
+            return
+        for index, track in enumerate(self.tracks, start=1):
+            name = track.get("name", _("Unknown"))
+            artists = ", ".join([a.get("name", _("Unknown")) for a in track.get("artists", [])])
+            duration = self.client._format_duration(track.get("duration_ms"))
+            display = f"{index}. {name}"
+            if artists:
+                display = f"{display} — {artists}"
+            if duration:
+                display = f"{display} ({duration})"
+            self.tracks_list.Append(display)
+
+    def _get_selected_track(self):
+        selection = self.tracks_list.GetSelection()
+        if selection == wx.NOT_FOUND or selection >= len(self.tracks):
+            ui.message(_("Please select a track first."))
+            return None
+        return self.tracks[selection]
+
+    def on_context_menu(self, evt):
+        if not self.tracks:
+            return
+        menu = wx.Menu()
+        menu.Append(self.MENU_PLAY.GetId(), _("Play\tAlt+P"))
+        menu.Append(self.MENU_ADD_QUEUE.GetId(), _("Add to Queue\tAlt+Q"))
+        menu.Append(self.MENU_COPY_LINK.GetId(), _("Copy Link\tAlt+L"))
+        self.PopupMenu(menu)
+        menu.Destroy()
+
+    def on_play_selected(self, evt=None):
+        track = self._get_selected_track()
+        if track:
+            self._play_uri(track.get("uri"))
+
+    def on_add_to_queue(self, evt=None):
+        track = self._get_selected_track()
+        if track:
+            self._queue_add_track(track.get("uri"), track.get("name"))
+
+    def on_copy_link(self, evt=None):
+        track = self._get_selected_track()
+        if track:
+            link = track.get("external_urls", {}).get("spotify")
+            self.copy_link(link)
+
+
+class PlaylistTracksDialog(AccessifyDialog):
+    MENU_PLAY = wx.NewIdRef()
+    MENU_ADD_QUEUE = wx.NewIdRef()
+    MENU_COPY_LINK = wx.NewIdRef()
+    DEFAULT_PLAYLIST_PAGE_SIZE = 40
+
+    def __init__(self, parent, client, playlist):
+        playlist_name = playlist.get("name", _("Unknown"))
+        title = _("Tracks in Playlist {name}").format(name=playlist_name)
+        super().__init__(parent, title=title, size=(520, 420))
+        self.client = client
+        self.playlist = playlist
+        self.tracks = []
+        self._tracks_offset = 0
+        self._tracks_loading = False
+        self._tracks_has_more = True
+        self._tracks_load_more_label = f"--- {_('Load More')} ---"
+        self._tracks_page_size = _get_search_limit(self.DEFAULT_PLAYLIST_PAGE_SIZE)
+
+        self._init_ui()
+        self._create_accelerators()
+        self._load_tracks()
+
+    def _init_ui(self):
+        panel = wx.Panel(self)
+        main_sizer = wx.BoxSizer(wx.VERTICAL)
+
+        owner = (self.playlist.get("owner") or {}).get("display_name")
+        description = self.playlist.get("description") or ""
+        total_tracks = (self.playlist.get("tracks") or {}).get("total")
+        summary_lines = [
+            _("Playlist: {name}").format(name=self.playlist.get("name", _("Unknown")))
+        ]
+        if owner:
+            summary_lines.append(_("Owner: {owner}").format(owner=owner))
+        if total_tracks is not None:
+            summary_lines.append(_("Tracks: {count}").format(count=total_tracks))
+        if description:
+            summary_lines.append(description)
+        summary_ctrl = wx.StaticText(panel, label="\n".join(summary_lines))
+        main_sizer.Add(summary_ctrl, 0, wx.ALL, 5)
+
+        self.tracks_list = wx.ListBox(panel)
+        self._bind_list_activation(self.tracks_list, self._on_tracks_activate)
+        self.tracks_list.Bind(wx.EVT_CONTEXT_MENU, self.on_context_menu)
+        main_sizer.Add(self.tracks_list, 1, wx.EXPAND | wx.ALL, 5)
+
+        buttons_sizer = wx.StdDialogButtonSizer()
+        play_button = wx.Button(panel, wx.ID_OK, label=_("&Play Selected"))
+        play_button.Bind(wx.EVT_BUTTON, self.on_play_selected)
+        buttons_sizer.AddButton(play_button)
+
+        close_button = wx.Button(panel, wx.ID_CANCEL, label=_("&Close"))
+        self.bind_close_button(close_button)
+        buttons_sizer.AddButton(close_button)
+        buttons_sizer.Realize()
+        main_sizer.Add(buttons_sizer, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
+
+        panel.SetSizer(main_sizer)
+
+    def _create_accelerators(self):
+        accel_entries = [
+            (wx.ACCEL_ALT, ord("P"), self.MENU_PLAY.GetId()),
+            (wx.ACCEL_ALT, ord("Q"), self.MENU_ADD_QUEUE.GetId()),
+            (wx.ACCEL_ALT, ord("L"), self.MENU_COPY_LINK.GetId()),
+        ]
+        self.SetAcceleratorTable(wx.AcceleratorTable(accel_entries))
+        self.Bind(wx.EVT_MENU, self.on_play_selected, id=self.MENU_PLAY.GetId())
+        self.Bind(wx.EVT_MENU, self.on_add_to_queue, id=self.MENU_ADD_QUEUE.GetId())
+        self.Bind(wx.EVT_MENU, self.on_copy_link, id=self.MENU_COPY_LINK.GetId())
+
+    def _load_tracks(self):
+        self.tracks = []
+        self._tracks_offset = 0
+        self._tracks_has_more = True
+        self.tracks_list.Clear()
+        self._load_more_tracks()
+
+    def _load_more_tracks(self):
+        if self._tracks_loading or not self._tracks_has_more:
+            return
+        self._tracks_loading = True
+        if not self.tracks:
+            self.tracks_list.Clear()
+            self.tracks_list.Append(_("Loading..."))
+        threading.Thread(target=self._load_more_tracks_thread).start()
+
+    def _load_more_tracks_thread(self):
+        playlist_id = self.playlist.get("id")
+        if not playlist_id:
+            wx.CallAfter(self._handle_error, _("Playlist information incomplete."))
+            return
+        results = self.client.get_playlist_tracks_page(
+            playlist_id, limit=self._tracks_page_size, offset=self._tracks_offset
+        )
+        wx.CallAfter(self._finish_load_tracks, results)
+
+    def _handle_error(self, message):
+        self._tracks_loading = False
+        self.tracks_list.Clear()
+        self.tracks_list.Append(message)
+        ui.message(message)
+
+    def _finish_load_tracks(self, results):
+        self._tracks_loading = False
+        if isinstance(results, str):
+            if not self.tracks:
+                self.tracks_list.Clear()
+                self.tracks_list.Append(_("Unable to load playlist tracks."))
+            ui.message(results)
+            return
+
+        items = results.get("items", []) if results else []
+        if not items and not self.tracks:
+            self.tracks_list.Clear()
+            self.tracks_list.Append(_("No tracks available."))
+            self._tracks_has_more = False
+            return
+
+        if not items:
+            self._tracks_has_more = False
+            self._refresh_tracks_placeholder()
+            return
+
+        if not self.tracks:
+            self.tracks_list.Clear()
+
+        parsed = []
+        for entry in items:
+            track = entry.get("track") if isinstance(entry, dict) else entry
+            if track:
+                parsed.append(track)
+
+        start_index = len(self.tracks)
+        self.tracks.extend(parsed)
+        self._tracks_offset += len(items)
+
+        total = (results.get("total") if isinstance(results, dict) else None)
+        if total is not None:
+            self._tracks_has_more = self._tracks_offset < total
+        else:
+            self._tracks_has_more = bool(results.get("next"))
+
+        self._append_tracks_to_list(parsed, start_index)
+
+    def _append_tracks_to_list(self, new_tracks, start_index):
+        if self._has_tracks_placeholder():
+            self.tracks_list.Delete(self.tracks_list.GetCount() - 1)
+
+        for idx, track in enumerate(new_tracks, start=start_index + 1):
+            display = self._format_track_display(idx, track)
+            self.tracks_list.Append(display)
+
+        self._refresh_tracks_placeholder()
+
+    def _refresh_tracks_placeholder(self):
+        if self._has_tracks_placeholder():
+            self.tracks_list.Delete(self.tracks_list.GetCount() - 1)
+        if self._tracks_has_more:
+            self.tracks_list.Append(self._tracks_load_more_label)
+
+    def _has_tracks_placeholder(self):
+        count = self.tracks_list.GetCount()
+        if count == 0:
+            return False
+        return self.tracks_list.GetString(count - 1) == self._tracks_load_more_label
+
+    def _format_track_display(self, index, track):
+        name = track.get("name", _("Unknown"))
+        artists = ", ".join([a.get("name", _("Unknown")) for a in track.get("artists", [])])
+        duration = self.client._format_duration(track.get("duration_ms"))
+        display = f"{index}. {name}"
+        if artists:
+            display = f"{display} — {artists}"
+        if duration:
+            display = f"{display} ({duration})"
+        return display
+
+    def _get_selected_track(self):
+        selection = self.tracks_list.GetSelection()
+        if selection == wx.NOT_FOUND:
+            ui.message(_("Please select a track first."))
+            return None
+        if self._is_tracks_load_more(selection):
+            self._load_more_tracks()
+            return None
+        if selection >= len(self.tracks):
+            ui.message(_("Please select a track first."))
+            return None
+        return self.tracks[selection]
+
+    def _is_tracks_load_more(self, selection):
+        if selection == wx.NOT_FOUND:
+            return False
+        return (
+            self._tracks_has_more
+            and self._has_tracks_placeholder()
+            and selection == self.tracks_list.GetCount() - 1
+        )
+
+    def _on_tracks_activate(self):
+        selection = self.tracks_list.GetSelection()
+        if self._is_tracks_load_more(selection):
+            self._load_more_tracks()
+            return
+        self.on_play_selected()
+
+    def on_context_menu(self, evt):
+        if not self.tracks:
+            return
+        menu = wx.Menu()
+        menu.Append(self.MENU_PLAY.GetId(), _("Play\tAlt+P"))
+        menu.Append(self.MENU_ADD_QUEUE.GetId(), _("Add to Queue\tAlt+Q"))
+        menu.Append(self.MENU_COPY_LINK.GetId(), _("Copy Link\tAlt+L"))
+        self.PopupMenu(menu)
+        menu.Destroy()
+
+    def on_play_selected(self, evt=None):
+        track = self._get_selected_track()
+        if track:
+            self._play_uri(track.get("uri"))
+
+    def on_add_to_queue(self, evt=None):
+        track = self._get_selected_track()
+        if track:
+            self._queue_add_track(track.get("uri"), track.get("name"))
+
+    def on_copy_link(self, evt=None):
+        track = self._get_selected_track()
+        if track:
+            link = track.get("external_urls", {}).get("spotify")
+            self.copy_link(link)
+
 class RelatedArtistsDialog(AccessifyDialog):
     MENU_PLAY = wx.NewIdRef()
     MENU_ADD_QUEUE = wx.NewIdRef()
@@ -531,19 +1230,19 @@ class RelatedArtistsDialog(AccessifyDialog):
         self.artists_list.Bind(wx.EVT_CONTEXT_MENU, self.on_context_menu)
 
         buttons_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        play_button = wx.Button(panel, label=_("Play"))
+        play_button = wx.Button(panel, label=_("&Play"))
         play_button.Bind(wx.EVT_BUTTON, self.on_play)
         buttons_sizer.Add(play_button, 0, wx.ALL, 5)
 
-        discography_button = wx.Button(panel, label=_("View Discography"))
+        discography_button = wx.Button(panel, label=_("&View Discography"))
         discography_button.Bind(wx.EVT_BUTTON, self.on_view_discography)
         buttons_sizer.Add(discography_button, 0, wx.ALL, 5)
 
-        follow_button = wx.Button(panel, label=_("Follow"))
+        follow_button = wx.Button(panel, label=_("&Follow"))
         follow_button.Bind(wx.EVT_BUTTON, self.on_follow)
         buttons_sizer.Add(follow_button, 0, wx.ALL, 5)
 
-        close_button = wx.Button(panel, id=wx.ID_CANCEL, label=_("Close"))
+        close_button = wx.Button(panel, id=wx.ID_CANCEL, label=_("&Close"))
         self.bind_close_button(close_button)
         buttons_sizer.Add(close_button, 0, wx.ALL, 5)
 
@@ -653,19 +1352,30 @@ class ManagementDialog(AccessifyDialog):
     # --- BAGIAN INTI DARI REFACTORING INTERNAL ---
     # Fungsi generik untuk mendapatkan item terpilih dari tab yang sedang aktif
     def _get_selected_item(self):
-        """A smart helper that gets items from the currently active tab."""
-        current_page_index = self.notebook.GetSelection()
+        focused_control = self.FindFocus()
         
-        if current_page_index == 0:  # Ini tab "Top Tracks"
-            selection = self.top_tracks_list.GetSelection()
-            if selection != wx.NOT_FOUND:
-                return self.top_tracks[selection]
+        if focused_control == self.playlist_tracks_list:
+            selection = self.playlist_tracks_list.GetSelection()
+            if selection != wx.NOT_FOUND and selection < len(self.current_playlist_tracks):
+                return self.current_playlist_tracks[selection]
+            return None
 
-        elif current_page_index == 1:  # Ini tab "Albums and Singles"
-            selection = self.albums_list.GetSelection()
-            if selection != wx.NOT_FOUND:
-                return self.albums[selection]
-        
+        for config in self.tabs_config.values():
+            if config["control"] == focused_control:
+                list_control = config["control"]
+                data_source_attr = config["data_attr"]
+                item_parser = config.get("item_parser", lambda item: item)
+
+                selection = list_control.GetSelection()
+                if selection == wx.NOT_FOUND:
+                    return None
+                
+                data_source = getattr(self, data_source_attr, [])
+                if not data_source or selection >= len(data_source):
+                    return None
+
+                return item_parser(data_source[selection])
+
         ui.message(_("Please select an item from the active tab first."))
         return None
 
@@ -726,12 +1436,14 @@ class ManagementDialog(AccessifyDialog):
             initial_data_key="saved_tracks")
         self.init_generic_list_tab("followed_artists", _("Followed Artists"), self.load_followed_artists, 
             display_formatter=lambda a: a['name'],
-            initial_data_key="followed_artists")
+            initial_data_key="followed_artists",
+            activate_handler=lambda: self.on_view_discography(None))
         self.init_top_items_tab()
         self.init_generic_list_tab("saved_shows", _("Saved Shows"), self.load_saved_shows,
             display_formatter=lambda s: f"{s['name']} - {s['publisher']}",
             item_parser=lambda item: item['show'],
-            initial_data_key="saved_shows")
+            initial_data_key="saved_shows",
+            activate_handler=lambda: self.on_view_episodes(None))
         self.init_generic_list_tab("new_releases", _("New Releases"), self.load_new_releases,
             display_formatter=lambda a: f"{a['name']} - {', '.join([x['name'] for x in a['artists']])}",
             initial_data_key="new_releases")
@@ -741,7 +1453,7 @@ class ManagementDialog(AccessifyDialog):
             initial_data_key="recently_played")
 
         buttons_sizer = wx.StdDialogButtonSizer()
-        close_button = wx.Button(panel, wx.ID_CANCEL, label=_("Close"))
+        close_button = wx.Button(panel, wx.ID_CANCEL, label=_("&Close"))
         self.bind_close_button(close_button)
         buttons_sizer.AddButton(close_button)
         buttons_sizer.Realize()
@@ -749,7 +1461,7 @@ class ManagementDialog(AccessifyDialog):
 
         panel.SetSizer(main_sizer)
 
-    def init_generic_list_tab(self, key, title, loader_func, display_formatter, item_parser=lambda i: i, initial_data_key=None):
+    def init_generic_list_tab(self, key, title, loader_func, display_formatter, item_parser=lambda i: i, initial_data_key=None, activate_handler=None):
         panel = wx.Panel(self.notebook)
         self.notebook.AddPage(panel, title)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -763,10 +1475,10 @@ class ManagementDialog(AccessifyDialog):
             "formatter": display_formatter, "item_parser": item_parser,
         }
         
-        self._bind_list_activation(list_control, self._handle_play)
+        self._bind_list_activation(list_control, activate_handler or self._handle_play)
         list_control.Bind(wx.EVT_CONTEXT_MENU, self._on_list_context_menu)
 
-        refresh_button = wx.Button(panel, label=_("Refresh"))
+        refresh_button = wx.Button(panel, label=_("&Refresh"))
         refresh_button.Bind(wx.EVT_BUTTON, lambda evt, l=loader_func: l())
         sizer.Add(refresh_button, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
         
@@ -827,56 +1539,44 @@ class ManagementDialog(AccessifyDialog):
                 return data.get("items", []) if isinstance(data, dict) else data
             threading.Thread(target=lambda: self._load_data_thread("recently_played", loader)).start()
 
-    # --- FUNGSI UNTUK TAB DENGAN LOGIKA KHUSUS ---
-
-    # == Bagian Playlist (TreeCtrl) - Logikanya terlalu unik untuk digeneralisasi ==
     def init_manage_playlists_tab(self):
         panel = wx.Panel(self.notebook)
         self.notebook.AddPage(panel, _("Manage Playlists"))
         sizer = wx.BoxSizer(wx.VERTICAL)
         panel.SetSizer(sizer)
         sHelper = guiHelper.BoxSizerHelper(panel, sizer=sizer)
-
-        # 1. Buat ComboBox untuk memilih playlist
         self.playlist_choices = sHelper.addLabeledControl(
             _("Playlist:"), wx.ComboBox, style=wx.CB_READONLY
         )
         self.playlist_choices.Bind(wx.EVT_COMBOBOX, self.on_playlist_selected)
-
-        # 2. Buat ListBox untuk menampilkan lagu
         self.playlist_tracks_list = wx.ListBox(panel)
         sizer.Add(self.playlist_tracks_list, 1, wx.EXPAND | wx.ALL, 5)
 
-        # Kaitkan aksi dan menu konteks
+        # Link actions and context menu
         self._bind_list_activation(self.playlist_tracks_list, self._handle_play)
         self.playlist_tracks_list.Bind(wx.EVT_CONTEXT_MENU, self.on_playlist_context_menu)
-
-        # 3. Tombol-tombol di bawah
         buttons_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        
-        refresh_button = wx.Button(panel, label=_("Refresh Playlists"))
+
+        refresh_button = wx.Button(panel, label=_("&Refresh Playlists"))
         refresh_button.Bind(wx.EVT_BUTTON, self.on_refresh_playlists)
         buttons_sizer.Add(refresh_button, 0, wx.ALL, 5)
 
-        edit_button = wx.Button(panel, label=_("Edit Playlist Details"))
+        edit_button = wx.Button(panel, label=_("&Edit Playlist Details"))
         edit_button.Bind(wx.EVT_BUTTON, self.on_update_playlist)
         buttons_sizer.Add(edit_button, 0, wx.ALL, 5)
 
-        delete_button = wx.Button(panel, label=_("Delete Playlist"))
+        delete_button = wx.Button(panel, label=_("&Delete Playlist"))
         delete_button.Bind(wx.EVT_BUTTON, self.on_delete_playlist)
         buttons_sizer.Add(delete_button, 0, wx.ALL, 5)
 
         sizer.Add(buttons_sizer, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
 
-        # Simpan data
         self.user_playlists = []
         self.current_playlist_tracks = []
 
-        # Muat data awal
         self.load_playlists(initial_data=self.preloaded_data.get("playlists"))
 
     def on_refresh_playlists(self, evt=None):
-        ui.message(_("Refreshing playlists..."))
         self.load_playlists()
 
     def load_playlists(self, initial_data=None):
@@ -894,7 +1594,7 @@ class ManagementDialog(AccessifyDialog):
 
     def _populate_playlists_combobox(self, playlists_data):
         self.playlist_choices.Clear()
-        self.user_playlists = []  # Kosongkan dulu
+        self.user_playlists = []
         
         user_id = self.current_user_id
         if not user_id:
@@ -913,7 +1613,7 @@ class ManagementDialog(AccessifyDialog):
             self.playlist_choices.Append(p["name"])
         
         self.playlist_choices.SetSelection(0)
-        self.on_playlist_selected()  # Muat lagu untuk playlist pertama
+        self.on_playlist_selected()
 
     def on_playlist_selected(self, evt=None):
         selection_index = self.playlist_choices.GetSelection()
@@ -937,7 +1637,7 @@ class ManagementDialog(AccessifyDialog):
             else:
                 wx.CallAfter(self._populate_playlist_tracks, tracks_data)
         threading.Thread(target=_load).start()
-    
+
     def _populate_playlist_tracks(self, tracks_data):
         self.playlist_tracks_list.Clear()
         self.current_playlist_tracks = []
@@ -973,7 +1673,6 @@ class ManagementDialog(AccessifyDialog):
     def _on_playlist_details_dialog_close(self, evt):
         if self._playlistDetailsDialog:
             self._playlistDetailsDialog = None
-        # Refresh daftar playlist jika ada perubahan nama
         self.load_playlists()
         evt.Skip()
 
@@ -1026,7 +1725,6 @@ class ManagementDialog(AccessifyDialog):
                     wx.CallAfter(ui.message, result)
                 else:
                     wx.CallAfter(ui.message, _("Track '{track_name}' removed from playlist.").format(track_name=track_data["name"]))
-                    # Muat ulang lagu di playlist saat ini
                     wx.CallAfter(self.on_playlist_selected)
             threading.Thread(target=_remove).start()
 
@@ -1059,7 +1757,7 @@ class ManagementDialog(AccessifyDialog):
         self._bind_list_activation(list_control, self._handle_play)
         list_control.Bind(wx.EVT_CONTEXT_MENU, self._on_list_context_menu)
 
-        refresh_button = wx.Button(panel, label=_("Refresh"))
+        refresh_button = wx.Button(panel, label=_("&Refresh"))
         refresh_button.Bind(wx.EVT_BUTTON, self.load_top_items)
         sizer.Add(refresh_button, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
 

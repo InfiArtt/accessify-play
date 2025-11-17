@@ -321,18 +321,29 @@ class SpotifyClient:
 
     def play_item(self, uris):
         """
-        Plays a track, album, artist, playlist, or a list of tracks.
-        :param uris: A single URI (string) or a list of track URIs (list of strings).
+        Plays a track, episode, album, artist, playlist, or a list of tracks.
+        :param uris: A single URI (string) or a list of track/episode URIs.
         """
         if isinstance(uris, list):
-            # It's a list of tracks
+            # Treat any list as an explicit set of tracks/episodes.
             return self._execute(self.client.start_playback, uris=uris)
 
-        # It's a single item (album, artist, playlist)
-        if "track" in uris:
-            return self._execute(self.client.start_playback, uris=[uris])
-        else:
-            return self._execute(self.client.start_playback, context_uri=uris)
+        uri = uris or ""
+        entity_type = None
+        if uri.startswith("spotify:"):
+            parts = [p for p in uri.split(":") if p and p.lower() != "spotify"]
+            if len(parts) >= 1:
+                entity_type = parts[0]
+        elif "open.spotify.com" in uri:
+            parsed = self._parse_spotify_url(uri)
+            if parsed:
+                entity_type = parsed.get("type")
+
+        if entity_type in ("track", "episode"):
+            return self._execute(self.client.start_playback, uris=[uri])
+
+        # Default to context playback (album, artist, playlist, show, etc.)
+        return self._execute(self.client.start_playback, context_uri=uri)
 
     def add_to_queue(self, uri):
         return self._execute(self.client.add_to_queue, uri=uri)
@@ -532,22 +543,27 @@ class SpotifyClient:
         offset = 0
         limit = 100  # Max limit per request
         while True:
-            results = self._execute_web_api(
-                self.client.playlist_items,
-                playlist_id=playlist_id,
-                limit=limit,
-                offset=offset,
-            )
+            results = self.get_playlist_tracks_page(playlist_id, limit=limit, offset=offset)
             if isinstance(results, str):
                 return results  # Error message
 
-            if not results or not results.get("items"):
+            items = results.get("items", []) if results else []
+            if not items:
                 break
-            tracks.extend(results["items"])
-            if len(results["items"]) < limit:
+            tracks.extend(items)
+            if len(items) < limit:
                 break
-            offset += limit
+            offset += len(items)
         return tracks
+
+    def get_playlist_tracks_page(self, playlist_id, limit=50, offset=0):
+        """Gets a single page of tracks from a playlist."""
+        return self._execute_web_api(
+            self.client.playlist_items,
+            playlist_id=playlist_id,
+            limit=limit,
+            offset=offset,
+        )
 
     def remove_tracks_from_playlist(self, playlist_id, track_uris):
         """Removes tracks from a specified playlist."""
@@ -719,13 +735,54 @@ class SpotifyClient:
         )
 
     def get_artist_albums(self, artist_id):
-        """Gets an artist's albums."""
-        return self._execute_web_api(
-            self.client.artist_albums,
-            artist_id=artist_id,
-            album_type="album,single",
-            limit=50,
-        )
+        """Gets all albums and singles for an artist (paginated)."""
+        limit = 50
+        offset = 0
+        aggregated = {"items": []}
+
+        while True:
+            results = self._execute_web_api(
+                self.client.artist_albums,
+                artist_id=artist_id,
+                album_type="album,single",
+                limit=limit,
+                offset=offset,
+            )
+            if isinstance(results, str):
+                return results
+            items = results.get("items", [])
+            if not items:
+                break
+            aggregated["items"].extend(items)
+            if len(items) < limit:
+                break
+            offset += limit
+        return aggregated
+
+    def get_album_tracks(self, album_id):
+        """Gets all tracks for a single album."""
+        tracks = []
+        limit = 50
+        offset = 0
+
+        while True:
+            results = self._execute_web_api(
+                self.client.album_tracks, album_id=album_id, limit=limit, offset=offset
+            )
+            if isinstance(results, str):
+                return results
+            items = results.get("items", [])
+            if not items:
+                break
+            tracks.extend(items)
+            if len(items) < limit:
+                break
+            offset += limit
+        return tracks
+
+    def get_artist_details(self, artist_id):
+        """Gets profile information for the given artist."""
+        return self._execute_web_api(self.client.artist, artist_id=artist_id)
 
     def get_related_artists(self, artist_id):
         """Gets artists related to a given artist."""
@@ -733,10 +790,10 @@ class SpotifyClient:
             self.client.artist_related_artists, artist_id=artist_id
         )
 
-    def get_show_episodes(self, show_id):
-        """Gets episodes for a show."""
+    def get_show_episodes(self, show_id, limit=50, offset=0):
+        """Gets episodes for a show (paginated)."""
         return self._execute_web_api(
-            self.client.show_episodes, show_id=show_id, limit=50
+            self.client.show_episodes, show_id=show_id, limit=limit, offset=offset
         )
 
     def get_current_user_profile(self):
