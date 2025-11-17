@@ -84,29 +84,23 @@ class AccessifyDialog(wx.Dialog):
 
     def _queue_add_context_thread(self, uri, item_type, name):
         if item_type in ("album", "playlist"):
-            result = self.client.play_item(uri)
-            if isinstance(result, str):
-                wx.CallAfter(ui.message, result)
+            track_uris = self.client.get_context_track_uris(uri, item_type)
+            if isinstance(track_uris, str):
+                wx.CallAfter(ui.message, track_uris)
                 return
-            queue_data = self.client.get_full_queue()
-            if isinstance(queue_data, str):
-                wx.CallAfter(ui.message, queue_data)
-                return
-            queue_tracks = [
-                entry["uri"]
-                for entry in queue_data
-                if entry.get("type") == "queue_item"
-            ]
-            if not queue_tracks:
+            if not track_uris:
                 wx.CallAfter(ui.message, _("No tracks were queued."))
                 return
-            rebuild = self.client.rebuild_queue(queue_tracks)
-            if isinstance(rebuild, str):
-                wx.CallAfter(ui.message, rebuild)
-                return
+            added = 0
+            for track_uri in track_uris:
+                result = self.client.add_to_queue(track_uri)
+                if isinstance(result, str):
+                    wx.CallAfter(ui.message, result)
+                    return
+                added += 1
             wx.CallAfter(
                 ui.message,
-                _("Tracks from {name} added to queue.").format(name=name),
+                _("Queued {count} tracks from {name}.").format(count=added, name=name),
             )
         elif item_type in ("artist", "show"):
             result = self.client.play_item(uri)

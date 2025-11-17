@@ -384,6 +384,7 @@ class SpotifyClient:
 
         full_queue = []
         currently_playing = queue_data.get("currently_playing")
+        seen_uris = set()
         if currently_playing:
             track_name = currently_playing.get("name")
             artists = ", ".join(
@@ -398,19 +399,26 @@ class SpotifyClient:
                     "link": currently_playing.get("external_urls", {}).get("spotify"),
                 }
             )
+            if currently_playing.get("uri"):
+                seen_uris.add(currently_playing.get("uri"))
 
         for track in queue_data.get("queue", []):
             track_name = track.get("name")
             artists = ", ".join([a["name"] for a in track.get("artists", [])])
+            track_uri = track.get("uri")
+            if track_uri and track_uri in seen_uris:
+                continue
             full_queue.append(
                 {
                     "type": "queue_item",
                     "name": track_name,
                     "artists": artists,
-                    "uri": track.get("uri"),
+                    "uri": track_uri,
                     "link": track.get("external_urls", {}).get("spotify"),
                 }
             )
+            if track_uri:
+                seen_uris.add(track_uri)
 
         return full_queue
 
@@ -564,6 +572,32 @@ class SpotifyClient:
             limit=limit,
             offset=offset,
         )
+
+    def get_context_track_uris(self, uri, item_type):
+        """Returns a flat list of track URIs for supported context types."""
+        if not uri:
+            return _("Unable to determine tracks for this item.")
+        parsed = self._parse_spotify_url(uri)
+        if not parsed:
+            return _("Invalid Spotify link or URI.")
+        _, entity_id = parsed
+        if item_type == "album":
+            tracks = self.get_album_tracks(entity_id)
+            if isinstance(tracks, str):
+                return tracks
+            return [track.get("uri") for track in tracks if track.get("uri")]
+        if item_type == "playlist":
+            tracks = self.get_playlist_tracks(entity_id)
+            if isinstance(tracks, str):
+                return tracks
+            uris = []
+            for item in tracks:
+                track = item.get("track") if isinstance(item, dict) else item
+                uri_value = track.get("uri") if isinstance(track, dict) else None
+                if uri_value:
+                    uris.append(uri_value)
+            return uris
+        return []
 
     def remove_tracks_from_playlist(self, playlist_id, track_uris):
         """Removes tracks from a specified playlist."""
