@@ -19,12 +19,12 @@ class SetVolumeDialog(AccessifyDialog):
 
         # Action buttons
         buttonsSizer = wx.StdDialogButtonSizer()
-        okButton = wx.Button(self, wx.ID_OK, label=_("Set"))
+        okButton = wx.Button(self, wx.ID_OK, label=_("&Set"))
         okButton.SetDefault()
         okButton.Bind(wx.EVT_BUTTON, self.onSet)
         buttonsSizer.AddButton(okButton)
 
-        cancelButton = wx.Button(self, wx.ID_CANCEL, label=_("Cancel"))
+        cancelButton = wx.Button(self, wx.ID_CANCEL, label=_("&Cancel"))
         self.bind_close_button(cancelButton)
         buttonsSizer.AddButton(cancelButton)
         buttonsSizer.Realize()

@@ -6,7 +6,8 @@ This is a significant feature and stability release, focused on improving user w
 
 #### ✨ New Features
 
--   **Add to Playlist from Search**: You can now add a track directly to one of your playlists from the search results context menu. (Resolves #22)
+-   **Switch Playback Devices**: You can now open a dialog with `NVDA+Alt+Shift+D` to view all available Spotify devices (computers, phones, smart speakers) and seamlessly transfer playback to any of them.
+-   **Contextual 'Add to Playlist'**: The 'Add to Playlist' feature is now available in the context menu for tracks in nearly every view, including Search Results, Saved Tracks, Top Tracks, Recently Played, Artist Discography, and Album Tracks. (Resolves #22)
 -   **Richer Artist Browsing**: The artist discography dialog has been enhanced with new tabs for "Artist Info" and "All Tracks," featuring incremental loading to handle large discographies efficiently.
 -   **Quick Playlist Playback**: A "Play Playlist" button has been added next to the playlist selection dropdown in the Management dialog, allowing for immediate playback of the selected playlist.
 -   **Delete Track with Keyboard**: In the Management dialog's playlist tab, you can now press the `Delete` key on a selected track to remove it from the playlist (after a confirmation prompt).
@@ -15,6 +16,8 @@ This is a significant feature and stability release, focused on improving user w
 
 #### 🛠️ Fixes & Improvements
 
+-   **Simplified Playlist Management UI**: The playlist management tab has been redesigned, replacing the complex tree view with a more intuitive dropdown menu for selecting playlists and a simple list for their tracks. This makes navigation faster and brings the user experience in line with other dialogs.
+-   **Corrected Duplicate Queue Items**: Fixed a bug where the queue dialog would sometimes display the same track multiple times. The list now accurately reflects the true state of your Spotify queue.
 -   **Enhanced Search Activation**: Pressing `Enter` on artists, albums, podcasts, or playlists in the search results now opens the appropriate detailed view (e.g., discography, track list) instead of immediately starting playback. This creates a more consistent and predictable exploration workflow. (Resolves #19)
 -   **Improved Shortcut Implementation**: All UI shortcuts now function consistently across the interface, with clearer usage in search, management, and queue.
 -   **Reliable Skip Commands**: The next/previous track shortcuts now verify a follow-up track exists before executing and translate Spotify's restriction errors into friendly messages (e.g., "No previous track available."). This prevents playback from stopping unexpectedly. (Resolves #23)

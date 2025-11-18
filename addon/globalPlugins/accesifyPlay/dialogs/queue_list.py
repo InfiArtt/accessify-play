@@ -17,7 +17,7 @@ class QueueListDialog(AccessifyDialog):
         mainSizer.Add(self.queueList, proportion=1, flag=wx.EXPAND | wx.ALL, border=5)
 
         buttonsSizer = wx.StdDialogButtonSizer()
-        cancelButton = wx.Button(self, wx.ID_CANCEL, label=_("C&lose"))
+        cancelButton = wx.Button(self, wx.ID_CANCEL, label=_("&Close"))
         self.bind_close_button(cancelButton)
         buttonsSizer.AddButton(cancelButton)
         buttonsSizer.Realize()
@@ -33,7 +33,7 @@ class QueueListDialog(AccessifyDialog):
         self._queueRemoveId = wx.NewIdRef()
         accel = wx.AcceleratorTable([
             (wx.ACCEL_ALT, ord("P"), self._queuePlayId.GetId()),
-            (wx.ACCEL_ALT, ord("C"), self._queueCopyId.GetId()),
+            (wx.ACCEL_ALT, ord("L"), self._queueCopyId.GetId()),
             (wx.ACCEL_ALT, ord("R"), self._queueRemoveId.GetId()),
         ])
         self.SetAcceleratorTable(accel)

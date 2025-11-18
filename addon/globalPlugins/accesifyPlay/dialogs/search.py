@@ -222,11 +222,11 @@ class SearchDialog(AccessifyDialog):
         action()
         
     def _open_artist_discography(self, artist):
-        dialog = ArtistDiscographyDialog(self, self.client, artist["id"], artist.get("name"))
+        dialog = ArtistDiscographyDialog(self, self.client, artist["id"], artist.get("name"), self._user_playlists)
         dialog.Show()
 
     def _open_album_tracks(self, album):
-        dialog = AlbumTracksDialog(self, self.client, album)
+        dialog = AlbumTracksDialog(self, self.client, album, self._user_playlists)
         dialog.Show()
 
     def _open_podcast_episodes(self, show):

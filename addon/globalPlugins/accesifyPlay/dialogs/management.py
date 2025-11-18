@@ -38,11 +38,11 @@ class CreatePlaylistDialog(AccessifyDialog):
         )
 
         buttonsSizer = wx.StdDialogButtonSizer()
-        self.createButton = wx.Button(self, wx.ID_OK, label=_("Create"))
+        self.createButton = wx.Button(self, wx.ID_OK, label=_("Cre&ate"))
         self.createButton.Bind(wx.EVT_BUTTON, self.onCreate)
         buttonsSizer.AddButton(self.createButton)
 
-        cancelButton = wx.Button(self, wx.ID_CANCEL, label=_("Cancel"))
+        cancelButton = wx.Button(self, wx.ID_CANCEL, label=_("&Cancel"))
         self.bind_close_button(cancelButton)
         buttonsSizer.AddButton(cancelButton)
         buttonsSizer.Realize()
@@ -215,12 +215,12 @@ class AddToPlaylistDialog(AccessifyDialog):
 
         buttons_sizer = wx.BoxSizer(wx.HORIZONTAL)
         # Translators: Label for the "Add" button in the "Add to Playlist" dialog.
-        add_button = wx.Button(panel, label=_("Add to Playlist"))
+        add_button = wx.Button(panel, label=_("&Add to Playlist"))
         add_button.Bind(wx.EVT_BUTTON, self.on_add_to_playlist)
         buttons_sizer.Add(add_button, 0, wx.ALL, 5)
 
         # Translators: Label for the "Cancel" button in the "Add to Playlist" dialog.
-        cancel_button = wx.Button(panel, label=_("Cancel"))
+        cancel_button = wx.Button(panel, label=_("&Cancel"))
         self.bind_close_button(cancel_button)
         buttons_sizer.Add(cancel_button, 0, wx.ALL, 5)
 
@@ -306,7 +306,7 @@ class PodcastEpisodesDialog(AccessifyDialog):
         accel_entries = [
             (wx.ACCEL_ALT, ord("P"), self.MENU_PLAY_EPISODE.GetId()),
             (wx.ACCEL_ALT, ord("Q"), self.MENU_ADD_QUEUE.GetId()),
-            (wx.ACCEL_ALT, ord("C"), self.MENU_COPY_LINK.GetId()), # 'C' untuk Copy
+            (wx.ACCEL_ALT, ord("L"), self.MENU_COPY_LINK.GetId()), # 'C' untuk Copy
         ]
         self.SetAcceleratorTable(wx.AcceleratorTable(accel_entries))
 
@@ -432,7 +432,7 @@ class PodcastEpisodesDialog(AccessifyDialog):
         menu = wx.Menu()
         menu.Append(self.MENU_PLAY_EPISODE.GetId(), _("Play Episode\tAlt+P"))
         menu.Append(self.MENU_ADD_QUEUE.GetId(), _("Add to Queue\tAlt+Q"))
-        menu.Append(self.MENU_COPY_LINK.GetId(), _("Copy Link\tAlt+C"))
+        menu.Append(self.MENU_COPY_LINK.GetId(), _("Copy Link\tAlt+L"))
         
         self.PopupMenu(menu)
         menu.Destroy()
@@ -461,7 +461,7 @@ class ArtistDiscographyDialog(AccessifyDialog):
     MENU_ADD_QUEUE = wx.NewIdRef()
     MENU_COPY_LINK = wx.NewIdRef()
 
-    def __init__(self, parent, client, artist_id, artist_name):
+    def __init__(self, parent, client, artist_id, artist_name, user_playlists):
         title = _("Discography for {artist_name}").format(artist_name=artist_name)
         super(ArtistDiscographyDialog, self).__init__(parent, title=title, size=(600, 500))
         self.client = client
@@ -477,6 +477,7 @@ class ArtistDiscographyDialog(AccessifyDialog):
         self._all_tracks_loading = False
         self._all_tracks_can_load_more = False
         self._all_tracks_load_more_label = f"--- {_('Load More')} ---"
+        self.user_playlists = user_playlists
         self.init_ui()
         self.load_data()
         self._create_accelerators()
@@ -551,7 +552,7 @@ class ArtistDiscographyDialog(AccessifyDialog):
         accel_entries = [
             (wx.ACCEL_ALT, ord("P"), self.MENU_PLAY.GetId()),
             (wx.ACCEL_ALT, ord("Q"), self.MENU_ADD_QUEUE.GetId()),
-            (wx.ACCEL_ALT, ord("C"), self.MENU_COPY_LINK.GetId()),
+            (wx.ACCEL_ALT, ord("L"), self.MENU_COPY_LINK.GetId()),
         ]
         self.SetAcceleratorTable(wx.AcceleratorTable(accel_entries))
         self.Bind(wx.EVT_MENU, self.on_play_selected, id=self.MENU_PLAY.GetId())
@@ -785,7 +786,7 @@ class ArtistDiscographyDialog(AccessifyDialog):
             ui.message(_("Please select an album first."))
             return
         album = self.albums[selection]
-        dialog = AlbumTracksDialog(self, self.client, album)
+        dialog = AlbumTracksDialog(self, self.client, album, self._user_playlists)
         dialog.Show()
 
     def on_context_menu(self, evt):
@@ -796,8 +797,31 @@ class ArtistDiscographyDialog(AccessifyDialog):
         menu = wx.Menu()
         menu.Append(self.MENU_PLAY.GetId(), _("Play\tAlt+P"))
         menu.Append(self.MENU_ADD_QUEUE.GetId(), _("Add to Queue\tAlt+Q"))
-        menu.Append(self.MENU_COPY_LINK.GetId(), _("Copy Link\tAlt+C"))
+        menu.Append(self.MENU_COPY_LINK.GetId(), _("Copy Link\tAlt+L"))
         
+        if item.get("type") == "track":
+            menu.AppendSeparator()
+            playlist_submenu = wx.Menu()
+            if self.user_playlists:
+                for playlist in self.user_playlists:
+                    menu_item = playlist_submenu.Append(
+                        wx.ID_ANY,
+                        playlist.get("name", "Unknown Playlist")
+                    )
+                    self.Bind(
+                        wx.EVT_MENU,
+                        lambda event, p_id=playlist.get("id"), p_name=playlist.get("name"): 
+                            self._on_add_to_playlist_selected(event, p_id, p_name),
+                        menu_item
+                    )
+            else:
+                no_playlist_item = playlist_submenu.Append(
+                    wx.ID_ANY, _("No owned playlists found.")
+                )
+                no_playlist_item.Enable(False)
+                
+            menu.appendSubMenu(playlist_submenu, _("Add to Playlist"))
+
         self.PopupMenu(menu)
         menu.Destroy()
 
@@ -827,13 +851,34 @@ class ArtistDiscographyDialog(AccessifyDialog):
             link = item.get("external_urls", {}).get("spotify")
             self.copy_link(link)
 
+    def _on_add_to_playlist_selected(self, event, playlist_id, playlist_name):
+        track = self._get_selected_item()
+        if not track or track.get("type") != 'track':
+            return
+
+        track_uri = track.get("uri")
+        if not playlist_id or not track_uri:
+            ui.message(_("Could not add track. Information missing."))
+            return
+            
+        ui.message(_("Adding '{track_name}' to '{playlist_name}'...").format(
+            track_name=track.get("name"), playlist_name=playlist_name
+        ))
+        
+        def _add_thread():
+            result = self.client.add_track_to_playlist(playlist_id, track_uri)
+            if isinstance(result, str):
+                wx.CallAfter(ui.message, result)
+            else:
+                wx.CallAfter(ui.message, _("Track added successfully."))
+        threading.Thread(target=_add_thread).start()
 
 class AlbumTracksDialog(AccessifyDialog):
     MENU_PLAY = wx.NewIdRef()
     MENU_ADD_QUEUE = wx.NewIdRef()
     MENU_COPY_LINK = wx.NewIdRef()
 
-    def __init__(self, parent, client, album):
+    def __init__(self, parent, client, album, user_playlists):
         album_name = album.get("name", _("Unknown"))
         title = _("Tracks in {album}").format(album=album_name)
         super().__init__(parent, title=title, size=(500, 400))
@@ -841,6 +886,7 @@ class AlbumTracksDialog(AccessifyDialog):
         self.album = album
         self.tracks = []
         self._loading = False
+        self.user_playlists = user_playlists
 
         self._init_ui()
         self._create_accelerators()
@@ -945,12 +991,31 @@ class AlbumTracksDialog(AccessifyDialog):
         return self.tracks[selection]
 
     def on_context_menu(self, evt):
-        if not self.tracks:
+        track = self._get_selected_track()
+        if not track:
             return
+
         menu = wx.Menu()
         menu.Append(self.MENU_PLAY.GetId(), _("Play\tAlt+P"))
         menu.Append(self.MENU_ADD_QUEUE.GetId(), _("Add to Queue\tAlt+Q"))
         menu.Append(self.MENU_COPY_LINK.GetId(), _("Copy Link\tAlt+L"))
+
+        menu.AppendSeparator()
+        playlist_submenu = wx.Menu()
+        if self.user_playlists:
+            for playlist in self.user_playlists:
+                menu_item = playlist_submenu.Append(wx.ID_ANY, playlist.get("name", "Unknown Playlist"))
+                self.Bind(
+                    wx.EVT_MENU,
+                    lambda event, p_id=playlist.get("id"), p_name=playlist.get("name"): self._on_add_to_playlist_selected(event, p_id, p_name),
+                    menu_item
+                )
+        else:
+            no_playlist_item = playlist_submenu.Append(wx.ID_ANY, _("No owned playlists found."))
+            no_playlist_item.Enable(False)
+        
+        menu.AppendSubMenu(playlist_submenu, _("Add to Playlist"))
+
         self.PopupMenu(menu)
         menu.Destroy()
 
@@ -969,6 +1034,29 @@ class AlbumTracksDialog(AccessifyDialog):
         if track:
             link = track.get("external_urls", {}).get("spotify")
             self.copy_link(link)
+
+    def _on_add_to_playlist_selected(self, event, playlist_id, playlist_name):
+        track = self._get_selected_track()
+        if not track:
+            return
+
+        track_uri = track.get("uri")
+        if not playlist_id or not track_uri:
+            ui.message(_("Could not add track. Information missing."))
+            return
+
+        ui.message(_("Adding '{track_name}' to '{playlist_name}'...").format(
+            track_name=track.get("name"), playlist_name=playlist_name
+        ))
+
+        def _add_thread():
+            result = self.client.add_track_to_playlist(playlist_id, track_uri)
+            if isinstance(result, str):
+                wx.CallAfter(ui.message, result)
+            else:
+                wx.CallAfter(ui.message, _("Track added successfully."))
+
+        threading.Thread(target=_add_thread).start()
 
 
 class PlaylistTracksDialog(AccessifyDialog):
@@ -1254,7 +1342,7 @@ class RelatedArtistsDialog(AccessifyDialog):
         accel_entries = [
             (wx.ACCEL_ALT, ord("P"), self.MENU_PLAY.GetId()),
             (wx.ACCEL_ALT, ord("Q"), self.MENU_ADD_QUEUE.GetId()),
-            (wx.ACCEL_ALT, ord("C"), self.MENU_COPY_LINK.GetId()),
+            (wx.ACCEL_ALT, ord("L"), self.MENU_COPY_LINK.GetId()),
             (wx.ACCEL_ALT, ord("D"), self.MENU_DISCOGRAPHY.GetId()),
             (wx.ACCEL_ALT, ord("F"), self.MENU_FOLLOW.GetId()),
         ]
@@ -1293,7 +1381,7 @@ class RelatedArtistsDialog(AccessifyDialog):
         menu = wx.Menu()
         menu.Append(self.MENU_PLAY.GetId(), _("Play Artist Radio\tAlt+P"))
         menu.Append(self.MENU_ADD_QUEUE.GetId(), _("Add to Queue\tAlt+Q"))
-        menu.Append(self.MENU_COPY_LINK.GetId(), _("Copy Link\tAlt+C"))
+        menu.Append(self.MENU_COPY_LINK.GetId(), _("Copy Link\tAlt+L"))
         menu.AppendSeparator()
         menu.Append(self.MENU_DISCOGRAPHY.GetId(), _("View Discography\tAlt+D"))
         menu.Append(self.MENU_FOLLOW.GetId(), _("Follow Artist\tAlt+F"))
@@ -1320,7 +1408,7 @@ class RelatedArtistsDialog(AccessifyDialog):
     def on_view_discography(self, evt=None):
         artist = self.get_selected_artist()
         if artist:
-            dialog = ArtistDiscographyDialog(self, self.client, artist["id"], artist["name"])
+            dialog = ArtistDiscographyDialog(self, self.client, artist["id"], artist["name"], self.user_playlists)
             dialog.Show()
 
     def on_follow(self, evt=None):
@@ -1404,6 +1492,29 @@ class ManagementDialog(AccessifyDialog):
             return
         link = item.get("external_urls", {}).get("spotify")
         self.copy_link(link)
+
+    def _on_add_to_playlist_selected(self, event, playlist_id, playlist_name):
+        track = self._get_selected_item()
+        if not track or track.get("type") != 'track':
+            return
+
+        track_uri = track.get("uri")
+        
+        if not playlist_id or not track_uri:
+            ui.message(_("Could not add track. Information missing."))
+            return
+            
+        ui.message(_("Adding '{track_name}' to '{playlist_name}'...").format(
+            track_name=track.get("name"), playlist_name=playlist_name
+        ))
+        
+        def _add_thread():
+            result = self.client.add_track_to_playlist(playlist_id, track_uri)
+            if isinstance(result, str):
+                wx.CallAfter(ui.message, result)
+            else:
+                wx.CallAfter(ui.message, _("Track added successfully."))
+        threading.Thread(target=_add_thread).start()
 
     def _handle_refresh(self, evt=None):
         focused_control = self.FindFocus()
@@ -1812,7 +1923,7 @@ class ManagementDialog(AccessifyDialog):
         accel = wx.AcceleratorTable([
             (wx.ACCEL_ALT, ord("P"), self._shortcutPlayId.GetId()),
             (wx.ACCEL_ALT, ord("Q"), self._shortcutAddId.GetId()),
-            (wx.ACCEL_ALT | wx.ACCEL_SHIFT, ord("C"), self._shortcutCopyId.GetId()),
+            (wx.ACCEL_ALT, ord("L"), self._shortcutCopyId.GetId()),
             (wx.ACCEL_ALT, ord("R"), self._shortcutRefreshId.GetId()),
             (wx.ACCEL_CTRL, ord("N"), self._shortcutNewPlaylistId.GetId()),
         ])
@@ -1844,7 +1955,22 @@ class ManagementDialog(AccessifyDialog):
             self._append_menu_item(menu, _("View Discography"), self.on_view_discography)
         elif focused_control == self.tabs_config["saved_shows"]["control"]:
             self._append_menu_item(menu, _("View Episodes"), self.on_view_episodes)
-
+        if item and item.get("type") == "track":
+            menu.AppendSeparator()
+            playlist_submenu = wx.Menu()
+            if self.user_playlists:
+                for playlist in self.user_playlists:
+                    menu_item = playlist_submenu.Append(wx.ID_ANY, playlist.get("name", "Unknown Playlist"))
+                    self.Bind(
+                        wx.EVT_MENU,
+                        lambda event, p_id=playlist.get("id"), p_name=playlist.get("name"): self._on_add_to_playlist_selected(event, p_id, p_name),
+                        menu_item
+                    )
+            else:
+                no_playlist_item = playlist_submenu.Append(wx.ID_ANY, _("No owned playlists found."))
+                no_playlist_item.Enable(False)
+                
+            menu.AppendSubMenu(playlist_submenu, _("Add to Playlist"))
         if menu.GetMenuItemCount(): self.PopupMenu(menu)
         menu.Destroy()
 
@@ -1894,7 +2020,7 @@ class ManagementDialog(AccessifyDialog):
     def on_view_discography(self, evt):
         artist = self._get_selected_item()
         if artist and artist.get("type") == "artist":
-            dialog = ArtistDiscographyDialog(self, self.client, artist["id"], artist["name"])
+            dialog = ArtistDiscographyDialog(self, self.client, artist["id"], artist["name"], self.user_playlists)
             dialog.Show()
         else:
             ui.message(_("Please select an artist to view their discography."))
