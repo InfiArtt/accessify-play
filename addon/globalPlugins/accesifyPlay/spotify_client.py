@@ -3,6 +3,7 @@
 import os
 import webbrowser
 from urllib.parse import urlparse
+import time
 import spotipy
 from spotipy.oauth2 import SpotifyPKCE, CacheFileHandler
 from spotipy.exceptions import SpotifyException
@@ -153,7 +154,9 @@ class SpotifyClient:
             result = command(*args, **kwargs)
             return result
         except SpotifyException as e:
-            log.error(f"{_('Spotify command failed:')} {e}", exc_info=True)
+            message = str(e).lower()
+            if "restriction" not in message:
+                log.error(f"{_('Spotify command failed:')} {e}", exc_info=True)
             if e.http_status == 401:  # Unauthorized
                 self.initialize()  # Try to refresh the token silently
                 return _("Token expired, please try again.")
@@ -193,36 +196,55 @@ class SpotifyClient:
             return _("An unexpected error occurred.")
 
     def _ensure_device(self):
-        """Makes sure there is an active device ID set."""
-        if self.device_id:
-            try:
-                devices = self.client.devices().get("devices", [])
-                if any(d["id"] == self.device_id for d in devices):
-                    return True
-            except Exception:
-                self.device_id = None
-
-        log.info(_("Spotify: No active device, searching for one."))
+        """
+        Ensures an active device is available for playback.
+        If no device is currently active, it proactively tries to wake up
+        the last known device or the first available one.
+        """
         try:
-            devices = self.client.devices().get("devices", [])
-            if not devices:
+            devices_result = self.client.devices()
+            if not devices_result or not devices_result.get("devices"):
+                log.info(_("Spotify: No devices found."))
                 return False
-
-            for device in devices:
-                if device.get("is_active"):
-                    self.device_id = device["id"]
-                    return True
-
-            self.device_id = devices[0]["id"]
-            return True
-        except Exception:
+            devices = devices_result["devices"]
+        except Exception as e:
+            log.error(f"{_('Spotify: Could not fetch devices:')} {e}", exc_info=True)
             return False
+        for device in devices:
+            if device.get("is_active"):
+                self.device_id = device["id"]
+                log.info(f"Spotify: Found active device '{device['name']}'.")
+                return True
+        log.info(_("Spotify: No active device found. Attempting to wake one up."))
 
-    def get_current_track_info(self):
-        playback = self._execute(self.client.current_playback)
+        target_device_id = None
+        if self.device_id:
+            for device in devices:
+                if device["id"] == self.device_id:
+                    target_device_id = self.device_id
+                    log.info(f"Spotify: Last known device '{device['name']}' is available. Setting as target.")
+                    break
+        if not target_device_id and devices:
+            target_device_id = devices[0]["id"]
+            log.info(f"Spotify: Last known device not found. Using first available device '{devices[0]['name']}' as target.")
+        if target_device_id:
+            try:
+                log.info(f"Spotify: Sending wake-up call (transfer_playback) to device ID {target_device_id}.")
+                self.client.transfer_playback(target_device_id, force_play=False)
+                self.device_id = target_device_id
+                return True
+            except Exception as e:
+                log.error(f"{_('Spotify: Failed to wake up device:')} {e}", exc_info=True)
+                self.device_id = None # Reset karena gagal
+                return False
+        return False
+
+    def get_current_track_info(self, playback=None):
+        if playback is None:
+            playback = self._execute(self.client.current_playback)
         if isinstance(playback, str):
             return playback
-        if not playback or not playback.get("item"):
+        if not playback or not playback.get("item") or not playback.get("is_playing"):
             return _("Nothing is currently playing.")
 
         item_type = playback.get("currently_playing_type")
@@ -321,18 +343,32 @@ class SpotifyClient:
 
     def play_item(self, uris):
         """
-        Plays a track, album, artist, playlist, or a list of tracks.
-        :param uris: A single URI (string) or a list of track URIs (list of strings).
+        Plays a track, episode, album, artist, playlist, or a list of tracks.
+        :param uris: A single URI (string) or a list of track/episode URIs.
         """
         if isinstance(uris, list):
-            # It's a list of tracks
+            # Treat any list as an explicit set of tracks/episodes.
             return self._execute(self.client.start_playback, uris=uris)
 
-        # It's a single item (album, artist, playlist)
-        if "track" in uris:
-            return self._execute(self.client.start_playback, uris=[uris])
-        else:
-            return self._execute(self.client.start_playback, context_uri=uris)
+        uri = uris or ""
+        entity_type = None
+        if uri.startswith("spotify:"):
+            parts = [p for p in uri.split(":") if p and p.lower() != "spotify"]
+            if len(parts) >= 1:
+                entity_type = parts[0]
+        elif "spotify.com" in uri:
+            parsed = self._parse_spotify_url(uri)
+            if parsed:
+                entity_type, entity_id = parsed
+                entity_type = (entity_type or "").lower()
+                if entity_type and entity_id:
+                    uri = f"spotify:{entity_type}:{entity_id}"
+
+        if entity_type in ("track", "episode"):
+            return self._execute(self.client.start_playback, uris=[uri])
+
+        # Default to context playback (album, artist, playlist, show, etc.)
+        return self._execute(self.client.start_playback, context_uri=uri)
 
     def add_to_queue(self, uri):
         return self._execute(self.client.add_to_queue, uri=uri)
@@ -351,20 +387,17 @@ class SpotifyClient:
             "duration": metadata.get("duration"),
         }
 
-    def get_next_track_in_queue(self):
-        queue_data = self._execute_web_api(self.client.queue)
+    def get_next_track_in_queue(self, queue_data=None):
+        if queue_data is None:
+            queue_data = self._execute_web_api(self.client.queue)
         if isinstance(queue_data, str):
             return queue_data
-
-        if not queue_data or not queue_data.get("queue"):
+        queue_items = self._get_filtered_queue_items(queue_data)
+        if not queue_items:
             return _("Queue is empty.")
 
-        next_track = queue_data["queue"][0]
-        track_name = next_track.get("name")
-        artists = ", ".join([a["name"] for a in next_track.get("artists", [])])
-        return _("Next in queue: {track_name} by {artists}").format(
-            track_name=track_name, artists=artists
-        )
+        next_item = queue_items[0]
+        return f"{self._describe_queue_item(next_item, _('Next in queue'))} {self._queue_autoplay_notice()}"
 
     def get_full_queue(self):
         queue_data = self._execute_web_api(self.client.queue)
@@ -372,36 +405,85 @@ class SpotifyClient:
             return queue_data
 
         full_queue = []
-        currently_playing = queue_data.get("currently_playing")
-        if currently_playing:
-            track_name = currently_playing.get("name")
-            artists = ", ".join(
-                [a["name"] for a in currently_playing.get("artists", [])]
-            )
-            full_queue.append(
-                {
-                    "type": "currently_playing",
-                    "name": track_name,
-                    "artists": artists,
-                    "uri": currently_playing.get("uri"),
-                    "link": currently_playing.get("external_urls", {}).get("spotify"),
-                }
-            )
+        currently_playing = (queue_data or {}).get("currently_playing")
+        formatted_current = self._format_queue_item(
+            currently_playing, entry_type="currently_playing"
+        )
+        if formatted_current:
+            full_queue.append(formatted_current)
 
-        for track in queue_data.get("queue", []):
-            track_name = track.get("name")
-            artists = ", ".join([a["name"] for a in track.get("artists", [])])
-            full_queue.append(
-                {
-                    "type": "queue_item",
-                    "name": track_name,
-                    "artists": artists,
-                    "uri": track.get("uri"),
-                    "link": track.get("external_urls", {}).get("spotify"),
-                }
-            )
+        for track in self._get_filtered_queue_items(queue_data):
+            formatted = self._format_queue_item(track, entry_type="queue_item")
+            if formatted:
+                full_queue.append(formatted)
 
         return full_queue
+
+    def _format_queue_item(self, item, entry_type):
+        if not item:
+            return None
+        item_type = item.get("type")
+        if item_type == "episode":
+            artists = item.get("show", {}).get("name", "")
+        else:
+            artists = ", ".join([a["name"] for a in item.get("artists", [])])
+        return {
+            "type": entry_type,
+            "item_type": item_type,
+            "name": item.get("name"),
+            "artists": artists,
+            "uri": item.get("uri"),
+            "link": item.get("external_urls", {}).get("spotify"),
+        }
+
+    def _describe_queue_item(self, item, prefix):
+        if not item:
+            return _("Queue is empty.")
+        item_type = item.get("type")
+        if item_type == "episode":
+            episode_name = item.get("name")
+            show_name = item.get("show", {}).get("name")
+            if show_name:
+                return _("{prefix}: {episode} from {show}").format(
+                    prefix=prefix, episode=episode_name, show=show_name
+                )
+            return _("{prefix}: {episode}").format(prefix=prefix, episode=episode_name)
+
+        track_name = item.get("name")
+        artists = ", ".join([a["name"] for a in item.get("artists", [])])
+        if artists:
+            return _("{prefix}: {track_name} by {artists}").format(
+                prefix=prefix, track_name=track_name, artists=artists
+            )
+        return _("{prefix}: {track_name}").format(prefix=prefix, track_name=track_name)
+
+    def _queue_autoplay_notice(self):
+        return _("(Spotify may replace upcoming tracks automatically.)")
+
+    def _get_filtered_queue_items(self, queue_data):
+        queue_items = (queue_data or {}).get("queue") or []
+        if not queue_items:
+            return []
+
+        current_uri = (queue_data or {}).get("currently_playing", {}).get("uri")
+        has_non_current = any(
+            (item.get("uri") or "") != current_uri for item in queue_items if item
+        )
+        filtered = []
+        for item in queue_items:
+            if not item:
+                continue
+            uri = item.get("uri")
+            if not uri:
+                continue
+            # If Spotify only reports copies of the current item, treat the queue as empty.
+            if not has_non_current and uri == current_uri:
+                continue
+            # Once Spotify starts repeating the context (current track) again, stop listing.
+            if uri == current_uri and filtered:
+                break
+            filtered.append(item)
+        return filtered
 
     def rebuild_queue(self, uris, progress_ms=0):
         result = self._execute(self.client.start_playback, uris=uris)
@@ -410,6 +492,32 @@ class SpotifyClient:
         if progress_ms:
             self.seek_track(progress_ms)
         return True
+
+    def skip_to_queue_index(self, target_index):
+        """
+        Skips forward in the queue by issuing next-track commands until the
+        desired absolute position (0 = currently playing) is reached.
+        """
+        try:
+            index = int(target_index)
+        except (TypeError, ValueError):
+            return _("Unable to determine the requested queue position.")
+
+        if index <= 0:
+            return _("Already playing the selected item.")
+
+        for _ in range(index):
+            result = self._execute(self.client.next_track)
+            if isinstance(result, str):
+                return result
+            time.sleep(0.2)
+
+        playback = self._execute(self.client.current_playback)
+        if isinstance(playback, str):
+            return playback
+        if playback and playback.get("item"):
+            return self.get_current_track_info(playback)
+        return _("Nothing is currently playing.")
 
     def clear_credentials_and_cache(self):
         """Clears clientID from its dedicated file and deletes the Spotify token cache."""
@@ -532,22 +640,53 @@ class SpotifyClient:
         offset = 0
         limit = 100  # Max limit per request
         while True:
-            results = self._execute_web_api(
-                self.client.playlist_items,
-                playlist_id=playlist_id,
-                limit=limit,
-                offset=offset,
-            )
+            results = self.get_playlist_tracks_page(playlist_id, limit=limit, offset=offset)
             if isinstance(results, str):
                 return results  # Error message
 
-            if not results or not results.get("items"):
+            items = results.get("items", []) if results else []
+            if not items:
                 break
-            tracks.extend(results["items"])
-            if len(results["items"]) < limit:
+            tracks.extend(items)
+            if len(items) < limit:
                 break
-            offset += limit
+            offset += len(items)
         return tracks
+
+    def get_playlist_tracks_page(self, playlist_id, limit=50, offset=0):
+        """Gets a single page of tracks from a playlist."""
+        return self._execute_web_api(
+            self.client.playlist_items,
+            playlist_id=playlist_id,
+            limit=limit,
+            offset=offset,
+        )
+
+    def get_context_track_uris(self, uri, item_type):
+        """Returns a flat list of track URIs for supported context types."""
+        if not uri:
+            return _("Unable to determine tracks for this item.")
+        parsed = self._parse_spotify_url(uri)
+        if not parsed:
+            return _("Invalid Spotify link or URI.")
+        _, entity_id = parsed
+        if item_type == "album":
+            tracks = self.get_album_tracks(entity_id)
+            if isinstance(tracks, str):
+                return tracks
+            return [track.get("uri") for track in tracks if track.get("uri")]
+        if item_type == "playlist":
+            tracks = self.get_playlist_tracks(entity_id)
+            if isinstance(tracks, str):
+                return tracks
+            uris = []
+            for item in tracks:
+                track = item.get("track") if isinstance(item, dict) else item
+                uri_value = track.get("uri") if isinstance(track, dict) else None
+                if uri_value:
+                    uris.append(uri_value)
+            return uris
+        return []
 
     def remove_tracks_from_playlist(self, playlist_id, track_uris):
         """Removes tracks from a specified playlist."""
@@ -719,13 +858,54 @@ class SpotifyClient:
         )
 
     def get_artist_albums(self, artist_id):
-        """Gets an artist's albums."""
-        return self._execute_web_api(
-            self.client.artist_albums,
-            artist_id=artist_id,
-            album_type="album,single",
-            limit=50,
-        )
+        """Gets all albums and singles for an artist (paginated)."""
+        limit = 50
+        offset = 0
+        aggregated = {"items": []}
+
+        while True:
+            results = self._execute_web_api(
+                self.client.artist_albums,
+                artist_id=artist_id,
+                album_type="album,single",
+                limit=limit,
+                offset=offset,
+            )
+            if isinstance(results, str):
+                return results
+            items = results.get("items", [])
+            if not items:
+                break
+            aggregated["items"].extend(items)
+            if len(items) < limit:
+                break
+            offset += limit
+        return aggregated
+
+    def get_album_tracks(self, album_id):
+        """Gets all tracks for a single album."""
+        tracks = []
+        limit = 50
+        offset = 0
+
+        while True:
+            results = self._execute_web_api(
+                self.client.album_tracks, album_id=album_id, limit=limit, offset=offset
+            )
+            if isinstance(results, str):
+                return results
+            items = results.get("items", [])
+            if not items:
+                break
+            tracks.extend(items)
+            if len(items) < limit:
+                break
+            offset += limit
+        return tracks
+
+    def get_artist_details(self, artist_id):
+        """Gets profile information for the given artist."""
+        return self._execute_web_api(self.client.artist, artist_id=artist_id)
 
     def get_related_artists(self, artist_id):
         """Gets artists related to a given artist."""
@@ -733,10 +913,10 @@ class SpotifyClient:
             self.client.artist_related_artists, artist_id=artist_id
         )
 
-    def get_show_episodes(self, show_id):
-        """Gets episodes for a show."""
+    def get_show_episodes(self, show_id, limit=50, offset=0):
+        """Gets episodes for a show (paginated)."""
         return self._execute_web_api(
-            self.client.show_episodes, show_id=show_id, limit=50
+            self.client.show_episodes, show_id=show_id, limit=limit, offset=offset
         )
 
     def get_current_user_profile(self):
@@ -945,3 +1125,16 @@ class SpotifyClient:
                 "duration": duration,
             },
         }
+
+    def get_available_devices(self):
+        """Fetches a list of available devices."""
+        result = self._execute_web_api(self.client.devices)
+        if isinstance(result, str):
+            return result
+        return result.get("devices", [])
+
+    def transfer_playback_to_device(self, device_id):
+        """Transfers playback to a specific device ID."""
+        return self._execute_web_api(
+            self.client.transfer_playback, device_id=device_id, force_play=False
+        )

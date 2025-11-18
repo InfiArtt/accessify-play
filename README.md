@@ -84,6 +84,45 @@ Accessify Play is packed with features, organized for your convenience:
 
 ---
 
+### A Note on the Spotify Queue Feature: Understanding Its Behavior
+
+You may have noticed that the queue list in Accessify Play (`NVDA+Shift+Alt+Q`) can be both incredibly accurate and, at other times, seem completely out of sync with what's playing next. This behavior is not a bug but a direct consequence of the data provided by the Spotify API.
+
+Here is the precise breakdown of when the addon's queue list is reliable and when it is not:
+
+#### When the Queue List is ACCURATE
+
+The queue list displayed by the addon is a correct representation of what Spotify will play next in two key scenarios:
+
+1.  **Playing a Finite Context Sequentially:** When you are playing a playlist or an album with **Shuffle Mode turned OFF**, the addon's queue list will reliably match the "Next Up" list in the Spotify app.
+2.  **Manually Added Tracks:** Any song you manually add using "Add to Queue" will always appear correctly at the top of the list.
+
+#### Where the Discrepancy Occurs
+
+The predictability breaks down completely in two very common situations, causing a mismatch between the addon and the Spotify app:
+
+1.  **When Shuffle Mode is ON:** This is the most significant limitation. While the Spotify app knows the special randomized order it has created, the public API used by this addon **does not have access to this shuffled order**. The API will *always* report the playlist's original, saved sequence, completely ignoring the fact that shuffle is active.
+2.  **When Autoplay Takes Over:** After your album or playlist finishes, Spotify's "Autoplay" feature begins playing similar tracks. This is an algorithmic radio stream, and the API **provides no information about what songs are coming up** in this stream.
+
+#### The Addon's Design and the API's Definition
+
+To provide a consistent experience, Accessify Play is designed to show exactly what the Spotify API provides. The addon uses the official `/me/player/queue` endpoint. According to the Spotify Developer documentation, this endpoint is designed to:
+
+> Get the list of objects that make up the user's queue.
+
+This means the API's definition of a "queue" is primarily the list of manually added tracks. While the API response also includes the next track from the current context (album/playlist), it cannot provide the full, upcoming sequence for shuffled or algorithmically generated content.
+
+#### Conclusion: How to Use the Queue Feature Effectively
+
+Therefore, the Accessify Play queue feature is your reliable tool for two main purposes:
+
+1.  Viewing the upcoming tracks when you are listening to an **album or playlist with Shuffle turned OFF**.
+2.  Viewing and managing the songs you have **manually added to the queue**, regardless of what is playing.
+
+It should not be used as a reference when **Shuffle Mode is ON** or when **Autoplay** has started, as the API does not provide the necessary data for those scenarios.
+
+---
+
 ## ⚙️ Configuration Guide
 
 To use this addon, you need to get a **Client ID** and **Client Secret** from the Spotify Developer Dashboard. Follow these steps carefully.

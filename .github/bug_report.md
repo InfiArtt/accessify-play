@@ -1,4 +1,3 @@
----
 name: Bug Report
 description: Create a report to help us improve Accessify Play
 title: "[Bug]: "
