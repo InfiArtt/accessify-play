@@ -195,30 +195,48 @@ class SpotifyClient:
             return _("An unexpected error occurred.")
 
     def _ensure_device(self):
-        """Makes sure there is an active device ID set."""
-        if self.device_id:
-            try:
-                devices = self.client.devices().get("devices", [])
-                if any(d["id"] == self.device_id for d in devices):
-                    return True
-            except Exception:
-                self.device_id = None
-
-        log.info(_("Spotify: No active device, searching for one."))
+        """
+        Ensures an active device is available for playback.
+        If no device is currently active, it proactively tries to wake up
+        the last known device or the first available one.
+        """
         try:
-            devices = self.client.devices().get("devices", [])
-            if not devices:
+            devices_result = self.client.devices()
+            if not devices_result or not devices_result.get("devices"):
+                log.info(_("Spotify: No devices found."))
                 return False
-
-            for device in devices:
-                if device.get("is_active"):
-                    self.device_id = device["id"]
-                    return True
-
-            self.device_id = devices[0]["id"]
-            return True
-        except Exception:
+            devices = devices_result["devices"]
+        except Exception as e:
+            log.error(f"{_('Spotify: Could not fetch devices:')} {e}", exc_info=True)
             return False
+        for device in devices:
+            if device.get("is_active"):
+                self.device_id = device["id"]
+                log.info(f"Spotify: Found active device '{device['name']}'.")
+                return True
+        log.info(_("Spotify: No active device found. Attempting to wake one up."))
+
+        target_device_id = None
+        if self.device_id:
+            for device in devices:
+                if device["id"] == self.device_id:
+                    target_device_id = self.device_id
+                    log.info(f"Spotify: Last known device '{device['name']}' is available. Setting as target.")
+                    break
+        if not target_device_id and devices:
+            target_device_id = devices[0]["id"]
+            log.info(f"Spotify: Last known device not found. Using first available device '{devices[0]['name']}' as target.")
+        if target_device_id:
+            try:
+                log.info(f"Spotify: Sending wake-up call (transfer_playback) to device ID {target_device_id}.")
+                self.client.transfer_playback(target_device_id, force_play=False)
+                self.device_id = target_device_id
+                return True
+            except Exception as e:
+                log.error(f"{_('Spotify: Failed to wake up device:')} {e}", exc_info=True)
+                self.device_id = None # Reset karena gagal
+                return False
+        return False
 
     def get_current_track_info(self, playback=None):
         if playback is None:

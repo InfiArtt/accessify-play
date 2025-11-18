@@ -3,6 +3,7 @@ import ui
 import threading
 import config
 from gui import guiHelper, messageBox
+import gui
 from .base import AccessifyDialog
 
 def _get_search_limit(default_value):
@@ -1353,7 +1354,6 @@ class ManagementDialog(AccessifyDialog):
     # Fungsi generik untuk mendapatkan item terpilih dari tab yang sedang aktif
     def _get_selected_item(self):
         focused_control = self.FindFocus()
-        
         if focused_control == self.playlist_tracks_list:
             selection = self.playlist_tracks_list.GetSelection()
             if selection != wx.NOT_FOUND and selection < len(self.current_playlist_tracks):
@@ -1545,9 +1545,15 @@ class ManagementDialog(AccessifyDialog):
         sizer = wx.BoxSizer(wx.VERTICAL)
         panel.SetSizer(sizer)
         sHelper = guiHelper.BoxSizerHelper(panel, sizer=sizer)
-        self.playlist_choices = sHelper.addLabeledControl(
-            _("Playlist:"), wx.ComboBox, style=wx.CB_READONLY
-        )
+        top_controls_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        playlist_label = wx.StaticText(panel, label=_("Playlist:"))
+        top_controls_sizer.Add(playlist_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 5)
+        self.playlist_choices = wx.ComboBox(panel, style=wx.CB_READONLY)
+        top_controls_sizer.Add(self.playlist_choices, 1, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 5)
+        self.play_playlist_button = wx.Button(panel, label=_("&Play Playlist"))
+        self.play_playlist_button.Bind(wx.EVT_BUTTON, self.on_play_playlist)
+        top_controls_sizer.Add(self.play_playlist_button, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 5)
+        sizer.Add(top_controls_sizer, 0, wx.EXPAND | wx.ALL, 5)
         self.playlist_choices.Bind(wx.EVT_COMBOBOX, self.on_playlist_selected)
         self.playlist_tracks_list = wx.ListBox(panel)
         sizer.Add(self.playlist_tracks_list, 1, wx.EXPAND | wx.ALL, 5)
@@ -1555,6 +1561,7 @@ class ManagementDialog(AccessifyDialog):
         # Link actions and context menu
         self._bind_list_activation(self.playlist_tracks_list, self._handle_play)
         self.playlist_tracks_list.Bind(wx.EVT_CONTEXT_MENU, self.on_playlist_context_menu)
+        self.playlist_tracks_list.Bind(wx.EVT_KEY_DOWN, self.on_key_down_in_playlist)
         buttons_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
         refresh_button = wx.Button(panel, label=_("&Refresh Playlists"))
@@ -1575,6 +1582,19 @@ class ManagementDialog(AccessifyDialog):
         self.current_playlist_tracks = []
 
         self.load_playlists(initial_data=self.preloaded_data.get("playlists"))
+
+    def on_play_playlist(self, evt):
+        selection_index = self.playlist_choices.GetSelection()
+        if selection_index == wx.NOT_FOUND:
+            ui.message(_("Please select a playlist to play."))
+            return
+            
+        selected_playlist = self.user_playlists[selection_index]
+        uri = selected_playlist.get("uri")
+        if uri:
+            self._play_uri(uri)
+        else:
+            ui.message(_("Could not find URI for the selected playlist."))
 
     def on_refresh_playlists(self, evt=None):
         self.load_playlists()
@@ -1728,6 +1748,15 @@ class ManagementDialog(AccessifyDialog):
                     wx.CallAfter(self.on_playlist_selected)
             threading.Thread(target=_remove).start()
 
+    def on_key_down_in_playlist(self, event):
+        """Handles key presses on the playlist tracks list, specifically the Delete key."""
+        # Periksa apakah tombol yang ditekan adalah WXK_DELETE
+        if event.GetKeyCode() == wx.WXK_DELETE:
+            # Jika ya, panggil fungsi yang sudah ada untuk menghapus trek
+            self.on_remove_track_from_playlist(None)
+        else:
+            event.Skip()
+
     def init_top_items_tab(self):
         panel = wx.Panel(self.notebook)
         self.notebook.AddPage(panel, _("Top Items"))
@@ -1821,17 +1850,18 @@ class ManagementDialog(AccessifyDialog):
 
     def on_playlist_context_menu(self, evt):
         selection = self.playlist_tracks_list.GetSelection()
-        if selection == wx.NOT_FOUND: return
-
-        item = self.current_playlist_tracks[selection]
+        if selection == wx.NOT_FOUND: 
+            return
         menu = wx.Menu()
         
         self._append_menu_item(menu, _("Play"), self._handle_play)
         self._append_menu_item(menu, _("Add to Queue"), self._handle_add_to_queue)
         self._append_menu_item(menu, _("Copy Link"), self._handle_copy_link)
+        menu.AppendSeparator()
         self._append_menu_item(menu, _("Remove Track from Playlist"), self.on_remove_track_from_playlist)
         
         self.PopupMenu(menu)
+        menu.Destroy()
 
     def on_remove_from_library(self, evt):
         item = self._get_selected_item()

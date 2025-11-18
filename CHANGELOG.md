@@ -1,17 +1,27 @@
 # Changelog
 
-## Version 1.3.5
+## Version 1.4.0
 
-#### Code Fixes
-- **Reorganized code for better maintainability**: Each class is now separated into its own file, making the codebase easier to maintain and simplifying error tracking.
-- **Improved shortcut implementation**: All UI shortcuts now function consistently across the interface, with clearer usage in search, management, queue, and volume controls.
-- **Richer artist browsing**: Added artist info and a full-track tab with incremental loading in the discography dialog, plus album/show detail dialogs so Enter opens the relevant track list instead of playing immediately.
-- **Search activation enhancements**: Enter on artists, albums, podcasts, or playlists now opens the appropriate dialog (discography, album tracks, episodes, playlist tracks) instead of starting playback, giving a consistent exploration workflow. (#19)
-- **Playlist & episode pagination**: Introduced Load More support for playlist and podcast dialogs that respects the Search Results Limit setting, reducing initial load times for large catalogs.
-- **Episode playback fix**: Corrected Spotify URI handling so individual podcast episodes now play reliably instead of triggering “Non supported context uri” errors.
-- **Queue management reliability**: Album/playlist queueing now pulls their tracks directly, deduplicates queue data, and hides the “currently playing” block once Spotify stops so the dialog mirrors the real playback state.
-- **Playback announcements**: The current-track and “next in queue” scripts now respect Spotify’s `is_playing` flag and skip duplicate items, so you no longer hear stale titles when nothing is playing.
-- **Skip command UX**: Next/previous shortcuts first verify a follow-up track exists and translate Spotify’s restriction errors into friendly messages, preventing playback from stopping unexpectedly and avoiding noisy log output. (#23)
+This is a significant feature and stability release, focused on improving user workflow, adding powerful new capabilities, and enhancing overall reliability.
+
+#### ✨ New Features
+
+-   **Add to Playlist from Search**: You can now add a track directly to one of your playlists from the search results context menu. (Resolves #22)
+-   **Richer Artist Browsing**: The artist discography dialog has been enhanced with new tabs for "Artist Info" and "All Tracks," featuring incremental loading to handle large discographies efficiently.
+-   **Quick Playlist Playback**: A "Play Playlist" button has been added next to the playlist selection dropdown in the Management dialog, allowing for immediate playback of the selected playlist.
+-   **Delete Track with Keyboard**: In the Management dialog's playlist tab, you can now press the `Delete` key on a selected track to remove it from the playlist (after a confirmation prompt).
+-   **Pagination for Large Catalogs**: "Load More" functionality has been added to long lists, such as playlist tracks and podcast episodes. This respects the "Search Results Limit" setting and significantly reduces initial load times.
+-   **Proactive Device Wake-Up**: The addon now automatically attempts to "wake up" the last used Spotify device if it becomes inactive. This resolves many "No active device found" errors, making playback resumption smoother. (Resolves #25)
+
+#### 🛠️ Fixes & Improvements
+
+-   **Enhanced Search Activation**: Pressing `Enter` on artists, albums, podcasts, or playlists in the search results now opens the appropriate detailed view (e.g., discography, track list) instead of immediately starting playback. This creates a more consistent and predictable exploration workflow. (Resolves #19)
+-   **Improved Shortcut Implementation**: All UI shortcuts now function consistently across the interface, with clearer usage in search, management, and queue.
+-   **Reliable Skip Commands**: The next/previous track shortcuts now verify a follow-up track exists before executing and translate Spotify's restriction errors into friendly messages (e.g., "No previous track available."). This prevents playback from stopping unexpectedly. (Resolves #23)
+-   **Accurate Playback Announcements**: The scripts for announcing the current track and "next in queue" now respect Spotify’s `is_playing` flag and handle empty queues correctly, preventing stale or inaccurate announcements.
+-   **Smarter Queue Management**: Queueing an album or playlist is now more reliable. The "currently playing" item in the queue dialog is now hidden when playback stops, accurately reflecting the current state.
+-   **Episode Playback Fix**: Corrected Spotify URI handling so that individual podcast episodes play reliably without errors.
+-   **Code Reorganization**: The addon's codebase has been reorganized into separate files for each dialog/class. This improves maintainability, simplifies error tracking, and makes future development easier.
 
 ## Version 1.3.4
 

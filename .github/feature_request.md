@@ -1,4 +1,3 @@
----
 name: Feature Request
 description: Suggest an idea or new feature for the project
 title: "[Feature]: "
