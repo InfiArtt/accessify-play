@@ -283,7 +283,7 @@ class SearchDialog(AccessifyDialog):
         menu = wx.Menu()
         if item.get("uri"):
             menu.Append(self.MENU_PLAY.GetId(), _("Play\tAlt+P"))
-        if item.get("type") == "track":
+        if item.get("type") in ("track", "album", "playlist"):
             menu.Append(self.MENU_ADD_QUEUE.GetId(), _("Add to Queue\tAlt+Q"))
         if item.get("type") == "artist":
             menu.Append(self.MENU_FOLLOW.GetId(), _("Follow Artist\tAlt+F"))
@@ -347,11 +347,17 @@ class SearchDialog(AccessifyDialog):
         if not item:
             ui.message(_("No item selected."))
             return
-        
-        if item.get("type") == "track":
-            self._queue_add_track(item.get("uri"), item.get("name"))
+
+        item_type = item.get("type")
+        uri = item.get("uri")
+        name = item.get("name")
+
+        if item_type == "track":
+            self._queue_add_track(uri, name)
+        elif item_type in ("album", "playlist"):
+            self._queue_add_context(uri, item_type, name)
         else:
-            ui.message(_("Only individual tracks can be added to the queue from search results."))
+            ui.message(_("This item type cannot be added to the queue."))
 
     def on_follow_artist(self, evt=None):
         item = self._get_item_at_index(self.resultsList.GetSelection())

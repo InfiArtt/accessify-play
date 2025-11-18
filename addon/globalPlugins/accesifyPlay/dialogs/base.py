@@ -15,9 +15,8 @@ class AccessifyDialog(wx.Dialog):
         self.Bind(wx.EVT_CHAR_HOOK, self._on_char_hook)
         self.Bind(wx.EVT_CLOSE, self._on_dialog_close, self)
 
-        # Setiap dialog yang dibuat harus memiliki atribut 'client'
-        # Biasanya diatur di __init__ anak kelas: self.client = client
         self.client = None
+        self._is_queuing = False
 
     def bind_close_button(self, button):
         button.Bind(wx.EVT_BUTTON, self._on_close_button)
@@ -55,66 +54,83 @@ class AccessifyDialog(wx.Dialog):
 
     def _queue_add_track(self, uri, name):
         """Adds a single track to the queue."""
-        if not self.client: return
+        if self._is_queuing:
+            ui.message(_("Please wait, another item is being added to the queue."))
+            return
+        if not self.client:
+            return
         if not uri:
             ui.message(_("Could not get URI for selected item."))
             return
+        
+        self._is_queuing = True
+        ui.message(_("Adding to queue..."))
         threading.Thread(
             target=self._queue_add_track_thread, args=(uri, name)
         ).start()
 
     def _queue_add_track_thread(self, uri, name):
-        result = self.client.add_to_queue(uri)
-        if isinstance(result, str):
-            wx.CallAfter(ui.message, result)
-        else:
-            wx.CallAfter(ui.message, _("{name} added to queue.").format(name=name))
+        try:
+            result = self.client.add_to_queue(uri)
+            if isinstance(result, str):
+                wx.CallAfter(ui.message, result)
+            else:
+                wx.CallAfter(ui.message, _("{name} added to queue.").format(name=name))
+        finally:
+            self._is_queuing = False
 
     def _queue_add_context(self, uri, item_type, name):
-        """Adds a context (album, artist radio, etc.) to the queue."""
-        if not self.client: return
+        if self._is_queuing:
+            ui.message(_("Please wait, another item is being added to the queue."))
+            return
+        if not self.client:
+            return
         if not uri:
             ui.message(_("Unable to add {name} to queue.").format(name=name))
             return
-        ui.message(_("Adding to queue...")) # Give user feedback
+        self._is_queuing = True
+        ui.message(_("Adding to queue..."))
         threading.Thread(
             target=self._queue_add_context_thread,
             args=(uri, item_type, name),
         ).start()
 
     def _queue_add_context_thread(self, uri, item_type, name):
-        if item_type in ("album", "playlist"):
-            track_uris = self.client.get_context_track_uris(uri, item_type)
-            if isinstance(track_uris, str):
-                wx.CallAfter(ui.message, track_uris)
-                return
-            if not track_uris:
-                wx.CallAfter(ui.message, _("No tracks were queued."))
-                return
-            added = 0
-            for track_uri in track_uris:
-                result = self.client.add_to_queue(track_uri)
-                if isinstance(result, str):
-                    wx.CallAfter(ui.message, result)
+        try:
+            if item_type in ("album", "playlist"):
+                track_uris = self.client.get_context_track_uris(uri, item_type)
+                if isinstance(track_uris, str):
+                    wx.CallAfter(ui.message, track_uris)
                     return
-                added += 1
-            wx.CallAfter(
-                ui.message,
-                _("Queued {count} tracks from {name}.").format(count=added, name=name),
-            )
-        elif item_type in ("artist", "show"):
-            result = self.client.play_item(uri)
-            if isinstance(result, str):
-                wx.CallAfter(ui.message, result)
-            else:
+                if not track_uris:
+                    wx.CallAfter(ui.message, _("No tracks were queued."))
+                    return
+                added = 0
+                for track_uri in track_uris:
+                    result = self.client.add_to_queue(track_uri)
+                    if isinstance(result, str):
+                        wx.CallAfter(ui.message, result)
+                        return
+                    added += 1
                 wx.CallAfter(
                     ui.message,
-                    _("Started radio for {name}. You can add tracks individually.").format(
-                        name=name
-                    ),
+                    _("Queued {count} tracks from {name}.").format(count=added, name=name),
                 )
-        else:
-            wx.CallAfter(ui.message, _("Cannot add this item to the queue."))
+            elif item_type in ("artist", "show"):
+                result = self.client.play_item(uri)
+                if isinstance(result, str):
+                    wx.CallAfter(ui.message, result)
+                else:
+                    wx.CallAfter(
+                        ui.message,
+                        _("Started radio for {name}. You can add tracks individually.").format(
+                            name=name
+                        ),
+                    )
+            else:
+                wx.CallAfter(ui.message, _("Cannot add this item to the queue."))
+        finally:
+            self._is_queuing = False
 
     
     def copy_link(self, link):
