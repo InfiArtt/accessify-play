@@ -154,11 +154,11 @@ class UpdateDialog(wx.Frame):
         self.info_text.SetValue(text + release_info.get("body", _("No changelog provided.")))
 
         buttons_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.update_button = wx.Button(panel, label=_("Download and Install"))
+        self.update_button = wx.Button(panel, label=_("&Download and Install"))
         self.update_button.Bind(wx.EVT_BUTTON, self.on_update)
         buttons_sizer.Add(self.update_button, 0, wx.RIGHT, 10)
 
-        self.cancel_button = wx.Button(panel, label=_("Later"))
+        self.cancel_button = wx.Button(panel, label=_("&Later"))
         self.cancel_button.Bind(wx.EVT_BUTTON, lambda evt: self.Close())
         buttons_sizer.Add(self.cancel_button)
 
