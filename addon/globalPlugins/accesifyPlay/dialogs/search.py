@@ -23,7 +23,6 @@ class SearchDialog(AccessifyDialog):
     MENU_FOLLOW = wx.NewIdRef()
     MENU_DISCO = wx.NewIdRef()
     MENU_COPY_LINK = wx.NewIdRef()
-    MENU_ADD_TO_PLAYLIST_BASE = wx.NewIdRef() 
 
     def __init__(self, parent, client):
         super(SearchDialog, self).__init__(parent, title=_("Search Spotify"))
@@ -101,10 +100,6 @@ class SearchDialog(AccessifyDialog):
         self.Bind(wx.EVT_MENU, self.on_follow_artist, id=self.MENU_FOLLOW.GetId())
         self.Bind(wx.EVT_MENU, self.on_view_discography, id=self.MENU_DISCO.GetId())
         self.Bind(wx.EVT_MENU, self.copy_selected_link, id=self.MENU_COPY_LINK.GetId())
-        
-        self.Bind(wx.EVT_MENU_RANGE, self._on_add_to_playlist_selected, 
-                  id=self.MENU_ADD_TO_PLAYLIST_BASE.GetId(), 
-                  id2=self.MENU_ADD_TO_PLAYLIST_BASE.GetId() + 200)
 
     def onSearch(self, evt=None):
         """Initiates a new search, clearing previous results."""
@@ -306,10 +301,13 @@ class SearchDialog(AccessifyDialog):
                 loading_item = playlist_submenu.Append(wx.ID_ANY, _("Loading playlists..."))
                 loading_item.Enable(False)
             elif self._user_playlists:
-                for i, playlist in enumerate(self._user_playlists):
-                    if i >= 200: break
-                    playlist_menu_id = self.MENU_ADD_TO_PLAYLIST_BASE.GetId() + i
-                    playlist_submenu.Append(playlist_menu_id, playlist.get("name", "Unknown Playlist"))
+                for playlist in self._user_playlists:
+                    menu_item = playlist_submenu.Append(wx.ID_ANY, playlist.get("name", "Unknown Playlist"))
+                    self.Bind(
+                        wx.EVT_MENU,
+                        lambda event, p_id=playlist.get("id"), p_name=playlist.get("name"): self._on_add_to_playlist_selected(event, p_id, p_name),
+                        menu_item
+                    )
             else:
                 no_playlist_item = playlist_submenu.Append(wx.ID_ANY, _("No owned playlists found."))
                 no_playlist_item.Enable(False)
@@ -320,19 +318,12 @@ class SearchDialog(AccessifyDialog):
             self.PopupMenu(menu)
         menu.Destroy()
 
-    def _on_add_to_playlist_selected(self, event):
+    def _on_add_to_playlist_selected(self, event, playlist_id, playlist_name):
         """Handles when a playlist is selected from the submenu."""
         track = self._get_item_at_index(self.resultsList.GetSelection())
         if not track or track.get("type") != 'track':
             return
 
-        playlist_index = event.GetId() - self.MENU_ADD_TO_PLAYLIST_BASE.GetId()
-        
-        if not (self._user_playlists and 0 <= playlist_index < len(self._user_playlists)):
-            return
-
-        playlist = self._user_playlists[playlist_index]
-        playlist_id = playlist.get("id")
         track_uri = track.get("uri")
         
         if not playlist_id or not track_uri:
@@ -340,7 +331,7 @@ class SearchDialog(AccessifyDialog):
             return
             
         ui.message(_("Adding '{track_name}' to '{playlist_name}'...").format(
-            track_name=track.get("name"), playlist_name=playlist.get("name")
+            track_name=track.get("name"), playlist_name=playlist_name
         ))
         
         def _add_thread():
@@ -349,7 +340,6 @@ class SearchDialog(AccessifyDialog):
                 wx.CallAfter(ui.message, result)
             else:
                 wx.CallAfter(ui.message, _("Track added successfully."))
-        
         threading.Thread(target=_add_thread).start()
 
     def onAddToQueue(self, evt=None):
