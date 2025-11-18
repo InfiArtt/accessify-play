@@ -2,7 +2,7 @@
 
 ## Version 1.4.0
 
-This is a significant feature and stability release, focused on improving user workflow, adding powerful new capabilities, and enhancing overall reliability.
+This is the most polished and feature-rich release so far, introducing smarter workflows, expanded capabilities, and major stability advancements that elevate the entire Spotify experience on NVDA.
 
 #### ✨ New Features
 
@@ -25,6 +25,11 @@ This is a significant feature and stability release, focused on improving user w
 -   **Smarter Queue Management**: Queueing an album or playlist is now more reliable. The "currently playing" item in the queue dialog is now hidden when playback stops, accurately reflecting the current state.
 -   **Episode Playback Fix**: Corrected Spotify URI handling so that individual podcast episodes play reliably without errors.
 -   **Code Reorganization**: The addon's codebase has been reorganized into separate files for each dialog/class. This improves maintainability, simplifies error tracking, and makes future development easier.
+
+## ❌ Removed
+
+- **Removed Remove from Queue Feature**: This feature has been removed because Spotify does not officially support modifying the playback queue and previous implementations relied on non-ideal workarounds that often caused inconsistent, unpredictable, and unstable behavior. Removing this feature ensures a more reliable and accurate queue experience going forward.
+
 
 ## Version 1.3.4
 

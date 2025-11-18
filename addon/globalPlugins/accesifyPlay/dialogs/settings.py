@@ -4,6 +4,7 @@ import config
 import ui
 import threading
 from gui import settingsDialogs, guiHelper, messageBox
+import gui
 from .. import spotify_client, donate, updater # Tanda .. berarti naik satu level folder
 from .base import AccessifyDialog
 from ..language import AVAILABLE_LANGUAGE_CODES, LANGUAGE_AUTO, LANGUAGE_DISPLAY_OVERRIDES
