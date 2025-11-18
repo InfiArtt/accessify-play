@@ -8,6 +8,8 @@ class QueueListDialog(AccessifyDialog):
         super(QueueListDialog, self).__init__(parent, title=_("Spotify Queue"))
         self.client = client
         self.queue_items = []
+        self._announce_refresh_result = False
+        self._refresh_in_progress = False
 
         mainSizer = wx.BoxSizer(wx.VERTICAL)
         self.queueList = wx.ListBox(self)
@@ -16,7 +18,15 @@ class QueueListDialog(AccessifyDialog):
         self.queueList.Bind(wx.EVT_CONTEXT_MENU, self.on_queue_context_menu)
         mainSizer.Add(self.queueList, proportion=1, flag=wx.EXPAND | wx.ALL, border=5)
 
+        self.noticeLabel = wx.StaticText(
+            self, label=_("Upcoming tracks may change automatically. Use Refresh to update.")
+        )
+        mainSizer.Add(self.noticeLabel, flag=wx.LEFT | wx.RIGHT | wx.BOTTOM, border=5)
+
         buttonsSizer = wx.StdDialogButtonSizer()
+        refreshButton = wx.Button(self, label=_("&Refresh"))
+        refreshButton.Bind(wx.EVT_BUTTON, lambda evt: self.refresh_queue_data())
+        buttonsSizer.AddButton(refreshButton)
         cancelButton = wx.Button(self, wx.ID_CANCEL, label=_("&Close"))
         self.bind_close_button(cancelButton)
         buttonsSizer.AddButton(cancelButton)
@@ -30,13 +40,16 @@ class QueueListDialog(AccessifyDialog):
     def _init_shortcuts(self):
         self._queuePlayId = wx.NewIdRef()
         self._queueCopyId = wx.NewIdRef()
+        self._queueRefreshId = wx.NewIdRef()
         accel = wx.AcceleratorTable([
             (wx.ACCEL_ALT, ord("P"), self._queuePlayId.GetId()),
             (wx.ACCEL_ALT, ord("L"), self._queueCopyId.GetId()),
+            (wx.ACCEL_ALT, ord("R"), self._queueRefreshId.GetId()),
         ])
         self.SetAcceleratorTable(accel)
         self.Bind(wx.EVT_MENU, self.play_selected_queue_item, id=self._queuePlayId.GetId())
         self.Bind(wx.EVT_MENU, self.copy_selected_queue_link, id=self._queueCopyId.GetId())
+        self.Bind(wx.EVT_MENU, lambda evt: self.refresh_queue_data(), id=self._queueRefreshId.GetId())
 
     def update_queue_list(self, queue_data):
         self.queueList.Clear()
@@ -77,11 +90,56 @@ class QueueListDialog(AccessifyDialog):
         menu.Destroy()
 
     def play_selected_queue_item(self, evt=None):
+        selection = self.queueList.GetSelection()
         item = self._get_queue_selection()
-        if item:
-            self._play_uri(item.get("uri"))
+        if selection == wx.NOT_FOUND or not item:
+            return
+        if not item.get("uri"):
+            ui.message(_("Unable to play this entry because no URI was found."))
+            return
+        if selection == 0:
+            ui.message(_("Already playing the selected item."))
+            return
+        ui.message(_("Skipping to selected queue item..."))
+        threading.Thread(
+            target=self._skip_to_queue_item, args=(selection,)
+        ).start()
+
+    def _skip_to_queue_item(self, selection_index):
+        try:
+            message = self.client.skip_to_queue_index(selection_index)
+            if message:
+                wx.CallAfter(ui.message, message)
+        finally:
+            pass
 
     def copy_selected_queue_link(self, evt=None):
         item = self._get_queue_selection()
         if item:
             self.copy_link(item.get("link"))
+
+    def refresh_queue_data(self, speak_status=True):
+        if self._refresh_in_progress:
+            if speak_status:
+                ui.message(_("Queue is already refreshing."))
+            return
+        self._refresh_in_progress = True
+        self._announce_refresh_result = speak_status
+        if speak_status:
+            ui.message(_("Refreshing queue..."))
+        threading.Thread(target=self._refresh_thread).start()
+
+    def _refresh_thread(self):
+        try:
+            queue_data = self.client.get_full_queue()
+            wx.CallAfter(self._finish_refresh, queue_data)
+        finally:
+            self._refresh_in_progress = False
+
+    def _finish_refresh(self, queue_data):
+        if isinstance(queue_data, str):
+            ui.message(queue_data)
+            return
+        self.update_queue_list(queue_data)
+        if self._announce_refresh_result:
+            ui.message(_("Queue updated."))

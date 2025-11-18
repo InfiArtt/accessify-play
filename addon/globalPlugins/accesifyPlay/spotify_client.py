@@ -3,6 +3,7 @@
 import os
 import webbrowser
 from urllib.parse import urlparse
+import time
 import spotipy
 from spotipy.oauth2 import SpotifyPKCE, CacheFileHandler
 from spotipy.exceptions import SpotifyException
@@ -355,10 +356,13 @@ class SpotifyClient:
             parts = [p for p in uri.split(":") if p and p.lower() != "spotify"]
             if len(parts) >= 1:
                 entity_type = parts[0]
-        elif "open.spotify.com" in uri:
+        elif "spotify.com" in uri:
             parsed = self._parse_spotify_url(uri)
             if parsed:
-                entity_type = parsed.get("type")
+                entity_type, entity_id = parsed
+                entity_type = (entity_type or "").lower()
+                if entity_type and entity_id:
+                    uri = f"spotify:{entity_type}:{entity_id}"
 
         if entity_type in ("track", "episode"):
             return self._execute(self.client.start_playback, uris=[uri])
@@ -388,27 +392,12 @@ class SpotifyClient:
             queue_data = self._execute_web_api(self.client.queue)
         if isinstance(queue_data, str):
             return queue_data
-
-        if not queue_data or not queue_data.get("queue"):
+        queue_items = self._get_filtered_queue_items(queue_data)
+        if not queue_items:
             return _("Queue is empty.")
 
-        current_uri = queue_data.get("currently_playing", {}).get("uri")
-        next_track = None
-        for track in queue_data.get("queue", []):
-            track_uri = track.get("uri")
-            if track_uri and track_uri == current_uri:
-                continue
-            next_track = track
-            break
-
-        if not next_track:
-            return _("Queue is empty.")
-
-        track_name = next_track.get("name")
-        artists = ", ".join([a["name"] for a in next_track.get("artists", [])])
-        return _("Next in queue: {track_name} by {artists}").format(
-            track_name=track_name, artists=artists
-        )
+        next_item = queue_items[0]
+        return f"{self._describe_queue_item(next_item, _('Next in queue'))} {self._queue_autoplay_notice()}"
 
     def get_full_queue(self):
         queue_data = self._execute_web_api(self.client.queue)
@@ -416,44 +405,85 @@ class SpotifyClient:
             return queue_data
 
         full_queue = []
-        currently_playing = queue_data.get("currently_playing")
-        seen_uris = set()
-        if currently_playing and queue_data.get("currently_playing", {}).get("is_playing"):
-            track_name = currently_playing.get("name")
-            artists = ", ".join(
-                [a["name"] for a in currently_playing.get("artists", [])]
-            )
-            full_queue.append(
-                {
-                    "type": "currently_playing",
-                    "name": track_name,
-                    "artists": artists,
-                    "uri": currently_playing.get("uri"),
-                    "link": currently_playing.get("external_urls", {}).get("spotify"),
-                }
-            )
-            if currently_playing.get("uri"):
-                seen_uris.add(currently_playing.get("uri"))
+        currently_playing = (queue_data or {}).get("currently_playing")
+        formatted_current = self._format_queue_item(
+            currently_playing, entry_type="currently_playing"
+        )
+        if formatted_current:
+            full_queue.append(formatted_current)
 
-        for track in queue_data.get("queue", []):
-            track_name = track.get("name")
-            artists = ", ".join([a["name"] for a in track.get("artists", [])])
-            track_uri = track.get("uri")
-            if track_uri and track_uri in seen_uris:
-                continue
-            full_queue.append(
-                {
-                    "type": "queue_item",
-                    "name": track_name,
-                    "artists": artists,
-                    "uri": track_uri,
-                    "link": track.get("external_urls", {}).get("spotify"),
-                }
-            )
-            if track_uri:
-                seen_uris.add(track_uri)
+        for track in self._get_filtered_queue_items(queue_data):
+            formatted = self._format_queue_item(track, entry_type="queue_item")
+            if formatted:
+                full_queue.append(formatted)
 
         return full_queue
+
+    def _format_queue_item(self, item, entry_type):
+        if not item:
+            return None
+        item_type = item.get("type")
+        if item_type == "episode":
+            artists = item.get("show", {}).get("name", "")
+        else:
+            artists = ", ".join([a["name"] for a in item.get("artists", [])])
+        return {
+            "type": entry_type,
+            "item_type": item_type,
+            "name": item.get("name"),
+            "artists": artists,
+            "uri": item.get("uri"),
+            "link": item.get("external_urls", {}).get("spotify"),
+        }
+
+    def _describe_queue_item(self, item, prefix):
+        if not item:
+            return _("Queue is empty.")
+        item_type = item.get("type")
+        if item_type == "episode":
+            episode_name = item.get("name")
+            show_name = item.get("show", {}).get("name")
+            if show_name:
+                return _("{prefix}: {episode} from {show}").format(
+                    prefix=prefix, episode=episode_name, show=show_name
+                )
+            return _("{prefix}: {episode}").format(prefix=prefix, episode=episode_name)
+
+        track_name = item.get("name")
+        artists = ", ".join([a["name"] for a in item.get("artists", [])])
+        if artists:
+            return _("{prefix}: {track_name} by {artists}").format(
+                prefix=prefix, track_name=track_name, artists=artists
+            )
+        return _("{prefix}: {track_name}").format(prefix=prefix, track_name=track_name)
+
+    def _queue_autoplay_notice(self):
+        return _("(Spotify may replace upcoming tracks automatically.)")
+
+    def _get_filtered_queue_items(self, queue_data):
+        queue_items = (queue_data or {}).get("queue") or []
+        if not queue_items:
+            return []
+
+        current_uri = (queue_data or {}).get("currently_playing", {}).get("uri")
+        has_non_current = any(
+            (item.get("uri") or "") != current_uri for item in queue_items if item
+        )
+        filtered = []
+        for item in queue_items:
+            if not item:
+                continue
+            uri = item.get("uri")
+            if not uri:
+                continue
+            # If Spotify only reports copies of the current item, treat the queue as empty.
+            if not has_non_current and uri == current_uri:
+                continue
+            # Once Spotify starts repeating the context (current track) again, stop listing.
+            if uri == current_uri and filtered:
+                break
+            filtered.append(item)
+        return filtered
 
     def rebuild_queue(self, uris, progress_ms=0):
         result = self._execute(self.client.start_playback, uris=uris)
@@ -462,6 +492,32 @@ class SpotifyClient:
         if progress_ms:
             self.seek_track(progress_ms)
         return True
+
+    def skip_to_queue_index(self, target_index):
+        """
+        Skips forward in the queue by issuing next-track commands until the
+        desired absolute position (0 = currently playing) is reached.
+        """
+        try:
+            index = int(target_index)
+        except (TypeError, ValueError):
+            return _("Unable to determine the requested queue position.")
+
+        if index <= 0:
+            return _("Already playing the selected item.")
+
+        for _ in range(index):
+            result = self._execute(self.client.next_track)
+            if isinstance(result, str):
+                return result
+            time.sleep(0.2)
+
+        playback = self._execute(self.client.current_playback)
+        if isinstance(playback, str):
+            return playback
+        if playback and playback.get("item"):
+            return self.get_current_track_info(playback)
+        return _("Nothing is currently playing.")
 
     def clear_credentials_and_cache(self):
         """Clears clientID from its dedicated file and deletes the Spotify token cache."""
