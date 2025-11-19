@@ -210,8 +210,21 @@ class SearchDialog(AccessifyDialog):
         """Performs the default 'Enter' action based on the item type."""
         item_type = item.get("type")
         
+        if item_type == "track":
+            track_uri = item.get("uri")
+            album_info = item.get("album", {})
+            context_uri = album_info.get("uri")
+            if context_uri and track_uri:
+                ui.message(_("Playing."))
+                threading.Thread(
+                    target=self.client.play_context_with_offset,
+                    args=(context_uri, track_uri),
+                ).start()
+            else:
+                self._play_uri(track_uri)
+            return
+
         action_map = {
-            "track": lambda: self._play_uri(item.get("uri")),
             "artist": lambda: self._open_artist_discography(item),
             "album": lambda: self._open_album_tracks(item),
             "show": lambda: self._open_podcast_episodes(item),
@@ -220,7 +233,7 @@ class SearchDialog(AccessifyDialog):
         
         action = action_map.get(item_type, lambda: self._play_uri(item.get("uri")))
         action()
-        
+
     def _open_artist_discography(self, artist):
         dialog = ArtistDiscographyDialog(self, self.client, artist["id"], artist.get("name"), self._user_playlists)
         dialog.Show()

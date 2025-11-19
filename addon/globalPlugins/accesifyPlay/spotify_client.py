@@ -370,6 +370,17 @@ class SpotifyClient:
         # Default to context playback (album, artist, playlist, show, etc.)
         return self._execute(self.client.start_playback, context_uri=uri)
 
+    def play_context_with_offset(self, context_uri, track_uri):
+        """
+        Plays a specific track within a context (album, playlist) to maintain the queue.
+        :param context_uri: The URI of the album or playlist.
+        :param track_uri: The URI of the track to start from.
+        """
+        offset = {"uri": track_uri}
+        return self._execute(
+            self.client.start_playback, context_uri=context_uri, offset=offset
+        )
+
     def add_to_queue(self, uri):
         return self._execute(self.client.add_to_queue, uri=uri)
 
@@ -696,6 +707,19 @@ class SpotifyClient:
             self.client.playlist_remove_all_occurrences_of_items,
             playlist_id=playlist_id,
             items=track_uris,
+        )
+
+    def reorder_playlist_track(self, playlist_id, from_index, to_index):
+        """Moves a track in a playlist from one position to another."""
+        # Spotify's API needs the position to insert *before*.
+        # If we move a track down (e.g., from index 2 to 3), we insert it before index 4.
+        insert_before = to_index + 1 if from_index < to_index else to_index
+        
+        return self._execute_web_api(
+            self.client.playlist_reorder_items,
+            playlist_id=playlist_id,
+            range_start=from_index,
+            insert_before=insert_before
         )
 
     def get_link_details(self, url: str) -> dict:
@@ -1138,3 +1162,11 @@ class SpotifyClient:
         return self._execute_web_api(
             self.client.transfer_playback, device_id=device_id, force_play=False
         )
+
+    def set_shuffle_state(self, state):
+        """Sets the shuffle state (True for on, False for off)."""
+        return self._execute(self.client.shuffle, state=state)
+
+    def set_repeat_mode(self, mode):
+        """Sets the repeat mode ('track', 'context', or 'off')."""
+        return self._execute(self.client.repeat, state=mode)

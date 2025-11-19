@@ -439,9 +439,19 @@ class PodcastEpisodesDialog(AccessifyDialog):
 
     def on_play_episode(self, evt=None):
         episode = self._get_selected_episode()
-        if episode:
-            self._play_uri(episode.get("uri"))
-            self.Close()
+        if not episode:
+            return
+        show_uri = f"spotify:show:{self.show_id}"
+        episode_uri = episode.get("uri")
+
+        if show_uri and episode_uri:
+            ui.message(_("Playing."))
+            threading.Thread(
+                target=self.client.play_context_with_offset,
+                args=(show_uri, episode_uri),
+            ).start()
+        else:
+            self._play_uri(episode_uri)
 
     def on_add_to_queue(self, evt=None):
         episode = self._get_selected_episode()
@@ -1021,8 +1031,20 @@ class AlbumTracksDialog(AccessifyDialog):
 
     def on_play_selected(self, evt=None):
         track = self._get_selected_track()
-        if track:
-            self._play_uri(track.get("uri"))
+        if not track:
+            return
+        
+        album_uri = self.album.get("uri")
+        track_uri = track.get("uri")
+
+        if album_uri and track_uri:
+            ui.message(_("Playing from album..."))
+            threading.Thread(
+                target=self.client.play_context_with_offset,
+                args=(album_uri, track_uri),
+            ).start()
+        else:
+            self._play_uri(track_uri)
 
     def on_add_to_queue(self, evt=None):
         track = self._get_selected_track()
@@ -1278,8 +1300,20 @@ class PlaylistTracksDialog(AccessifyDialog):
 
     def on_play_selected(self, evt=None):
         track = self._get_selected_track()
-        if track:
-            self._play_uri(track.get("uri"))
+        if not track:
+            return
+
+        playlist_uri = self.playlist.get("uri")
+        track_uri = track.get("uri")
+
+        if playlist_uri and track_uri:
+            ui.message(_("Playing from playlist..."))
+            threading.Thread(
+                target=self.client.play_context_with_offset,
+                args=(playlist_uri, track_uri),
+            ).start()
+        else:
+            self._play_uri(track_uri)
 
     def on_add_to_queue(self, evt=None):
         track = self._get_selected_track()
@@ -1859,13 +1893,77 @@ class ManagementDialog(AccessifyDialog):
                     wx.CallAfter(self.on_playlist_selected)
             threading.Thread(target=_remove).start()
 
+    def _handle_reorder_track(self, direction):
+        """Handles the logic for reordering a track up or down."""
+        playlist_selection = self.playlist_choices.GetSelection()
+        track_selection = self.playlist_tracks_list.GetSelection()
+
+        if track_selection == wx.NOT_FOUND or playlist_selection == wx.NOT_FOUND:
+            return
+
+        # Edge case checks
+        if direction == "up" and track_selection == 0:
+            ui.message(_("Cannot move the first track further up."))
+            return
+        if direction == "down" and track_selection == self.playlist_tracks_list.GetCount() - 1:
+            ui.message(_("Cannot move the last track further down."))
+            return
+
+        # Optimistic UI Update
+        from_index = track_selection
+        to_index = from_index - 1 if direction == "up" else from_index + 1
+
+        # 1. Update the data source
+        track_to_move = self.current_playlist_tracks.pop(from_index)
+        self.current_playlist_tracks.insert(to_index, track_to_move)
+
+        # 2. Update the UI ListBox
+        track_label = self.playlist_tracks_list.GetString(from_index)
+        self.playlist_tracks_list.Delete(from_index)
+        self.playlist_tracks_list.Insert(track_label, to_index)
+        self.playlist_tracks_list.SetSelection(to_index)
+        
+        # Determine message based on direction
+        target_track_label = self.playlist_tracks_list.GetString(to_index + 1 if direction == "up" else to_index - 1)
+        if direction == "up":
+            ui.message(_("Moving '{}' above '{}'").format(track_label, target_track_label))
+        else:
+            ui.message(_("Moving '{}' below '{}'").format(track_label, target_track_label))
+
+        # 3. Call the API in the background
+        playlist_id = self.user_playlists[playlist_selection]["id"]
+        threading.Thread(
+            target=self._finish_reorder_track,
+            args=(playlist_id, from_index, to_index),
+        ).start()
+
+    def _finish_reorder_track(self, playlist_id, from_index, to_index):
+        """The background thread that calls the API and handles the result."""
+        result = self.client.reorder_playlist_track(playlist_id, from_index, to_index)
+        if isinstance(result, str):
+            # If the API call fails, announce the error and reload the original playlist state.
+            wx.CallAfter(ui.message, result)
+            wx.CallAfter(self.on_playlist_selected)  # Reload to revert UI
+        else:
+            wx.CallAfter(ui.message, _("Track moved successfully."))
+
     def on_key_down_in_playlist(self, event):
-        """Handles key presses on the playlist tracks list, specifically the Delete key."""
-        # Periksa apakah tombol yang ditekan adalah WXK_DELETE
-        if event.GetKeyCode() == wx.WXK_DELETE:
-            # Jika ya, panggil fungsi yang sudah ada untuk menghapus trek
+        """Handles key presses on the playlist tracks list."""
+        key_code = event.GetKeyCode()
+        is_alt_down = event.AltDown()
+
+        if is_alt_down:
+            if key_code == wx.WXK_UP:
+                self._handle_reorder_track("up")
+                return  # Stop further processing
+            elif key_code == wx.WXK_DOWN:
+                self._handle_reorder_track("down")
+                return  # Stop further processing
+
+        if key_code == wx.WXK_DELETE:
             self.on_remove_track_from_playlist(None)
         else:
+            # Let other key presses (like normal up/down arrows) work as usual
             event.Skip()
 
     def init_top_items_tab(self):
