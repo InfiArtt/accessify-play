@@ -97,7 +97,7 @@ class SpotifyClient:
         try:
             token_info = auth_manager.get_access_token(check_cache=True)
             if token_info:
-                self.client = spotipy.Spotify(auth_manager=auth_manager)
+                self.client = spotipy.Spotify(auth_manager=auth_manager, requests_timeout=10)
                 log.info(_("Spotify: Client successfully initialized from cache."))
             else:
                 self.client = None
@@ -119,7 +119,7 @@ class SpotifyClient:
         try:
             token_info = auth_manager.get_access_token(check_cache=False)
             if token_info:
-                self.client = spotipy.Spotify(auth_manager=auth_manager)
+                self.client = spotipy.Spotify(auth_manager=auth_manager, requests_timeout=10)
                 self.client.current_user()  # Test call
                 log.info(_("Spotify: Validation successful."))
                 return True
@@ -197,61 +197,30 @@ class SpotifyClient:
             return _("An unexpected error occurred.")
 
     def _ensure_device(self):
-        """
-        Ensures an active device is available for playback.
-        If no device is currently active, it proactively tries to wake up
-        the last known device or the first available one.
-        Handles connection errors by retrying once.
-        """
-        try:
-            # First attempt to get devices
-            devices_result = self.client.devices()
-        except requests.exceptions.ConnectionError as e:
-            # This handles 'Remote end closed connection without response' after long inactivity
-            log.warning(f"Spotify: First attempt to fetch devices failed with a connection error: {e}. Retrying once...")
-            try:
-                # Second attempt, which should establish a new connection
-                devices_result = self.client.devices()
-            except Exception as retry_e:
-                log.error(f"{_('Spotify: Could not fetch devices on retry:')} {retry_e}", exc_info=True)
-                return False
-        except Exception as e:
-            log.error(f"{_('Spotify: Could not fetch devices:')} {e}", exc_info=True)
-            return False
-
-        if not devices_result or not devices_result.get("devices"):
-            log.info(_("Spotify: No devices found."))
-            return False
-        devices = devices_result["devices"]
-
-        for device in devices:
-            if device.get("is_active"):
-                self.device_id = device["id"]
-                log.info(f"Spotify: Found active device '{device['name']}'.")
-                return True
-        log.info(_("Spotify: No active device found. Attempting to wake one up."))
-
-        target_device_id = None
+        """Makes sure there is an active device ID set."""
         if self.device_id:
-            for device in devices:
-                if device["id"] == self.device_id:
-                    target_device_id = self.device_id
-                    log.info(f"Spotify: Last known device '{device['name']}' is available. Setting as target.")
-                    break
-        if not target_device_id and devices:
-            target_device_id = devices[0]["id"]
-            log.info(f"Spotify: Last known device not found. Using first available device '{devices[0]['name']}' as target.")
-        if target_device_id:
             try:
-                log.info(f"Spotify: Sending wake-up call (transfer_playback) to device ID {target_device_id}.")
-                self.client.transfer_playback(target_device_id, force_play=False)
-                self.device_id = target_device_id
-                return True
-            except Exception as e:
-                log.error(f"{_('Spotify: Failed to wake up device:')} {e}", exc_info=True)
-                self.device_id = None # Reset karena gagal
+                devices = self.client.devices().get("devices", [])
+                if any(d["id"] == self.device_id for d in devices):
+                    return True
+            except Exception:
+                self.device_id = None
+
+        log.info(_("Spotify: No active device, searching for one."))
+        try:
+            devices = self.client.devices().get("devices", [])
+            if not devices:
                 return False
-        return False
+
+            for device in devices:
+                if device.get("is_active"):
+                    self.device_id = device["id"]
+                    return True
+
+            self.device_id = devices[0]["id"]
+            return True
+        except Exception:
+            return False
 
     def get_current_track_info(self, playback=None):
         if playback is None:
