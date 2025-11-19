@@ -9,16 +9,16 @@ msgid ""
 msgstr ""
 "Project-Id-Version: AccessifyPlay VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2025-11-19 07:31+0700\n"
+"POT-Creation-Date: 2025-11-19 13:07+0700\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.14.0\n"
+"Generated-By: Babel 2.17.0\n"
 
-#: addon/globalPlugins/accesifyPlay/donate.py:15
+#: addon/globalPlugins/accesifyPlay/donate.py:16
 msgid ""
 "Thank you for considering a donation! This will open a link in your web "
 "browser."
@@ -29,36 +29,44 @@ msgstr ""
 msgid "Donate"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:90
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:91
 msgid "Spotify: Attempting silent initialization."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:93
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:94
 msgid "Spotify: No credentials configured, skipping initialization."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:100
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:101
 msgid "Spotify: Client successfully initialized from cache."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:103
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:104
 msgid "Spotify: No valid token in cache."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:112
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:108
+msgid "Spotify: Silent initialization failed:"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:113
 msgid "Spotify: Attempting interactive validation."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:115
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:116
 msgid "Spotify: Validation failed. Credentials not configured."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:123
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:124
 msgid "Spotify: Validation successful."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:128
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:129
 msgid "Spotify: Could not get token, even with interactive login."
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:135
+msgid "Spotify: Interactive validation failed:"
 msgstr ""
 
 #: addon/globalPlugins/accesifyPlay/__init__.py:287
@@ -69,282 +77,361 @@ msgstr ""
 #: addon/globalPlugins/accesifyPlay/__init__.py:470
 #: addon/globalPlugins/accesifyPlay/__init__.py:491
 #: addon/globalPlugins/accesifyPlay/__init__.py:687
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:141
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:176
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:606
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:624
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:716
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:142
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:177
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:620
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:638
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:743
 msgid "Spotify client not ready. Please validate your credentials."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:144
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:146
 msgid "No active Spotify device found. Please start playback in your Spotify app."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:162
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:187
-msgid "Token expired, please try again."
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:160
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:185
+msgid "Spotify command failed:"
 msgstr ""
 
 #: addon/globalPlugins/accesifyPlay/spotify_client.py:163
 #: addon/globalPlugins/accesifyPlay/spotify_client.py:188
+msgid "Token expired, please try again."
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:164
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:189
+#, python-brace-format
 msgid "Spotify command failed: {error_message}"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:171
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:196
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:169
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:194
+msgid "Spotify command failed with an unexpected error:"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:172
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:197
 msgid "An unexpected error occurred."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:207
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:216
+msgid "Spotify: Could not fetch devices on retry:"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:219
+msgid "Spotify: Could not fetch devices:"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:223
 msgid "Spotify: No devices found."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:218
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:232
 msgid "Spotify: No active device found. Attempting to wake one up."
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:251
+msgid "Spotify: Failed to wake up device:"
 msgstr ""
 
 #: addon/globalPlugins/accesifyPlay/__init__.py:216
 #: addon/globalPlugins/accesifyPlay/__init__.py:394
 #: addon/globalPlugins/accesifyPlay/__init__.py:609
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:248
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:301
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:317
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:531
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:566
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:262
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:315
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:331
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:545
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:580
 msgid "Nothing is currently playing."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:268
-msgid "Playing episode: {episode_name} from the show {show_name}"
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:272
+msgid "Currently playing:"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:273
-msgid "Unknown Item"
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:272
+msgid "by"
 msgstr ""
 
 #: addon/globalPlugins/accesifyPlay/spotify_client.py:274
+msgid "from the album"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:282
+#, python-brace-format
+msgid "Playing episode: {episode_name} from the show {show_name}"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:287
+msgid "Unknown Item"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:288
+#, python-brace-format
 msgid "Currently playing: {name}"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:305
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:319
 msgid "Could not find URL for the current track."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:325
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:339
+#, python-brace-format
 msgid "{current_min}min {current_sec}sec out of {total_min}min {total_sec}sec"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:392
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:406
 msgid "The provided link is not a track link."
 msgstr ""
 
 #: addon/globalPlugins/accesifyPlay/dialogs/queue_list.py:61
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:408
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:452
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:422
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:466
 msgid "Queue is empty."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:458
-msgid "{prefix}: {episode} from {show}"
-msgstr ""
-
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:461
-msgid "{prefix}: {episode}"
-msgstr ""
-
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:466
-msgid "{prefix}: {track_name} by {artists}"
-msgstr ""
-
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:469
-msgid "{prefix}: {track_name}"
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:425
+msgid "Next in queue"
 msgstr ""
 
 #: addon/globalPlugins/accesifyPlay/spotify_client.py:472
+#, python-brace-format
+msgid "{prefix}: {episode} from {show}"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:475
+#, python-brace-format
+msgid "{prefix}: {episode}"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:480
+#, python-brace-format
+msgid "{prefix}: {track_name} by {artists}"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:483
+#, python-brace-format
+msgid "{prefix}: {track_name}"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:486
 msgid "(Spotify may replace upcoming tracks automatically.)"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:515
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:529
 msgid "Unable to determine the requested queue position."
 msgstr ""
 
 #: addon/globalPlugins/accesifyPlay/dialogs/queue_list.py:101
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:518
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:532
 msgid "Already playing the selected item."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:538
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:552
 msgid "Spotify: clientID cleared from its dedicated file."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:550
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:557
+msgid "Spotify: Token cache file deleted:"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:560
+msgid "Spotify: Token cache file not found at"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:560
+msgid "no deletion needed."
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:564
 msgid "Spotify credentials and cache cleared successfully."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:556
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:567
+msgid "Spotify: Failed to clear credentials and cache:"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:570
+#, python-brace-format
 msgid "Failed to clear Spotify credentials and cache: {error}"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:611
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:629
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:625
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:643
 msgid "Could not retrieve user ID."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:679
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:693
 msgid "Unable to determine tracks for this item."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:682
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:696
 msgid "Invalid Spotify link or URI."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:720
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:747
 msgid "Invalid Spotify link."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:742
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:756
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:769
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:783
 msgid "Links of this type are not supported yet."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:952
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:979
 msgid "Track"
 msgstr ""
 
 #: addon/globalPlugins/accesifyPlay/dialogs/search.py:57
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:953
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:980
 msgid "Album"
 msgstr ""
 
 #: addon/globalPlugins/accesifyPlay/dialogs/search.py:57
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:954
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:981
 msgid "Artist"
 msgstr ""
 
 #: addon/globalPlugins/accesifyPlay/dialogs/search.py:58
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:955
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:982
 msgid "Playlist"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:956
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:983
 msgid "Show"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:957
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:984
 msgid "Episode"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:994
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:1021
 msgid "Type: Track"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:995
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:1019
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:1070
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:1099
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:1123
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:1022
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:1046
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:1097
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:1126
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:1150
+#, python-brace-format
 msgid "Title: {name}"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:998
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:1022
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:1025
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:1049
+#, python-brace-format
 msgid "Artists: {artists}"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:1000
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:1027
+#, python-brace-format
 msgid "Album: {album}"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:1001
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:1129
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:1028
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:1156
+#, python-brace-format
 msgid "Duration: {duration}"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:1018
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:1045
 msgid "Type: Album"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:1024
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:1128
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:1051
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:1155
+#, python-brace-format
 msgid "Release date: {date}"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1110
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:1025
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:1074
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1120
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:1052
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:1101
+#, python-brace-format
 msgid "Tracks: {count}"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:1044
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:1071
 msgid "Type: Artist"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:720
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:1045
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:730
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:1072
+#, python-brace-format
 msgid "Name: {name}"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:721
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:1048
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:731
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:1075
+#, python-brace-format
 msgid "Followers: {count}"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:725
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:1050
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:735
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:1077
+#, python-brace-format
 msgid "Genres: {genres}"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:1052
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:1079
+#, python-brace-format
 msgid "Popularity: {score}/100"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:1069
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:1096
 msgid "Type: Playlist"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1108
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:1073
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1118
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:1100
+#, python-brace-format
 msgid "Owner: {owner}"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:1077
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:1104
+#, python-brace-format
 msgid "Public: {state}"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:1078
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:1105
 msgid "Yes"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:1078
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:1105
 msgid "No"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:1082
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:1109
+#, python-brace-format
 msgid "Description: {text}"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:1098
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:1125
 msgid "Type: Show"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:1102
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:1129
+#, python-brace-format
 msgid "Publisher: {name}"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:1103
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:1130
+#, python-brace-format
 msgid "Episodes: {count}"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:1105
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:1132
 msgid "Explicit content"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:1122
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:1149
 msgid "Type: Episode"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:1126
+#: addon/globalPlugins/accesifyPlay/spotify_client.py:1153
+#, python-brace-format
 msgid "Show: {name}"
 msgstr ""
 
@@ -376,6 +463,7 @@ msgid "AccessifyPlay Update Available"
 msgstr ""
 
 #: addon/globalPlugins/accesifyPlay/updater.py:149
+#, python-brace-format
 msgid ""
 "A new version of AccessifyPlay is available: {version}\n"
 "\n"
@@ -408,6 +496,7 @@ msgid "Error"
 msgstr ""
 
 #: addon/globalPlugins/accesifyPlay/updater.py:222
+#, python-brace-format
 msgid "Update failed: {error}"
 msgstr ""
 
@@ -465,6 +554,7 @@ msgid "Save the currently playing track to your Library."
 msgstr ""
 
 #: addon/globalPlugins/accesifyPlay/__init__.py:405
+#, python-brace-format
 msgid "Track '{track_name}' saved to your library."
 msgstr ""
 
@@ -556,6 +646,11 @@ msgstr ""
 msgid "Increase Spotify volume."
 msgstr ""
 
+#: addon/globalPlugins/accesifyPlay/__init__.py:634
+#: addon/globalPlugins/accesifyPlay/__init__.py:660
+msgid "Volume"
+msgstr ""
+
 #: addon/globalPlugins/accesifyPlay/__init__.py:636
 #: addon/globalPlugins/accesifyPlay/__init__.py:662
 msgid "No active device found."
@@ -582,6 +677,7 @@ msgid "Seek forward in the current track by configurable duration."
 msgstr ""
 
 #: addon/globalPlugins/accesifyPlay/__init__.py:710
+#, python-brace-format
 msgid "Seeked forward {duration} seconds."
 msgstr ""
 
@@ -590,6 +686,7 @@ msgid "Seek backward in the current track by configurable duration."
 msgstr ""
 
 #: addon/globalPlugins/accesifyPlay/__init__.py:735
+#, python-brace-format
 msgid "Seeked backward {duration} seconds."
 msgstr ""
 
@@ -616,10 +713,12 @@ msgid "Adding to queue..."
 msgstr ""
 
 #: addon/globalPlugins/accesifyPlay/dialogs/base.py:78
+#, python-brace-format
 msgid "{name} added to queue."
 msgstr ""
 
 #: addon/globalPlugins/accesifyPlay/dialogs/base.py:89
+#, python-brace-format
 msgid "Unable to add {name} to queue."
 msgstr ""
 
@@ -628,10 +727,12 @@ msgid "No tracks were queued."
 msgstr ""
 
 #: addon/globalPlugins/accesifyPlay/dialogs/base.py:117
+#, python-brace-format
 msgid "Queued {count} tracks from {name}."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/base.py:122
+#: addon/globalPlugins/accesifyPlay/dialogs/base.py:123
+#, python-brace-format
 msgid ""
 "Spotify does not allow queueing entire {item_type}. Please queue "
 "individual tracks or episodes."
@@ -650,6 +751,7 @@ msgid "Spotify Devices"
 msgstr ""
 
 #: addon/globalPlugins/accesifyPlay/dialogs/devices.py:22
+#, python-brace-format
 msgid "{name} ({type})"
 msgstr ""
 
@@ -663,11 +765,11 @@ msgstr ""
 
 #: addon/globalPlugins/accesifyPlay/dialogs/devices.py:43
 #: addon/globalPlugins/accesifyPlay/dialogs/management.py:297
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:544
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:923
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1126
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1358
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1591
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:554
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:933
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1136
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1368
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1601
 #: addon/globalPlugins/accesifyPlay/dialogs/play_from_link.py:40
 #: addon/globalPlugins/accesifyPlay/dialogs/queue_list.py:30
 #: addon/globalPlugins/accesifyPlay/dialogs/search.py:79
@@ -683,6 +785,7 @@ msgid "This device is already active."
 msgstr ""
 
 #: addon/globalPlugins/accesifyPlay/dialogs/devices.py:67
+#, python-brace-format
 msgid "Switching playback to {device_name}..."
 msgstr ""
 
@@ -733,6 +836,7 @@ msgid "Collaborative playlists must be private."
 msgstr ""
 
 #: addon/globalPlugins/accesifyPlay/dialogs/management.py:84
+#, python-brace-format
 msgid "Playlist '{name}' created successfully."
 msgstr ""
 
@@ -773,6 +877,7 @@ msgid "Unknown Track"
 msgstr ""
 
 #: addon/globalPlugins/accesifyPlay/dialogs/management.py:195
+#, python-brace-format
 msgid "Current Track: {track_name} by {artists}"
 msgstr ""
 
@@ -789,11 +894,20 @@ msgid "Please select a playlist and ensure a track is playing."
 msgstr ""
 
 #: addon/globalPlugins/accesifyPlay/dialogs/management.py:252
+#, python-brace-format
 msgid "Track added to playlist '{playlist_name}'."
 msgstr ""
 
 #: addon/globalPlugins/accesifyPlay/dialogs/management.py:267
+#, python-brace-format
 msgid "Episodes for {show_name}"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:275
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:489
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1100
+#: addon/globalPlugins/accesifyPlay/dialogs/search.py:185
+msgid "Load More"
 msgstr ""
 
 #: addon/globalPlugins/accesifyPlay/dialogs/management.py:293
@@ -801,8 +915,8 @@ msgid "&Play Episode"
 msgstr ""
 
 #: addon/globalPlugins/accesifyPlay/dialogs/management.py:330
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:947
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1158
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:957
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1168
 msgid "Loading..."
 msgstr ""
 
@@ -823,450 +937,506 @@ msgid "Play Episode\tAlt+P"
 msgstr ""
 
 #: addon/globalPlugins/accesifyPlay/dialogs/management.py:434
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:799
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1000
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1286
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1407
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:809
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1010
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1296
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1417
 #: addon/globalPlugins/accesifyPlay/dialogs/search.py:300
 msgid "Add to Queue\tAlt+Q"
 msgstr ""
 
 #: addon/globalPlugins/accesifyPlay/dialogs/management.py:435
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:800
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1001
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1287
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1408
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:810
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1011
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1297
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1418
 #: addon/globalPlugins/accesifyPlay/dialogs/search.py:307
 msgid "Copy Link\tAlt+L"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:465
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:448
+#: addon/globalPlugins/accesifyPlay/dialogs/search.py:218
+msgid "Playing."
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:475
+#, python-brace-format
 msgid "Discography for {artist_name}"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:504
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:514
 msgid "Artist Info"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:513
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1902
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:523
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1976
 msgid "Top Tracks"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:522
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:532
 msgid "All Tracks"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:531
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:541
 msgid "Albums and Singles"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:540
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:919
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1122
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:550
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:929
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1132
 msgid "&Play Selected"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:600
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:663
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:973
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1189
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:610
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:673
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:983
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1199
 msgid "No tracks available."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:690
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:720
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:722
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:724
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:726
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:882
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:902
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:903
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:976
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:977
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1081
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1105
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1242
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1243
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:700
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:730
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:732
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:734
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:736
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:892
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:912
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:913
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:986
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:987
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1091
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1115
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1252
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1253
 msgid "Unknown"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:724
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:734
+#, python-brace-format
 msgid "Popularity: {score}"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:728
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:738
+#, python-brace-format
 msgid "Spotify Link: {link}"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:729
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:731
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:739
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:741
 msgid "Unavailable"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:731
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:741
+#, python-brace-format
 msgid "URI: {uri}"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:739
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:749
 msgid "This tab has informational content only."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:752
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:762
 msgid "Loading more tracks..."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:756
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:766
 msgid "Please select a track, or load more items."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:764
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1491
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:774
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1501
 msgid "Please select an item from the active tab first."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:786
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:796
 msgid "Please select an album first."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:798
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:999
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1285
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:808
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1009
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1295
 #: addon/globalPlugins/accesifyPlay/dialogs/search.py:298
 msgid "Play\tAlt+P"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:819
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1014
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1994
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:829
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1024
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:2068
 #: addon/globalPlugins/accesifyPlay/dialogs/search.py:325
 msgid "No owned playlists found."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:823
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1017
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1997
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:833
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1027
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:2071
 #: addon/globalPlugins/accesifyPlay/dialogs/search.py:328
 msgid "Add to Playlist"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:861
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1057
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1528
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:871
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1067
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1538
 #: addon/globalPlugins/accesifyPlay/dialogs/search.py:343
 msgid "Could not add track. Information missing."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:864
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1060
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1531
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:874
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1070
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1541
 #: addon/globalPlugins/accesifyPlay/dialogs/search.py:346
+#, python-brace-format
 msgid "Adding '{track_name}' to '{playlist_name}'..."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:873
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1069
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1540
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:883
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1079
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1550
 #: addon/globalPlugins/accesifyPlay/dialogs/search.py:355
 msgid "Track added successfully."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:883
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:893
+#, python-brace-format
 msgid "Tracks in {album}"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:903
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:913
+#, python-brace-format
 msgid "Album: {name}"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:953
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:917
+#, python-brace-format
+msgid "Artist(s): {artists}"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:919
+#, python-brace-format
+msgid "Type: {album_type}"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:963
 msgid "Album information incomplete."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:968
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:978
 msgid "Unable to load tracks."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:989
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1255
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1261
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:999
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1265
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1271
 msgid "Please select a track first."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1031
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1041
 msgid "Playing from album..."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1082
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1092
+#, python-brace-format
 msgid "Tracks in Playlist {name}"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1105
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1115
+#, python-brace-format
 msgid "Playlist: {name}"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1164
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1174
 msgid "Playlist information incomplete."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1182
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1192
 msgid "Unable to load playlist tracks."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1300
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1310
 msgid "Playing from playlist..."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1327
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1337
+#, python-brace-format
 msgid "Artists Related to {artist_name}"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1346
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1356
 #: addon/globalPlugins/accesifyPlay/dialogs/play_from_link.py:35
 msgid "&Play"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1350
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1360
 msgid "&View Discography"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1354
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1364
 msgid "&Follow"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1388
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1398
 msgid "No related artists found."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1397
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1407
 msgid "Please select an artist."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1406
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1416
 msgid "Play Artist Radio\tAlt+P"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1410
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1420
 #: addon/globalPlugins/accesifyPlay/dialogs/search.py:303
 msgid "View Discography\tAlt+D"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1411
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1421
 #: addon/globalPlugins/accesifyPlay/dialogs/search.py:302
 msgid "Follow Artist\tAlt+F"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1445
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1455
 #: addon/globalPlugins/accesifyPlay/dialogs/search.py:385
+#, python-brace-format
 msgid "You are now following {artist_name}."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1450
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1460
 msgid "Spotify Management"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1511
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1521
 msgid "This item cannot be added to the queue."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1568
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1578
 msgid "Saved Tracks"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1572
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1582
 msgid "Followed Artists"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1577
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1587
 msgid "Saved Shows"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1582
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1592
 msgid "New Releases"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1585
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1595
 msgid "Recently Played"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1616
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1924
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1626
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1998
 #: addon/globalPlugins/accesifyPlay/dialogs/queue_list.py:27
 msgid "&Refresh"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1631
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1641
 msgid "No items found."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1679
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1689
 msgid "Manage Playlists"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1684
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1694
 msgid "Playlist:"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1688
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1698
 msgid "&Play Playlist"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1702
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1712
 msgid "&Refresh Playlists"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1706
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1716
 msgid "&Edit Playlist Details"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1710
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1720
 msgid "&Delete Playlist"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1724
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1734
 msgid "Please select a playlist to play."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1732
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1742
 msgid "Could not find URI for the selected playlist."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1782
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1792
 msgid "Loading tracks..."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1814
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1824
 msgid "Please select a playlist to update."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1837
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1847
 msgid "Please select a playlist to delete."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1842
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1853
+#, python-brace-format
 msgid ""
 "Are you sure you want to delete playlist '{name}'? This action cannot be "
 "undone."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1845
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1855
 msgid "Confirm Delete Playlist"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1853
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1863
+#, python-brace-format
 msgid "Playlist '{name}' deleted successfully."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1862
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1872
 msgid "Please select a track to remove."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1869
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1880
+#, python-brace-format
 msgid ""
 "Are you sure you want to remove '{track_name}' by {artists} from this "
 "playlist?"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1872
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:2020
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1882
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:2094
 msgid "Confirm Remove Track"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1882
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1892
+#, python-brace-format
 msgid "Track '{track_name}' removed from playlist."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1897
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1906
+msgid "Cannot move the first track further up."
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1909
+msgid "Cannot move the last track further down."
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1929
+#, python-brace-format
+msgid "Moving '{}' above '{}'"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1931
+#, python-brace-format
+msgid "Moving '{}' below '{}'"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1948
+msgid "Track moved successfully."
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1971
 msgid "Top Items"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1902
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1976
 msgid "Top Artists"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1903
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1977
 msgid "Show:"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1906
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1980
 msgid "Last 4 Weeks"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1906
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1980
 msgid "Last 6 Months"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1906
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1980
 msgid "All Time"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1907
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1981
 msgid "Time Range:"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1967
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:2007
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:2041
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:2081
 #: addon/globalPlugins/accesifyPlay/dialogs/queue_list.py:87
 msgid "Play"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1968
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:2008
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:2042
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:2082
 msgid "Add to Queue"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1970
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:2009
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:2044
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:2083
 #: addon/globalPlugins/accesifyPlay/dialogs/queue_list.py:88
 msgid "Copy Link"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1974
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:2048
 msgid "Remove from Library"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1976
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1979
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:2050
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:2053
 msgid "View Discography"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1977
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:2051
 msgid "Unfollow"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1981
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:2055
 msgid "View Episodes"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:2011
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:2085
 msgid "Remove Track from Playlist"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:2019
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:2093
+#, python-brace-format
 msgid "Are you sure you want to remove '{track_name}' from your library?"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:2027
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:2101
+#, python-brace-format
 msgid "Track '{track_name}' removed from your library."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:2033
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:2107
+#, python-brace-format
 msgid "Are you sure you want to unfollow {artist_name}?"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:2034
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:2108
 msgid "Confirm Unfollow"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:2041
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:2115
+#, python-brace-format
 msgid "You have unfollowed {artist_name}."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:2050
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:2124
 msgid "Please select an artist to view their discography."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:2058
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:2132
 msgid "Please select a show to view episodes."
 msgstr ""
 
@@ -1349,10 +1519,6 @@ msgstr ""
 
 #: addon/globalPlugins/accesifyPlay/dialogs/search.py:181
 msgid "No results found."
-msgstr ""
-
-#: addon/globalPlugins/accesifyPlay/dialogs/search.py:218
-msgid "Playing."
 msgstr ""
 
 #: addon/globalPlugins/accesifyPlay/dialogs/search.py:314
@@ -1499,7 +1665,7 @@ msgstr ""
 msgid "Validating credentials with Spotify..."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/settings.py:282
+#: addon/globalPlugins/accesifyPlay/dialogs/settings.py:283
 msgid ""
 "Are you sure you want to clear your Spotify Client ID, and delete the "
 "stored access token? You will need to re-enter your credentials and re-"
@@ -1522,7 +1688,8 @@ msgstr ""
 msgid "Success"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/settings.py:317
+#: addon/globalPlugins/accesifyPlay/dialogs/settings.py:318
+#, python-brace-format
 msgid ""
 "Validation failed. Please check the following:\n"
 "\n"
@@ -1548,10 +1715,12 @@ msgid "&Set"
 msgstr ""
 
 #: addon/globalPlugins/accesifyPlay/dialogs/volume.py:38
+#, python-brace-format
 msgid "Setting volume to {volume}%..."
 msgstr ""
 
 #: addon/globalPlugins/accesifyPlay/dialogs/volume.py:47
+#, python-brace-format
 msgid "Volume set to {volume}%"
 msgstr ""
 
