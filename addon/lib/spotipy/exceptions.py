@@ -3,6 +3,7 @@ class SpotifyBaseException(Exception):
 
 
 class SpotifyException(SpotifyBaseException):
+
     def __init__(self, http_status, code, msg, reason=None, headers=None):
         self.http_status = http_status
         self.code = code
@@ -15,15 +16,13 @@ class SpotifyException(SpotifyBaseException):
         self.headers = headers
 
     def __str__(self):
-        return (
-            f"http status: {self.http_status}, "
-            f"code: {self.code} - {self.msg}, "
-            f"reason: {self.reason}"
-        )
+        return (f"http status: {self.http_status}, "
+                f"code: {self.code} - {self.msg}, "
+                f"reason: {self.reason}")
 
 
 class SpotifyOauthError(SpotifyBaseException):
-    """Error during Auth Code or Implicit Grant flow"""
+    """ Error during Auth Code or Implicit Grant flow """
 
     def __init__(self, message, error=None, error_description=None, *args, **kwargs):
         self.error = error
@@ -33,20 +32,13 @@ class SpotifyOauthError(SpotifyBaseException):
 
 
 class SpotifyStateError(SpotifyOauthError):
-    """The state sent and state received were different"""
+    """ The state sent and state received were different """
 
-    def __init__(
-        self,
-        local_state=None,
-        remote_state=None,
-        message=None,
-        error=None,
-        error_description=None,
-        *args,
-        **kwargs,
-    ):
+    def __init__(self, local_state=None, remote_state=None, message=None,
+                 error=None, error_description=None, *args, **kwargs):
         if not message:
-            message = "Expected " + local_state + " but received " + remote_state
-        super(SpotifyOauthError, self).__init__(
-            message, error, error_description, *args, **kwargs
-        )
+            message = ("Expected " + local_state + " but received "
+                       + remote_state)
+        super(SpotifyOauthError, self).__init__(message, error,
+                                                error_description, *args,
+                                                **kwargs)

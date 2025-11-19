@@ -1,6 +1,6 @@
 # Changelog
 
-## Version 1.4.1-pre.1 (Pre-release)
+## Version 1.5.0
 
 This is a focused pre-release aimed at dramatically improving playback consistency and introducing a powerful new feature for playlist management. The core of this update is to make the add-on's behavior more intuitive and reliable in everyday use. A special thanks to **@a-singer** for meticulously reporting the key issues addressed in this release.
 

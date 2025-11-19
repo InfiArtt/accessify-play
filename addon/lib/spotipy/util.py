@@ -31,14 +31,14 @@ def prompt_for_user_token(
     redirect_uri=None,
     cache_path=None,
     oauth_manager=None,
-    show_dialog=False,
+    show_dialog=False
 ):
     warnings.warn(
         "'prompt_for_user_token' is deprecated."
         "Use the following instead: "
         "    auth_manager=SpotifyOAuth(scope=scope)"
         "    spotipy.Spotify(auth_manager=auth_manager)",
-        DeprecationWarning,
+        DeprecationWarning
     )
     """Prompt the user to login if necessary and returns a user token
        suitable for use with the spotipy.Spotify constructor.
@@ -86,7 +86,7 @@ def prompt_for_user_token(
         scope=scope,
         cache_path=cache_path,
         username=username,
-        show_dialog=show_dialog,
+        show_dialog=show_dialog
     )
 
     # try to get a valid token for this user, from the cache,
@@ -109,11 +109,11 @@ def prompt_for_user_token(
 
 
 def get_host_port(netloc):
-    """Split the network location string into host and port and returns a tuple
-    where the host is a string and the the port is an integer.
+    """ Split the network location string into host and port and returns a tuple
+        where the host is a string and the the port is an integer.
 
-    Parameters:
-        - netloc - a string representing the network location.
+        Parameters:
+            - netloc - a string representing the network location.
     """
     if ":" in netloc:
         host, port = netloc.split(":", 1)
@@ -136,7 +136,7 @@ def normalize_scope(scope):
     """
     if scope:
         if isinstance(scope, str):
-            scopes = scope.split(",")
+            scopes = scope.split(',')
         elif isinstance(scope, list) or isinstance(scope, tuple):
             scopes = scope
         else:
@@ -155,26 +155,22 @@ class Retry(urllib3.Retry):
     """
 
     def increment(
-        self,
-        method: str | None = None,
-        url: str | None = None,
-        response: urllib3.BaseHTTPResponse | None = None,
-        error: Exception | None = None,
-        _pool: urllib3.connectionpool.ConnectionPool | None = None,
-        _stacktrace: TracebackType | None = None,
+            self,
+            method: str | None = None,
+            url: str | None = None,
+            response: urllib3.BaseHTTPResponse | None = None,
+            error: Exception | None = None,
+            _pool: urllib3.connectionpool.ConnectionPool | None = None,
+            _stacktrace: TracebackType | None = None,
     ) -> urllib3.Retry:
         if response:
             retry_header = response.headers.get("Retry-After")
             if self.is_retry(method, response.status, bool(retry_header)):
-                logging.warning(
-                    "Your application has reached a rate/request limit. "
-                    f"Retry will occur after: {retry_header}"
-                )
-        return super().increment(
-            method,
-            url,
-            response=response,
-            error=error,
-            _pool=_pool,
-            _stacktrace=_stacktrace,
-        )
+                logging.warning("Your application has reached a rate/request limit. "
+                                f"Retry will occur after: {retry_header}")
+        return super().increment(method,
+                                 url,
+                                 response=response,
+                                 error=error,
+                                 _pool=_pool,
+                                 _stacktrace=_stacktrace)

@@ -9,7 +9,7 @@ msgstr ""
 "Project-Id-Version: AccessifyPlay 1.4\n"
 "Report-Msgid-Bugs-To: 'nvda-translations@groups.io'\n"
 "POT-Creation-Date: 2025-11-20 01:56+0700\n"
-"PO-Revision-Date: 2025-11-20 01:58+0700\n"
+"PO-Revision-Date: 2025-11-20 03:39+0700\n"
 "Last-Translator: Rexya <rexya2017@gmail.com>\n"
 "Language-Team: Indonesian <info@infiartt.com>\n"
 "Language: id\n"
@@ -1807,7 +1807,7 @@ msgid ""
 msgstr ""
 "Namun, versi {version} sudah tersedia di saluran stabil. Anda dapat "
 "memperbarui setelah penginstalan ini selesai, dan Accessify Play juga akan "
-"memeriksa pembaruan secara otomatis saat NVDA dimulai ulang lagi."
+"memeriksa pembaruan secara otomatis saat NVDA dimulai ulang."
 
 #: addon\installTasks.py:121
 msgid ""
@@ -1827,7 +1827,7 @@ msgstr ""
 
 #: addon\installTasks.py:137
 msgid "&Donate"
-msgstr "&Donasi"
+msgstr "&DonasiDonasi"
 
 #: addon\installTasks.py:141
 msgid "&Continue Installation"

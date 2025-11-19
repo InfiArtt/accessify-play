@@ -97,13 +97,11 @@ if TYPE_CHECKING:
 
 
 class ResponseCallbackProtocol(Protocol):
-    def __call__(self, response: Any, **kwargs):
-        ...
+    def __call__(self, response: Any, **kwargs): ...
 
 
 class AsyncResponseCallbackProtocol(Protocol):
-    async def __call__(self, response: Any, **kwargs):
-        ...
+    async def __call__(self, response: Any, **kwargs): ...
 
 
 ResponseCallbackT = Union[ResponseCallbackProtocol, AsyncResponseCallbackProtocol]
@@ -1291,13 +1289,11 @@ class PubSub:
 
 
 class PubsubWorkerExceptionHandler(Protocol):
-    def __call__(self, e: BaseException, pubsub: PubSub):
-        ...
+    def __call__(self, e: BaseException, pubsub: PubSub): ...
 
 
 class AsyncPubsubWorkerExceptionHandler(Protocol):
-    async def __call__(self, e: BaseException, pubsub: PubSub):
-        ...
+    async def __call__(self, e: BaseException, pubsub: PubSub): ...
 
 
 PSWorkerThreadExcHandlerT = Union[
@@ -1588,7 +1584,7 @@ class Pipeline(Redis):  # lgtm [py/init-calls-subclass]
         cmd = " ".join(map(safe_str, command))
         msg = (
             f"Command # {number} ({truncate_text(cmd)}) "
-            "of pipeline caused error: {exception.args}"
+            f"of pipeline caused error: {exception.args}"
         )
         exception.args = (msg,) + exception.args[1:]
 

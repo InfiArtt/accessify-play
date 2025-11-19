@@ -1,6 +1,3 @@
-# Ignore generated NVDA addon packages
-*.nvda-addon
-
 # Ignore logs
 *.log
 
@@ -19,7 +16,6 @@ dist/
 archives/
 DevGuide.wiki/
 
-# Build/translation scripts
 pybabel.py
 .gemini/
 .noscan

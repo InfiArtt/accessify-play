@@ -50,8 +50,7 @@ ExceptionMappingT = Mapping[str, Union[Type[Exception], Mapping[str, Type[Except
 
 
 class CommandsProtocol(Protocol):
-    def execute_command(self, *args, **options) -> ResponseT:
-        ...
+    def execute_command(self, *args, **options) -> ResponseT: ...
 
 
 class ClusterCommandsProtocol(CommandsProtocol):

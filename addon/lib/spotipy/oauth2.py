@@ -4,7 +4,7 @@ __all__ = [
     "SpotifyOauthError",
     "SpotifyStateError",
     "SpotifyImplicitGrant",
-    "SpotifyPKCE",
+    "SpotifyPKCE"
 ]
 
 import base64
@@ -27,7 +27,9 @@ logger = logging.getLogger(__name__)
 
 
 def _make_authorization_headers(client_id, client_secret):
-    auth_header = base64.b64encode(str(client_id + ":" + client_secret).encode("ascii"))
+    auth_header = base64.b64encode(
+        str(client_id + ":" + client_secret).encode("ascii")
+    )
     return {"Authorization": f"Basic {auth_header.decode('ascii')}"}
 
 
@@ -49,7 +51,6 @@ class SpotifyAuthBase:
                 self._session = requests.Session()
             else:  # Use the Requests API module as a "session".
                 from requests import api
-
                 self._session = api
 
     def _normalize_scope(self, scope):
@@ -94,15 +95,17 @@ class SpotifyAuthBase:
     @staticmethod
     def _is_scope_subset(needle_scope, haystack_scope):
         needle_scope = set(needle_scope.split()) if needle_scope else set()
-        haystack_scope = set(haystack_scope.split()) if haystack_scope else set()
+        haystack_scope = (
+            set(haystack_scope.split()) if haystack_scope else set()
+        )
         return needle_scope <= haystack_scope
 
     def _handle_oauth_error(self, http_error):
         response = http_error.response
         try:
             error_payload = response.json()
-            error = error_payload.get("error")
-            error_description = error_payload.get("error_description")
+            error = error_payload.get('error')
+            error_description = error_payload.get('error_description')
         except ValueError:
             # if the response cannot be decoded into JSON (which raises a ValueError),
             # then try to decode it into text
@@ -112,9 +115,9 @@ class SpotifyAuthBase:
             error_description = None
 
         raise SpotifyOauthError(
-            f"error: {error}, error_description: {error_description}",
+            f'error: {error}, error_description: {error_description}',
             error=error,
-            error_description=error_description,
+            error_description=error_description
         )
 
     def __del__(self):
@@ -133,7 +136,7 @@ class SpotifyClientCredentials(SpotifyAuthBase):
         proxies=None,
         requests_session=True,
         requests_timeout=None,
-        cache_handler=None,
+        cache_handler=None
     ):
         """
         Creates a Client Credentials Flow Manager.
@@ -169,12 +172,9 @@ class SpotifyClientCredentials(SpotifyAuthBase):
         self.proxies = proxies
         self.requests_timeout = requests_timeout
         if cache_handler:
-            assert issubclass(cache_handler.__class__, CacheHandler), (
-                "cache_handler must be a subclass of CacheHandler: "
-                + str(type(cache_handler))
-                + " != "
-                + str(CacheHandler)
-            )
+            assert issubclass(cache_handler.__class__, CacheHandler), \
+                "cache_handler must be a subclass of CacheHandler: " + str(type(cache_handler)) \
+                + " != " + str(CacheHandler)
             self.cache_handler = cache_handler
         else:
             self.cache_handler = CacheFileHandler()
@@ -210,15 +210,15 @@ class SpotifyClientCredentials(SpotifyAuthBase):
         return token_info if as_dict else token_info["access_token"]
 
     def _request_access_token(self):
-        """Gets client credentials access token"""
+        """Gets client credentials access token """
         payload = {"grant_type": "client_credentials"}
 
-        headers = _make_authorization_headers(self.client_id, self.client_secret)
-
-        logger.debug(
-            f"Sending POST request to {self.OAUTH_TOKEN_URL} with Headers: "
-            f"{headers} and Body: {payload}"
+        headers = _make_authorization_headers(
+            self.client_id, self.client_secret
         )
+
+        logger.debug(f"Sending POST request to {self.OAUTH_TOKEN_URL} with Headers: "
+                     f"{headers} and Body: {payload}")
 
         try:
             response = self._session.post(
@@ -248,25 +248,24 @@ class SpotifyOAuth(SpotifyAuthBase):
     """
     Implements Authorization Code Flow for Spotify's OAuth implementation.
     """
-
     OAUTH_AUTHORIZE_URL = "https://accounts.spotify.com/authorize"
     OAUTH_TOKEN_URL = "https://accounts.spotify.com/api/token"
 
     def __init__(
-        self,
-        client_id=None,
-        client_secret=None,
-        redirect_uri=None,
-        state=None,
-        scope=None,
-        cache_path=None,
-        username=None,
-        proxies=None,
-        show_dialog=False,
-        requests_session=True,
-        requests_timeout=None,
-        open_browser=True,
-        cache_handler=None,
+            self,
+            client_id=None,
+            client_secret=None,
+            redirect_uri=None,
+            state=None,
+            scope=None,
+            cache_path=None,
+            username=None,
+            proxies=None,
+            show_dialog=False,
+            requests_session=True,
+            requests_timeout=None,
+            open_browser=True,
+            cache_handler=None
     ):
         """
         Creates a SpotifyOAuth object
@@ -303,36 +302,31 @@ class SpotifyOAuth(SpotifyAuthBase):
         self.state = state
         self.scope = self._normalize_scope(scope)
         if username or cache_path:
-            warnings.warn(
-                "Specifying cache_path or username as arguments to SpotifyOAuth "
-                + "will be deprecated. Instead, please create a CacheFileHandler "
-                + "instance with the desired cache_path and username and pass it "
-                + "to SpotifyOAuth as the cache_handler. For example:\n\n"
-                + "\tfrom spotipy.oauth2 import CacheFileHandler\n"
-                + "\thandler = CacheFileHandler(cache_path=cache_path, "
-                + "username=username)\n"
-                + "\tsp = spotipy.SpotifyOAuth(client_id, client_secret, "
-                + "redirect_uri,"
-                + " cache_handler=handler)",
-                DeprecationWarning,
-            )
+            warnings.warn("Specifying cache_path or username as arguments to SpotifyOAuth " +
+                          "will be deprecated. Instead, please create a CacheFileHandler " +
+                          "instance with the desired cache_path and username and pass it " +
+                          "to SpotifyOAuth as the cache_handler. For example:\n\n" +
+                          "\tfrom spotipy.oauth2 import CacheFileHandler\n" +
+                          "\thandler = CacheFileHandler(cache_path=cache_path, " +
+                          "username=username)\n" +
+                          "\tsp = spotipy.SpotifyOAuth(client_id, client_secret, " +
+                          "redirect_uri," +
+                          " cache_handler=handler)",
+                          DeprecationWarning
+                          )
             if cache_handler:
-                warnings.warn(
-                    "A cache_handler has been specified along with a cache_path or "
-                    + "username. The cache_path and username arguments will be ignored."
-                )
+                warnings.warn("A cache_handler has been specified along with a cache_path or " +
+                              "username. The cache_path and username arguments will be ignored.")
         if cache_handler:
-            assert issubclass(cache_handler.__class__, CacheHandler), (
-                "cache_handler must be a subclass of CacheHandler: "
-                + str(type(cache_handler))
-                + " != "
-                + str(CacheHandler)
-            )
+            assert issubclass(cache_handler.__class__, CacheHandler), \
+                "cache_handler must be a subclass of CacheHandler: " + str(type(cache_handler)) \
+                + " != " + str(CacheHandler)
             self.cache_handler = cache_handler
         else:
-            username = username or os.getenv(CLIENT_CREDS_ENV_VARS["client_username"])
+            username = (username or os.getenv(CLIENT_CREDS_ENV_VARS["client_username"]))
             self.cache_handler = CacheFileHandler(
-                username=username, cache_path=cache_path
+                username=username,
+                cache_path=cache_path
             )
         self.proxies = proxies
         self.requests_timeout = requests_timeout
@@ -345,17 +339,20 @@ class SpotifyOAuth(SpotifyAuthBase):
 
         # if scopes don't match, then bail
         if "scope" not in token_info or not self._is_scope_subset(
-            self.scope, token_info["scope"]
+                self.scope, token_info["scope"]
         ):
             return None
 
         if self.is_token_expired(token_info):
-            token_info = self.refresh_access_token(token_info["refresh_token"])
+            token_info = self.refresh_access_token(
+                token_info["refresh_token"]
+            )
 
         return token_info
 
     def get_authorize_url(self, state=None):
-        """Gets the URL to use to authorize this app"""
+        """ Gets the URL to use to authorize this app
+        """
         payload = {
             "client_id": self.client_id,
             "response_type": "code",
@@ -375,10 +372,10 @@ class SpotifyOAuth(SpotifyAuthBase):
         return f"{self.OAUTH_AUTHORIZE_URL}?{urlparams}"
 
     def parse_response_code(self, url):
-        """Parse the response code in the given response url
+        """ Parse the response code in the given response url
 
-        Parameters:
-            - url - the response url
+            Parameters:
+                - url - the response url
         """
         _, code = self.parse_auth_response_url(url)
         if code is None:
@@ -391,9 +388,8 @@ class SpotifyOAuth(SpotifyAuthBase):
         query_s = urlparse(url).query
         form = dict(parse_qsl(query_s))
         if "error" in form:
-            raise SpotifyOauthError(
-                f"Received error from auth server: {form['error']}", error=form["error"]
-            )
+            raise SpotifyOauthError(f"Received error from auth server: {form['error']}",
+                                    error=form["error"])
         return tuple(form.get(param) for param in ["state", "code"])
 
     def _make_authorization_headers(self):
@@ -435,57 +431,46 @@ class SpotifyOAuth(SpotifyAuthBase):
         elif server.auth_code is not None:
             return server.auth_code
         else:
-            raise SpotifyOauthError(
-                "Server listening on localhost has not been accessed"
-            )
+            raise SpotifyOauthError("Server listening on localhost has not been accessed")
 
     def get_auth_response(self, open_browser=None):
-        logger.info(
-            "User authentication requires interaction with your "
-            "web browser. Once you enter your credentials and "
-            "give authorization, you will be redirected to "
-            "a url.  Paste that url you were directed to to "
-            "complete the authorization."
-        )
+        logger.info('User authentication requires interaction with your '
+                    'web browser. Once you enter your credentials and '
+                    'give authorization, you will be redirected to '
+                    'a url.  Paste that url you were directed to to '
+                    'complete the authorization.')
 
         redirect_info = urlparse(self.redirect_uri)
         redirect_host, redirect_port = get_host_port(redirect_info.netloc)
 
-        if redirect_host == "localhost":
+        if redirect_host == 'localhost':
             logger.warning(
                 "Using 'localhost' as a redirect URI is being deprecated. "
                 "Use a loopback IP address such as 127.0.0.1 "
-                "to ensure your app remains functional."
-            )
+                "to ensure your app remains functional.")
 
-        if redirect_info.scheme == "http" and redirect_host not in (
-            "127.0.0.1",
-            "localhost",
-        ):
+        if redirect_info.scheme == "http" and redirect_host not in ("127.0.0.1", "localhost"):
             logger.warning(
                 "Redirect URIs using HTTP are being deprecated. "
-                "To ensure your app remains functional, use HTTPS instead."
-            )
+                "To ensure your app remains functional, use HTTPS instead.")
 
         if open_browser is None:
             open_browser = self.open_browser
 
         if (
-            open_browser
-            and redirect_host in ("127.0.0.1", "localhost")
-            and redirect_info.scheme == "http"
+                open_browser
+                and redirect_host in ("127.0.0.1", "localhost")
+                and redirect_info.scheme == "http"
         ):
             # Only start a local http server if a port is specified
             if redirect_port:
                 return self._get_auth_response_local_server(redirect_port)
             else:
-                logger.warning(
-                    f"Using `{redirect_host}` as redirect URI without a port. "
-                    f"Specify a port (e.g. `{redirect_host}:8080`) to allow "
-                    "automatic retrieval of authentication code "
-                    "instead of having to copy and paste "
-                    "the URL your browser is redirected to."
-                )
+                logger.warning(f'Using `{redirect_host}` as redirect URI without a port. '
+                               f'Specify a port (e.g. `{redirect_host}:8080`) to allow '
+                               'automatic retrieval of authentication code '
+                               'instead of having to copy and paste '
+                               'the URL your browser is redirected to.')
 
         return self._get_auth_response_interactive(open_browser=open_browser)
 
@@ -495,13 +480,13 @@ class SpotifyOAuth(SpotifyAuthBase):
         return self.get_auth_response()
 
     def get_access_token(self, code=None, as_dict=True, check_cache=True):
-        """Gets the access token for the app given the code
+        """ Gets the access token for the app given the code
 
-        Parameters:
-            - code - the response code
-            - as_dict - a boolean indicating if returning the access token
-                        as a token_info dictionary, otherwise it will be returned
-                        as a string.
+            Parameters:
+                - code - the response code
+                - as_dict - a boolean indicating if returning the access token
+                            as a token_info dictionary, otherwise it will be returned
+                            as a string.
         """
         if as_dict:
             warnings.warn(
@@ -516,7 +501,9 @@ class SpotifyOAuth(SpotifyAuthBase):
             token_info = self.validate_token(self.cache_handler.get_cached_token())
             if token_info is not None:
                 if self.is_token_expired(token_info):
-                    token_info = self.refresh_access_token(token_info["refresh_token"])
+                    token_info = self.refresh_access_token(
+                        token_info["refresh_token"]
+                    )
                 return token_info if as_dict else token_info["access_token"]
 
         payload = {
@@ -531,10 +518,8 @@ class SpotifyOAuth(SpotifyAuthBase):
 
         headers = self._make_authorization_headers()
 
-        logger.debug(
-            f"Sending POST request to {self.OAUTH_TOKEN_URL} with Headers: "
-            f"{headers} and Body: {payload}"
-        )
+        logger.debug(f"Sending POST request to {self.OAUTH_TOKEN_URL} with Headers: "
+                     f"{headers} and Body: {payload}")
 
         try:
             response = self._session.post(
@@ -561,10 +546,8 @@ class SpotifyOAuth(SpotifyAuthBase):
 
         headers = self._make_authorization_headers()
 
-        logger.debug(
-            f"Sending POST request to {self.OAUTH_TOKEN_URL} with Headers: "
-            f"{headers} and Body: {payload}"
-        )
+        logger.debug(f"Sending POST request to {self.OAUTH_TOKEN_URL} with Headers: "
+                     f"{headers} and Body: {payload}")
 
         try:
             response = self._session.post(
@@ -594,30 +577,28 @@ class SpotifyOAuth(SpotifyAuthBase):
         return token_info
 
     def get_cached_token(self):
-        warnings.warn(
-            "Calling get_cached_token directly on the SpotifyOAuth object will be "
-            + "deprecated. Instead, please specify a CacheFileHandler instance as "
-            + "the cache_handler in SpotifyOAuth and use the CacheFileHandler's "
-            + "get_cached_token method. You can replace:\n\tsp.get_cached_token()"
-            + "\n\nWith:\n\tsp.validate_token(sp.cache_handler.get_cached_token())",
-            DeprecationWarning,
-        )
+        warnings.warn("Calling get_cached_token directly on the SpotifyOAuth object will be " +
+                      "deprecated. Instead, please specify a CacheFileHandler instance as " +
+                      "the cache_handler in SpotifyOAuth and use the CacheFileHandler's " +
+                      "get_cached_token method. You can replace:\n\tsp.get_cached_token()" +
+                      "\n\nWith:\n\tsp.validate_token(sp.cache_handler.get_cached_token())",
+                      DeprecationWarning
+                      )
         return self.validate_token(self.cache_handler.get_cached_token())
 
     def _save_token_info(self, token_info):
-        warnings.warn(
-            "Calling _save_token_info directly on the SpotifyOAuth object will be "
-            + "deprecated. Instead, please specify a CacheFileHandler instance as "
-            + "the cache_handler in SpotifyOAuth and use the CacheFileHandler's "
-            + "save_token_to_cache method.",
-            DeprecationWarning,
-        )
+        warnings.warn("Calling _save_token_info directly on the SpotifyOAuth object will be " +
+                      "deprecated. Instead, please specify a CacheFileHandler instance as " +
+                      "the cache_handler in SpotifyOAuth and use the CacheFileHandler's " +
+                      "save_token_to_cache method.",
+                      DeprecationWarning
+                      )
         self.cache_handler.save_token_to_cache(token_info)
         return None
 
 
 class SpotifyPKCE(SpotifyAuthBase):
-    """Implements PKCE Authorization Flow for client apps
+    """ Implements PKCE Authorization Flow for client apps
 
     This auth manager enables *user and non-user* endpoints with only
     a client ID, redirect URI, and username. When the app requests
@@ -631,20 +612,18 @@ class SpotifyPKCE(SpotifyAuthBase):
     OAUTH_AUTHORIZE_URL = "https://accounts.spotify.com/authorize"
     OAUTH_TOKEN_URL = "https://accounts.spotify.com/api/token"
 
-    def __init__(
-        self,
-        client_id=None,
-        redirect_uri=None,
-        state=None,
-        scope=None,
-        cache_path=None,
-        username=None,
-        proxies=None,
-        requests_timeout=None,
-        requests_session=True,
-        open_browser=True,
-        cache_handler=None,
-    ):
+    def __init__(self,
+                 client_id=None,
+                 redirect_uri=None,
+                 state=None,
+                 scope=None,
+                 cache_path=None,
+                 username=None,
+                 proxies=None,
+                 requests_timeout=None,
+                 requests_session=True,
+                 open_browser=True,
+                 cache_handler=None):
         """
         Creates Auth Manager with the PKCE Auth flow.
 
@@ -676,35 +655,29 @@ class SpotifyPKCE(SpotifyAuthBase):
         self.state = state
         self.scope = self._normalize_scope(scope)
         if username or cache_path:
-            warnings.warn(
-                "Specifying cache_path or username as arguments to SpotifyPKCE "
-                + "will be deprecated. Instead, please create a CacheFileHandler "
-                + "instance with the desired cache_path and username and pass it "
-                + "to SpotifyPKCE as the cache_handler. For example:\n\n"
-                + "\tfrom spotipy.oauth2 import CacheFileHandler\n"
-                + "\thandler = CacheFileHandler(cache_path=cache_path, "
-                + "username=username)\n"
-                + "\tsp = spotipy.SpotifyImplicitGrant(client_id, client_secret, "
-                + "redirect_uri, cache_handler=handler)",
-                DeprecationWarning,
-            )
+            warnings.warn("Specifying cache_path or username as arguments to SpotifyPKCE " +
+                          "will be deprecated. Instead, please create a CacheFileHandler " +
+                          "instance with the desired cache_path and username and pass it " +
+                          "to SpotifyPKCE as the cache_handler. For example:\n\n" +
+                          "\tfrom spotipy.oauth2 import CacheFileHandler\n" +
+                          "\thandler = CacheFileHandler(cache_path=cache_path, " +
+                          "username=username)\n" +
+                          "\tsp = spotipy.SpotifyImplicitGrant(client_id, client_secret, " +
+                          "redirect_uri, cache_handler=handler)",
+                          DeprecationWarning
+                          )
             if cache_handler:
-                warnings.warn(
-                    "A cache_handler has been specified along with a cache_path or "
-                    + "username. The cache_path and username arguments will be ignored."
-                )
+                warnings.warn("A cache_handler has been specified along with a cache_path or " +
+                              "username. The cache_path and username arguments will be ignored.")
         if cache_handler:
-            assert issubclass(type(cache_handler), CacheHandler), (
-                "type(cache_handler): "
-                + str(type(cache_handler))
-                + " != "
-                + str(CacheHandler)
-            )
+            assert issubclass(type(cache_handler), CacheHandler), \
+                "type(cache_handler): " + str(type(cache_handler)) + " != " + str(CacheHandler)
             self.cache_handler = cache_handler
         else:
-            username = username or os.getenv(CLIENT_CREDS_ENV_VARS["client_username"])
+            username = (username or os.getenv(CLIENT_CREDS_ENV_VARS["client_username"]))
             self.cache_handler = CacheFileHandler(
-                username=username, cache_path=cache_path
+                username=username,
+                cache_path=cache_path
             )
         self.proxies = proxies
         self.requests_timeout = requests_timeout
@@ -716,37 +689,32 @@ class SpotifyPKCE(SpotifyAuthBase):
         self.open_browser = open_browser
 
     def _get_code_verifier(self):
-        """Spotify PCKE code verifier - See step 1 of the reference guide below
+        """ Spotify PCKE code verifier - See step 1 of the reference guide below
         Reference:
         https://developer.spotify.com/documentation/general/guides/authorization-guide/#authorization-code-flow-with-proof-key-for-code-exchange-pkce
         """
         # Range (33,96) is used to select between 44-128 base64 characters for the
         # next operation. The range looks weird because base64 is 6 bytes
         import random
-
         length = random.randint(33, 96)
 
         # The seeded length generates between a 44 and 128 base64 characters encoded string
         import secrets
-
         return secrets.token_urlsafe(length)
 
     def _get_code_challenge(self):
-        """Spotify PCKE code challenge - See step 1 of the reference guide below
+        """ Spotify PCKE code challenge - See step 1 of the reference guide below
         Reference:
         https://developer.spotify.com/documentation/general/guides/authorization-guide/#authorization-code-flow-with-proof-key-for-code-exchange-pkce
         """
         import base64
         import hashlib
-
-        code_challenge_digest = hashlib.sha256(
-            self.code_verifier.encode("utf-8")
-        ).digest()
-        code_challenge = base64.urlsafe_b64encode(code_challenge_digest).decode("utf-8")
-        return code_challenge.replace("=", "")
+        code_challenge_digest = hashlib.sha256(self.code_verifier.encode('utf-8')).digest()
+        code_challenge = base64.urlsafe_b64encode(code_challenge_digest).decode('utf-8')
+        return code_challenge.replace('=', '')
 
     def get_authorize_url(self, state=None):
-        """Gets the URL to use to authorize this app"""
+        """ Gets the URL to use to authorize this app """
         if not self.code_challenge:
             self.get_pkce_handshake_parameters()
         payload = {
@@ -754,7 +722,7 @@ class SpotifyPKCE(SpotifyAuthBase):
             "response_type": "code",
             "redirect_uri": self.redirect_uri,
             "code_challenge_method": self._code_challenge_method,
-            "code_challenge": self.code_challenge,
+            "code_challenge": self.code_challenge
         }
         if self.scope:
             payload["scope"] = self.scope
@@ -774,13 +742,11 @@ class SpotifyPKCE(SpotifyAuthBase):
             logger.error(f"Please navigate here: {auth_url}")
 
     def _get_auth_response(self, open_browser=None):
-        logger.info(
-            "User authentication requires interaction with your "
-            "web browser. Once you enter your credentials and "
-            "give authorization, you will be redirected to "
-            "a url.  Paste that url you were directed to to "
-            "complete the authorization."
-        )
+        logger.info('User authentication requires interaction with your '
+                    'web browser. Once you enter your credentials and '
+                    'give authorization, you will be redirected to '
+                    'a url.  Paste that url you were directed to to '
+                    'complete the authorization.')
 
         redirect_info = urlparse(self.redirect_uri)
         redirect_host, redirect_port = get_host_port(redirect_info.netloc)
@@ -788,38 +754,31 @@ class SpotifyPKCE(SpotifyAuthBase):
         if open_browser is None:
             open_browser = self.open_browser
 
-        if redirect_host == "localhost":
+        if redirect_host == 'localhost':
             logger.warning(
                 "Using 'localhost' as a redirect URI is being deprecated. "
                 "Use a loopback IP address such as 127.0.0.1 "
-                "to ensure your app remains functional."
-            )
+                "to ensure your app remains functional.")
 
-        if redirect_info.scheme == "http" and redirect_host not in (
-            "127.0.0.1",
-            "localhost",
-        ):
+        if redirect_info.scheme == "http" and redirect_host not in ("127.0.0.1", "localhost"):
             logger.warning(
                 "Redirect URIs using HTTP are being deprecated. "
-                "To ensure your app remains functional, use HTTPS instead."
-            )
+                "To ensure your app remains functional, use HTTPS instead.")
 
         if (
-            open_browser
-            and redirect_host in ("127.0.0.1", "localhost")
-            and redirect_info.scheme == "http"
+                open_browser
+                and redirect_host in ("127.0.0.1", "localhost")
+                and redirect_info.scheme == "http"
         ):
             # Only start a local http server if a port is specified
             if redirect_port:
                 return self._get_auth_response_local_server(redirect_port)
             else:
-                logger.warning(
-                    f"Using `{redirect_host}` as redirect URI without a port. "
-                    f"Specify a port (e.g. `{redirect_host}:8080`) to allow "
-                    "automatic retrieval of authentication code "
-                    "instead of having to copy and paste "
-                    "the URL your browser is redirected to."
-                )
+                logger.warning(f'Using `{redirect_host}` as redirect URI without a port. '
+                               f'Specify a port (e.g. `{redirect_host}:8080`) to allow '
+                               'automatic retrieval of authentication code '
+                               'instead of having to copy and paste '
+                               'the URL your browser is redirected to.')
         return self._get_auth_response_interactive(open_browser=open_browser)
 
     def _get_auth_response_local_server(self, redirect_port):
@@ -835,9 +794,7 @@ class SpotifyPKCE(SpotifyAuthBase):
         elif server.error is not None:
             raise SpotifyOauthError(f"Received error from OAuth server: {server.error}")
         else:
-            raise SpotifyOauthError(
-                "Server listening on localhost has not been accessed"
-            )
+            raise SpotifyOauthError("Server listening on localhost has not been accessed")
 
     def _get_auth_response_interactive(self, open_browser=False):
         if open_browser or self.open_browser:
@@ -845,10 +802,8 @@ class SpotifyPKCE(SpotifyAuthBase):
             prompt = "Enter the URL you were redirected to: "
         else:
             url = self.get_authorize_url()
-            prompt = (
-                f"Go to the following URL: {url}\n"
-                f"Enter the URL you were redirected to: "
-            )
+            prompt = (f"Go to the following URL: {url}\n"
+                      f"Enter the URL you were redirected to: ")
         response = self._get_user_input(prompt)
         state, code = self.parse_auth_response_url(response)
         if self.state is not None and self.state != state:
@@ -866,12 +821,14 @@ class SpotifyPKCE(SpotifyAuthBase):
 
         # if scopes don't match, then bail
         if "scope" not in token_info or not self._is_scope_subset(
-            self.scope, token_info["scope"]
+                self.scope, token_info["scope"]
         ):
             return None
 
         if self.is_token_expired(token_info):
-            token_info = self.refresh_access_token(token_info["refresh_token"])
+            token_info = self.refresh_access_token(
+                token_info["refresh_token"]
+            )
 
         return token_info
 
@@ -888,23 +845,25 @@ class SpotifyPKCE(SpotifyAuthBase):
         self.code_challenge = self._get_code_challenge()
 
     def get_access_token(self, code=None, check_cache=True):
-        """Gets the access token for the app
+        """ Gets the access token for the app
 
-        If the code is not given and no cached token is used, an
-        authentication window will be shown to the user to get a new
-        code.
+            If the code is not given and no cached token is used, an
+            authentication window will be shown to the user to get a new
+            code.
 
-        Parameters:
-            - code - the response code from authentication
-            - check_cache - if true, checks for a locally stored token
-                            before requesting a new token
+            Parameters:
+                - code - the response code from authentication
+                - check_cache - if true, checks for a locally stored token
+                                before requesting a new token
         """
 
         if check_cache:
             token_info = self.validate_token(self.cache_handler.get_cached_token())
             if token_info is not None:
                 if self.is_token_expired(token_info):
-                    token_info = self.refresh_access_token(token_info["refresh_token"])
+                    token_info = self.refresh_access_token(
+                        token_info["refresh_token"]
+                    )
                 return token_info["access_token"]
 
         if self.code_verifier is None or self.code_challenge is None:
@@ -915,15 +874,13 @@ class SpotifyPKCE(SpotifyAuthBase):
             "grant_type": "authorization_code",
             "code": code or self.get_authorization_code(),
             "redirect_uri": self.redirect_uri,
-            "code_verifier": self.code_verifier,
+            "code_verifier": self.code_verifier
         }
 
         headers = {"Content-Type": "application/x-www-form-urlencoded"}
 
-        logger.debug(
-            f"Sending POST request to {self.OAUTH_TOKEN_URL} with Headers: "
-            f"{headers} and Body: {payload}"
-        )
+        logger.debug(f"Sending POST request to {self.OAUTH_TOKEN_URL} with Headers: "
+                     f"{headers} and Body: {payload}")
 
         try:
             response = self._session.post(
@@ -951,10 +908,8 @@ class SpotifyPKCE(SpotifyAuthBase):
 
         headers = {"Content-Type": "application/x-www-form-urlencoded"}
 
-        logger.debug(
-            f"Sending POST request to {self.OAUTH_TOKEN_URL} with Headers: "
-            f"{headers} and Body: {payload}"
-        )
+        logger.debug(f"Sending POST request to {self.OAUTH_TOKEN_URL} with Headers: "
+                     f"{headers} and Body: {payload}")
 
         try:
             response = self._session.post(
@@ -975,10 +930,10 @@ class SpotifyPKCE(SpotifyAuthBase):
             self._handle_oauth_error(http_error)
 
     def parse_response_code(self, url):
-        """Parse the response code in the given response url
+        """ Parse the response code in the given response url
 
-        Parameters:
-            - url - the response url
+            Parameters:
+                - url - the response url
         """
         _, code = self.parse_auth_response_url(url)
         if code is None:
@@ -991,30 +946,28 @@ class SpotifyPKCE(SpotifyAuthBase):
         return SpotifyOAuth.parse_auth_response_url(url)
 
     def get_cached_token(self):
-        warnings.warn(
-            "Calling get_cached_token directly on the SpotifyPKCE object will be "
-            + "deprecated. Instead, please specify a CacheFileHandler instance as "
-            + "the cache_handler in SpotifyOAuth and use the CacheFileHandler's "
-            + "get_cached_token method. You can replace:\n\tsp.get_cached_token()"
-            + "\n\nWith:\n\tsp.validate_token(sp.cache_handler.get_cached_token())",
-            DeprecationWarning,
-        )
+        warnings.warn("Calling get_cached_token directly on the SpotifyPKCE object will be " +
+                      "deprecated. Instead, please specify a CacheFileHandler instance as " +
+                      "the cache_handler in SpotifyOAuth and use the CacheFileHandler's " +
+                      "get_cached_token method. You can replace:\n\tsp.get_cached_token()" +
+                      "\n\nWith:\n\tsp.validate_token(sp.cache_handler.get_cached_token())",
+                      DeprecationWarning
+                      )
         return self.validate_token(self.cache_handler.get_cached_token())
 
     def _save_token_info(self, token_info):
-        warnings.warn(
-            "Calling _save_token_info directly on the SpotifyOAuth object will be "
-            + "deprecated. Instead, please specify a CacheFileHandler instance as "
-            + "the cache_handler in SpotifyOAuth and use the CacheFileHandler's "
-            + "save_token_to_cache method.",
-            DeprecationWarning,
-        )
+        warnings.warn("Calling _save_token_info directly on the SpotifyOAuth object will be " +
+                      "deprecated. Instead, please specify a CacheFileHandler instance as " +
+                      "the cache_handler in SpotifyOAuth and use the CacheFileHandler's " +
+                      "save_token_to_cache method.",
+                      DeprecationWarning
+                      )
         self.cache_handler.save_token_to_cache(token_info)
         return None
 
 
 class SpotifyImplicitGrant(SpotifyAuthBase):
-    """Implements Implicit Grant Flow for client apps
+    """ Implements Implicit Grant Flow for client apps
 
     This auth manager enables *user and non-user* endpoints with only
     a client secret, redirect uri, and username. The user will need to
@@ -1046,21 +999,18 @@ class SpotifyImplicitGrant(SpotifyAuthBase):
     request with an authorization code and proof of origin could not be
     easily intercepted without a compromised network.
     """
-
     OAUTH_AUTHORIZE_URL = "https://accounts.spotify.com/authorize"
 
-    def __init__(
-        self,
-        client_id=None,
-        redirect_uri=None,
-        state=None,
-        scope=None,
-        cache_path=None,
-        username=None,
-        show_dialog=False,
-        cache_handler=None,
-    ):
-        """Creates Auth Manager using the Implicit Grant flow
+    def __init__(self,
+                 client_id=None,
+                 redirect_uri=None,
+                 state=None,
+                 scope=None,
+                 cache_path=None,
+                 username=None,
+                 show_dialog=False,
+                 cache_handler=None):
+        """ Creates Auth Manager using the Implicit Grant flow
 
         **See help(SpotifyImplicitGrant) for full Security Warning**
 
@@ -1081,48 +1031,40 @@ class SpotifyImplicitGrant(SpotifyAuthBase):
                     (will set `cache_path` to `.cache-{username}`)
         * show_dialog: Interpreted as boolean
         """
-        logger.warning(
-            "Spotify is deprecating the Implicit "
-            "Grant Flow for client-side code. Use the SpotifyPKCE "
-            "auth manager instead of SpotifyImplicitGrant. For "
-            "more details and a guide to switching, see "
-            "help(SpotifyImplicitGrant)."
-        )
+        logger.warning("Spotify is deprecating the Implicit "
+                       "Grant Flow for client-side code. Use the SpotifyPKCE "
+                       "auth manager instead of SpotifyImplicitGrant. For "
+                       "more details and a guide to switching, see "
+                       "help(SpotifyImplicitGrant).")
 
         self.client_id = client_id
         self.redirect_uri = redirect_uri
         self.state = state
         if username or cache_path:
-            warnings.warn(
-                "Specifying cache_path or username as arguments to "
-                + "SpotifyImplicitGrant will be deprecated. Instead, please create "
-                + "a CacheFileHandler instance with the desired cache_path and "
-                + "username and pass it to SpotifyImplicitGrant as the "
-                + "cache_handler. For example:\n\n"
-                + "\tfrom spotipy.oauth2 import CacheFileHandler\n"
-                + "\thandler = CacheFileHandler(cache_path=cache_path, "
-                + "username=username)\n"
-                + "\tsp = spotipy.SpotifyImplicitGrant(client_id, client_secret, "
-                + "redirect_uri, cache_handler=handler)",
-                DeprecationWarning,
-            )
+            warnings.warn("Specifying cache_path or username as arguments to " +
+                          "SpotifyImplicitGrant will be deprecated. Instead, please create " +
+                          "a CacheFileHandler instance with the desired cache_path and " +
+                          "username and pass it to SpotifyImplicitGrant as the " +
+                          "cache_handler. For example:\n\n" +
+                          "\tfrom spotipy.oauth2 import CacheFileHandler\n" +
+                          "\thandler = CacheFileHandler(cache_path=cache_path, " +
+                          "username=username)\n" +
+                          "\tsp = spotipy.SpotifyImplicitGrant(client_id, client_secret, " +
+                          "redirect_uri, cache_handler=handler)",
+                          DeprecationWarning
+                          )
             if cache_handler:
-                warnings.warn(
-                    "A cache_handler has been specified along with a cache_path or "
-                    + "username. The cache_path and username arguments will be ignored."
-                )
+                warnings.warn("A cache_handler has been specified along with a cache_path or " +
+                              "username. The cache_path and username arguments will be ignored.")
         if cache_handler:
-            assert issubclass(type(cache_handler), CacheHandler), (
-                "type(cache_handler): "
-                + str(type(cache_handler))
-                + " != "
-                + str(CacheHandler)
-            )
+            assert issubclass(type(cache_handler), CacheHandler), \
+                "type(cache_handler): " + str(type(cache_handler)) + " != " + str(CacheHandler)
             self.cache_handler = cache_handler
         else:
-            username = username or os.getenv(CLIENT_CREDS_ENV_VARS["client_username"])
+            username = (username or os.getenv(CLIENT_CREDS_ENV_VARS["client_username"]))
             self.cache_handler = CacheFileHandler(
-                username=username, cache_path=cache_path
+                username=username,
+                cache_path=cache_path
             )
         self.scope = self._normalize_scope(scope)
         self.show_dialog = show_dialog
@@ -1134,7 +1076,7 @@ class SpotifyImplicitGrant(SpotifyAuthBase):
 
         # if scopes don't match, then bail
         if "scope" not in token_info or not self._is_scope_subset(
-            self.scope, token_info["scope"]
+                self.scope, token_info["scope"]
         ):
             return None
 
@@ -1143,8 +1085,11 @@ class SpotifyImplicitGrant(SpotifyAuthBase):
 
         return token_info
 
-    def get_access_token(self, state=None, response=None, check_cache=True):
-        """Gets Auth Token from cache (preferred) or user interaction
+    def get_access_token(self,
+                         state=None,
+                         response=None,
+                         check_cache=True):
+        """ Gets Auth Token from cache (preferred) or user interaction
 
         Parameters
         ----------
@@ -1167,7 +1112,7 @@ class SpotifyImplicitGrant(SpotifyAuthBase):
         return token_info["access_token"]
 
     def get_authorize_url(self, state=None):
-        """Gets the URL to use to authorize this app"""
+        """ Gets the URL to use to authorize this app """
         payload = {
             "client_id": self.client_id,
             "response_type": "token",
@@ -1187,35 +1132,29 @@ class SpotifyImplicitGrant(SpotifyAuthBase):
         return f"{self.OAUTH_AUTHORIZE_URL}?{urlparams}"
 
     def parse_response_token(self, url, state=None):
-        """Parse the response code in the given response url"""
+        """ Parse the response code in the given response url """
         remote_state, token, t_type, exp_in = self.parse_auth_response_url(url)
         if state is None:
             state = self.state
         if state is not None and remote_state != state:
             raise SpotifyStateError(state, remote_state)
-        return {
-            "access_token": token,
-            "token_type": t_type,
-            "expires_in": exp_in,
-            "state": state,
-        }
+        return {"access_token": token, "token_type": t_type,
+                "expires_in": exp_in, "state": state}
 
     @staticmethod
     def parse_auth_response_url(url):
         url_components = urlparse(url)
         fragment_s = url_components.fragment
         query_s = url_components.query
-        form = dict(i.split("=") for i in (fragment_s or query_s or url).split("&"))
+        form = dict(i.split('=') for i
+                    in (fragment_s or query_s or url).split('&'))
         if "error" in form:
-            raise SpotifyOauthError(
-                f"Received error from auth server: {form['error']}", state=form["state"]
-            )
+            raise SpotifyOauthError(f"Received error from auth server: {form['error']}",
+                                    state=form["state"])
         if "expires_in" in form:
             form["expires_in"] = int(form["expires_in"])
-        return tuple(
-            form.get(param)
-            for param in ["state", "access_token", "token_type", "expires_in"]
-        )
+        return tuple(form.get(param) for param in ["state", "access_token",
+                                                   "token_type", "expires_in"])
 
     def _open_auth_url(self, state=None):
         auth_url = self.get_authorize_url(state)
@@ -1226,42 +1165,32 @@ class SpotifyImplicitGrant(SpotifyAuthBase):
             logger.error(f"Please navigate here: {auth_url}")
 
     def get_auth_response(self, state=None):
-        """Gets a new auth **token** with user interaction"""
-        logger.info(
-            "User authentication requires interaction with your "
-            "web browser. Once you enter your credentials and "
-            "give authorization, you will be redirected to "
-            "a url.  Paste that url you were directed to to "
-            "complete the authorization."
-        )
+        """ Gets a new auth **token** with user interaction """
+        logger.info('User authentication requires interaction with your '
+                    'web browser. Once you enter your credentials and '
+                    'give authorization, you will be redirected to '
+                    'a url.  Paste that url you were directed to to '
+                    'complete the authorization.')
 
         redirect_info = urlparse(self.redirect_uri)
         redirect_host, redirect_port = get_host_port(redirect_info.netloc)
         # Implicit Grant tokens are returned in a hash fragment
         # which is only available to the browser. Therefore, interactive
         # URL retrieval is required.
-        if (
-            redirect_host in ("127.0.0.1", "localhost")
-            and redirect_info.scheme == "http"
-            and redirect_port
-        ):
-            logger.warning(
-                "Using a local redirect URI with a "
-                "port, likely expecting automatic "
-                "retrieval. Due to technical limitations, "
-                "the authentication token cannot be "
-                "automatically retrieved and must be "
-                "copied and pasted."
-            )
+        if (redirect_host in ("127.0.0.1", "localhost")
+                and redirect_info.scheme == "http" and redirect_port):
+            logger.warning('Using a local redirect URI with a '
+                           'port, likely expecting automatic '
+                           'retrieval. Due to technical limitations, '
+                           'the authentication token cannot be '
+                           'automatically retrieved and must be '
+                           'copied and pasted.')
 
         self._open_auth_url(state)
-        logger.info(
-            "Paste that url you were directed to in order to "
-            "complete the authorization"
-        )
-        response = SpotifyImplicitGrant._get_user_input(
-            "Enter the URL you " "were redirected to: "
-        )
+        logger.info('Paste that url you were directed to in order to '
+                    'complete the authorization')
+        response = SpotifyImplicitGrant._get_user_input("Enter the URL you "
+                                                        "were redirected to: ")
         return self.parse_response_token(response, state)
 
     def _add_custom_values_to_token_info(self, token_info):
@@ -1274,25 +1203,23 @@ class SpotifyImplicitGrant(SpotifyAuthBase):
         return token_info
 
     def get_cached_token(self):
-        warnings.warn(
-            "Calling get_cached_token directly on the SpotifyImplicitGrant "
-            + "object will be deprecated. Instead, please specify a "
-            + "CacheFileHandler instance as the cache_handler in SpotifyOAuth "
-            + "and use the CacheFileHandler's get_cached_token method. "
-            + "You can replace:\n\tsp.get_cached_token()"
-            + "\n\nWith:\n\tsp.validate_token(sp.cache_handler.get_cached_token())",
-            DeprecationWarning,
-        )
+        warnings.warn("Calling get_cached_token directly on the SpotifyImplicitGrant " +
+                      "object will be deprecated. Instead, please specify a " +
+                      "CacheFileHandler instance as the cache_handler in SpotifyOAuth " +
+                      "and use the CacheFileHandler's get_cached_token method. " +
+                      "You can replace:\n\tsp.get_cached_token()" +
+                      "\n\nWith:\n\tsp.validate_token(sp.cache_handler.get_cached_token())",
+                      DeprecationWarning
+                      )
         return self.validate_token(self.cache_handler.get_cached_token())
 
     def _save_token_info(self, token_info):
-        warnings.warn(
-            "Calling _save_token_info directly on the SpotifyImplicitGrant "
-            + "object will be deprecated. Instead, please specify a "
-            + "CacheFileHandler instance as the cache_handler in SpotifyOAuth "
-            + "and use the CacheFileHandler's save_token_to_cache method.",
-            DeprecationWarning,
-        )
+        warnings.warn("Calling _save_token_info directly on the SpotifyImplicitGrant " +
+                      "object will be deprecated. Instead, please specify a " +
+                      "CacheFileHandler instance as the cache_handler in SpotifyOAuth " +
+                      "and use the CacheFileHandler's save_token_to_cache method.",
+                      DeprecationWarning
+                      )
         self.cache_handler.save_token_to_cache(token_info)
         return None
 
@@ -1319,8 +1246,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             self._write("<html><body><h1>Invalid request</h1></body></html>")
             return
 
-        self._write(
-            f"""<html>
+        self._write(f"""<html>
 <script>
 window.close()
 </script>
@@ -1334,8 +1260,7 @@ window.close()
 Close Window
 </button>
 </body>
-</html>"""
-        )
+</html>""")
 
     def _write(self, text):
         return self.wfile.write(text.encode("utf-8"))
