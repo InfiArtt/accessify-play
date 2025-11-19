@@ -134,11 +134,11 @@ class InstallInfoDialog(wx.Dialog):
         main_sizer.Add(info_text, 0, wx.ALL | wx.EXPAND, 15)
 
         button_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        donate_btn = wx.Button(self, label=_("Donate"))
+        donate_btn = wx.Button(self, label=_("&Donate"))
         donate_btn.Bind(wx.EVT_BUTTON, self._on_donate)
         button_sizer.Add(donate_btn, 0, wx.RIGHT, 10)
 
-        continue_btn = wx.Button(self, label=_("Continue Installation"))
+        continue_btn = wx.Button(self, label=_("&Continue Installation"))
         continue_btn.Bind(wx.EVT_BUTTON, self._on_continue)
         continue_btn.SetDefault()
         button_sizer.Add(continue_btn)
