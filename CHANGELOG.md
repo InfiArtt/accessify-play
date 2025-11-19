@@ -1,5 +1,26 @@
 # Changelog
 
+## Version 1.4.1-pre.1 (Pre-release)
+
+This is a focused pre-release aimed at dramatically improving playback consistency and introducing a powerful new feature for playlist management. The core of this update is to make the add-on's behavior more intuitive and reliable in everyday use. A special thanks to **@a-singer** for meticulously reporting the key issues addressed in this release.
+
+#### ✨ New Features
+
+-   **Playlist Reordering with Keyboard**: You can now reorder tracks within your own playlists directly from the Management dialog. Simply select a track in the playlist view and use `Alt+Up Arrow` or `Alt+Down Arrow` to move it. The UI updates instantly for a smooth and responsive experience.
+
+#### 🌟 Major Improvements
+
+-   **Intelligent Contextual Playback**: This is a fundamental fix to how the add-on handles your music queue. When you play a specific track from an album, playlist, or podcast, the queue will now correctly continue with the subsequent items from that context. This makes the `Next Track` and `Previous Track` commands behave predictably and reliably, just like in the official Spotify app. (Resolves #29) This improvement applies to:
+    -   Search Results
+    -   Album Tracks Dialog
+    -   Playlist Tracks Dialog
+    -   Podcast Episodes Dialog
+
+#### 🛠️ Fixes
+
+-   **Enhanced Connection Stability**: Resolved a common issue where the add-on would report "No active device found" after a long period of inactivity due to a stale connection. The connection logic is now more resilient and automatically attempts to re-establish communication with Spotify, I hope. (Resolves #30)
+-   **Artist Discography Navigation Fix**: Corrected a bug that caused a crash (`AttributeError`) when attempting to open an album's track list from the Artist Discography dialog. (Resolves #31)
+
 ## Version 1.4.0
 
 This is the most polished and feature-rich release so far, introducing smarter workflows, expanded capabilities, and major stability advancements that elevate the entire Spotify experience on NVDA.

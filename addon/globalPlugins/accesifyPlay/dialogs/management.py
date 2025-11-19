@@ -487,7 +487,7 @@ class ArtistDiscographyDialog(AccessifyDialog):
         self._all_tracks_loading = False
         self._all_tracks_can_load_more = False
         self._all_tracks_load_more_label = f"--- {_('Load More')} ---"
-        self.user_playlists = user_playlists
+        self._user_playlists = user_playlists # <--- UBAH BARIS INI
         self.init_ui()
         self.load_data()
         self._create_accelerators()
