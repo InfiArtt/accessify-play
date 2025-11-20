@@ -2,30 +2,26 @@
 
 ## Version 1.5.0
 
-This is a focused pre-release aimed at dramatically improving playback consistency and introducing a powerful new feature for playlist management. The core of this update is to make the add-on's behavior more intuitive and reliable in everyday use. A special thanks to **@a-singer** for meticulously reporting the key issues addressed in this release.
+This is a stable release focused on dramatically improving reliability, performance, and core functionality. Thanks to community feedback, especially from **@a-singer**, this version addresses key connection issues and streamlines the user experience.
 
-#### ✨ New Features
+### Added
+- Implemented playlist track reordering in the Management dialog using `Alt+Up/Down` arrow keys.
+- Added a feature that lets you go to the album or artist from the context menu in most parts of the UI when the selected item is a track (Resolves #34).
 
--   **Playlist Reordering with Keyboard**: You can now reorder tracks within your own playlists directly from the Management dialog. Simply select a track in the playlist view and use `Alt+Up Arrow` or `Alt+Down Arrow` to move it. The UI updates instantly for a smooth and responsive experience.
+### Changed
+- Reworked `Next/Previous Track` logic to be nearly instantaneous, removing polling delays for a much snappier feel.
+- Improved playback to maintain context from albums, playlists, and shows, ensuring the queue continues as expected (Resolves #29).
+- Refactored internal command handling to use decorators, resulting in cleaner, more maintainable code and better error handling.
 
-#### 🌟 Major Improvements
-
--   **Intelligent Contextual Playback**: This is a fundamental fix to how the add-on handles your music queue. When you play a specific track from an album, playlist, or podcast, the queue will now correctly continue with the subsequent items from that context. This makes the `Next Track` and `Previous Track` commands behave predictably and reliably, just like in the official Spotify app. (Resolves #29) This improvement applies to:
-    -   Search Results
-    -   Album Tracks Dialog
-    -   Playlist Tracks Dialog
-    -   Podcast Episodes Dialog
-
-#### 🛠️ Fixes
-
--   **Enhanced Connection Stability**: Resolved a common issue where the add-on would report "No active device found" after a long period of inactivity due to a stale connection. The connection logic is now more resilient and automatically attempts to re-establish communication with Spotify, I hope. (Resolves #30)
--   **Artist Discography Navigation Fix**: Corrected a bug that caused a crash (`AttributeError`) when attempting to open an album's track list from the Artist Discography dialog. (Resolves #31)
+### Fixed
+- Fixed a crash (`AttributeError`) when opening an album's track list from the Artist Discography dialog (Resolves #31).
+- Made the "Add" button the default action in the "Add to Playlist" dialog, enabling the `Enter` key to confirm the selection (Resolves #35).
 
 ## Version 1.4.0
 
 This is the most polished and feature-rich release so far, introducing smarter workflows, expanded capabilities, and major stability advancements that elevate the entire Spotify experience on NVDA.
 
-#### ✨ New Features
+### ✨ New Features
 
 -   **Switch Playback Devices**: You can now open a dialog with `NVDA+Alt+Shift+D` to view all available Spotify devices (computers, phones, smart speakers) and seamlessly transfer playback to any of them.
 -   **Contextual 'Add to Playlist'**: The 'Add to Playlist' feature is now available in the context menu for tracks in nearly every view, including Search Results, Saved Tracks, Top Tracks, Recently Played, Artist Discography, and Album Tracks. (Resolves #22)
@@ -35,7 +31,7 @@ This is the most polished and feature-rich release so far, introducing smarter w
 -   **Pagination for Large Catalogs**: "Load More" functionality has been added to long lists, such as playlist tracks and podcast episodes. This respects the "Search Results Limit" setting and significantly reduces initial load times.
 -   **Proactive Device Wake-Up**: The addon now automatically attempts to "wake up" the last used Spotify device if it becomes inactive. This resolves many "No active device found" errors, making playback resumption smoother. (Resolves #25)
 
-#### 🛠️ Fixes & Improvements
+### 🛠️ Fixes & Improvements
 
 -   **Simplified Playlist Management UI**: The playlist management tab has been redesigned, replacing the complex tree view with a more intuitive dropdown menu for selecting playlists and a simple list for their tracks. This makes navigation faster and brings the user experience in line with other dialogs.
 -   **Corrected Duplicate Queue Items**: Fixed a bug where the queue dialog would sometimes display the same track multiple times. The list now accurately reflects the true state of your Spotify queue.
@@ -54,18 +50,18 @@ This is the most polished and feature-rich release so far, introducing smarter w
 
 ## Version 1.3.4
 
-#### Code Fixes
+### Code Fixes
 -   **Improved Updater Version Parsing**: Fixed an issue where the updater could not correctly parse and compare semantic versions that included pre-release tags (e.g., `1.3.5-pre`, `1.3.5-beta1`, `1.3.5-rc4`). The version parsing logic has been updated to accurately handle these formats, ensuring that the addon correctly identifies and offers the latest available updates across all release channels.
 
 ## Version 1.3.3
 
 This is a maintenance and code quality release that addresses significant structural issues from previous versions. The primary focus is on refactoring duplicated code, cleaning up logic, and improving the overall stability and long-term maintainability of the addon.
 
-#### ✨ Improvements & Refinements
+### ✨ Improvements & Refinements
 
 -   **Unified Language System**: The language management system has been completely unified and centralized. The addon now correctly follows NVDA's default language and provides a seamless fallback to English if a translation is not available. The language selection dropdown in the settings panel is now dynamically populated, ensuring all available languages are always displayed correctly.
 -   **Default Port Change**: The default callback port for Spotify authentication has been changed from `8888` to `8539`. This helps prevent potential conflicts with other applications that may use port 8888. New installations will use this port by default.
-#### 🛠️ Code Fixes & Housekeeping
+### 🛠️ Code Fixes & Housekeeping
 
 -   **Improved Updater Version Parsing**: Fixed an issue where the updater could not correctly parse and compare semantic versions that included pre-release tags (e.g., `1.3.5-pre`, `1.3.5-beta1`, `1.3.5-rc4`). The version parsing logic has been updated to accurately handle these formats, ensuring that the addon correctly identifies and offers the latest available updates across all release channels.
 -   **Major Code Refactoring**: Removed a large block of duplicated code within the addon's main file (`__init__.py`). This resolves the primary source of instability from version 1.3.1/1.3.2 and makes the addon significantly easier to maintain and debug.
@@ -77,11 +73,11 @@ This is a maintenance and code quality release that addresses significant struct
 
 This is an essential hotfix release to address a critical bug that prevented credential validation in version 1.3.1. This update is solely focused on restoring core functionality.
 
-#### 🛠️ Critical Fix
+### 🛠️ Critical Fix
 
 -   **Restored Credential Validation**: Fixed a critical `AttributeError` that occurred when pressing the "Validate Credentials" button in the settings panel. This bug made it impossible for users to authenticate with Spotify. With this fix, the validation process now works as expected, allowing the addon to be used.
 
-#### 📝 Developer Notes
+### 📝 Developer Notes
 
 -   **Code Quality**: Please be aware that this release contains known code duplication and other structural issues. The immediate priority was to fix the validation bug.
 -   **Future Cleanup**: A follow-up release (version 1.3.3 or newer) is planned to address these underlying code quality problems, refactor duplicated logic, and ensure long-term stability.
@@ -91,7 +87,7 @@ This is an essential hotfix release to address a critical bug that prevented cre
 
 This is a major release focusing on security, usability, and new features, representing the most significant update to the addon yet.
 
-#### ✨ New Features
+### ✨ New Features
 
 - **Automatic & Manual Updater**: The addon can now check for updates directly from GitHub. Enable automatic checks on NVDA startup or trigger them manually from the settings panel, with support for `Stable` and `Beta` release channels.
 - **Announce Playback Time**: A new command (`NVDA+Alt+Shift+T`) announces the current track's progress and total duration (e.g., "1min 23sec out of 3min 45sec").
@@ -100,11 +96,11 @@ This is a major release focusing on security, usability, and new features, repre
 - **Seamless Credential Migration**: A "Migrate Old Credentials" button now appears in settings if legacy `Client ID` or `Client Secret` data is found, allowing for a one-click migration to the new, more secure storage system.
 - **Quick Developer Access**: A "Go to Developer Dashboard" button has been added to the settings panel for easy access to manage your Spotify Client ID.
 
-#### 🔐 Security Enhancements
+### 🔐 Security Enhancements
 
 - **Modernized PKCE Authentication**: The addon now uses Spotify's more secure **Proof Key for Code Exchange (PKCE)** authentication flow. This significantly enhances security and **removes the need for a `Client Secret`**, simplifying the setup process.
 
-#### 🚀 Improvements
+### 🚀 Improvements
 
 - **Enhanced User Interface & Experience**:
   - **Context Menus Everywhere**: All lists (Search Results, Saved Tracks, Queue, etc.) now feature context menus for quick access to actions like `Play`, `Add to Queue`, `Copy Link`, and more, creating a cleaner and more powerful UI.
@@ -113,7 +109,7 @@ This is a major release focusing on security, usability, and new features, repre
 - **Reliable Playback Commands**: All playback-related shortcuts (Play/Pause, Next/Previous, Volume, etc.) are now more stable. The addon prevents overlapping commands; if a shortcut is pressed while another is processing, a "Please wait..." message is announced, ensuring each action completes successfully.
 - **Full Internationalization Support**: The translation system has been standardized, ensuring that all text is translatable and that non-English locales (including Bahasa Indonesia) load correctly.
 
-#### 🛠️ Fixes
+### 🛠️ Fixes
 
 - **Podcast & Show Information Now Works**: Fixed a critical issue where information for currently playing podcasts or shows could not be retrieved. The addon can now correctly identify and announce details for both music tracks and podcast episodes.
 - **Search Dialog Stability**: Resolved a crash that could occur if Spotify's search results contained invalid or empty data.

@@ -215,9 +215,11 @@ class AddToPlaylistDialog(AccessifyDialog):
 
         buttons_sizer = wx.BoxSizer(wx.HORIZONTAL)
         # Translators: Label for the "Add" button in the "Add to Playlist" dialog.
-        add_button = wx.Button(panel, label=_("&Add to Playlist"))
-        add_button.Bind(wx.EVT_BUTTON, self.on_add_to_playlist)
-        buttons_sizer.Add(add_button, 0, wx.ALL, 5)
+        self.add_button = wx.Button(panel, label=_("&Add to Playlist"))
+        self.add_button.Bind(wx.EVT_BUTTON, self.on_add_to_playlist)
+        buttons_sizer.Add(self.add_button, 0, wx.ALL, 5)
+        # Menjadikan tombol ini sebagai aksi default saat Enter ditekan
+        self.add_button.SetDefault()
 
         # Translators: Label for the "Cancel" button in the "Add to Playlist" dialog.
         cancel_button = wx.Button(panel, label=_("&Cancel"))
@@ -228,6 +230,8 @@ class AddToPlaylistDialog(AccessifyDialog):
 
         panel.SetSizer(sizer)
         sizer.Fit(self)
+        # Menempatkan fokus awal pada pilihan playlist untuk navigasi yang mudah
+        self.playlist_combobox.SetFocus()
 
     def on_playlist_selected(self, evt):
         selection_index = self.playlist_combobox.GetSelection()
@@ -253,9 +257,13 @@ class AddToPlaylistDialog(AccessifyDialog):
                         playlist_name=selected_playlist_name
                     ),
                 )
-            wx.CallAfter(self.Destroy)
+            # Menutup dialog setelah aksi selesai
+            wx.CallAfter(self.Close)
 
+        ui.message(_("Adding to playlist..."))
         threading.Thread(target=_add).start()
+        # Nonaktifkan tombol untuk mencegah klik ganda
+        self.add_button.Disable()
 
 class PodcastEpisodesDialog(AccessifyDialog):
     MENU_PLAY_EPISODE = wx.NewIdRef()
@@ -2069,6 +2077,7 @@ class ManagementDialog(AccessifyDialog):
                 no_playlist_item.Enable(False)
                 
             menu.AppendSubMenu(playlist_submenu, _("Add to Playlist"))
+            self._append_go_to_options_for_track(menu, item)
         if menu.GetMenuItemCount(): self.PopupMenu(menu)
         menu.Destroy()
 
@@ -2083,7 +2092,8 @@ class ManagementDialog(AccessifyDialog):
         self._append_menu_item(menu, _("Copy Link"), self._handle_copy_link)
         menu.AppendSeparator()
         self._append_menu_item(menu, _("Remove Track from Playlist"), self.on_remove_track_from_playlist)
-        
+        selected_track = self._get_selected_item()
+        self._append_go_to_options_for_track(menu, selected_track)
         self.PopupMenu(menu)
         menu.Destroy()
 

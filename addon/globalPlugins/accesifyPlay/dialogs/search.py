@@ -326,7 +326,7 @@ class SearchDialog(AccessifyDialog):
                 no_playlist_item.Enable(False)
                 
             menu.AppendSubMenu(playlist_submenu, _("Add to Playlist"))
-
+            self._append_go_to_options_for_track(menu, item)
         if menu.GetMenuItemCount():
             self.PopupMenu(menu)
         menu.Destroy()
