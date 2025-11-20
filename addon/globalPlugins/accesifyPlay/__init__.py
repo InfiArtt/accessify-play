@@ -485,11 +485,12 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         _prepare()
 
     def _fetch_management_data(self):
-        """Mendapatkan semua data yang diperlukan untuk ManagementDialog."""
+        """Gets all the data needed for ManagementDialog."""
         data = {}
         loaders = {
             "user_profile": self.client.get_current_user_profile,
             "playlists": self.client.get_user_playlists,
+            "saved_albums": self.client.get_saved_albums,
             "saved_tracks": self.client.get_saved_tracks,
             "followed_artists": self.client.get_followed_artists,
             "top_items": lambda: self.client.get_top_items(item_type="tracks", time_range="medium_term"),

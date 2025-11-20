@@ -128,7 +128,27 @@ class AccessifyDialog(wx.Dialog):
         finally:
             self._is_queuing = False
 
-    
+    def _save_album_to_library(self, album):
+        """Saves a single album to the user's library."""
+        if not self.client:
+            return
+        if not album or album.get("type") != 'album' or not album.get("id"):
+            wx.CallAfter(ui.message, _("Could not save. Invalid album data provided."))
+            return
+
+        ui.message(_("Saving '{album_name}' to your library...").format(album_name=album.get("name")))
+        threading.Thread(
+            target=self._save_album_thread, args=(album,)
+        ).start()
+
+    def _save_album_thread(self, album):
+        album_id = album.get("id")
+        album_name = album.get("name")
+        result = self.client.save_albums_to_library([album_id])
+        if isinstance(result, str):
+            wx.CallAfter(ui.message, result)
+        else:
+            wx.CallAfter(ui.message, _("Album '{album_name}' saved successfully.").format(album_name=album_name))
     def copy_link(self, link):
         """Copies a given link to the clipboard."""
         if not link:

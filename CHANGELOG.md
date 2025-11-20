@@ -7,6 +7,7 @@ This is a stable release focused on dramatically improving reliability, performa
 ### Added
 - Implemented playlist track reordering in the Management dialog using `Alt+Up/Down` arrow keys.
 - Added a feature that lets you go to the album or artist from the context menu in most parts of the UI when the selected item is a track (Resolves #34).
+- Added a feature that allows you to add, view, and remove albums from the Saved Albums tab in Spotify Management, similar to how Saved Tracks are handled.
 
 ### Changed
 - Reworked `Next/Previous Track` logic to be nearly instantaneous, removing polling delays for a much snappier feel.

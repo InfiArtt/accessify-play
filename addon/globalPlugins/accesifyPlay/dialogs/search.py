@@ -301,7 +301,10 @@ class SearchDialog(AccessifyDialog):
         if item.get("type") == "artist":
             menu.Append(self.MENU_FOLLOW.GetId(), _("Follow Artist\tAlt+F"))
             menu.Append(self.MENU_DISCO.GetId(), _("View Discography\tAlt+D"))
-            
+        if item.get("type") == "album":
+            save_item = menu.Append(wx.ID_ANY, _("Save Album"))
+            self.Bind(wx.EVT_MENU, self.on_save_album, save_item)
+
         link = item.get("external_urls", {}).get("spotify")
         if link:
             menu.Append(self.MENU_COPY_LINK.GetId(), _("Copy Link\tAlt+L"))
@@ -354,6 +357,11 @@ class SearchDialog(AccessifyDialog):
             else:
                 wx.CallAfter(ui.message, _("Track added successfully."))
         threading.Thread(target=_add_thread).start()
+
+    def on_save_album(self, evt=None):
+        item = self._get_item_at_index(self.resultsList.GetSelection())
+        if item:
+            self._save_album_to_library(item)
 
     def onAddToQueue(self, evt=None):
         item = self._get_item_at_index(self.resultsList.GetSelection())

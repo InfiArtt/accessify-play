@@ -930,6 +930,63 @@ class SpotifyClient:
         """Returns information about the current Spotify user."""
         return self._execute_web_api(self.client.current_user)
 
+    def get_saved_albums(self):
+        """Fetches all saved albums from the user's library."""
+        albums = []
+        offset = 0
+        limit = 50  # Max limit per request
+        while True:
+            results = self._execute_web_api(
+                self.client.current_user_saved_albums, limit=limit, offset=offset
+            )
+            if isinstance(results, str):
+                return results  # Error message
+
+            if not results or not results.get("items"):
+                break
+            albums.extend(results["items"])
+            if len(results["items"]) < limit:
+                break
+            offset += limit
+        return albums
+
+    def save_albums_to_library(self, album_ids):
+        """Saves one or more albums to the user's library."""
+        return self._execute_web_api(
+            self.client.current_user_saved_albums_add, albums=album_ids
+        )
+
+    def remove_albums_from_library(self, album_ids):
+        """Removes one or more albums from the user's library."""
+        return self._execute_web_api(
+            self.client.current_user_saved_albums_delete, albums=album_ids
+        )
+
+    def check_if_albums_saved(self, album_ids):
+        """Checks if one or more albums are already in the user's library."""
+        return self._execute_web_api(
+            self.client.current_user_saved_albums_contains, albums=album_ids
+        )
+
+    def follow_playlist(self, playlist_id):
+        """Follows a playlist."""
+        return self._execute_web_api(
+            self.client.playlist_follow_playlist, playlist_id=playlist_id
+        )
+
+    def unfollow_playlist(self, playlist_id):
+        """Unfollows a playlist."""
+        # Note: For public playlists, this is the correct method.
+        return self._execute_web_api(
+            self.client.playlist_unfollow, playlist_id=playlist_id
+        )
+
+    def check_if_playlist_followed(self, playlist_id, user_ids):
+        """Checks if users are following a playlist."""
+        return self._execute_web_api(
+            self.client.playlist_is_following, playlist_id=playlist_id, user_ids=user_ids
+        )
+
     @staticmethod
     def _format_duration(duration_ms):
         if not duration_ms:
