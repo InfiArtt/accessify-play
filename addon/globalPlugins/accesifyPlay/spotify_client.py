@@ -968,25 +968,29 @@ class SpotifyClient:
             self.client.current_user_saved_albums_contains, albums=album_ids
         )
 
+    def check_if_artists_followed(self, artist_ids):
+        """Checks if the current user is following one or more artists."""
+        return self._execute_web_api(
+            self.client.current_user_following_artists, ids=artist_ids
+        )
+
     def follow_playlist(self, playlist_id):
         """Follows a playlist."""
         return self._execute_web_api(
-            self.client.playlist_follow_playlist, playlist_id=playlist_id
+            self.client.current_user_follow_playlist, playlist_id=playlist_id
         )
 
     def unfollow_playlist(self, playlist_id):
         """Unfollows a playlist."""
-        # Note: For public playlists, this is the correct method.
         return self._execute_web_api(
-            self.client.playlist_unfollow, playlist_id=playlist_id
+            self.client.current_user_unfollow_playlist, playlist_id=playlist_id
         )
 
-    def check_if_playlist_followed(self, playlist_id, user_ids):
-        """Checks if users are following a playlist."""
+    def check_if_playlist_is_followed(self, playlist_id, user_ids):
+        """Checks if one or more users are following a playlist."""
         return self._execute_web_api(
             self.client.playlist_is_following, playlist_id=playlist_id, user_ids=user_ids
         )
-
     @staticmethod
     def _format_duration(duration_ms):
         if not duration_ms:

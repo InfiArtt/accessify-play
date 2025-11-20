@@ -1478,15 +1478,13 @@ class RelatedArtistsDialog(AccessifyDialog):
 class ManagementDialog(AccessifyDialog):
     def __init__(self, parent, client, preloaded_data):
         super().__init__(parent, title=_("Spotify Management"), size=(600, 500))
-        # Mengatur self.client agar fungsi dari AccessifyDialog bisa bekerja
         self.client = client
         
         self.preloaded_data = preloaded_data or {}
         self.current_user_id = self.preloaded_data.get("user_profile", {}).get("id")
         self._createPlaylistDialog = None
         self._playlistDetailsDialog = None
-        
-        # "Otak" dari dialog, untuk mengelola tab-tab secara generik
+        self.is_current_playlist_owned = False        
         self.tabs_config = {}
 
         self.init_ui()
@@ -1745,9 +1743,9 @@ class ManagementDialog(AccessifyDialog):
         edit_button.Bind(wx.EVT_BUTTON, self.on_update_playlist)
         buttons_sizer.Add(edit_button, 0, wx.ALL, 5)
 
-        delete_button = wx.Button(panel, label=_("&Delete Playlist"))
-        delete_button.Bind(wx.EVT_BUTTON, self.on_delete_playlist)
-        buttons_sizer.Add(delete_button, 0, wx.ALL, 5)
+        self.delete_unfollow_button = wx.Button(panel, label=_("&Delete Playlist"))
+        self.delete_unfollow_button.Bind(wx.EVT_BUTTON, self.on_delete_or_unfollow_playlist)
+        buttons_sizer.Add(self.delete_unfollow_button, 0, wx.ALL, 5)
 
         sizer.Add(buttons_sizer, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
 
@@ -1787,26 +1785,27 @@ class ManagementDialog(AccessifyDialog):
 
     def _populate_playlists_combobox(self, playlists_data):
         self.playlist_choices.Clear()
-        self.user_playlists = []
         
-        user_id = self.current_user_id
-        if not user_id:
+        self.user_playlists = playlists_data or []
+        
+        if not self.current_user_id:
             profile = self.client.get_current_user_profile()
             if not isinstance(profile, str):
-                user_id = self.current_user_id = profile.get("id")
-
-        if user_id:
-            self.user_playlists = [p for p in playlists_data if p.get("owner", {}).get("id") == user_id]
+                self.current_user_id = profile.get("id")
 
         if not self.user_playlists:
             self.playlist_tracks_list.Clear()
+            self._update_playlist_controls_state()
             return
 
         for p in self.user_playlists:
             self.playlist_choices.Append(p["name"])
         
-        self.playlist_choices.SetSelection(0)
-        self.on_playlist_selected()
+        if self.user_playlists:
+            self.playlist_choices.SetSelection(0)
+            self.on_playlist_selected()
+        else:
+            self._update_playlist_controls_state()
 
     def on_playlist_selected(self, evt=None):
         selection_index = self.playlist_choices.GetSelection()
@@ -1814,12 +1813,15 @@ class ManagementDialog(AccessifyDialog):
             return
 
         selected_playlist = self.user_playlists[selection_index]
+        owner_id = selected_playlist.get("owner", {}).get("id")
+        self.is_current_playlist_owned = (owner_id == self.current_user_id)
         playlist_id = selected_playlist["id"]
         
         self.playlist_tracks_list.Clear()
         self.playlist_tracks_list.Append(_("Loading tracks..."))
         
         self.load_playlist_tracks(playlist_id)
+        self._update_playlist_controls_state()
 
     def load_playlist_tracks(self, playlist_id):
         def _load():
@@ -1845,6 +1847,25 @@ class ManagementDialog(AccessifyDialog):
 
         if self.playlist_tracks_list.GetCount() > 0:
             self.playlist_tracks_list.SetSelection(0)
+
+    def _update_playlist_controls_state(self):
+        """Enables or disables controls based on playlist ownership."""
+        is_owned = self.is_current_playlist_owned
+        panel = self.playlist_choices.GetParent()
+        edit_button = [c for c in panel.GetChildren() if isinstance(c, wx.Button) and c.GetLabel() == _("&Edit Playlist Details")]
+        if edit_button:
+            edit_button[0].Enable(is_owned)
+        if is_owned:
+            self.delete_unfollow_button.SetLabel(_("&Delete Playlist"))
+        else:
+            self.delete_unfollow_button.SetLabel(_("&Unfollow Playlist"))
+            self.delete_unfollow_button.Enable(self.playlist_choices.GetSelection() != wx.NOT_FOUND)
+
+    def on_delete_or_unfollow_playlist(self, evt):
+        if self.is_current_playlist_owned:
+            self.on_delete_playlist(evt)
+        else:
+            self.on_unfollow_playlist(evt)
 
     def on_update_playlist(self, evt):
         selection_index = self.playlist_choices.GetSelection()
@@ -1891,6 +1912,27 @@ class ManagementDialog(AccessifyDialog):
                     wx.CallAfter(ui.message, _("Playlist '{name}' deleted successfully.").format(name=playlist_data["name"]))
                     wx.CallAfter(self.load_playlists)
             threading.Thread(target=_delete).start()
+
+    def on_unfollow_playlist(self, evt):
+        selection_index = self.playlist_choices.GetSelection()
+        if selection_index == wx.NOT_FOUND:
+            return
+
+        playlist_data = self.user_playlists[selection_index]
+        confirmation_msg = _(
+            "Are you sure you want to unfollow playlist '{name}'?"
+        ).format(name=playlist_data["name"])
+        dialog_title = _("Confirm Unfollow Playlist")
+    
+        if gui.messageBox(confirmation_msg, dialog_title, wx.YES_NO | wx.ICON_QUESTION) == wx.YES:
+            def _unfollow():
+                result = self.client.unfollow_playlist(playlist_data["id"])
+                if isinstance(result, str):
+                    wx.CallAfter(ui.message, result)
+                else:
+                    wx.CallAfter(ui.message, _("Unfollowed '{name}' successfully.").format(name=playlist_data["name"]))
+                    wx.CallAfter(self.load_playlists)
+            threading.Thread(target=_unfollow).start()
 
     def on_remove_track_from_playlist(self, evt=None):
         track_selection = self.playlist_tracks_list.GetSelection()
@@ -1980,19 +2022,20 @@ class ManagementDialog(AccessifyDialog):
         key_code = event.GetKeyCode()
         is_alt_down = event.AltDown()
 
-        if is_alt_down:
-            if key_code == wx.WXK_UP:
-                self._handle_reorder_track("up")
-                return  # Stop further processing
-            elif key_code == wx.WXK_DOWN:
-                self._handle_reorder_track("down")
-                return  # Stop further processing
-
-        if key_code == wx.WXK_DELETE:
-            self.on_remove_track_from_playlist(None)
-        else:
-            # Let other key presses (like normal up/down arrows) work as usual
-            event.Skip()
+        if (is_alt_down and key_code in (wx.WXK_UP, wx.WXK_DOWN)) or key_code == wx.WXK_DELETE:
+            if not self.is_current_playlist_owned:
+                ui.message(_("You cannot modify a playlist you don't own."))
+                return
+            if is_alt_down:
+                if key_code == wx.WXK_UP:
+                    self._handle_reorder_track("up")
+                elif key_code == wx.WXK_DOWN:
+                    self._handle_reorder_track("down")
+                return
+            if key_code == wx.WXK_DELETE:
+                self.on_remove_track_from_playlist(None)
+                return
+        event.Skip()
 
     def init_top_items_tab(self):
         panel = wx.Panel(self.notebook)
@@ -2111,12 +2154,14 @@ class ManagementDialog(AccessifyDialog):
         if selection == wx.NOT_FOUND: 
             return
         menu = wx.Menu()
-        
+
         self._append_menu_item(menu, _("Play"), self._handle_play)
         self._append_menu_item(menu, _("Add to Queue"), self._handle_add_to_queue)
         self._append_menu_item(menu, _("Copy Link"), self._handle_copy_link)
         menu.AppendSeparator()
-        self._append_menu_item(menu, _("Remove Track from Playlist"), self.on_remove_track_from_playlist)
+        if self.is_current_playlist_owned:
+            menu.AppendSeparator()
+            self._append_menu_item(menu, _("Remove Track from Playlist"), self.on_remove_track_from_playlist)
         selected_track = self._get_selected_item()
         self._append_go_to_options_for_track(menu, selected_track)
         self.PopupMenu(menu)

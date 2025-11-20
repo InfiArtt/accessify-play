@@ -2,21 +2,23 @@
 
 ## Version 1.5.0
 
-This is a stable release focused on dramatically improving reliability, performance, and core functionality. Thanks to community feedback, especially from **@a-singer**, this version addresses key connection issues and streamlines the user experience.
+This is a stable release focused on significantly improving reliability, performance, and core functionality. this version addresses key connection issues and streamlines the overall user experience.
 
 ### Added
 - Implemented playlist track reordering in the Management dialog using `Alt+Up/Down` arrow keys.
 - Added a feature that lets you go to the album or artist from the context menu in most parts of the UI when the selected item is a track (Resolves #34).
-- Added a feature that allows you to add, view, and remove albums from the Saved Albums tab in Spotify Management, similar to how Saved Tracks are handled.
+- Added a feature that allows users to add, view, and remove albums from the Saved Albums tab in Spotify Management, similar to how Saved Tracks are handled.
+- Added support for following and unfollowing playlists directly from the Search dialog.
+- Added a shortcut `Alt+NVDA+Shift+F` to quickly follow or unfollow the artist of the currently playing track.
+- Added a version-checking system during Add-on installation. If a newer version of the addon is available, the user will be notified before the installation completes.
 
 ### Changed
-- Reworked `Next/Previous Track` logic to be nearly instantaneous, removing polling delays for a much snappier feel.
-- Improved playback to maintain context from albums, playlists, and shows, ensuring the queue continues as expected (Resolves #29).
-- Refactored internal command handling to use decorators, resulting in cleaner, more maintainable code and better error handling.
+- Improved playback to maintain context from albums, playlists, and shows, ensuring the queue continues correctly (Resolves #29).
+- Refactored internal command handling to use decorators, resulting in cleaner, more maintainable code and improved error handling.
 
 ### Fixed
-- Fixed a crash (`AttributeError`) when opening an album's track list from the Artist Discography dialog (Resolves #31).
-- Made the "Add" button the default action in the "Add to Playlist" dialog, enabling the `Enter` key to confirm the selection (Resolves #35).
+- Fixed a crash (`AttributeError`) when opening an album’s track list from the Artist Discography dialog (Resolves #31).
+- Made the “Add” button the default action in the “Add to Playlist” dialog, enabling the `Enter` key to confirm the selection (Resolves #35).
 
 ## Version 1.4.0
 

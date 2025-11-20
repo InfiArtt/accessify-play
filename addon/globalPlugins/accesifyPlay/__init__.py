@@ -337,8 +337,49 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         if isinstance(result, str): return result
         return _("Track '{track_name}' saved to your library.").format(track_name=track["name"])
 
-    # --- SCRIPT UNTUK MEMBUKA DIALOG (TIDAK PAKAI DECORATOR) ---
-    
+    @scriptHandler.script(
+        description=_("Follow or unfollow the artist of the currently playing track."),
+        gesture="kb:nvda+alt+shift+f",
+    )
+    @utils.speak_in_thread
+    def script_toggleFollowArtist(self, gesture):
+        playback = self.client._execute(self.client.client.current_playback)
+        if isinstance(playback, str):
+            return playback
+        if not playback or not playback.get("item"):
+            return _("Nothing is currently playing.")
+        
+        if playback.get("currently_playing_type") != "track":
+            return _("This action is only available for music tracks.")
+
+        artists = playback["item"].get("artists", [])
+        if not artists:
+            return _("Could not find artist information for this track.")
+
+        primary_artist = artists[0]
+        artist_id = primary_artist.get("id")
+        artist_name = primary_artist.get("name")
+
+        if not artist_id or not artist_name:
+            return _("Could not identify the artist.")
+
+        is_followed_list = self.client.check_if_artists_followed([artist_id])
+        if isinstance(is_followed_list, str):
+            return is_followed_list
+        
+        is_currently_followed = is_followed_list[0]
+
+        if is_currently_followed:
+            result = self.client.unfollow_artists([artist_id])
+            if isinstance(result, str):
+                return result
+            return _("Unfollowed artist: {artist_name}.").format(artist_name=artist_name)
+        else:
+            result = self.client.follow_artists([artist_id])
+            if isinstance(result, str):
+                return result
+            return _("Now following artist: {artist_name}.").format(artist_name=artist_name)
+
     def _open_dialog(self, dialog_class, dialog_attr, *args, **kwargs):
         """Fungsi helper generik untuk membuka dialog."""
         if getattr(self, dialog_attr, None):
