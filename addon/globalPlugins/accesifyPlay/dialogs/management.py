@@ -112,10 +112,10 @@ class PlaylistDetailsDialog(AccessifyDialog):
         self.collabCheck.SetValue(bool(playlist_data.get("collaborative")))
 
         buttonsSizer = wx.StdDialogButtonSizer()
-        self.saveButton = wx.Button(self, wx.ID_OK, label=_("Save"))
+        self.saveButton = wx.Button(self, wx.ID_OK, label=_("&Save"))
         self.saveButton.Bind(wx.EVT_BUTTON, self.onSave)
         buttonsSizer.AddButton(self.saveButton)
-        cancelButton = wx.Button(self, wx.ID_CANCEL, label=_("Cancel"))
+        cancelButton = wx.Button(self, wx.ID_CANCEL, label=_("&Cancel"))
         self.bind_close_button(cancelButton)
         buttonsSizer.AddButton(cancelButton)
         buttonsSizer.Realize()
