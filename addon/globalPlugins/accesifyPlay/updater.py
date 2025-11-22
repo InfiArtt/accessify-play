@@ -26,8 +26,7 @@ def check_for_updates(is_manual=False):
     if not is_manual:
         if not config.conf["spotify"]["isAutomaticallyCheckForUpdates"]:
             return
-    
-    log.info("AccessifyPlay: Checking for updates...")
+
     threading.Thread(target=_perform_check, args=(is_manual,)).start()
 
 
@@ -75,7 +74,6 @@ def _perform_check(is_manual):
 
     try:
         current_version = addonHandler.getCodeAddon().manifest["version"]
-        log.info(f"AccessifyPlay: Current version: {current_version}, Channel: {channel}")
 
         api_url = f"https://api.github.com/repos/{OWNER}/{REPO}/releases"
         headers = {'Accept': 'application/vnd.github.v3+json'}
@@ -98,13 +96,10 @@ def _perform_check(is_manual):
             return
 
         latest_version = latest_release["tag_name"].lstrip("v")
-        log.info(f"AccessifyPlay: Latest version found: {latest_version}")
 
         if _parse_version(latest_version) > _parse_version(current_version):
-            log.info(f"AccessifyPlay: New version available. Current: {current_version}, Latest: {latest_version}")
             wx.CallAfter(show_update_dialog, latest_release)
         elif is_manual:
-            log.info("AccessifyPlay: No new version available.")
             wx.CallAfter(
                 messageBox,
                 _("You are running the latest version of AccessifyPlay."),
