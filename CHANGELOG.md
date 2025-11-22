@@ -2,7 +2,7 @@
 
 ## Version 1.5.0
 
-This is a stable release focused on significantly improving reliability, performance, and core functionality. this version addresses key connection issues and streamlines the overall user experience.
+This stable release focuses on improving core reliability, reducing connection issues, and refining overall performance. Several long-standing gaps in functionality have been addressed, and new quality-of-life features have been introduced to make navigation, playback, and library management more consistent and intuitive.
 
 ### Added
 - Implemented playlist track reordering in the Management dialog using `Alt+Up/Down` arrow keys.
@@ -13,6 +13,7 @@ This is a stable release focused on significantly improving reliability, perform
 - added a feature to control shuffle and repeat with NVDA Alt+Shift+H and R, respectively.
 - added a feature to jump to a relative number of seconds or to a specific minute:second position.
 - added keep-alive settings so there are no dead connections (hopefully this works well).
+- added a playlist ownership identifier, allowing you to distinguish between your playlists and those created by others.
 - Added a shortcut `Alt+NVDA+Shift+F` to quickly follow or unfollow the artist of the currently playing track.
 - Added a version-checking system during Add-on installation. If a newer version of the addon is available, the user will be notified before the installation completes.
 

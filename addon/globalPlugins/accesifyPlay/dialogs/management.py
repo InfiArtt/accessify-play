@@ -1799,7 +1799,20 @@ class ManagementDialog(AccessifyDialog):
             return
 
         for p in self.user_playlists:
-            self.playlist_choices.Append(p["name"])
+            owner_obj = p.get("owner", {})
+            owner_id = owner_obj.get("id")
+            owner_name = owner_obj.get("display_name") or owner_id or _("Unknown")
+            
+            playlist_name = p.get("name", _("Untitled"))
+
+            if owner_id == self.current_user_id:
+                display_text = f"{playlist_name} ({_('Owned by You')})"
+            elif owner_id:
+                display_text = f"{playlist_name} ({_('Owned by {name}').format(name=owner_name)})"
+            else:
+                display_text = f"{playlist_name} ({_('Owned by Unknown')})"
+
+            self.playlist_choices.Append(display_text)
         
         if self.user_playlists:
             self.playlist_choices.SetSelection(0)
