@@ -8,7 +8,11 @@ This is a stable release focused on significantly improving reliability, perform
 - Implemented playlist track reordering in the Management dialog using `Alt+Up/Down` arrow keys.
 - Added a feature that lets you go to the album or artist from the context menu in most parts of the UI when the selected item is a track (Resolves #34).
 - Added a feature that allows users to add, view, and remove albums from the Saved Albums tab in Spotify Management, similar to how Saved Tracks are handled.
+- added a feature to manage shows the same way as albums; not sure why this wasn’t available before.
 - Added support for following and unfollowing playlists directly from the Search dialog.
+- added a feature to control shuffle and repeat with NVDA Alt+Shift+H and R, respectively.
+- added a feature to jump to a relative number of seconds or to a specific minute:second position.
+- added keep-alive settings so there are no dead connections (hopefully this works well).
 - Added a shortcut `Alt+NVDA+Shift+F` to quickly follow or unfollow the artist of the currently playing track.
 - Added a version-checking system during Add-on installation. If a newer version of the addon is available, the user will be notified before the installation completes.
 

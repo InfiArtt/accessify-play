@@ -2129,6 +2129,7 @@ class ManagementDialog(AccessifyDialog):
                 self._append_menu_item(menu, _("View Album Tracks"), self.on_view_album_tracks)
         elif focused_control == self.tabs_config["saved_shows"]["control"]:
             self._append_menu_item(menu, _("View Episodes"), self.on_view_episodes)
+            self._append_menu_item(menu, _("Remove from Library"), self.on_remove_show_from_library)
         if item and item.get("type") == "track":
             menu.AppendSeparator()
             playlist_submenu = wx.Menu()
@@ -2194,6 +2195,20 @@ class ManagementDialog(AccessifyDialog):
         else:
             wx.CallAfter(ui.message, _("Album '{album_name}' removed from your library.").format(album_name=album_name))
             wx.CallAfter(self.load_saved_albums)
+
+    def on_remove_show_from_library(self, evt):
+        item = self._get_selected_item()
+        if not item: return
+        msg = _("Are you sure you want to remove '{show_name}' from your library?").format(show_name=item["name"])
+        if gui.messageBox(msg, _("Confirm Remove Show"), wx.YES_NO | wx.ICON_WARNING) == wx.YES:
+            threading.Thread(target=self._remove_show_from_library_thread, args=(item['id'], item['name'])).start()
+
+    def _remove_show_from_library_thread(self, show_id, show_name):
+        result = self.client.remove_shows_from_library([show_id])
+        if isinstance(result, str): wx.CallAfter(ui.message, result)
+        else:
+            wx.CallAfter(ui.message, _("Show '{show_name}' removed from your library.").format(show_name=show_name))
+            wx.CallAfter(self.load_saved_shows)
 
     def on_unfollow_artist(self, evt):
         artist = self._get_selected_item()

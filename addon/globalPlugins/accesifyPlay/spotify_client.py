@@ -196,31 +196,65 @@ class SpotifyClient:
             )
             return _("An unexpected error occurred.")
 
-    def _ensure_device(self):
-        """Makes sure there is an active device ID set."""
-        if self.device_id:
-            try:
-                devices = self.client.devices().get("devices", [])
-                if any(d["id"] == self.device_id for d in devices):
-                    return True
-            except Exception:
-                self.device_id = None
-
-        log.info(_("Spotify: No active device, searching for one."))
+    def send_keep_alive(self):
+        """
+        Sends a lightweight request to keep the connection active.
+        Using current_user (Get Profile) as it's low impact.
+        """
+        if not self.client:
+            return
         try:
-            devices = self.client.devices().get("devices", [])
-            if not devices:
-                return False
-
-            for device in devices:
-                if device.get("is_active"):
-                    self.device_id = device["id"]
-                    return True
-
-            self.device_id = devices[0]["id"]
-            return True
+            self.client.current_user()
         except Exception:
+            pass
+
+    def _ensure_device(self):
+        """
+        Ensures an active device is available for playback.
+        If no device is currently active, it proactively tries to wake up
+        the last known device or the first available one.
+        Handles connection errors by retrying once.
+        """
+        try:
+            # First attempt to get devices
+            devices_result = self.client.devices()
+        except requests.exceptions.ConnectionError as e:
+            try:
+                devices_result = self.client.devices()
+            except Exception as retry_e:
+                log.error(f"{_('Spotify: Could not fetch devices on retry:')} {retry_e}", exc_info=True)
+                return False
+        except Exception as e:
+            log.error(f"{_('Spotify: Could not fetch devices:')} {e}", exc_info=True)
             return False
+
+        if not devices_result or not devices_result.get("devices"):
+            return False
+        devices = devices_result["devices"]
+
+        for device in devices:
+            if device.get("is_active"):
+                self.device_id = device["id"]
+                return True
+
+        target_device_id = None
+        if self.device_id:
+            for device in devices:
+                if device["id"] == self.device_id:
+                    target_device_id = self.device_id
+                    break
+        if not target_device_id and devices:
+            target_device_id = devices[0]["id"]
+        if target_device_id:
+            try:
+                self.client.transfer_playback(target_device_id, force_play=False)
+                self.device_id = target_device_id
+                return True
+            except Exception as e:
+                log.error(f"{_('Spotify: Failed to wake up device:')} {e}", exc_info=True)
+                self.device_id = None # Reset karena gagal
+                return False
+        return False
 
     def get_current_track_info(self, playback=None):
         if playback is None:
@@ -556,6 +590,98 @@ class SpotifyClient:
         new_position_ms = max(0, min(new_position_ms, track_duration_ms))
 
         return self._execute(self.client.seek_track, position_ms=new_position_ms)
+
+    def smart_seek(self, time_input):
+        """
+        Parses a string input to determine absolute or relative seek.
+        - "mm:ss" or "hh:mm:ss" -> Absolute seek (Go to position).
+        - "30" -> Relative forward (Jump 30s).
+        - "-10" -> Relative backward (Rewind 10s).
+        """
+        playback = self._execute(self.client.current_playback)
+        if isinstance(playback, str): return playback
+        if not playback or not playback.get("item"):
+            return _("Nothing is currently playing.")
+
+        try:
+            target_ms = 0
+            current_ms = playback.get("progress_ms", 0)
+            duration_ms = playback["item"].get("duration_ms", 0)
+            
+            if ":" in time_input:
+                parts = time_input.split(":")
+                seconds = 0
+                for part in parts:
+                    seconds = seconds * 60 + int(part)
+                target_ms = seconds * 1000
+            
+            else:
+                offset_seconds = int(time_input)
+                target_ms = current_ms + (offset_seconds * 1000)
+
+            target_ms = max(0, min(target_ms, duration_ms))
+            
+            return self._execute(self.client.seek_track, position_ms=target_ms)
+            
+        except ValueError:
+            return _("Invalid time format. Use 'mm:ss' or just a number.")
+
+    def toggle_shuffle(self):
+        """Toggles shuffle mode on or off."""
+        playback = self._execute(self.client.current_playback)
+        if isinstance(playback, str): return playback
+        
+        # Jika tidak ada playback aktif
+        if not playback or not isinstance(playback, dict):
+            return _("No active playback found. Please play something first.")
+
+        # Cek status sekarang
+        current_state = playback.get("shuffle_state")
+        new_state = not current_state
+        
+        try:
+            # Kita panggil langsung lewat _execute agar handle device_id otomatis
+            result = self._execute(self.client.shuffle, state=new_state)
+            if isinstance(result, str) and "restriction" in result.lower():
+                return _("Failed: Spotify Premium is required for Shuffle control.")
+            if isinstance(result, str): 
+                return result # Return error message lain jika ada
+            
+            return _("Shuffle On") if new_state else _("Shuffle Off")
+        except Exception as e:
+             return _("Could not toggle shuffle. (Premium might be required).")
+
+    def cycle_repeat(self):
+        """Cycles repeat mode: off -> context (album/playlist) -> track -> off."""
+        playback = self._execute(self.client.current_playback)
+        if isinstance(playback, str): return playback
+        
+        if not playback or not isinstance(playback, dict):
+            return _("No active playback found. Please play something first.")
+
+        current_state = playback.get("repeat_state") # 'off', 'context', 'track'
+        
+        # Tentukan state berikutnya
+        if current_state == "off":
+            new_state = "context"
+            message = _("Repeat: All")
+        elif current_state == "context":
+            new_state = "track"
+            message = _("Repeat: One Track")
+        else:
+            new_state = "off"
+            message = _("Repeat: Off")
+
+        try:
+            result = self._execute(self.client.repeat, state=new_state)
+            if isinstance(result, str) and "restriction" in result.lower():
+                return _("Failed: Spotify Premium is required for Repeat control.")
+            if isinstance(result, str): 
+                return result
+            
+            return message
+        except Exception as e:
+            return _("Could not change repeat mode. (Premium might be required).")
 
     def get_user_playlists(self):
         """Fetches all playlists owned by or followed by the current user."""
@@ -966,6 +1092,18 @@ class SpotifyClient:
         """Checks if one or more albums are already in the user's library."""
         return self._execute_web_api(
             self.client.current_user_saved_albums_contains, albums=album_ids
+        )
+
+    def save_shows_to_library(self, show_ids):
+        """Saves one or more shows to the user's library."""
+        return self._execute_web_api(
+            self.client.current_user_saved_shows_add, shows=show_ids
+        )
+
+    def remove_shows_from_library(self, show_ids):
+        """Removes one or more shows from the user's library."""
+        return self._execute_web_api(
+            self.client.current_user_saved_shows_delete, shows=show_ids
         )
 
     def check_if_artists_followed(self, artist_ids):

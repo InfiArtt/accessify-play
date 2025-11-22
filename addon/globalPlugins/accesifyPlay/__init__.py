@@ -32,6 +32,7 @@ from .dialogs.search import SearchDialog
 from .dialogs.play_from_link import PlayFromLinkDialog
 from .dialogs.queue_list import QueueListDialog
 from .dialogs.management import ManagementDialog
+from .dialogs.seek import SeekDialog
 from .dialogs.settings import SpotifySettingsPanel
 from .dialogs.devices import DevicesDialog
 from .dialogs.volume import SetVolumeDialog
@@ -44,6 +45,7 @@ confspec = {
     "seekDuration": "integer(min=1, max=60, default=15)",
     "language": "string(default='auto')",
     "announceTrackChanges": "boolean(default=False)",
+    "keepAliveInterval": "integer(min=0, default=30)",
     "updateChannel": "string(default='stable')",
     "isAutomaticallyCheckForUpdates": "boolean(default=True)",
     "lastUpdateCheck": "integer(default=0)",
@@ -68,7 +70,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         self.managementDialog = None
         self.setVolumeDialog = None
         self.devicesDialog = None
-        
+        self.seekDialog = None
         # Status loading untuk dialog
         self._queueDialogLoading = False
         self._addToPlaylistLoading = False
@@ -84,7 +86,10 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         self.polling_thread.daemon = True
         self.polling_thread.start()
 
-        # Inisialisasi klien dan cek pembaruan di latar belakang
+        self.keep_alive_thread = threading.Thread(target=self.keep_alive_worker)
+        self.keep_alive_thread.daemon = True
+        self.keep_alive_thread.start()
+
         threading.Thread(target=self.client.initialize).start()
         if config.conf["spotify"]["isAutomaticallyCheckForUpdates"]:
             threading.Thread(target=updater.check_for_updates, args=(False,)).start()
@@ -97,9 +102,8 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         except (ValueError, AttributeError):
             pass
         
-        # Hancurkan semua dialog yang mungkin masih terbuka
         for dialog_attr in ['searchDialog', 'playFromLinkDialog', 'addToPlaylistDialog', 
-                            'queueListDialog', 'managementDialog', 'setVolumeDialog', 'devicesDialog']:
+                            'queueListDialog', 'managementDialog', 'setVolumeDialog', 'seekDialog', 'devicesDialog']:
             dialog = getattr(self, dialog_attr, None)
             if dialog:
                 dialog.Destroy()
@@ -120,10 +124,32 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
             except Exception as e:
                 log.error(f"Error in Spotify polling thread: {e}", exc_info=True)
             
-            # Tunggu 5 detik, cek setiap detik apakah addon sedang ditutup
             for _ in range(5):
                 if not self.is_running:
                     return
+                time.sleep(1)
+
+    def keep_alive_worker(self):
+        """Thread untuk mengirim ping ke Spotify agar koneksi tetap hidup."""
+        while self.is_running:
+            interval = config.conf["spotify"]["keepAliveInterval"]
+            
+            if interval == 0:
+                time.sleep(5)
+                continue
+            
+            if interval < 5:
+                interval = 5
+
+            try:
+                if self.client.client:
+                    self.client.send_keep_alive()
+            except Exception:
+                pass
+            
+            for _ in range(interval):
+                if not self.is_running:
+                    break
                 time.sleep(1)
 
     def _set_clipboard(self, text):
@@ -314,6 +340,36 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
             self._is_modifying_playback = False
 
     @scriptHandler.script(
+        description=_("Toggle Shuffle mode."),
+        gesture="kb:nvda+alt+shift+h",
+    )
+    @utils.speak_in_thread
+    def script_toggleShuffle(self, gesture):
+        # H = sHuffle (S is already used as Search)
+        if self._is_modifying_playback:
+            return _("Please wait...")
+        try:
+            self._is_modifying_playback = True
+            return self.client.toggle_shuffle()
+        finally:
+            self._is_modifying_playback = False
+
+    @scriptHandler.script(
+        description=_("Cycle Repeat mode (Off, Context, Track)."),
+        gesture="kb:nvda+alt+shift+r",
+    )
+    @utils.speak_in_thread
+    def script_cycleRepeat(self, gesture):
+        # R = Repeat
+        if self._is_modifying_playback:
+            return _("Please wait...")
+        try:
+            self._is_modifying_playback = True
+            return self.client.cycle_repeat()
+        finally:
+            self._is_modifying_playback = False
+
+    @scriptHandler.script(
         description=_("Announce the next track in the queue."),
         gesture="kb:nvda+shift+alt+n",
     )
@@ -416,6 +472,13 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
     )
     def script_setVolume(self, gesture):
         self._open_dialog(SetVolumeDialog, "setVolumeDialog")
+
+    @scriptHandler.script(
+        description=_("Seek to a specific time or jump forward/backward."),
+        gesture="kb:nvda+shift+alt+j",
+    )
+    def script_showSeekDialog(self, gesture):
+        self._open_dialog(SeekDialog, "seekDialog")
 
     @scriptHandler.script(
         description=_("Show the Spotify queue list."), gesture="kb:nvda+shift+alt+q"

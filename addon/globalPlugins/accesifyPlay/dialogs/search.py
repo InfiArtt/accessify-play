@@ -307,7 +307,10 @@ class SearchDialog(AccessifyDialog):
                 menu.AppendSeparator()
                 save_item = menu.Append(wx.ID_ANY, _("Save Album"))
                 self.Bind(wx.EVT_MENU, self.on_save_album, save_item)
-
+            elif item_type == "show":
+                menu.AppendSeparator()
+                save_item = menu.Append(wx.ID_ANY, _("Save Show"))
+                self.Bind(wx.EVT_MENU, self.on_save_show, save_item)
             elif item_type == "playlist":
                 is_owned = item.get("owner", {}).get("id") == self._current_user_id
                 if not is_owned:
@@ -382,6 +385,11 @@ class SearchDialog(AccessifyDialog):
         item = self._get_item_at_index(self.resultsList.GetSelection())
         if item:
             self._save_album_to_library(item)
+
+    def on_save_show(self, evt=None):
+        item = self._get_item_at_index(self.resultsList.GetSelection())
+        if item:
+            self._save_show_to_library(item)
 
     def onAddToQueue(self, evt=None):
         item = self._get_item_at_index(self.resultsList.GetSelection())

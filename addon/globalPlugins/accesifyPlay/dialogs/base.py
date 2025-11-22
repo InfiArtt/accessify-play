@@ -149,6 +149,29 @@ class AccessifyDialog(wx.Dialog):
             wx.CallAfter(ui.message, result)
         else:
             wx.CallAfter(ui.message, _("Album '{album_name}' saved successfully.").format(album_name=album_name))
+
+    def _save_show_to_library(self, show):
+        """Saves a single show to the user's library."""
+        if not self.client:
+            return
+        if not show or show.get("type") != 'show' or not show.get("id"):
+            wx.CallAfter(ui.message, _("Could not save. Invalid show data provided."))
+            return
+
+        ui.message(_("Saving '{show_name}' to your library...").format(show_name=show.get("name")))
+        threading.Thread(
+            target=self._save_show_thread, args=(show,)
+        ).start()
+
+    def _save_show_thread(self, show):
+        show_id = show.get("id")
+        show_name = show.get("name")
+        result = self.client.save_shows_to_library([show_id])
+        if isinstance(result, str):
+            wx.CallAfter(ui.message, result)
+        else:
+            wx.CallAfter(ui.message, _("Show '{show_name}' saved successfully.").format(show_name=show_name))
+
     def copy_link(self, link):
         """Copies a given link to the clipboard."""
         if not link:

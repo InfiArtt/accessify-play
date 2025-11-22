@@ -88,7 +88,10 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
         )
         self.seekDurationCtrl.SetRange(1, 60)
         self.seekDurationCtrl.SetValue(config.conf["spotify"]["seekDuration"])
-
+        keep_alive_label = _("Keep Alive Interval (seconds, 0 = Off, Min = 5)")
+        self.keepAliveCtrl = sHelper.addLabeledControl(keep_alive_label, wx.SpinCtrl)
+        self.keepAliveCtrl.SetRange(0, 300) # Maksimal 5 menit
+        self.keepAliveCtrl.SetValue(config.conf["spotify"]["keepAliveInterval"])
         # Translators: Label for a setting to choose the display language for the addon.
         language_label = _("Language:")
         self.languageEntries = self._buildLanguageEntries()
@@ -258,6 +261,12 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
         if selected_code != self._originalLanguage:
             ui.message(_("Language changes will take effect after restarting NVDA."))
             self._originalLanguage = selected_code
+        ka_val = self.keepAliveCtrl.GetValue()
+        if ka_val > 0 and ka_val < 5:
+            ka_val = 5 # Paksa ke 5 jika user bandel isi 1, 2, 3, atau 4
+            ui.message(_("Keep Alive interval adjusted to minimum 5 seconds."))
+        
+        config.conf["spotify"]["keepAliveInterval"] = ka_val
         config.conf["spotify"][
             "announceTrackChanges"
         ] = self.announceTrackChanges.IsChecked()
