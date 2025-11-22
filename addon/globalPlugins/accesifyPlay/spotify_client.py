@@ -703,11 +703,27 @@ class SpotifyClient:
             offset += limit
         return playlists
 
-    def add_track_to_playlist(self, playlist_id, track_uri):
-        """Adds a track to a specified playlist."""
+    def add_items_to_playlist(self, playlist_id, uris):
+        """Adds one or more items (tracks/episodes) to a playlist."""
+        if isinstance(uris, str):
+            uris = [uris]
         return self._execute_web_api(
-            self.client.playlist_add_items, playlist_id=playlist_id, items=[track_uri]
+            self.client.playlist_add_items, playlist_id=playlist_id, items=uris
         )
+
+    def add_album_to_playlist(self, playlist_id, album_id):
+        """Fetches all tracks from an album and adds them to a playlist."""
+        tracks = self.get_album_tracks(album_id)
+        if isinstance(tracks, str): return tracks # Return error message
+
+        uris = [t['uri'] for t in tracks if t.get('uri')]
+        if not uris: return _("No tracks found in this album.")
+        for i in range(0, len(uris), 100):
+            chunk = uris[i:i+100]
+            result = self.add_items_to_playlist(playlist_id, chunk)
+            if isinstance(result, str): return result
+
+        return True
 
     def create_playlist(self, name, public=True, collaborative=False, description=""):
         """Creates a new playlist for the current user."""
@@ -905,6 +921,12 @@ class SpotifyClient:
         """Removes tracks from the user's library."""
         return self._execute_web_api(
             self.client.current_user_saved_tracks_delete, tracks=track_ids
+        )
+
+    def check_if_saved_tracks(self, track_ids):
+        """Checks if tracks are already saved in the current user's library."""
+        return self._execute_web_api(
+            self.client.current_user_saved_tracks_contains, tracks=track_ids
         )
 
     def save_tracks_to_library(self, track_ids):

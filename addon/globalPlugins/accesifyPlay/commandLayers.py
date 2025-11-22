@@ -47,29 +47,31 @@ class CommandLayerManager:
     """Handles binding/unbinding of layered commands and related UI."""
 
     _entry_specs = [
-        ("kb:a", "addToPlaylist", "Add the currently playing track to a playlist.", "A"),
-        ("kb:b", "previousTrack", "Skip to the previous track on Spotify.", "B"),
-        ("kb:c", "copyTrackURL", "Copy the URL of the current track.", "C"),
-        ("kb:d", "showDevicesDialog", "Show available devices to switch playback.", "D"),
-        ("kb:e", "announceNextInQueue", "Announce the next track in the queue.", "E"),
-        ("kb:f", "toggleFollowArtist", "Follow or unfollow the artist of the current track.", "F"),
-        ("kb:h", "toggleShuffle", "Toggle Shuffle mode.", "H"),
-        ("kb:i", "announceTrack", "Announce the currently playing track.", "I"),
-        ("kb:j", "showSeekDialog", "Seek to a specific time or jump forward/backward.", "J"),
-        ("kb:l", "saveTrackToLibrary", "Save the currently playing track to your Library.", "L"),
-        ("kb:m", "showManagementDialog", "Manage your Spotify library and playlists.", "M"),
-        ("kb:n", "nextTrack", "Skip to the next track on Spotify.", "N"),
-        ("kb:p", "playPause", "Play or pause the current track on Spotify.", "P"),
-        ("kb:q", "showQueueListDialog", "Show the Spotify queue list.", "Q"),
-        ("kb:r", "cycleRepeat", "Cycle Repeat mode (Off, Context, Track).", "R"),
-        ("kb:s", "showSearchDialog", "Search for an item on Spotify.", "S"),
-        ("kb:t", "announcePlaybackTime", "Announces the current track's playback time.", "T"),
-        ("kb:u", "showPlayFromLinkDialog", "Play an item from a Spotify URL.", "U"),
-        ("kb:v", "setVolume", "Set Spotify volume to a specific percentage.", "V"),
-        ("kb:-", "volumeDown", "Decrease Spotify volume.", "-"),
-        ("kb:=", "volumeUp", "Increase Spotify volume.", "="),
-        ("kb:[", "seekBackward", "Seek backward in the current track.", "["),
-        ("kb:]", "seekForward", "Seek forward in the current track.", "]"),
+        # Format: (Gesture, ScriptName, Description, HelpLabel, KeepOpen)
+        ("kb:p", "playPause", "Play or pause the current track on Spotify.", "P", False),
+        ("kb:n", "nextTrack", "Skip to the next track on Spotify.", "N", True),
+        ("kb:b", "previousTrack", "Skip to the previous track on Spotify.", "B", True),
+        ("kb:h", "toggleShuffle", "Toggle Shuffle mode.", "H", False),
+        ("kb:r", "cycleRepeat", "Cycle Repeat mode (Off, Context, Track).", "R", True),
+        ("kb:f", "toggleFollowArtist", "Follow or unfollow the artist of the current track.", "F", False),
+                ("kb:-", "volumeDown", "Decrease Spotify volume.", "-", True),
+        ("kb:=", "volumeUp", "Increase Spotify volume.", "=", True),
+        ("kb:[", "seekBackward", "Seek backward in the current track.", "[", True),
+        ("kb:]", "seekForward", "Seek forward in the current track.", "]", True),
+        ("kb:i", "announceTrack", "Announce the currently playing track.", "I", False),
+        ("kb:t", "announcePlaybackTime", "Announces the current track's playback time.", "T", False),
+        ("kb:e", "announceNextInQueue", "Announce the next track in the queue.", "E", False),
+        ("kb:a", "addToPlaylist", "Add the currently playing track to a playlist.", "A", False),
+        ("kb:c", "copyTrackURL", "Copy the URL of the current track.", "C", False),
+        ("kb:d", "showDevicesDialog", "Show available devices to switch playback.", "D", False),
+        ("kb:j", "showSeekDialog", "Seek to a specific time or jump forward/backward.", "J", False),
+        ("kb:l", "toggleLike", "Like/Unlike Track.", "L", True),
+        ("kb:m", "showManagementDialog", "Manage your Spotify library and playlists.", "M", False),
+        ("kb:q", "showQueueListDialog", "Show the Spotify queue list.", "Q", False),
+        ("kb:s", "showSearchDialog", "Search for an item on Spotify.", "S", False),
+        ("kb:u", "showPlayFromLinkDialog", "Play an item from a Spotify URL.", "U", False),
+        ("kb:v", "setVolume", "Set Spotify volume to a specific percentage.", "V", False),
+        ("kb:f4", "openSettings", "Open Accessify Play settings.", "F4", False),
     ]
 
     def __init__(self, plugin):
@@ -113,17 +115,25 @@ class CommandLayerManager:
         if not script:
             return None
 
+        script_name = script.__name__.replace("script_", "")
+        keep_open = False
+        for entry in self._entry_specs:
+            if entry[1] == script_name and len(entry) >= 5:
+                keep_open = entry[4]
+                break
+
         @wraps(script)
         def wrapped(gesture):
             try:
                 return script(gesture)
             finally:
-                self.finish()
-
+                if not keep_open:
+                    self.finish()
         return wrapped
 
     def handle_unknown_gesture(self):
         self._error_beep()
+        self.finish()
 
     def show_help(self):
         def _show():

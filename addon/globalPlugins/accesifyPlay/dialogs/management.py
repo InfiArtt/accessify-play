@@ -827,6 +827,19 @@ class ArtistDiscographyDialog(AccessifyDialog):
             menu.AppendSeparator()
             save_album_item = menu.Append(wx.ID_ANY, _("Save Album to Library"))
             self.Bind(wx.EVT_MENU, lambda evt, alb=item: self._save_album_to_library(alb), save_album_item)
+            playlist_submenu = wx.Menu()
+            if self._user_playlists:
+                for playlist in self._user_playlists:
+                    menu_item = playlist_submenu.Append(wx.ID_ANY, playlist.get("name", "Unknown"))
+                    self.Bind(
+                        wx.EVT_MENU,
+                        lambda event, p_id=playlist.get("id"), p_name=playlist.get("name"), a_id=item.get("id"), a_name=item.get("name"): 
+                            self._on_add_album_to_playlist_action(p_id, p_name, a_id, a_name),
+                        menu_item
+                    )
+            else:
+                playlist_submenu.Append(wx.ID_ANY, _("No playlists found.")).Enable(False)
+            menu.AppendSubMenu(playlist_submenu, _("Add Album to Playlist"))
         elif item_type == "track":
             menu.AppendSeparator()
             playlist_submenu = wx.Menu()
@@ -902,6 +915,20 @@ class ArtistDiscographyDialog(AccessifyDialog):
             else:
                 wx.CallAfter(ui.message, _("Track added successfully."))
         threading.Thread(target=_add_thread).start()
+
+    def _on_add_album_to_playlist_action(self, playlist_id, playlist_name, album_id, album_name):
+        ui.message(_("Adding tracks from '{album}' to '{playlist}'...").format(
+            album=album_name, playlist=playlist_name
+        ))
+        
+        def _thread():
+            result = self.client.add_album_to_playlist(playlist_id, album_id)
+            if result is True:
+                wx.CallAfter(ui.message, _("Album added successfully."))
+            else:
+                wx.CallAfter(ui.message, str(result))
+        threading.Thread(target=_thread).start()
+
 
 class AlbumTracksDialog(AccessifyDialog):
     MENU_PLAY = wx.NewIdRef()

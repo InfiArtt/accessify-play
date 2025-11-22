@@ -393,19 +393,31 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         return self.client.get_next_track_in_queue()
 
     @scriptHandler.script(
-        description=_("Save the currently playing track to your Library."),
+        description=_("Toggle 'Liked' status for the current track (Save/Remove)."),
     )
     @utils.speak_in_thread
-    def script_saveTrackToLibrary(self, gesture):
+    def script_toggleLike(self, gesture):
         playback = self.client._execute(self.client.client.current_playback)
         if isinstance(playback, str): return playback
         if not playback or not playback.get("item"):
             return _("Nothing is currently playing.")
         
         track = playback["item"]
-        result = self.client.save_tracks_to_library([track["id"]])
-        if isinstance(result, str): return result
-        return _("Track '{track_name}' saved to your library.").format(track_name=track["name"])
+        track_id = track["id"]
+        
+        check = self.client.check_if_saved_tracks([track_id])
+        if isinstance(check, str): return check
+        
+        is_saved = check[0] # True jika sudah dilike, False jika belum
+
+        if is_saved:
+            result = self.client.remove_tracks_from_library([track_id])
+            if isinstance(result, str): return result
+            return _("Removed from Liked Songs.")
+        else:
+            result = self.client.save_tracks_to_library([track_id])
+            if isinstance(result, str): return result
+            return _("Added to Liked Songs.")
 
     @scriptHandler.script(
         description=_("Follow or unfollow the artist of the currently playing track."),
@@ -657,3 +669,9 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
             ui.message(_("No available devices found."))
             return
         self._open_dialog(DevicesDialog, "devicesDialog", devices_info=devices)
+
+    def script_openSettings(self, gesture):
+        gui.mainFrame.popupSettingsDialog(
+            settingsDialogs.NVDASettingsDialog,
+            initialCategory=SpotifySettingsPanel
+        )
