@@ -61,23 +61,34 @@ jobs:
       with:
         name: packaged_addon
 
-    - name: Extract release notes
-      id: changelog_extractor
-      uses: m-t-a-c/extract-changelog-release-notes-action@v1
-      with:
-        changelog_file: changelog.md
-        version_tag: ${{ github.ref_name }}
-
-    - name: Calculate sha256 and prepare release body
+    # LANGKAH INI MENGGANTIKAN 'Extract release notes' DAN 'Calculate sha256...' SEBELUMNYA
+    - name: Extract changelog and prepare release body
       id: release_body_prep
       run: |
-        RELEASE_NOTES="${{ steps.changelog_extractor.outputs.release_notes }}"
+        # 1. Dapatkan nama tag (misal: v1.5.0) dan bersihkan awalan 'v' jika ada.
+        TAG_NAME=${{ github.ref_name }}
+        CLEAN_TAG=$(echo "$TAG_NAME" | sed 's/^v//')
+        
+        # 2. Ekstrak Catatan Rilis dari changelog.md menggunakan AWK.
+        # Mencari "## Version [Nomor Versi]" dan mencetak isinya hingga heading "## " berikutnya.
+        RELEASE_NOTES=$(awk -v ver="## Version $CLEAN_TAG" '
+          /^## / { p=0 } 
+          $0 ~ ver { p=1; next } 
+          p 
+        ' changelog.md)
+        
+        # Hapus baris kosong di awal dan akhir
+        RELEASE_NOTES=$(echo "$RELEASE_NOTES" | sed '/^\s*$/d')
 
+        # 3. Siapkan Checksum SHA256
         SHA256_FOOTER=$'\n\n---\n**SHA256 Checksum:**\n```\n'
         SHA256_FOOTER+=$(sha256sum *.nvda-addon)
         SHA256_FOOTER+=$'\n```'
-
+        
+        # 4. Gabungkan Catatan Rilis dan Checksum, lalu kirim sebagai output rilis
         FINAL_BODY="${RELEASE_NOTES}${SHA256_FOOTER}"
+        
+        # Gunakan delimiter untuk mengirim multiline output
         echo "body<<EOF" >> $GITHUB_OUTPUT
         echo "$FINAL_BODY" >> $GITHUB_OUTPUT
         echo "EOF" >> $GITHUB_OUTPUT
