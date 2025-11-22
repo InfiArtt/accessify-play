@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: redis
-Version: 7.0.1
+Version: 7.1.0
 Summary: Python client for Redis database and key-value store
 Project-URL: Changes, https://github.com/redis/redis-py/releases
 Project-URL: Code, https://github.com/redis/redis-py
@@ -19,14 +19,14 @@ Classifier: Operating System :: OS Independent
 Classifier: Programming Language :: Python
 Classifier: Programming Language :: Python :: 3
 Classifier: Programming Language :: Python :: 3 :: Only
-Classifier: Programming Language :: Python :: 3.9
 Classifier: Programming Language :: Python :: 3.10
 Classifier: Programming Language :: Python :: 3.11
 Classifier: Programming Language :: Python :: 3.12
 Classifier: Programming Language :: Python :: 3.13
+Classifier: Programming Language :: Python :: 3.14
 Classifier: Programming Language :: Python :: Implementation :: CPython
 Classifier: Programming Language :: Python :: Implementation :: PyPy
-Requires-Python: >=3.9
+Requires-Python: >=3.10
 Requires-Dist: async-timeout>=4.0.3; python_full_version < '3.11.3'
 Provides-Extra: circuit-breaker
 Requires-Dist: pybreaker>=1.4.0; extra == 'circuit-breaker'
@@ -57,6 +57,7 @@ The Python interface to the Redis key-value store.
 
 **Note:** redis-py 5.0 is the last version of redis-py that supports Python 3.7, as it has reached [end of life](https://devguide.python.org/versions/). redis-py 5.1 supports Python 3.8+.<br>
 **Note:** redis-py 6.1.0 is the last version of redis-py that supports Python 3.8, as it has reached [end of life](https://devguide.python.org/versions/). redis-py 6.2.0 supports Python 3.9+.
+**Note:** redis-py 7.0.1 is the last version of redis-py that supports Python 3.9, as it has reached [end of life](https://devguide.python.org/versions/). redis-py 7.1.0 supports Python 3.10+.
 
 ---------------------------------------------
 

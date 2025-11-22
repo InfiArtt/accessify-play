@@ -210,8 +210,21 @@ class SearchDialog(AccessifyDialog):
         """Performs the default 'Enter' action based on the item type."""
         item_type = item.get("type")
         
+        if item_type == "track":
+            track_uri = item.get("uri")
+            album_info = item.get("album", {})
+            context_uri = album_info.get("uri")
+            if context_uri and track_uri:
+                ui.message(_("Playing."))
+                threading.Thread(
+                    target=self.client.play_context_with_offset,
+                    args=(context_uri, track_uri),
+                ).start()
+            else:
+                self._play_uri(track_uri)
+            return
+
         action_map = {
-            "track": lambda: self._play_uri(item.get("uri")),
             "artist": lambda: self._open_artist_discography(item),
             "album": lambda: self._open_album_tracks(item),
             "show": lambda: self._open_podcast_episodes(item),
@@ -220,7 +233,7 @@ class SearchDialog(AccessifyDialog):
         
         action = action_map.get(item_type, lambda: self._play_uri(item.get("uri")))
         action()
-        
+
     def _open_artist_discography(self, artist):
         dialog = ArtistDiscographyDialog(self, self.client, artist["id"], artist.get("name"), self._user_playlists)
         dialog.Show()
@@ -261,62 +274,88 @@ class SearchDialog(AccessifyDialog):
                 self._user_playlists = playlists
 
         self._playlists_loading = False
-    
+
     def on_results_context_menu(self, evt):
-        """Builds and shows the context menu, handling both mouse and keyboard."""
-        # --- INI BAGIAN KUNCI PERBAIKANNYA ---
-        # Coba dulu dengan HitTest untuk mouse
         selection = self.resultsList.HitTest(evt.GetPosition())
-        
-        # Jika HitTest gagal (kemungkinan besar dari keyboard), pakai selection saat ini
         if selection == wx.NOT_FOUND:
             selection = self.resultsList.GetSelection()
-        # ----------------------------------------
             
         item = self._get_item_at_index(selection)
         if not item:
             return
 
-        # Pastikan item yang benar terpilih secara visual
         self.resultsList.SetSelection(selection)
         
-        menu = wx.Menu()
-        if item.get("uri"):
-            menu.Append(self.MENU_PLAY.GetId(), _("Play\tAlt+P"))
-        if item.get("type") in ("track", "album", "playlist"):
-            menu.Append(self.MENU_ADD_QUEUE.GetId(), _("Add to Queue\tAlt+Q"))
-        if item.get("type") == "artist":
-            menu.Append(self.MENU_FOLLOW.GetId(), _("Follow Artist\tAlt+F"))
-            menu.Append(self.MENU_DISCO.GetId(), _("View Discography\tAlt+D"))
-            
-        link = item.get("external_urls", {}).get("spotify")
-        if link:
-            menu.Append(self.MENU_COPY_LINK.GetId(), _("Copy Link\tAlt+L"))
-        
-        if item.get("type") == "track":
-            menu.AppendSeparator()
-            playlist_submenu = wx.Menu()
-            
-            if self._user_playlists is None:
-                loading_item = playlist_submenu.Append(wx.ID_ANY, _("Loading playlists..."))
-                loading_item.Enable(False)
-            elif self._user_playlists:
-                for playlist in self._user_playlists:
-                    menu_item = playlist_submenu.Append(wx.ID_ANY, playlist.get("name", "Unknown Playlist"))
-                    self.Bind(
-                        wx.EVT_MENU,
-                        lambda event, p_id=playlist.get("id"), p_name=playlist.get("name"): self._on_add_to_playlist_selected(event, p_id, p_name),
-                        menu_item
-                    )
-            else:
-                no_playlist_item = playlist_submenu.Append(wx.ID_ANY, _("No owned playlists found."))
-                no_playlist_item.Enable(False)
-                
-            menu.AppendSubMenu(playlist_submenu, _("Add to Playlist"))
+        def show_menu(is_followed=None):
+            menu = wx.Menu()
+            item_type = item.get("type")
 
-        if menu.GetMenuItemCount():
-            self.PopupMenu(menu)
-        menu.Destroy()
+            if item.get("uri"):
+                menu.Append(self.MENU_PLAY.GetId(), _("Play\tAlt+P"))
+            if item_type in ("track", "album", "playlist"):
+                menu.Append(self.MENU_ADD_QUEUE.GetId(), _("Add to Queue\tAlt+Q"))
+            
+            if item.get("external_urls", {}).get("spotify"):
+                menu.Append(self.MENU_COPY_LINK.GetId(), _("Copy Link\tAlt+L"))
+
+            if item_type == "artist":
+                menu.AppendSeparator()
+                menu.Append(self.MENU_FOLLOW.GetId(), _("Follow Artist\tAlt+F"))
+                menu.Append(self.MENU_DISCO.GetId(), _("View Discography\tAlt+D"))
+
+            elif item_type == "album":
+                menu.AppendSeparator()
+                save_item = menu.Append(wx.ID_ANY, _("Save Album"))
+                self.Bind(wx.EVT_MENU, self.on_save_album, save_item)
+            elif item_type == "show":
+                menu.AppendSeparator()
+                save_item = menu.Append(wx.ID_ANY, _("Save Show"))
+                self.Bind(wx.EVT_MENU, self.on_save_show, save_item)
+            elif item_type == "playlist":
+                is_owned = item.get("owner", {}).get("id") == self._current_user_id
+                if not is_owned:
+                    menu.AppendSeparator()
+                    if is_followed is True:
+                        unfollow_item = menu.Append(wx.ID_ANY, _("Unfollow Playlist"))
+                        self.Bind(wx.EVT_MENU, lambda e: self.on_toggle_follow_playlist(item, True), unfollow_item)
+                    elif is_followed is False:
+                        follow_item = menu.Append(wx.ID_ANY, _("Follow Playlist"))
+                        self.Bind(wx.EVT_MENU, lambda e: self.on_toggle_follow_playlist(item, False), follow_item)
+            
+            elif item_type == "track":
+                menu.AppendSeparator()
+                playlist_submenu = wx.Menu()
+                
+                if self._user_playlists is None:
+                    loading_item = playlist_submenu.Append(wx.ID_ANY, _("Loading playlists..."))
+                    loading_item.Enable(False)
+                elif self._user_playlists:
+                    for playlist in self._user_playlists:
+                        menu_item = playlist_submenu.Append(wx.ID_ANY, playlist.get("name", "Unknown Playlist"))
+                        self.Bind(
+                            wx.EVT_MENU,
+                            lambda event, p_id=playlist.get("id"), p_name=playlist.get("name"): self._on_add_to_playlist_selected(event, p_id, p_name),
+                            menu_item
+                        )
+                else:
+                    no_playlist_item = playlist_submenu.Append(wx.ID_ANY, _("No owned playlists found."))
+                    no_playlist_item.Enable(False)
+                    
+                menu.AppendSubMenu(playlist_submenu, _("Add to Playlist"))
+                self._append_go_to_options_for_track(menu, item)
+
+            if menu.GetMenuItemCount():
+                self.PopupMenu(menu)
+            menu.Destroy()
+
+        if item.get("type") == "playlist" and item.get("owner", {}).get("id") != self._current_user_id:
+            def _check_and_show():
+                result = self.client.check_if_playlist_is_followed(item.get("id"), [self._current_user_id])
+                is_followed_status = result[0] if isinstance(result, list) and result else False
+                wx.CallAfter(show_menu, is_followed_status)
+            threading.Thread(target=_check_and_show).start()
+        else:
+            show_menu()
 
     def _on_add_to_playlist_selected(self, event, playlist_id, playlist_name):
         """Handles when a playlist is selected from the submenu."""
@@ -341,6 +380,16 @@ class SearchDialog(AccessifyDialog):
             else:
                 wx.CallAfter(ui.message, _("Track added successfully."))
         threading.Thread(target=_add_thread).start()
+
+    def on_save_album(self, evt=None):
+        item = self._get_item_at_index(self.resultsList.GetSelection())
+        if item:
+            self._save_album_to_library(item)
+
+    def on_save_show(self, evt=None):
+        item = self._get_item_at_index(self.resultsList.GetSelection())
+        if item:
+            self._save_show_to_library(item)
 
     def onAddToQueue(self, evt=None):
         item = self._get_item_at_index(self.resultsList.GetSelection())
@@ -381,6 +430,23 @@ class SearchDialog(AccessifyDialog):
         item = self._get_item_at_index(self.resultsList.GetSelection())
         if item:
             self.copy_link(item.get("external_urls", {}).get("spotify"))
+
+    def on_toggle_follow_playlist(self, playlist_item, is_currently_followed):
+        playlist_id = playlist_item.get("id")
+        playlist_name = playlist_item.get("name")
+
+        def _thread_action():
+            if is_currently_followed:
+                result = self.client.unfollow_playlist(playlist_id)
+                message = _("Unfollowed '{name}'.").format(name=playlist_name)
+            else:
+                result = self.client.follow_playlist(playlist_id)
+                message = _("Now following '{name}'.").format(name=playlist_name)
+            if isinstance(result, str):
+                wx.CallAfter(ui.message, result)
+            else:
+                wx.CallAfter(ui.message, message)
+        threading.Thread(target=_thread_action).start()
 
     def _get_item_at_index(self, index):
         """

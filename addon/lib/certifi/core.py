@@ -7,12 +7,12 @@ This module returns the installation location of cacert.pem or its contents.
 import sys
 import atexit
 
-
 def exit_cacert_ctx() -> None:
     _CACERT_CTX.__exit__(None, None, None)  # type: ignore[union-attr]
 
 
 if sys.version_info >= (3, 11):
+
     from importlib.resources import as_file, files
 
     _CACERT_CTX = None
@@ -47,6 +47,7 @@ if sys.version_info >= (3, 11):
         return files("certifi").joinpath("cacert.pem").read_text(encoding="ascii")
 
 else:
+
     from importlib.resources import path as get_path, read_text
 
     _CACERT_CTX = None

@@ -1,12 +1,11 @@
 __all__ = [
-    "CacheHandler",
-    "CacheFileHandler",
-    "DjangoSessionCacheHandler",
-    "FlaskSessionCacheHandler",
-    "MemoryCacheHandler",
-    "RedisCacheHandler",
-    "MemcacheCacheHandler",
-]
+    'CacheHandler',
+    'CacheFileHandler',
+    'DjangoSessionCacheHandler',
+    'FlaskSessionCacheHandler',
+    'MemoryCacheHandler',
+    'RedisCacheHandler',
+    'MemcacheCacheHandler']
 
 import errno
 import json
@@ -20,7 +19,7 @@ from spotipy.util import CLIENT_CREDS_ENV_VARS
 logger = logging.getLogger(__name__)
 
 
-class CacheHandler:
+class CacheHandler():
     """
     An abstraction layer for handling the caching and retrieval of
     authorization tokens.
@@ -50,7 +49,10 @@ class CacheFileHandler(CacheHandler):
     as json files on disk.
     """
 
-    def __init__(self, cache_path=None, username=None, encoder_cls=None):
+    def __init__(self,
+                 cache_path=None,
+                 username=None,
+                 encoder_cls=None):
         """
         Parameters:
              * cache_path: May be supplied, will otherwise be generated
@@ -65,7 +67,7 @@ class CacheFileHandler(CacheHandler):
             self.cache_path = cache_path
         else:
             cache_path = ".cache"
-            username = username or os.getenv(CLIENT_CREDS_ENV_VARS["client_username"])
+            username = (username or os.getenv(CLIENT_CREDS_ENV_VARS["client_username"]))
             if username:
                 cache_path += "-" + str(username)
             self.cache_path = cache_path
@@ -74,7 +76,7 @@ class CacheFileHandler(CacheHandler):
         token_info = None
 
         try:
-            with open(self.cache_path, encoding="utf-8") as f:
+            with open(self.cache_path, encoding='utf-8') as f:
                 token_info_string = f.read()
             token_info = json.loads(token_info_string)
 
@@ -90,16 +92,14 @@ class CacheFileHandler(CacheHandler):
 
     def save_token_to_cache(self, token_info):
         try:
-            with open(self.cache_path, "w", encoding="utf-8") as f:
+            with open(self.cache_path, "w", encoding='utf-8') as f:
                 f.write(json.dumps(token_info, cls=self.encoder_cls))
             # https://github.com/spotipy-dev/spotipy/security/advisories/GHSA-pwhh-q4h6-w599
             os.chmod(self.cache_path, 0o600)
         except OSError:
             logger.warning(f"Couldn't write token to cache at: {self.cache_path}")
         except FileNotFoundError:
-            logger.warning(
-                f"Couldn't set permissions to cache file at: {self.cache_path}"
-            )
+            logger.warning(f"Couldn't set permissions to cache file at: {self.cache_path}")
 
 
 class MemoryCacheHandler(CacheHandler):
@@ -142,7 +142,7 @@ class DjangoSessionCacheHandler(CacheHandler):
     def get_cached_token(self):
         token_info = None
         try:
-            token_info = self.request.session["token_info"]
+            token_info = self.request.session['token_info']
         except KeyError:
             logger.debug("Token not found in the session")
 
@@ -150,7 +150,7 @@ class DjangoSessionCacheHandler(CacheHandler):
 
     def save_token_to_cache(self, token_info):
         try:
-            self.request.session["token_info"] = token_info
+            self.request.session['token_info'] = token_info
         except Exception as e:
             logger.warning(f"Error saving token to cache: {e}")
 
@@ -194,7 +194,7 @@ class RedisCacheHandler(CacheHandler):
                    (takes precedence over `token_info`)
         """
         self.redis = redis
-        self.key = key if key else "token_info"
+        self.key = key if key else 'token_info'
 
     def get_cached_token(self):
         token_info = None
@@ -215,7 +215,8 @@ class RedisCacheHandler(CacheHandler):
 
 
 class MemcacheCacheHandler(CacheHandler):
-    """A Cache handler that stores the token info in Memcache using the pymemcache client"""
+    """A Cache handler that stores the token info in Memcache using the pymemcache client
+    """
 
     def __init__(self, memcache, key=None) -> None:
         """
@@ -226,11 +227,10 @@ class MemcacheCacheHandler(CacheHandler):
                    (takes precedence over `token_info`)
         """
         self.memcache = memcache
-        self.key = key if key else "token_info"
+        self.key = key if key else 'token_info'
 
     def get_cached_token(self):
         from pymemcache import MemcacheError
-
         try:
             token_info = self.memcache.get(self.key)
             if token_info:
@@ -240,7 +240,6 @@ class MemcacheCacheHandler(CacheHandler):
 
     def save_token_to_cache(self, token_info):
         from pymemcache import MemcacheError
-
         try:
             self.memcache.set(self.key, json.dumps(token_info))
         except MemcacheError as e:

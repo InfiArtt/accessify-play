@@ -2,16 +2,14 @@
 
 import os
 import sys
-import builtins
 import gettext
 import globalPluginHandler
 import scriptHandler
 import ui
 import wx
 import gui
-from gui import settingsDialogs, guiHelper, messageBox
+from gui import settingsDialogs
 import config
-import subprocess
 import threading
 import time
 from logHandler import log
@@ -29,11 +27,13 @@ from . import donate
 from . import language
 from . import spotify_client
 from . import updater
+from . import utils  # Impor decorator dari utils.py
 from .dialogs.search import SearchDialog
 from .dialogs.play_from_link import PlayFromLinkDialog
 from .dialogs.queue_list import QueueListDialog
 from .dialogs.management import ManagementDialog
-from .dialogs.settings import SpotifySettingsPanel, ClientIDManagementDialog # ClientIDManagementDialog mungkin tidak perlu diimport di sini
+from .dialogs.seek import SeekDialog
+from .dialogs.settings import SpotifySettingsPanel
 from .dialogs.devices import DevicesDialog
 from .dialogs.volume import SetVolumeDialog
 from .dialogs.management import AddToPlaylistDialog
@@ -45,45 +45,52 @@ confspec = {
     "seekDuration": "integer(min=1, max=60, default=15)",
     "language": "string(default='auto')",
     "announceTrackChanges": "boolean(default=False)",
+    "keepAliveInterval": "integer(min=0, default=30)",
     "updateChannel": "string(default='stable')",
     "isAutomaticallyCheckForUpdates": "boolean(default=True)",
     "lastUpdateCheck": "integer(default=0)",
 }
 config.conf.spec["spotify"] = confspec
 
-# Now that confspec is defined, apply the language preference.
-# This will ensure all default values are set.
 language._apply_language_preference()
 
 class GlobalPlugin(globalPluginHandler.GlobalPlugin):
     scriptCategory = _("Accessify Play")
+    
     def __init__(self):
         super(GlobalPlugin, self).__init__()
         self._is_modifying_playback = False
         self.client = spotify_client.get_client()
+        
+        # Inisialisasi semua dialog ke None
         self.searchDialog = None
         self.playFromLinkDialog = None
         self.addToPlaylistDialog = None
         self.queueListDialog = None
         self.managementDialog = None
         self.setVolumeDialog = None
+        self.devicesDialog = None
+        self.seekDialog = None
+        # Status loading untuk dialog
         self._queueDialogLoading = False
         self._addToPlaylistLoading = False
         self._managementDialogLoading = False
-        self.devicesDialog = None
         self._devicesDialogLoading = False
+        
         settingsDialogs.NVDASettingsDialog.categoryClasses.append(SpotifySettingsPanel)
 
+        # Polling untuk perubahan lagu
         self.last_track_id = None
         self.is_running = True
         self.polling_thread = threading.Thread(target=self.track_change_poller)
         self.polling_thread.daemon = True
         self.polling_thread.start()
 
-        # language._apply_language_preference()
-        threading.Thread(target=self.client.initialize).start()
+        self.keep_alive_thread = threading.Thread(target=self.keep_alive_worker)
+        self.keep_alive_thread.daemon = True
+        self.keep_alive_thread.start()
 
-        # Automatic update check on startup
+        threading.Thread(target=self.client.initialize).start()
         if config.conf["spotify"]["isAutomaticallyCheckForUpdates"]:
             threading.Thread(target=updater.check_for_updates, args=(False,)).start()
 
@@ -91,92 +98,77 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         super(GlobalPlugin, self).terminate()
         self.is_running = False
         try:
-            settingsDialogs.NVDASettingsDialog.categoryClasses.remove(
-                SpotifySettingsPanel
-            )
+            settingsDialogs.NVDASettingsDialog.categoryClasses.remove(SpotifySettingsPanel)
         except (ValueError, AttributeError):
             pass
-        if self.searchDialog:
-            self.searchDialog.Destroy()
-        if self.playFromLinkDialog:
-            self.playFromLinkDialog.Destroy()
-        if self.addToPlaylistDialog:
-            self.addToPlaylistDialog.Destroy()
-        if self.queueListDialog:  # Destroy new dialog
-            self.queueListDialog.Destroy()
-        if self.managementDialog:  # Destroy new dialog
-            self.managementDialog.Destroy()
-        if self.devicesDialog:
-            self.devicesDialog.Destroy()
+        
+        for dialog_attr in ['searchDialog', 'playFromLinkDialog', 'addToPlaylistDialog', 
+                            'queueListDialog', 'managementDialog', 'setVolumeDialog', 'seekDialog', 'devicesDialog']:
+            dialog = getattr(self, dialog_attr, None)
+            if dialog:
+                dialog.Destroy()
 
     def track_change_poller(self):
-        """A background thread that polls Spotify for track changes."""
+        """Thread latar belakang yang mengecek perubahan lagu."""
         while self.is_running:
             try:
-                # Only poll if the setting is enabled and the client is validated
-                if (
-                    config.conf["spotify"]["announceTrackChanges"]
-                    and self.client.client
-                ):
-                    playback = self.client._execute_web_api(
-                        self.client.client.current_playback
-                    )
-
-                    current_track_id = None
-                    if playback and playback.get("item"):
-                        current_track_id = playback["item"]["id"]
+                if config.conf["spotify"]["announceTrackChanges"] and self.client.client:
+                    playback = self.client._execute_web_api(self.client.client.current_playback)
+                    current_track_id = playback.get("item", {}).get("id") if playback and isinstance(playback, dict) else None
 
                     if self.last_track_id != current_track_id:
                         self.last_track_id = current_track_id
-                        if current_track_id:  # Announce only if there's a new track
-                            track_string = self.client.get_simple_track_string(
-                                playback["item"]
-                            )
+                        if current_track_id:
+                            track_string = self.client.get_simple_track_string(playback["item"])
                             wx.CallAfter(ui.message, track_string)
             except Exception as e:
                 log.error(f"Error in Spotify polling thread: {e}", exc_info=True)
-
-            # Wait for a few seconds before the next check
-            for _ in range(5):  # Check self.is_running every second
+            
+            for _ in range(5):
                 if not self.is_running:
                     return
                 time.sleep(1)
 
-    def _speak_in_thread(self, func, *args, **kwargs):
-        """Executes a function in a thread and speaks the result."""
+    def keep_alive_worker(self):
+        """Thread untuk mengirim ping ke Spotify agar koneksi tetap hidup."""
+        while self.is_running:
+            interval = config.conf["spotify"]["keepAliveInterval"]
+            
+            if interval == 0:
+                time.sleep(5)
+                continue
+            
+            if interval < 5:
+                interval = 5
 
-        def run():
-            message = func(*args, **kwargs)
-            if message:
-                wx.CallAfter(ui.message, message)
-
-        threading.Thread(target=run).start()
-
-    def _copy_to_clipboard_in_thread(self, func):
-        """Executes a function in a thread and copies the result to the clipboard."""
-
-        def run():
-            result_text = func()
-            wx.CallAfter(self._set_clipboard, result_text)
-
-        threading.Thread(target=run).start()
+            try:
+                if self.client.client:
+                    self.client.send_keep_alive()
+            except Exception:
+                pass
+            
+            for _ in range(interval):
+                if not self.is_running:
+                    break
+                time.sleep(1)
 
     def _set_clipboard(self, text):
-        """This method runs in the main thread to safely access the clipboard."""
-        if text and text.startswith("http"):
+        """Metode aman untuk mengakses clipboard dari main thread."""
+        if not text:
+            return
+        if text.startswith("http"):
             try:
                 if wx.TheClipboard.Open():
                     wx.TheClipboard.SetData(wx.TextDataObject(text))
                     wx.TheClipboard.Close()
-                    # Translators: Message announced when a link is copied to the clipboard.
                     ui.message(_("Link copied"))
                 else:
                     ui.message(_("Could not open clipboard."))
             except Exception as e:
                 log.error(f"Failed to copy to clipboard: {e}", exc_info=True)
                 ui.message(_("Clipboard error"))
-        elif text:
-            # It's an error message from the client, speak it
+        else:
+            # Jika bukan link, berarti pesan error dari client
             ui.message(text)
 
     def _destroy_dialog(self, attr_name, evt):
@@ -187,152 +179,445 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         if evt:
             evt.Skip(False)
 
-    def _prepare_queue_dialog(self):
-        queue_data = self.client.get_full_queue()
-        wx.CallAfter(self._finish_queue_dialog_load, queue_data)
+    # --- SCRIPT GESTURES ---
+    
+    @scriptHandler.script(
+        description=_("Announce the currently playing track."),
+        gesture="kb:nvda+shift+alt+i",
+    )
+    @utils.speak_in_thread
+    def script_announceTrack(self, gesture):
+        return self.client.get_current_track_info()
 
-    def _finish_queue_dialog_load(self, queue_data):
-        self._queueDialogLoading = False
-        if isinstance(queue_data, str):
-            ui.message(queue_data)
+    @scriptHandler.script(
+        description=_("Announces the current track's playback time."),
+        gesture="kb:NVDA+Alt+Shift+T",
+    )
+    @utils.speak_in_thread
+    def script_announcePlaybackTime(self, gesture):
+        return self.client.get_playback_time_info()
+
+    @scriptHandler.script(
+        description=_("Copy the URL of the current track."),
+        gesture="kb:nvda+shift+alt+c",
+    )
+    @utils.copy_in_thread
+    def script_copyTrackURL(self, gesture):
+        return self.client.get_current_track_url()
+
+    @scriptHandler.script(
+        description=_("Play or pause the current track on Spotify."),
+        gesture="kb:nvda+shift+alt+space",
+    )
+    @utils.speak_in_thread
+    def script_playPause(self, gesture):
+        if self._is_modifying_playback:
+            return _("Please wait...")
+        try:
+            self._is_modifying_playback = True
+            playback = self.client._execute(self.client.client.current_playback)
+            if not isinstance(playback, dict):
+                return playback
+            if playback and playback.get("is_playing"):
+                self.client._execute(self.client.client.pause_playback)
+                return _("Paused")
+            else:
+                self.client._execute(self.client.client.start_playback)
+                return _("Playing")
+        finally:
+            self._is_modifying_playback = False
+
+    @scriptHandler.script(
+        description=_("Skip to the next track on Spotify."),
+        gesture="kb:nvda+shift+alt+rightArrow",
+    )
+    @utils.speak_in_thread
+    def script_nextTrack(self, gesture):
+        if self._is_modifying_playback:
+            return _("Please wait...")
+        try:
+            self._is_modifying_playback = True
+            result = self.client._execute(self.client.client.next_track)
+            if isinstance(result, str):
+                return result
+            time.sleep(0.4)  # Beri jeda agar server Spotify sempat memproses
+            playback = self.client._execute(self.client.client.current_playback)
+            return self.client.get_current_track_info(playback) if isinstance(playback, dict) else _("Next track")
+        finally:
+            self._is_modifying_playback = False
+
+    @scriptHandler.script(
+        description=_("Skip to the previous track on Spotify."),
+        gesture="kb:nvda+shift+alt+leftArrow",
+    )
+    @utils.speak_in_thread
+    def script_previousTrack(self, gesture):
+        if self._is_modifying_playback:
+            return _("Please wait...")
+        try:
+            self._is_modifying_playback = True
+            result = self.client._execute(self.client.client.previous_track)
+            if isinstance(result, str):
+                return result
+            time.sleep(0.4)
+            playback = self.client._execute(self.client.client.current_playback)
+            return self.client.get_current_track_info(playback) if isinstance(playback, dict) else _("Previous track")
+        finally:
+            self._is_modifying_playback = False
+
+    @scriptHandler.script(
+        description=_("Increase Spotify volume."), gesture="kb:nvda+shift+alt+upArrow"
+    )
+    @utils.speak_in_thread
+    def script_volumeUp(self, gesture):
+        if self._is_modifying_playback:
+            return _("Please wait...")
+        try:
+            self._is_modifying_playback = True
+            playback = self.client._execute(self.client.client.current_playback)
+            if not isinstance(playback, dict): return playback
+            if playback and playback.get("device"):
+                current_volume = playback["device"]["volume_percent"]
+                new_volume = min(current_volume + 5, 100)
+                self.client._execute(self.client.client.volume, new_volume)
+                return f"{_('Volume')} {new_volume}%"
+            return _("No active device found.")
+        finally:
+            self._is_modifying_playback = False
+
+    @scriptHandler.script(
+        description=_("Decrease Spotify volume."), gesture="kb:nvda+shift+alt+downArrow"
+    )
+    @utils.speak_in_thread
+    def script_volumeDown(self, gesture):
+        if self._is_modifying_playback:
+            return _("Please wait...")
+        try:
+            self._is_modifying_playback = True
+            playback = self.client._execute(self.client.client.current_playback)
+            if not isinstance(playback, dict): return playback
+            if playback and playback.get("device"):
+                current_volume = playback["device"]["volume_percent"]
+                new_volume = max(current_volume - 5, 0)
+                self.client._execute(self.client.client.volume, new_volume)
+                return f"{_('Volume')} {new_volume}%"
+            return _("No active device found.")
+        finally:
+            self._is_modifying_playback = False
+    
+    @scriptHandler.script(
+        description=_("Seek forward in the current track."),
+        gesture="kb:control+alt+nvda+rightArrow",
+    )
+    @utils.speak_in_thread
+    def script_seekForward(self, gesture):
+        if self._is_modifying_playback:
+            return _("Please wait...")
+        try:
+            self._is_modifying_playback = True
+            seek_duration = config.conf["spotify"]["seekDuration"]
+            result = self.client.seek_track(seek_duration * 1000)
+            if isinstance(result, str): return result
+            return _("Seeked forward {duration} seconds.").format(duration=seek_duration)
+        finally:
+            self._is_modifying_playback = False
+
+    @scriptHandler.script(
+        description=_("Seek backward in the current track."),
+        gesture="kb:control+alt+nvda+leftArrow",
+    )
+    @utils.speak_in_thread
+    def script_seekBackward(self, gesture):
+        if self._is_modifying_playback:
+            return _("Please wait...")
+        try:
+            self._is_modifying_playback = True
+            seek_duration = config.conf["spotify"]["seekDuration"]
+            result = self.client.seek_track(-seek_duration * 1000)
+            if isinstance(result, str): return result
+            return _("Seeked backward {duration} seconds.").format(duration=seek_duration)
+        finally:
+            self._is_modifying_playback = False
+
+    @scriptHandler.script(
+        description=_("Toggle Shuffle mode."),
+        gesture="kb:nvda+alt+shift+h",
+    )
+    @utils.speak_in_thread
+    def script_toggleShuffle(self, gesture):
+        # H = sHuffle (S is already used as Search)
+        if self._is_modifying_playback:
+            return _("Please wait...")
+        try:
+            self._is_modifying_playback = True
+            return self.client.toggle_shuffle()
+        finally:
+            self._is_modifying_playback = False
+
+    @scriptHandler.script(
+        description=_("Cycle Repeat mode (Off, Context, Track)."),
+        gesture="kb:nvda+alt+shift+r",
+    )
+    @utils.speak_in_thread
+    def script_cycleRepeat(self, gesture):
+        # R = Repeat
+        if self._is_modifying_playback:
+            return _("Please wait...")
+        try:
+            self._is_modifying_playback = True
+            return self.client.cycle_repeat()
+        finally:
+            self._is_modifying_playback = False
+
+    @scriptHandler.script(
+        description=_("Announce the next track in the queue."),
+        gesture="kb:nvda+shift+alt+n",
+    )
+    @utils.speak_in_thread
+    def script_announceNextInQueue(self, gesture):
+        return self.client.get_next_track_in_queue()
+
+    @scriptHandler.script(
+        description=_("Save the currently playing track to your Library."),
+        gesture="kb:nvda+alt+shift+l",
+    )
+    @utils.speak_in_thread
+    def script_saveTrackToLibrary(self, gesture):
+        playback = self.client._execute(self.client.client.current_playback)
+        if isinstance(playback, str): return playback
+        if not playback or not playback.get("item"):
+            return _("Nothing is currently playing.")
+        
+        track = playback["item"]
+        result = self.client.save_tracks_to_library([track["id"]])
+        if isinstance(result, str): return result
+        return _("Track '{track_name}' saved to your library.").format(track_name=track["name"])
+
+    @scriptHandler.script(
+        description=_("Follow or unfollow the artist of the currently playing track."),
+        gesture="kb:nvda+alt+shift+f",
+    )
+    @utils.speak_in_thread
+    def script_toggleFollowArtist(self, gesture):
+        playback = self.client._execute(self.client.client.current_playback)
+        if isinstance(playback, str):
+            return playback
+        if not playback or not playback.get("item"):
+            return _("Nothing is currently playing.")
+        
+        if playback.get("currently_playing_type") != "track":
+            return _("This action is only available for music tracks.")
+
+        artists = playback["item"].get("artists", [])
+        if not artists:
+            return _("Could not find artist information for this track.")
+
+        primary_artist = artists[0]
+        artist_id = primary_artist.get("id")
+        artist_name = primary_artist.get("name")
+
+        if not artist_id or not artist_name:
+            return _("Could not identify the artist.")
+
+        is_followed_list = self.client.check_if_artists_followed([artist_id])
+        if isinstance(is_followed_list, str):
+            return is_followed_list
+        
+        is_currently_followed = is_followed_list[0]
+
+        if is_currently_followed:
+            result = self.client.unfollow_artists([artist_id])
+            if isinstance(result, str):
+                return result
+            return _("Unfollowed artist: {artist_name}.").format(artist_name=artist_name)
+        else:
+            result = self.client.follow_artists([artist_id])
+            if isinstance(result, str):
+                return result
+            return _("Now following artist: {artist_name}.").format(artist_name=artist_name)
+
+    def _open_dialog(self, dialog_class, dialog_attr, *args, **kwargs):
+        """Fungsi helper generik untuk membuka dialog."""
+        if getattr(self, dialog_attr, None):
+            getattr(self, dialog_attr).Raise()
             return
+        if not self.client.client:
+            ui.message(_("Spotify client not ready. Please validate your credentials."))
+            return
+        
+        dialog = dialog_class(gui.mainFrame, self.client, *args, **kwargs)
+        # Membuat handler close dinamis
+        def on_close(evt):
+            self._destroy_dialog(dialog_attr, evt)
+        
+        dialog.Bind(wx.EVT_CLOSE, on_close)
+        setattr(self, dialog_attr, dialog)
+        dialog.Show()
+
+    @scriptHandler.script(
+        description=_("Search for an item on Spotify."), gesture="kb:nvda+shift+alt+s"
+    )
+    def script_showSearchDialog(self, gesture):
+        self._open_dialog(SearchDialog, "searchDialog")
+
+    @scriptHandler.script(
+        description=_("Play an item from a Spotify URL."), gesture="kb:nvda+shift+alt+p"
+    )
+    def script_showPlayFromLinkDialog(self, gesture):
+        self._open_dialog(PlayFromLinkDialog, "playFromLinkDialog")
+
+    @scriptHandler.script(
+        description=_("Set Spotify volume to a specific percentage."),
+        gesture="kb:nvda+shift+alt+v",
+    )
+    def script_setVolume(self, gesture):
+        self._open_dialog(SetVolumeDialog, "setVolumeDialog")
+
+    @scriptHandler.script(
+        description=_("Seek to a specific time or jump forward/backward."),
+        gesture="kb:nvda+shift+alt+j",
+    )
+    def script_showSeekDialog(self, gesture):
+        self._open_dialog(SeekDialog, "seekDialog")
+
+    @scriptHandler.script(
+        description=_("Show the Spotify queue list."), gesture="kb:nvda+shift+alt+q"
+    )
+    def script_showQueueListDialog(self, gesture):
         if self.queueListDialog:
             self.queueListDialog.Raise()
             return
-        self.queueListDialog = QueueListDialog(
-            gui.mainFrame, self.client, queue_data
-        )
-        self.queueListDialog.Bind(wx.EVT_CLOSE, self.onQueueListDialogClose)
-        self.queueListDialog.Show()
+        if self._queueDialogLoading:
+            ui.message(_("Queue dialog is still loading, please wait."))
+            return
+        if not self.client.client:
+            ui.message(_("Spotify client not ready. Please validate your credentials."))
+            return
+        
+        self._queueDialogLoading = True
+        ui.message(_("Please Wait..."))
+
+        @utils.run_in_thread
+        def _prepare():
+            data = self.client.get_full_queue()
+            wx.CallAfter(self._finish_queue_dialog_load, data)
+        _prepare()
+
+    def _finish_queue_dialog_load(self, data):
+        self._queueDialogLoading = False
+        if isinstance(data, str):
+            ui.message(data)
+            return
+        self._open_dialog(QueueListDialog, "queueListDialog", queue_data=data)
         ui.message(_("UI Ready."))
-
-    def _prepare_add_to_playlist_dialog(self):
-        playback = self.client._execute(self.client.client.current_playback)
-        if isinstance(playback, str):
-            wx.CallAfter(self._finish_add_to_playlist_dialog, playback)
+    
+    @scriptHandler.script(
+        description=_("Add the currently playing track to a playlist."),
+        gesture="kb:nvda+alt+shift+a",
+    )
+    def script_addToPlaylist(self, gesture):
+        if self.addToPlaylistDialog:
+            self.addToPlaylistDialog.Raise()
             return
-        if not playback or not playback.get("item"):
-            wx.CallAfter(
-                self._finish_add_to_playlist_dialog, _("Nothing is currently playing.")
-            )
+        if self._addToPlaylistLoading:
+            ui.message(_("Dialog is still loading, please wait."))
             return
-
-        playlists_data = self.client.get_user_playlists()
-        if isinstance(playlists_data, str):
-            wx.CallAfter(self._finish_add_to_playlist_dialog, playlists_data)
+        if not self.client.client:
+            ui.message(_("Spotify client not ready. Please validate your credentials."))
             return
+        
+        self._addToPlaylistLoading = True
+        ui.message(_("Preparing playlists..."))
 
-        user_profile = self.client.get_current_user_profile()
-        if isinstance(user_profile, str):
-            wx.CallAfter(self._finish_add_to_playlist_dialog, user_profile)
-            return
+        @utils.run_in_thread
+        def _prepare():
+            playback = self.client._execute(self.client.client.current_playback)
+            if not isinstance(playback, dict) or not playback.get("item"):
+                wx.CallAfter(self._finish_add_to_playlist_dialog, _("Nothing is currently playing."))
+                return
 
-        user_id = user_profile.get("id")
-        if not user_id:
-            wx.CallAfter(
-                self._finish_add_to_playlist_dialog,
-                _("Could not determine the current Spotify user."),
-            )
-            return
+            playlists = self.client.get_user_playlists()
+            if isinstance(playlists, str):
+                wx.CallAfter(self._finish_add_to_playlist_dialog, playlists)
+                return
+            
+            profile = self.client.get_current_user_profile()
+            if isinstance(profile, str) or not profile.get("id"):
+                wx.CallAfter(self._finish_add_to_playlist_dialog, _("Could not get user profile."))
+                return
 
-        user_playlists = [
-            p for p in playlists_data if p.get("owner", {}).get("id") == user_id
-        ]
-        if not user_playlists:
-            wx.CallAfter(
-                self._finish_add_to_playlist_dialog,
-                _("No playlists owned by your account were found."),
-            )
-            return
-
-        track = playback["item"]
-        payload = {"track": track, "playlists": user_playlists}
-        wx.CallAfter(self._finish_add_to_playlist_dialog, payload)
-
+            user_id = profile["id"]
+            user_playlists = [p for p in playlists if p.get("owner", {}).get("id") == user_id]
+            
+            payload = {"track": playback["item"], "playlists": user_playlists}
+            wx.CallAfter(self._finish_add_to_playlist_dialog, payload)
+        _prepare()
+        
     def _finish_add_to_playlist_dialog(self, payload):
         self._addToPlaylistLoading = False
         if isinstance(payload, str):
             ui.message(payload)
             return
-        if self.addToPlaylistDialog:
-            self.addToPlaylistDialog.Raise()
+        if not payload["playlists"]:
+            ui.message(_("No playlists owned by you were found."))
             return
-        self.addToPlaylistDialog = AddToPlaylistDialog(
-            gui.mainFrame, self.client, payload["track"], payload["playlists"]
-        )
-        self.addToPlaylistDialog.Bind(wx.EVT_CLOSE, self.onAddToPlaylistDialogClose)
-        self.addToPlaylistDialog.Show()
+        self._open_dialog(AddToPlaylistDialog, "addToPlaylistDialog", 
+                          current_track=payload['track'], playlists=payload['playlists'])
 
-    def _prepare_management_dialog(self):
-        data = self._fetch_management_data()
-        wx.CallAfter(self._finish_management_dialog_load, data)
+    @scriptHandler.script(
+        description=_("Manage your Spotify library and playlists."),
+        gesture="kb:nvda+alt+shift+m",
+    )
+    def script_showManagementDialog(self, gesture):
+        if self.managementDialog:
+            self.managementDialog.Raise()
+            return
+        if self._managementDialogLoading:
+            ui.message(_("Management data is still loading, please wait."))
+            return
+        if not self.client.client:
+            ui.message(_("Spotify client not ready. Please validate your credentials."))
+            return
+        
+        self._managementDialogLoading = True
+        ui.message(_("Please Wait..."))
+
+        @utils.run_in_thread
+        def _prepare():
+            data = self._fetch_management_data()
+            wx.CallAfter(self._finish_management_dialog_load, data)
+        _prepare()
+
+    def _fetch_management_data(self):
+        """Gets all the data needed for ManagementDialog."""
+        data = {}
+        loaders = {
+            "user_profile": self.client.get_current_user_profile,
+            "playlists": self.client.get_user_playlists,
+            "saved_albums": self.client.get_saved_albums,
+            "saved_tracks": self.client.get_saved_tracks,
+            "followed_artists": self.client.get_followed_artists,
+            "top_items": lambda: self.client.get_top_items(item_type="tracks", time_range="medium_term"),
+            "saved_shows": self.client.get_saved_shows,
+            "new_releases": self.client.get_new_releases,
+            "recently_played": self.client.get_recently_played,
+        }
+        for key, func in loaders.items():
+            result = func()
+            if isinstance(result, str): return result # return error message on failure
+            data[key] = result
+        return data
 
     def _finish_management_dialog_load(self, data):
         self._managementDialogLoading = False
         if isinstance(data, str):
             ui.message(data)
             return
-        if self.managementDialog:
-            self.managementDialog.Raise()
-            return
-        self.managementDialog = ManagementDialog(
-            gui.mainFrame, self.client, data
-        )
-        self.managementDialog.Bind(wx.EVT_CLOSE, self.onManagementDialogClose)
-        self.managementDialog.Show()
+        self._open_dialog(ManagementDialog, "managementDialog", preloaded_data=data)
         ui.message(_("UI Ready."))
-
-    def _fetch_management_data(self):
-        if not self.client.client:
-            return _("Spotify client not ready. Please validate your credentials.")
-
-        data = {}
-        steps = [
-            ("user_profile", self.client.get_current_user_profile),
-            ("playlists", self.client.get_user_playlists),
-            ("saved_tracks", self.client.get_saved_tracks),
-            ("followed_artists", self.client.get_followed_artists),
-            (
-                "top_items",
-                lambda: self.client.get_top_items(
-                    item_type="tracks", time_range="medium_term"
-                ),
-            ),
-            ("saved_shows", self.client.get_saved_shows),
-            ("new_releases", self.client.get_new_releases),
-            ("recently_played", self.client.get_recently_played),
-        ]
-
-        for key, loader in steps:
-            result = loader()
-            if isinstance(result, str):
-                return result
-            data[key] = result
-        return data
-
-    def onSearchDialogClose(self, evt):
-        self._destroy_dialog("searchDialog", evt)
-
-    def onPlayFromLinkDialogClose(self, evt):
-        self._destroy_dialog("playFromLinkDialog", evt)
-
-    def onQueueListDialogClose(self, evt):  # New dialog close handler
-        self._destroy_dialog("queueListDialog", evt)
-
-    def onManagementDialogClose(self, evt):  # New dialog close handler
-        self._destroy_dialog("managementDialog", evt)
-
-    def onSetVolumeDialogClose(self, evt):
-        self._destroy_dialog("setVolumeDialog", evt)
-
-    def onDevicesDialogClose(self, evt):
-        self._destroy_dialog("devicesDialog", evt)
-
-    def onAddToPlaylistDialogClose(self, evt):
-        self._destroy_dialog("addToPlaylistDialog", evt)
-
+        
     @scriptHandler.script(
-        description=_("Show available Spotify devices to switch playback."),
+        description=_("Show available devices to switch playback."),
         gesture="kb:nvda+alt+shift+d",
     )
     def script_showDevicesDialog(self, gesture):
@@ -348,394 +633,19 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         
         self._devicesDialogLoading = True
         ui.message(_("Fetching devices..."))
-        
-        def _prepare_dialog():
-            devices_info = self.client.get_available_devices()
-            wx.CallAfter(self._finish_devices_dialog_load, devices_info)
 
-        threading.Thread(target=_prepare_dialog).start()
+        @utils.run_in_thread
+        def _prepare():
+            devices = self.client.get_available_devices()
+            wx.CallAfter(self._finish_devices_dialog_load, devices)
+        _prepare()
 
-    def _finish_devices_dialog_load(self, devices_info):
+    def _finish_devices_dialog_load(self, devices):
         self._devicesDialogLoading = False
-        if isinstance(devices_info, str):
-            ui.message(devices_info)
+        if isinstance(devices, str):
+            ui.message(devices)
             return
-        
-        self.devicesDialog = DevicesDialog(gui.mainFrame, self.client, devices_info)
-        self.devicesDialog.Bind(wx.EVT_CLOSE, self.onDevicesDialogClose)
-        self.devicesDialog.Show()
-
-    @scriptHandler.script(
-        description=_("Set Spotify volume to a specific percentage."),
-        gesture="kb:nvda+shift+alt+v",
-    )
-    def script_setVolume(self, gesture):
-        if self.setVolumeDialog:
-            self.setVolumeDialog.Raise()
+        if not devices:
+            ui.message(_("No available devices found."))
             return
-        if not self.client.client:
-            ui.message(_("Spotify client not ready. Please validate your credentials."))
-            return
-        self.setVolumeDialog = SetVolumeDialog(gui.mainFrame, self.client)
-        self.setVolumeDialog.Bind(wx.EVT_CLOSE, self.onSetVolumeDialogClose)
-        self.setVolumeDialog.Show()
-
-    @scriptHandler.script(
-        description=_("Save the currently playing track to your Library."),
-        gesture="kb:nvda+alt+shift+l",
-    )
-    def script_saveTrackToLibrary(self, gesture):
-        def _save():
-            playback = self.client._execute(self.client.client.current_playback)
-            if isinstance(playback, str):
-                wx.CallAfter(ui.message, playback)
-                return
-            if not playback or not playback.get("item"):
-                wx.CallAfter(ui.message, _("Nothing is currently playing."))
-                return
-
-            track_id = playback["item"]["id"]
-            track_name = playback["item"]["name"]
-            result = self.client.save_tracks_to_library([track_id])
-            if isinstance(result, str):
-                wx.CallAfter(ui.message, result)
-            else:
-                wx.CallAfter(
-                    ui.message,
-                    _("Track '{track_name}' saved to your library.").format(
-                        track_name=track_name
-                    ),
-                )
-
-        threading.Thread(target=_save).start()
-
-    @scriptHandler.script(
-        description=_("Add the currently playing track to a selected playlist."),
-        gesture="kb:nvda+alt+shift+a",
-    )
-    def script_addToPlaylist(self, gesture):
-        if self.addToPlaylistDialog:
-            self.addToPlaylistDialog.Raise()
-            return
-        if self._addToPlaylistLoading:
-            ui.message(_("Add to playlist dialog is still loading, please wait."))
-            return
-        if not self.client.client:
-            ui.message(_("Spotify client not ready. Please validate your credentials."))
-            return
-
-        self._addToPlaylistLoading = True
-        ui.message(_("Preparing playlists..."))
-        threading.Thread(target=self._prepare_add_to_playlist_dialog).start()
-
-    @scriptHandler.script(
-        description=_("Manage Spotify playlists, library, and more."),
-        gesture="kb:nvda+alt+shift+m",
-    )
-    def script_showManagementDialog(self, gesture):
-        if self.managementDialog:
-            self.managementDialog.Raise()
-            return
-        if self._managementDialogLoading:
-            ui.message(_("Spotify management data is still loading, please wait."))
-            return
-        if not self.client.client:
-            ui.message(_("Spotify client not ready. Please validate your credentials."))
-            return
-        self._managementDialogLoading = True
-        ui.message(_("Please Wait..."))
-        threading.Thread(target=self._prepare_management_dialog).start()
-
-
-    @scriptHandler.script(
-        description=_("Announces the current track's playback time."),
-        gesture="kb:NVDA+Alt+Shift+T",
-    )
-    def script_announcePlaybackTime(self, gesture):
-        """Announces the current track's playback time."""
-        threading.Thread(target=self._get_and_announce_playback_time).start()
-
-    def _get_and_announce_playback_time(self):
-        result = self.client.get_playback_time_info()
-        wx.CallAfter(ui.message, result)
-
-    @scriptHandler.script(
-        description=_("Play a track from a Spotify URL."), gesture="kb:nvda+shift+alt+p"
-    )
-    def script_showPlayFromLinkDialog(self, gesture):
-        if self.playFromLinkDialog:
-            self.playFromLinkDialog.Raise()
-            return
-        if not self.client.client:
-            ui.message(_("Spotify client not ready. Please validate your credentials."))
-            return
-        self.playFromLinkDialog = PlayFromLinkDialog(gui.mainFrame, self.client)
-        self.playFromLinkDialog.Bind(wx.EVT_CLOSE, self.onPlayFromLinkDialogClose)
-        self.playFromLinkDialog.Show()
-
-    @scriptHandler.script(
-        description=_("Copy the URL of the current track."),
-        gesture="kb:nvda+shift+alt+c",
-    )
-    def script_copyTrackURL(self, gesture):
-        self._copy_to_clipboard_in_thread(self.client.get_current_track_url)
-
-    @scriptHandler.script(
-        description=_("Search for a track on Spotify."), gesture="kb:nvda+shift+alt+s"
-    )
-    def script_showSearchDialog(self, gesture):
-        if self.searchDialog:
-            self.searchDialog.Raise()
-            return
-        if not self.client.client:
-            ui.message(_("Spotify client not ready. Please validate your credentials."))
-            return
-        self.searchDialog = SearchDialog(gui.mainFrame, self.client)
-        self.searchDialog.Bind(wx.EVT_CLOSE, self.onSearchDialogClose)
-        self.searchDialog.Show()
-
-    @scriptHandler.script(
-        description=_("Announce the currently playing track."),
-        gesture="kb:nvda+shift+alt+i",
-    )
-    def script_announceTrack(self, gesture):
-        self._speak_in_thread(self.client.get_current_track_info)
-
-    @scriptHandler.script(
-        description=_("Play or pause the current track on Spotify."),
-        gesture="kb:nvda+shift+alt+space",
-    )
-    def script_playPause(self, gesture):
-        if self._is_modifying_playback:
-            ui.message(_("Please wait..."))
-            return
-        def logic():
-            try:
-                self._is_modifying_playback = True
-                playback = self.client._execute(self.client.client.current_playback)
-                if not isinstance(playback, dict):
-                    return playback
-                if playback and playback.get("is_playing"):
-                    self.client._execute(self.client.client.pause_playback)
-                    return _("Paused")
-                else:
-                    self.client._execute(self.client.client.start_playback)
-                    return _("Playing")
-            finally:
-                self._is_modifying_playback = False
-        self._speak_in_thread(logic)
-
-    @scriptHandler.script(
-        description=_("Skip to the next track on Spotify."),
-        gesture="kb:nvda+shift+alt+rightArrow",
-    )
-    def script_nextTrack(self, gesture):
-        if self._is_modifying_playback:
-            ui.message(_("Please wait..."))
-            return
-
-        def logic():
-            try:
-                self._is_modifying_playback = True
-                initial_playback = self.client._execute(self.client.client.current_playback)
-                if isinstance(initial_playback, str):
-                    return initial_playback
-                initial_track_id = None
-                if initial_playback and initial_playback.get("item"):
-                    initial_track_id = initial_playback["item"].get("id")
-                result = self.client._execute(self.client.client.next_track)
-                if isinstance(result, str):
-                    return result  # Error message
-                attempts = 0
-                while attempts < 10:
-                    playback = self.client._execute(self.client.client.current_playback)
-                    if isinstance(playback, str):
-                        return playback
-                    if playback and playback.get("item"):
-                        track_id = playback["item"].get("id")
-                        if track_id and track_id != initial_track_id:
-                            return self.client.get_current_track_info(playback)
-                    time.sleep(0.2)
-                    attempts += 1
-                if initial_playback and initial_playback.get("item"):
-                    return self.client.get_current_track_info(initial_playback)
-                return _("Skipped, but playback status could not be confirmed.")
-            finally:
-                self._is_modifying_playback = False
-
-        self._speak_in_thread(logic)
-
-    @scriptHandler.script(
-        description=_("Skip to the previous track on Spotify."),
-        gesture="kb:nvda+shift+alt+leftArrow",
-    )
-    def script_previousTrack(self, gesture):
-        if self._is_modifying_playback:
-            ui.message(_("Please Wait..."))
-            return
-            
-        def logic():
-            try:
-                self._is_modifying_playback = True
-                initial_playback = self.client._execute(self.client.client.current_playback)
-                if isinstance(initial_playback, str):
-                    return initial_playback
-                initial_track_id = None
-                if initial_playback and initial_playback.get("item"):
-                    initial_track_id = initial_playback["item"].get("id")
-                result = self.client._execute(self.client.client.previous_track)
-                if isinstance(result, str):
-                    if "restriction" in result.lower():
-                        return _("No previous track available.")
-                    return result  # Error message
-                attempts = 0
-                last_playback = None
-                while attempts < 10:
-                    playback = self.client._execute(self.client.client.current_playback)
-                    if isinstance(playback, str):
-                        return playback
-                    last_playback = playback
-                    if playback and playback.get("item"):
-                        track_id = playback["item"].get("id")
-                        if track_id and track_id != initial_track_id:
-                            return self.client.get_current_track_info(playback)
-                    time.sleep(0.2)
-                    attempts += 1
-                # If we get here, Spotify likely restarted the same track
-                if last_playback and last_playback.get("item"):
-                    return self.client.get_current_track_info(last_playback)
-                if initial_playback and initial_playback.get("item"):
-                    return self.client.get_current_track_info(initial_playback)
-                return _("Nothing is currently playing.")
-            finally:
-                self._is_modifying_playback = False
-
-        self._speak_in_thread(logic)
-
-    @scriptHandler.script(
-        description=_("Increase Spotify volume."), gesture="kb:nvda+shift+alt+upArrow"
-    )
-    def script_volumeUp(self, gesture):
-        if self._is_modifying_playback:
-            ui.message(_("Please wait..."))
-            return
-
-        def logic():
-            try:
-                self._is_modifying_playback = True
-                
-                playback = self.client._execute(self.client.client.current_playback)
-                if not isinstance(playback, dict):
-                    return playback # Mengembalikan pesan error jika ada
-                if playback and playback.get("device"):
-                    current_volume = playback["device"]["volume_percent"]
-                    new_volume = min(current_volume + 5, 100)
-                    self.client._execute(self.client.client.volume, new_volume)
-                    return f"{_('Volume')} {new_volume}%"
-                else:
-                    return _("No active device found.")
-            finally:
-                self._is_modifying_playback = False
-        self._speak_in_thread(logic)
-
-    @scriptHandler.script(
-        description=_("Decrease Spotify volume."), gesture="kb:nvda+shift+alt+downArrow"
-    )
-    def script_volumeDown(self, gesture):
-        if self._is_modifying_playback:
-            ui.message(_("Please wait..."))
-            return
-
-        def logic():
-            try:
-                self._is_modifying_playback = True
-
-                playback = self.client._execute(self.client.client.current_playback)
-                if not isinstance(playback, dict):
-                    return playback # Mengembalikan pesan error jika ada
-                if playback and playback.get("device"):
-                    current_volume = playback["device"]["volume_percent"]
-                    new_volume = max(current_volume - 5, 0)
-                    self.client._execute(self.client.client.volume, new_volume)
-                    return f"{_('Volume')} {new_volume}%"
-                else:
-                    return _("No active device found.")
-            finally:
-                # 3. Buka kunci setelah proses selesai (baik berhasil maupun gagal)
-                self._is_modifying_playback = False
-        self._speak_in_thread(logic)
-
-    @scriptHandler.script(
-        description=_("Announce the next track in the queue."),
-        gesture="kb:nvda+shift+alt+n",
-    )
-    def script_announceNextInQueue(self, gesture):
-        self._speak_in_thread(self.client.get_next_track_in_queue)
-
-    @scriptHandler.script(
-        description=_("Show the Spotify queue list."), gesture="kb:nvda+shift+alt+q"
-    )
-    def script_showQueueListDialog(self, gesture):
-        if self.queueListDialog:
-            self.queueListDialog.Raise()
-            self.queueListDialog.refresh_queue_data(speak_status=False)
-            return
-        if self._queueDialogLoading:
-            ui.message(_("Queue dialog is still loading, please wait."))
-            return
-        if not self.client.client:
-            ui.message(_("Spotify client not ready. Please validate your credentials."))
-            return
-        self._queueDialogLoading = True
-        ui.message(_("Please Wait..."))
-        threading.Thread(target=self._prepare_queue_dialog).start()
-
-    @scriptHandler.script(
-        description=_("Seek forward in the current track by configurable duration."),
-        gesture="kb:control+alt+nvda+rightArrow",
-    )
-    def script_seekForward(self, gesture):
-        if self._is_modifying_playback:
-            ui.message(_("Please Wait..."))
-            return
-            
-        def logic():
-            try:
-                self._is_modifying_playback = True
-                seek_duration_seconds = config.conf["spotify"]["seekDuration"]
-                seek_duration_ms = seek_duration_seconds * 1000
-                result = self.client.seek_track(seek_duration_ms)
-                if isinstance(result, str):
-                    return result  # Error message
-                return _("Seeked forward {duration} seconds.").format(
-                    duration=seek_duration_seconds
-                )
-            finally:
-                self._is_modifying_playback = False
-
-        self._speak_in_thread(logic)
-
-    @scriptHandler.script(
-        description=_("Seek backward in the current track by configurable duration."),
-        gesture="kb:control+alt+nvda+leftArrow",
-    )
-    def script_seekBackward(self, gesture):
-        if self._is_modifying_playback:
-            ui.message(_("Please Wait..."))
-            return
-
-        def logic():
-            try:
-                self._is_modifying_playback = True
-                seek_duration_seconds = config.conf["spotify"]["seekDuration"]
-                seek_duration_ms = seek_duration_seconds * 1000
-                result = self.client.seek_track(-seek_duration_ms)
-                if isinstance(result, str):
-                    return result  # Error message
-                return _("Seeked backward {duration} seconds.").format(
-                    duration=seek_duration_seconds
-                )
-            finally:
-                self._is_modifying_playback = False
-
-        self._speak_in_thread(logic)
+        self._open_dialog(DevicesDialog, "devicesDialog", devices_info=devices)

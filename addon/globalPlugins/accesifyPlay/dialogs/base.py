@@ -128,7 +128,50 @@ class AccessifyDialog(wx.Dialog):
         finally:
             self._is_queuing = False
 
-    
+    def _save_album_to_library(self, album):
+        """Saves a single album to the user's library."""
+        if not self.client:
+            return
+        if not album or album.get("type") != 'album' or not album.get("id"):
+            wx.CallAfter(ui.message, _("Could not save. Invalid album data provided."))
+            return
+
+        ui.message(_("Saving '{album_name}' to your library...").format(album_name=album.get("name")))
+        threading.Thread(
+            target=self._save_album_thread, args=(album,)
+        ).start()
+
+    def _save_album_thread(self, album):
+        album_id = album.get("id")
+        album_name = album.get("name")
+        result = self.client.save_albums_to_library([album_id])
+        if isinstance(result, str):
+            wx.CallAfter(ui.message, result)
+        else:
+            wx.CallAfter(ui.message, _("Album '{album_name}' saved successfully.").format(album_name=album_name))
+
+    def _save_show_to_library(self, show):
+        """Saves a single show to the user's library."""
+        if not self.client:
+            return
+        if not show or show.get("type") != 'show' or not show.get("id"):
+            wx.CallAfter(ui.message, _("Could not save. Invalid show data provided."))
+            return
+
+        ui.message(_("Saving '{show_name}' to your library...").format(show_name=show.get("name")))
+        threading.Thread(
+            target=self._save_show_thread, args=(show,)
+        ).start()
+
+    def _save_show_thread(self, show):
+        show_id = show.get("id")
+        show_name = show.get("name")
+        result = self.client.save_shows_to_library([show_id])
+        if isinstance(result, str):
+            wx.CallAfter(ui.message, result)
+        else:
+            wx.CallAfter(ui.message, _("Show '{show_name}' saved successfully.").format(show_name=show_name))
+
     def copy_link(self, link):
         """Copies a given link to the clipboard."""
         if not link:
@@ -154,3 +197,54 @@ class AccessifyDialog(wx.Dialog):
             else:
                 evt.Skip()
         control.Bind(wx.EVT_CHAR_HOOK, on_char)
+
+    def _append_go_to_options_for_track(self, menu, track_item):
+        """
+        Appends 'Go to Artist' and 'Go to Album' options to a context menu
+        if the provided item is a track.
+        """
+        if not track_item or track_item.get("type") != "track":
+            return
+
+        menu.AppendSeparator()
+
+        # "Go to Album" option
+        album = track_item.get("album")
+        if album and album.get("uri"):
+            go_to_album_item = menu.Append(wx.ID_ANY, _("Go to Album: {album_name}").format(album_name=album.get("name")))
+            self.Bind(wx.EVT_MENU, lambda evt, a=album: self._handle_go_to_album(evt, a), go_to_album_item)
+
+        # "Go to Artist" option (with a submenu if necessary)
+        artists = track_item.get("artists")
+        if not artists:
+            return
+
+        if len(artists) == 1:
+            # If there's only one artist, create a direct menu item
+            artist = artists[0]
+            go_to_artist_item = menu.Append(wx.ID_ANY, _("Go to Artist: {artist_name}").format(artist_name=artist.get("name")))
+            self.Bind(wx.EVT_MENU, lambda evt, a=artist: self._handle_go_to_artist(evt, a), go_to_artist_item)
+        else:
+            # If there are multiple artists, create a submenu
+            artist_submenu = wx.Menu()
+            for artist in artists:
+                artist_item = artist_submenu.Append(wx.ID_ANY, artist.get("name"))
+                self.Bind(wx.EVT_MENU, lambda evt, a=artist: self._handle_go_to_artist(evt, a), artist_item)
+            menu.AppendSubMenu(artist_submenu, _("Go to Artist"))
+
+    def _handle_go_to_album(self, event, album):
+        """Opens the AlbumTracksDialog for the selected album."""
+        # This dialog requires the user's playlists, which must be available on the parent dialog.
+        user_playlists = getattr(self, "_user_playlists", []) or getattr(self, "user_playlists", [])
+        # Dynamically import here to avoid circular dependencies
+        from .management import AlbumTracksDialog
+        dialog = AlbumTracksDialog(self, self.client, album, user_playlists)
+        dialog.Show()
+
+    def _handle_go_to_artist(self, event, artist):
+        """Opens the ArtistDiscographyDialog for the selected artist."""
+        user_playlists = getattr(self, "_user_playlists", []) or getattr(self, "user_playlists", [])
+        # Dynamically import here to avoid circular dependencies
+        from .management import ArtistDiscographyDialog
+        dialog = ArtistDiscographyDialog(self, self.client, artist.get("id"), artist.get("name"), user_playlists)
+        dialog.Show()
