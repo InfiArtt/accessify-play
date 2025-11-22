@@ -23,6 +23,7 @@ if lib_path not in sys.path:
     sys.path.insert(0, lib_path)
 
 # Local addon modules
+from .commandLayers import CommandLayerManager
 from . import donate
 from . import language
 from . import spotify_client
@@ -54,6 +55,7 @@ config.conf.spec["spotify"] = confspec
 
 language._apply_language_preference()
 
+
 class GlobalPlugin(globalPluginHandler.GlobalPlugin):
     scriptCategory = _("Accessify Play")
     
@@ -76,6 +78,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         self._addToPlaylistLoading = False
         self._managementDialogLoading = False
         self._devicesDialogLoading = False
+        self.commandLayer = CommandLayerManager(self)
         
         settingsDialogs.NVDASettingsDialog.categoryClasses.append(SpotifySettingsPanel)
 
@@ -93,6 +96,16 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         threading.Thread(target=self.client.initialize).start()
         if config.conf["spotify"]["isAutomaticallyCheckForUpdates"]:
             threading.Thread(target=updater.check_for_updates, args=(False,)).start()
+
+    def getScript(self, gesture):
+        if not self.commandLayer.is_active:
+            return super(GlobalPlugin, self).getScript(gesture)
+        script = super(GlobalPlugin, self).getScript(gesture)
+        wrapped = self.commandLayer.wrap_script(script)
+        if wrapped:
+            return wrapped
+        self.commandLayer.handle_unknown_gesture()
+        return None
 
     def terminate(self):
         super(GlobalPlugin, self).terminate()
@@ -180,10 +193,22 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
             evt.Skip(False)
 
     # --- SCRIPT GESTURES ---
+
+    @scriptHandler.script(
+        description=_("Accessify Play layer commands. Press F1 for help."),
+        gesture="kb:NVDA+g",
+    )
+    def script_commandLayerToggle(self, gesture):
+        self.commandLayer.activate()
+
+    def script_commandLayerHelp(self, gesture):
+        self.commandLayer.show_help()
+
+    def script_commandLayerCancel(self, gesture):
+        self.commandLayer.finish(announce=True)
     
     @scriptHandler.script(
         description=_("Announce the currently playing track."),
-        gesture="kb:nvda+shift+alt+i",
     )
     @utils.speak_in_thread
     def script_announceTrack(self, gesture):
@@ -191,7 +216,6 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
     @scriptHandler.script(
         description=_("Announces the current track's playback time."),
-        gesture="kb:NVDA+Alt+Shift+T",
     )
     @utils.speak_in_thread
     def script_announcePlaybackTime(self, gesture):
@@ -199,7 +223,6 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
     @scriptHandler.script(
         description=_("Copy the URL of the current track."),
-        gesture="kb:nvda+shift+alt+c",
     )
     @utils.copy_in_thread
     def script_copyTrackURL(self, gesture):
@@ -207,7 +230,6 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
     @scriptHandler.script(
         description=_("Play or pause the current track on Spotify."),
-        gesture="kb:nvda+shift+alt+space",
     )
     @utils.speak_in_thread
     def script_playPause(self, gesture):
@@ -229,7 +251,6 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
     @scriptHandler.script(
         description=_("Skip to the next track on Spotify."),
-        gesture="kb:nvda+shift+alt+rightArrow",
     )
     @utils.speak_in_thread
     def script_nextTrack(self, gesture):
@@ -248,7 +269,6 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
     @scriptHandler.script(
         description=_("Skip to the previous track on Spotify."),
-        gesture="kb:nvda+shift+alt+leftArrow",
     )
     @utils.speak_in_thread
     def script_previousTrack(self, gesture):
@@ -266,7 +286,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
             self._is_modifying_playback = False
 
     @scriptHandler.script(
-        description=_("Increase Spotify volume."), gesture="kb:nvda+shift+alt+upArrow"
+        description=_("Increase Spotify volume."),
     )
     @utils.speak_in_thread
     def script_volumeUp(self, gesture):
@@ -286,7 +306,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
             self._is_modifying_playback = False
 
     @scriptHandler.script(
-        description=_("Decrease Spotify volume."), gesture="kb:nvda+shift+alt+downArrow"
+        description=_("Decrease Spotify volume."),
     )
     @utils.speak_in_thread
     def script_volumeDown(self, gesture):
@@ -307,7 +327,6 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
     
     @scriptHandler.script(
         description=_("Seek forward in the current track."),
-        gesture="kb:control+alt+nvda+rightArrow",
     )
     @utils.speak_in_thread
     def script_seekForward(self, gesture):
@@ -324,7 +343,6 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
     @scriptHandler.script(
         description=_("Seek backward in the current track."),
-        gesture="kb:control+alt+nvda+leftArrow",
     )
     @utils.speak_in_thread
     def script_seekBackward(self, gesture):
@@ -341,7 +359,6 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
     @scriptHandler.script(
         description=_("Toggle Shuffle mode."),
-        gesture="kb:nvda+alt+shift+h",
     )
     @utils.speak_in_thread
     def script_toggleShuffle(self, gesture):
@@ -356,7 +373,6 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
     @scriptHandler.script(
         description=_("Cycle Repeat mode (Off, Context, Track)."),
-        gesture="kb:nvda+alt+shift+r",
     )
     @utils.speak_in_thread
     def script_cycleRepeat(self, gesture):
@@ -371,7 +387,6 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
     @scriptHandler.script(
         description=_("Announce the next track in the queue."),
-        gesture="kb:nvda+shift+alt+n",
     )
     @utils.speak_in_thread
     def script_announceNextInQueue(self, gesture):
@@ -379,7 +394,6 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
     @scriptHandler.script(
         description=_("Save the currently playing track to your Library."),
-        gesture="kb:nvda+alt+shift+l",
     )
     @utils.speak_in_thread
     def script_saveTrackToLibrary(self, gesture):
@@ -395,7 +409,6 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
     @scriptHandler.script(
         description=_("Follow or unfollow the artist of the currently playing track."),
-        gesture="kb:nvda+alt+shift+f",
     )
     @utils.speak_in_thread
     def script_toggleFollowArtist(self, gesture):
@@ -455,33 +468,31 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         dialog.Show()
 
     @scriptHandler.script(
-        description=_("Search for an item on Spotify."), gesture="kb:nvda+shift+alt+s"
+        description=_("Search for an item on Spotify."),
     )
     def script_showSearchDialog(self, gesture):
         self._open_dialog(SearchDialog, "searchDialog")
 
     @scriptHandler.script(
-        description=_("Play an item from a Spotify URL."), gesture="kb:nvda+shift+alt+p"
+        description=_("Play an item from a Spotify URL."),
     )
     def script_showPlayFromLinkDialog(self, gesture):
         self._open_dialog(PlayFromLinkDialog, "playFromLinkDialog")
 
     @scriptHandler.script(
         description=_("Set Spotify volume to a specific percentage."),
-        gesture="kb:nvda+shift+alt+v",
     )
     def script_setVolume(self, gesture):
         self._open_dialog(SetVolumeDialog, "setVolumeDialog")
 
     @scriptHandler.script(
         description=_("Seek to a specific time or jump forward/backward."),
-        gesture="kb:nvda+shift+alt+j",
     )
     def script_showSeekDialog(self, gesture):
         self._open_dialog(SeekDialog, "seekDialog")
 
     @scriptHandler.script(
-        description=_("Show the Spotify queue list."), gesture="kb:nvda+shift+alt+q"
+        description=_("Show the Spotify queue list."),
     )
     def script_showQueueListDialog(self, gesture):
         if self.queueListDialog:
@@ -513,7 +524,6 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
     
     @scriptHandler.script(
         description=_("Add the currently playing track to a playlist."),
-        gesture="kb:nvda+alt+shift+a",
     )
     def script_addToPlaylist(self, gesture):
         if self.addToPlaylistDialog:
@@ -566,7 +576,6 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
     @scriptHandler.script(
         description=_("Manage your Spotify library and playlists."),
-        gesture="kb:nvda+alt+shift+m",
     )
     def script_showManagementDialog(self, gesture):
         if self.managementDialog:
@@ -618,7 +627,6 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         
     @scriptHandler.script(
         description=_("Show available devices to switch playback."),
-        gesture="kb:nvda+alt+shift+d",
     )
     def script_showDevicesDialog(self, gesture):
         if self.devicesDialog:
