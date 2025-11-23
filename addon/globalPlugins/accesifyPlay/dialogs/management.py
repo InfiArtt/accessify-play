@@ -827,19 +827,6 @@ class ArtistDiscographyDialog(AccessifyDialog):
             menu.AppendSeparator()
             save_album_item = menu.Append(wx.ID_ANY, _("Save Album to Library"))
             self.Bind(wx.EVT_MENU, lambda evt, alb=item: self._save_album_to_library(alb), save_album_item)
-            playlist_submenu = wx.Menu()
-            if self._user_playlists:
-                for playlist in self._user_playlists:
-                    menu_item = playlist_submenu.Append(wx.ID_ANY, playlist.get("name", "Unknown"))
-                    self.Bind(
-                        wx.EVT_MENU,
-                        lambda event, p_id=playlist.get("id"), p_name=playlist.get("name"), a_id=item.get("id"), a_name=item.get("name"): 
-                            self._on_add_album_to_playlist_action(p_id, p_name, a_id, a_name),
-                        menu_item
-                    )
-            else:
-                playlist_submenu.Append(wx.ID_ANY, _("No playlists found.")).Enable(False)
-            menu.AppendSubMenu(playlist_submenu, _("Add Album to Playlist"))
         elif item_type == "track":
             menu.AppendSeparator()
             playlist_submenu = wx.Menu()
@@ -915,20 +902,6 @@ class ArtistDiscographyDialog(AccessifyDialog):
             else:
                 wx.CallAfter(ui.message, _("Track added successfully."))
         threading.Thread(target=_add_thread).start()
-
-    def _on_add_album_to_playlist_action(self, playlist_id, playlist_name, album_id, album_name):
-        ui.message(_("Adding tracks from '{album}' to '{playlist}'...").format(
-            album=album_name, playlist=playlist_name
-        ))
-        
-        def _thread():
-            result = self.client.add_album_to_playlist(playlist_id, album_id)
-            if result is True:
-                wx.CallAfter(ui.message, _("Album added successfully."))
-            else:
-                wx.CallAfter(ui.message, str(result))
-        threading.Thread(target=_thread).start()
-
 
 class AlbumTracksDialog(AccessifyDialog):
     MENU_PLAY = wx.NewIdRef()
@@ -2265,28 +2238,12 @@ class ManagementDialog(AccessifyDialog):
             wx.CallAfter(self.load_followed_artists)
 
     def on_view_discography(self, evt):
-        item = self._get_selected_item()
-        if not item:
-            return
-
-        target_id = None
-        target_name = None
-        if item.get("type") == "artist":
-            target_id = item["id"]
-            target_name = item["name"]
-        elif item.get("type") in ("album", "track"):
-            artists = item.get("artists", [])
-            if artists:
-                primary_artist = artists[0]
-                target_id = primary_artist.get("id")
-                target_name = primary_artist.get("name")
-        if target_id and target_name:
-            dialog = ArtistDiscographyDialog(
-                self, self.client, target_id, target_name, self.user_playlists
-            )
+        artist = self._get_selected_item()
+        if artist and artist.get("type") == "artist":
+            dialog = ArtistDiscographyDialog(self, self.client, artist["id"], artist["name"], self.user_playlists)
             dialog.Show()
         else:
-            ui.message(_("Could not identify the artist for this item."))
+            ui.message(_("Please select an artist to view their discography."))
 
     def on_view_album_tracks(self, evt=None):
         album = self._get_selected_item()

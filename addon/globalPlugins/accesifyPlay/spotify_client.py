@@ -464,15 +464,6 @@ class SpotifyClient:
             "link": item.get("external_urls", {}).get("spotify"),
         }
 
-    def get_current_songlink_url(self):
-        """
-        Generates a universal Odesli/Song.link URL for the current track.
-        """
-        spotify_url = self.get_current_track_url()
-        if "http" not in spotify_url:
-            return spotify_url
-        return f"https://song.link/{spotify_url}"    
-
     def _describe_queue_item(self, item, prefix):
         if not item:
             return _("Queue is empty.")
@@ -652,9 +643,9 @@ class SpotifyClient:
             # Kita panggil langsung lewat _execute agar handle device_id otomatis
             result = self._execute(self.client.shuffle, state=new_state)
             if isinstance(result, str) and "restriction" in result.lower():
-                return _("Shuffle control is disabled for this playback context.")
+                return _("Failed: Spotify Premium is required for Shuffle control.")
             if isinstance(result, str): 
-                return result
+                return result # Return error message lain jika ada
             
             return _("Shuffle On") if new_state else _("Shuffle Off")
         except Exception as e:
@@ -684,7 +675,7 @@ class SpotifyClient:
         try:
             result = self._execute(self.client.repeat, state=new_state)
             if isinstance(result, str) and "restriction" in result.lower():
-                return _("Repeat control is disabled for this playback context.")
+                return _("Failed: Spotify Premium is required for Repeat control.")
             if isinstance(result, str): 
                 return result
             
@@ -713,59 +704,10 @@ class SpotifyClient:
         return playlists
 
     def add_track_to_playlist(self, playlist_id, track_uri):
-        """
-        Wrapper for add_items_to_playlist via dialogs.
-        """
-        return self.add_items_to_playlist(playlist_id, track_uri)
-
-    def add_items_to_playlist(self, playlist_id, uris):
-        """
-        Adds items to a playlist, skipping ones that are already there.
-        """
-        if isinstance(uris, str):
-            uris = [uris]
-        current_tracks = self.get_playlist_tracks(playlist_id)
-        if isinstance(current_tracks, str):
-            return current_tracks # Return error jika gagal ambil list
-        existing_uris = set()
-        for item in current_tracks:
-            track = item.get("track")
-            if track and track.get("uri"):
-                existing_uris.add(track.get("uri"))
-        uris_to_add = []
-        for uri in uris:
-            if uri not in existing_uris:
-                uris_to_add.append(uri)
-        if not uris_to_add:
-            if len(uris) == 1:
-                return _("This track is already in the playlist.")
-            else:
-                return _("All these tracks are already in the playlist.")
-        result = self._execute_web_api(
-            self.client.playlist_add_items, playlist_id=playlist_id, items=uris_to_add
+        """Adds a track to a specified playlist."""
+        return self._execute_web_api(
+            self.client.playlist_add_items, playlist_id=playlist_id, items=[track_uri]
         )
-        if isinstance(result, str):
-            return result
-        skipped_count = len(uris) - len(uris_to_add)
-        if skipped_count > 0:
-            return _("Added {added} tracks ({skipped} duplicates skipped).").format(
-                added=len(uris_to_add), skipped=skipped_count
-            )
-        return True
-
-    def add_album_to_playlist(self, playlist_id, album_id):
-        """Fetches all tracks from an album and adds them to a playlist."""
-        tracks = self.get_album_tracks(album_id)
-        if isinstance(tracks, str): return tracks # Return error message
-
-        uris = [t['uri'] for t in tracks if t.get('uri')]
-        if not uris: return _("No tracks found in this album.")
-        for i in range(0, len(uris), 100):
-            chunk = uris[i:i+100]
-            result = self.add_items_to_playlist(playlist_id, chunk)
-            if isinstance(result, str): return result
-
-        return True
 
     def create_playlist(self, name, public=True, collaborative=False, description=""):
         """Creates a new playlist for the current user."""
@@ -963,12 +905,6 @@ class SpotifyClient:
         """Removes tracks from the user's library."""
         return self._execute_web_api(
             self.client.current_user_saved_tracks_delete, tracks=track_ids
-        )
-
-    def check_if_saved_tracks(self, track_ids):
-        """Checks if tracks are already saved in the current user's library."""
-        return self._execute_web_api(
-            self.client.current_user_saved_tracks_contains, tracks=track_ids
         )
 
     def save_tracks_to_library(self, track_ids):
