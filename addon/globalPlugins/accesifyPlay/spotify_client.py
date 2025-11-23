@@ -643,9 +643,9 @@ class SpotifyClient:
             # Kita panggil langsung lewat _execute agar handle device_id otomatis
             result = self._execute(self.client.shuffle, state=new_state)
             if isinstance(result, str) and "restriction" in result.lower():
-                return _("Failed: Spotify Premium is required for Shuffle control.")
+                return _("Shuffle control is disabled for this playback context.")
             if isinstance(result, str): 
-                return result # Return error message lain jika ada
+                return result
             
             return _("Shuffle On") if new_state else _("Shuffle Off")
         except Exception as e:
@@ -675,7 +675,7 @@ class SpotifyClient:
         try:
             result = self._execute(self.client.repeat, state=new_state)
             if isinstance(result, str) and "restriction" in result.lower():
-                return _("Failed: Spotify Premium is required for Repeat control.")
+                return _("Repeat control is disabled for this playback context.")
             if isinstance(result, str): 
                 return result
             
