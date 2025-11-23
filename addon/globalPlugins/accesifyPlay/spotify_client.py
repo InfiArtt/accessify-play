@@ -464,6 +464,15 @@ class SpotifyClient:
             "link": item.get("external_urls", {}).get("spotify"),
         }
 
+    def get_current_songlink_url(self):
+        """
+        Generates a universal Odesli/Song.link URL for the current track.
+        """
+        spotify_url = self.get_current_track_url()
+        if "http" not in spotify_url:
+            return spotify_url
+        return f"https://song.link/{spotify_url}"    
+
     def _describe_queue_item(self, item, prefix):
         if not item:
             return _("Queue is empty.")

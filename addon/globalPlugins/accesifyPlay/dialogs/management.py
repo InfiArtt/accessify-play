@@ -2265,12 +2265,28 @@ class ManagementDialog(AccessifyDialog):
             wx.CallAfter(self.load_followed_artists)
 
     def on_view_discography(self, evt):
-        artist = self._get_selected_item()
-        if artist and artist.get("type") == "artist":
-            dialog = ArtistDiscographyDialog(self, self.client, artist["id"], artist["name"], self.user_playlists)
+        item = self._get_selected_item()
+        if not item:
+            return
+
+        target_id = None
+        target_name = None
+        if item.get("type") == "artist":
+            target_id = item["id"]
+            target_name = item["name"]
+        elif item.get("type") in ("album", "track"):
+            artists = item.get("artists", [])
+            if artists:
+                primary_artist = artists[0]
+                target_id = primary_artist.get("id")
+                target_name = primary_artist.get("name")
+        if target_id and target_name:
+            dialog = ArtistDiscographyDialog(
+                self, self.client, target_id, target_name, self.user_playlists
+            )
             dialog.Show()
         else:
-            ui.message(_("Please select an artist to view their discography."))
+            ui.message(_("Could not identify the artist for this item."))
 
     def on_view_album_tracks(self, evt=None):
         album = self._get_selected_item()

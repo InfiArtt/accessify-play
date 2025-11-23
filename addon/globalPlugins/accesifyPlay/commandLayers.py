@@ -71,6 +71,7 @@ class CommandLayerManager:
         ("kb:s", "showSearchDialog", "Search for an item on Spotify.", "S", False),
         ("kb:u", "showPlayFromLinkDialog", "Play an item from a Spotify URL.", "U", False),
         ("kb:v", "setVolume", "Set Spotify volume to a specific percentage.", "V", False),
+        ("kb:x", "copyUniversalLink", "Copy Universal (Song.link) URL.", "X", False),
         ("kb:z", "showSleepTimerDialog", "Set Sleep Timer.", "Z", False),
         ("kb:f4", "openSettings", "Open Accessify Play settings.", "F4", False),
     ]

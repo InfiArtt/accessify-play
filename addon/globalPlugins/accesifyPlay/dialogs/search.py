@@ -167,6 +167,8 @@ class SearchDialog(AccessifyDialog):
         wx.CallAfter(self._update_results_list, index_to_focus)
 
     def _update_results_list(self, focus_index):
+        if not self.resultsList: 
+            return
         """Updates the ListBox with the latest results."""
         self.resultsList.Clear()
         self._rendered_items.clear()
