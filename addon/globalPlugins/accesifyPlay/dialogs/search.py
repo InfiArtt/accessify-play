@@ -167,6 +167,8 @@ class SearchDialog(AccessifyDialog):
         wx.CallAfter(self._update_results_list, index_to_focus)
 
     def _update_results_list(self, focus_index):
+        if not self.resultsList: 
+            return
         """Updates the ListBox with the latest results."""
         self.resultsList.Clear()
         self._rendered_items.clear()
@@ -307,6 +309,19 @@ class SearchDialog(AccessifyDialog):
                 menu.AppendSeparator()
                 save_item = menu.Append(wx.ID_ANY, _("Save Album"))
                 self.Bind(wx.EVT_MENU, self.on_save_album, save_item)
+                playlist_submenu = wx.Menu()
+                if self._user_playlists:
+                    for playlist in self._user_playlists:
+                        menu_item = playlist_submenu.Append(wx.ID_ANY, playlist.get("name", "Unknown"))
+                        self.Bind(
+                            wx.EVT_MENU,
+                            lambda event, p_id=playlist.get("id"), p_name=playlist.get("name"): 
+                                self._on_add_album_to_playlist_selected(event, p_id, p_name),
+                            menu_item
+                        )
+                else:
+                    playlist_submenu.Append(wx.ID_ANY, _("No playlists found.")).Enable(False)
+                menu.AppendSubMenu(playlist_submenu, _("Add Album to Playlist"))
             elif item_type == "show":
                 menu.AppendSeparator()
                 save_item = menu.Append(wx.ID_ANY, _("Save Show"))
@@ -385,6 +400,25 @@ class SearchDialog(AccessifyDialog):
         item = self._get_item_at_index(self.resultsList.GetSelection())
         if item:
             self._save_album_to_library(item)
+
+    def _on_add_album_to_playlist_selected(self, event, playlist_id, playlist_name):
+        album = self._get_item_at_index(self.resultsList.GetSelection())
+        if not album or album.get("type") != 'album':
+            return
+
+        album_id = album.get("id")
+        ui.message(_("Adding all tracks from '{album}' to '{playlist}'...").format(
+            album=album.get("name"), playlist=playlist_name
+        ))
+        
+        def _process():
+            result = self.client.add_album_to_playlist(playlist_id, album_id)
+            if result is True:
+                wx.CallAfter(ui.message, _("Album added to playlist successfully."))
+            else:
+                wx.CallAfter(ui.message, str(result))
+        
+        threading.Thread(target=_process).start()
 
     def on_save_show(self, evt=None):
         item = self._get_item_at_index(self.resultsList.GetSelection())
