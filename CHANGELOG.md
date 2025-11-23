@@ -22,7 +22,7 @@ This release marks a major paradigm shift in how you interact with Accessify Pla
 **Sleep Timer**: Added a Sleep Timer feature (accessible via `Z` in the Command Layer) to pause playback after a specified number of minutes. Setting the timer to `0` cancels it. The timer will continue to work even if NVDA is restarted or the computer is rebooted, unless the timer has already expired.
 
 ### Improvements
-
+- **Add to Playlist**: Adding the same track multiple times to the same playlist is still technically possible, but it is no longer allowed because the API behaves destructively. If one of the duplicated entries is removed, both entries get deleted.
 -   **Toggle Like (`L`)**: The "Save Track" function has been upgraded to a Toggle. It now checks if a song is already in your library; if it is, it removes it, otherwise, it adds it.
 
 ### Contributors

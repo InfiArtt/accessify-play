@@ -703,13 +703,46 @@ class SpotifyClient:
             offset += limit
         return playlists
 
+    def add_track_to_playlist(self, playlist_id, track_uri):
+        """
+        Wrapper for add_items_to_playlist via dialogs.
+        """
+        return self.add_items_to_playlist(playlist_id, track_uri)
+
     def add_items_to_playlist(self, playlist_id, uris):
-        """Adds one or more items (tracks/episodes) to a playlist."""
+        """
+        Adds items to a playlist, skipping ones that are already there.
+        """
         if isinstance(uris, str):
             uris = [uris]
-        return self._execute_web_api(
-            self.client.playlist_add_items, playlist_id=playlist_id, items=uris
+        current_tracks = self.get_playlist_tracks(playlist_id)
+        if isinstance(current_tracks, str):
+            return current_tracks # Return error jika gagal ambil list
+        existing_uris = set()
+        for item in current_tracks:
+            track = item.get("track")
+            if track and track.get("uri"):
+                existing_uris.add(track.get("uri"))
+        uris_to_add = []
+        for uri in uris:
+            if uri not in existing_uris:
+                uris_to_add.append(uri)
+        if not uris_to_add:
+            if len(uris) == 1:
+                return _("This track is already in the playlist.")
+            else:
+                return _("All these tracks are already in the playlist.")
+        result = self._execute_web_api(
+            self.client.playlist_add_items, playlist_id=playlist_id, items=uris_to_add
         )
+        if isinstance(result, str):
+            return result
+        skipped_count = len(uris) - len(uris_to_add)
+        if skipped_count > 0:
+            return _("Added {added} tracks ({skipped} duplicates skipped).").format(
+                added=len(uris_to_add), skipped=skipped_count
+            )
+        return True
 
     def add_album_to_playlist(self, playlist_id, album_id):
         """Fetches all tracks from an album and adds them to a playlist."""
