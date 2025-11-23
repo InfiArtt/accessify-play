@@ -19,6 +19,7 @@ This release marks a major paradigm shift in how you interact with Accessify Pla
     -   **Sticky Mode**: Navigation keys (Volume, Seek, Next/prev.) keep the layer open for rapid adjustments. Single-action keys (like opening a dialog) will automatically close the layer.
     -   **Help**: Press `F1` inside the layer to view all available commands.
 -   **Add Album to Playlist**: You can now add an entire album to a playlist via the context menu in the Search Dialog (when searching for Albums) and the Artist Discography Dialog.
+**Sleep Timer**: Added a Sleep Timer feature (accessible via `Z` in the Command Layer) to pause playback after a specified number of minutes. Setting the timer to `0` cancels it. The timer will continue to work even if NVDA is restarted or the computer is rebooted, unless the timer has already expired.
 
 ### Improvements
 
