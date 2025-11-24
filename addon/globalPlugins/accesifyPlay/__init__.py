@@ -776,9 +776,6 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         self.sleepTimerDialog.Bind(wx.EVT_CLOSE, on_close)
         self.sleepTimerDialog.Show()
 
-    @scriptHandler.script(
-        description=_("Copy the universal Song.link URL (for sharing to non-Spotify users)."),
-    )
     @utils.copy_in_thread
     def script_copyUniversalLink(self, gesture):
         return self.client.get_current_songlink_url()
