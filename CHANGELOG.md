@@ -1,6 +1,11 @@
 # Changelog
 
-## Version 1.6.0
+## Version 1.6.0-rc.1
+
+> ⚠️ **Pre-release Notice**
+>
+> This version is a pre-release build. Full documentation for this version is not yet available, so feel free to explore everything freely.  
+> If you encounter any errors or notice anything that doesn’t work as expected, please open an issue and we will do our best to resolve it.
 
 This release marks a major paradigm shift in how you interact with Accessify Play. We have introduced a **Command Layer** to streamline controls and reduce keyboard conflicts, as mentioned in the v1.5.1 changelog.
 
