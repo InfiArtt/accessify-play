@@ -16,6 +16,7 @@ import time
 from logHandler import log
 import addonHandler
 import webbrowser
+import api
 
 # Add the 'lib' folder to sys.path before other imports
 addon_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -33,7 +34,11 @@ from . import utils  # Impor decorator dari utils.py
 from .dialogs.search import SearchDialog
 from .dialogs.play_from_link import PlayFromLinkDialog
 from .dialogs.queue_list import QueueListDialog
-from .dialogs.management import ManagementDialog
+from .dialogs.management import (
+    ManagementDialog,
+    ArtistDiscographyDialog,
+    AlbumTracksDialog,
+)
 from .dialogs.seek import SeekDialog
 from .dialogs.settings import SpotifySettingsPanel
 from .dialogs.devices import DevicesDialog
@@ -52,6 +57,7 @@ confspec = {
     "updateChannel": "string(default='stable')",
     "isAutomaticallyCheckForUpdates": "boolean(default=True)",
     "lastUpdateCheck": "integer(default=0)",
+    "volumeStep": "integer(default=5, min=1, max=100)",
 }
 config.conf.spec["spotify"] = confspec
 
@@ -60,12 +66,12 @@ language._apply_language_preference()
 
 class GlobalPlugin(globalPluginHandler.GlobalPlugin):
     scriptCategory = _("Accessify Play")
-    
+
     def __init__(self):
         super(GlobalPlugin, self).__init__()
         self._is_modifying_playback = False
         self.client = spotify_client.get_client()
-        
+
         self.searchDialog = None
         self.playFromLinkDialog = None
         self.addToPlaylistDialog = None
@@ -77,13 +83,12 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         self.seekDialog = None
         self.sleepTimerDialog = None
 
-
         self._queueDialogLoading = False
         self._addToPlaylistLoading = False
         self._managementDialogLoading = False
         self._devicesDialogLoading = False
         self.commandLayer = CommandLayerManager(self)
-        
+
         settingsDialogs.NVDASettingsDialog.categoryClasses.append(SpotifySettingsPanel)
 
         # Polling untuk perubahan lagu
@@ -109,7 +114,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         wrapped = self.commandLayer.wrap_script(script)
         if wrapped:
             return wrapped
-        self.commandLayer.handle_unknown_gesture()
+        self.commandLayer.handle_unknown_gesture(gesture)
         return None
 
     def terminate(self):
@@ -119,9 +124,18 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
             settingsDialogs.NVDASettingsDialog.categoryClasses.remove(SpotifySettingsPanel)
         except (ValueError, AttributeError):
             pass
-        
-        for dialog_attr in ['searchDialog', 'playFromLinkDialog', 'addToPlaylistDialog', 
-                            'queueListDialog', 'managementDialog', 'setVolumeDialog', 'seekDialog', 'devicesDialog', 'sleepTimerDialog']:
+
+        for dialog_attr in [
+            "searchDialog",
+            "playFromLinkDialog",
+            "addToPlaylistDialog",
+            "queueListDialog",
+            "managementDialog",
+            "setVolumeDialog",
+            "seekDialog",
+            "devicesDialog",
+            "sleepTimerDialog",
+        ]:
             dialog = getattr(self, dialog_attr, None)
             if dialog:
                 dialog.Destroy()
@@ -132,7 +146,11 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
             try:
                 if config.conf["spotify"]["announceTrackChanges"] and self.client.client:
                     playback = self.client._execute_web_api(self.client.client.current_playback)
-                    current_track_id = playback.get("item", {}).get("id") if playback and isinstance(playback, dict) else None
+                    current_track_id = (
+                        playback.get("item", {}).get("id")
+                        if playback and isinstance(playback, dict)
+                        else None
+                    )
 
                     if self.last_track_id != current_track_id:
                         self.last_track_id = current_track_id
@@ -141,7 +159,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
                             wx.CallAfter(ui.message, track_string)
             except Exception as e:
                 log.error(f"Error in Spotify polling thread: {e}", exc_info=True)
-            
+
             for _ in range(5):
                 if not self.is_running:
                     return
@@ -151,11 +169,11 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         """Thread untuk mengirim ping ke Spotify agar koneksi tetap hidup."""
         while self.is_running:
             interval = config.conf["spotify"]["keepAliveInterval"]
-            
+
             if interval == 0:
                 time.sleep(5)
                 continue
-            
+
             if interval < 5:
                 interval = 5
 
@@ -164,7 +182,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
                     self.client.send_keep_alive()
             except Exception:
                 pass
-            
+
             for _ in range(interval):
                 if not self.is_running:
                     break
@@ -211,7 +229,11 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
     def script_commandLayerCancel(self, gesture):
         self.commandLayer.finish(announce=True)
-    
+
+    def script_showLayerEditor(self, gesture):
+        self.commandLayer.show_editor()
+        return self.client.get_current_track_info()
+
     @scriptHandler.script(
         description=_("Announce the currently playing track."),
     )
@@ -268,7 +290,11 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
                 return result
             time.sleep(0.4)  # Beri jeda agar server Spotify sempat memproses
             playback = self.client._execute(self.client.client.current_playback)
-            return self.client.get_current_track_info(playback) if isinstance(playback, dict) else _("Next track")
+            return (
+                self.client.get_current_track_info(playback)
+                if isinstance(playback, dict)
+                else _("Next track")
+            )
         finally:
             self._is_modifying_playback = False
 
@@ -286,7 +312,11 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
                 return result
             time.sleep(0.4)
             playback = self.client._execute(self.client.client.current_playback)
-            return self.client.get_current_track_info(playback) if isinstance(playback, dict) else _("Previous track")
+            return (
+                self.client.get_current_track_info(playback)
+                if isinstance(playback, dict)
+                else _("Previous track")
+            )
         finally:
             self._is_modifying_playback = False
 
@@ -300,10 +330,12 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         try:
             self._is_modifying_playback = True
             playback = self.client._execute(self.client.client.current_playback)
-            if not isinstance(playback, dict): return playback
+            if not isinstance(playback, dict):
+                return playback
             if playback and playback.get("device"):
                 current_volume = playback["device"]["volume_percent"]
-                new_volume = min(current_volume + 5, 100)
+                step = config.conf["spotify"]["volumeStep"]
+                new_volume = min(current_volume + step, 100)
                 self.client._execute(self.client.client.volume, new_volume)
                 return f"{_('Volume')} {new_volume}%"
             return _("No active device found.")
@@ -320,16 +352,18 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         try:
             self._is_modifying_playback = True
             playback = self.client._execute(self.client.client.current_playback)
-            if not isinstance(playback, dict): return playback
+            if not isinstance(playback, dict):
+                return playback
             if playback and playback.get("device"):
                 current_volume = playback["device"]["volume_percent"]
-                new_volume = max(current_volume - 5, 0)
+                step = config.conf["spotify"]["volumeStep"]
+                new_volume = max(current_volume - step, 0)
                 self.client._execute(self.client.client.volume, new_volume)
                 return f"{_('Volume')} {new_volume}%"
             return _("No active device found.")
         finally:
             self._is_modifying_playback = False
-    
+
     @scriptHandler.script(
         description=_("Seek forward in the current track."),
     )
@@ -341,7 +375,8 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
             self._is_modifying_playback = True
             seek_duration = config.conf["spotify"]["seekDuration"]
             result = self.client.seek_track(seek_duration * 1000)
-            if isinstance(result, str): return result
+            if isinstance(result, str):
+                return result
             return _("Seeked forward {duration} seconds.").format(duration=seek_duration)
         finally:
             self._is_modifying_playback = False
@@ -357,7 +392,8 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
             self._is_modifying_playback = True
             seek_duration = config.conf["spotify"]["seekDuration"]
             result = self.client.seek_track(-seek_duration * 1000)
-            if isinstance(result, str): return result
+            if isinstance(result, str):
+                return result
             return _("Seeked backward {duration} seconds.").format(duration=seek_duration)
         finally:
             self._is_modifying_playback = False
@@ -403,25 +439,29 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
     @utils.speak_in_thread
     def script_toggleLike(self, gesture):
         playback = self.client._execute(self.client.client.current_playback)
-        if isinstance(playback, str): return playback
+        if isinstance(playback, str):
+            return playback
         if not playback or not playback.get("item"):
             return _("Nothing is currently playing.")
-        
+
         track = playback["item"]
         track_id = track["id"]
-        
+
         check = self.client.check_if_saved_tracks([track_id])
-        if isinstance(check, str): return check
-        
-        is_saved = check[0] # True jika sudah dilike, False jika belum
+        if isinstance(check, str):
+            return check
+
+        is_saved = check[0]  # True jika sudah dilike, False jika belum
 
         if is_saved:
             result = self.client.remove_tracks_from_library([track_id])
-            if isinstance(result, str): return result
+            if isinstance(result, str):
+                return result
             return _("Removed from Liked Songs.")
         else:
             result = self.client.save_tracks_to_library([track_id])
-            if isinstance(result, str): return result
+            if isinstance(result, str):
+                return result
             return _("Added to Liked Songs.")
 
     @scriptHandler.script(
@@ -434,7 +474,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
             return playback
         if not playback or not playback.get("item"):
             return _("Nothing is currently playing.")
-        
+
         if playback.get("currently_playing_type") != "track":
             return _("This action is only available for music tracks.")
 
@@ -452,7 +492,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         is_followed_list = self.client.check_if_artists_followed([artist_id])
         if isinstance(is_followed_list, str):
             return is_followed_list
-        
+
         is_currently_followed = is_followed_list[0]
 
         if is_currently_followed:
@@ -474,12 +514,13 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         if not self.client.client:
             ui.message(_("Spotify client not ready. Please validate your credentials."))
             return
-        
+
         dialog = dialog_class(gui.mainFrame, self.client, *args, **kwargs)
+
         # Membuat handler close dinamis
         def on_close(evt):
             self._destroy_dialog(dialog_attr, evt)
-        
+
         dialog.Bind(wx.EVT_CLOSE, on_close)
         setattr(self, dialog_attr, dialog)
         dialog.Show()
@@ -521,7 +562,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         if not self.client.client:
             ui.message(_("Spotify client not ready. Please validate your credentials."))
             return
-        
+
         self._queueDialogLoading = True
         ui.message(_("Please Wait..."))
 
@@ -529,6 +570,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         def _prepare():
             data = self.client.get_full_queue()
             wx.CallAfter(self._finish_queue_dialog_load, data)
+
         _prepare()
 
     def _finish_queue_dialog_load(self, data):
@@ -538,7 +580,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
             return
         self._open_dialog(QueueListDialog, "queueListDialog", queue_data=data)
         ui.message(_("UI Ready."))
-    
+
     @scriptHandler.script(
         description=_("Add the currently playing track to a playlist."),
     )
@@ -552,7 +594,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         if not self.client.client:
             ui.message(_("Spotify client not ready. Please validate your credentials."))
             return
-        
+
         self._addToPlaylistLoading = True
         ui.message(_("Preparing playlists..."))
 
@@ -567,7 +609,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
             if isinstance(playlists, str):
                 wx.CallAfter(self._finish_add_to_playlist_dialog, playlists)
                 return
-            
+
             profile = self.client.get_current_user_profile()
             if isinstance(profile, str) or not profile.get("id"):
                 wx.CallAfter(self._finish_add_to_playlist_dialog, _("Could not get user profile."))
@@ -575,11 +617,12 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
             user_id = profile["id"]
             user_playlists = [p for p in playlists if p.get("owner", {}).get("id") == user_id]
-            
+
             payload = {"track": playback["item"], "playlists": user_playlists}
             wx.CallAfter(self._finish_add_to_playlist_dialog, payload)
+
         _prepare()
-        
+
     def _finish_add_to_playlist_dialog(self, payload):
         self._addToPlaylistLoading = False
         if isinstance(payload, str):
@@ -588,8 +631,12 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         if not payload["playlists"]:
             ui.message(_("No playlists owned by you were found."))
             return
-        self._open_dialog(AddToPlaylistDialog, "addToPlaylistDialog", 
-                          current_track=payload['track'], playlists=payload['playlists'])
+        self._open_dialog(
+            AddToPlaylistDialog,
+            "addToPlaylistDialog",
+            current_track=payload["track"],
+            playlists=payload["playlists"],
+        )
 
     @scriptHandler.script(
         description=_("Manage your Spotify library and playlists."),
@@ -604,7 +651,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         if not self.client.client:
             ui.message(_("Spotify client not ready. Please validate your credentials."))
             return
-        
+
         self._managementDialogLoading = True
         ui.message(_("Please Wait..."))
 
@@ -612,6 +659,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         def _prepare():
             data = self._fetch_management_data()
             wx.CallAfter(self._finish_management_dialog_load, data)
+
         _prepare()
 
     def _fetch_management_data(self):
@@ -630,7 +678,8 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         }
         for key, func in loaders.items():
             result = func()
-            if isinstance(result, str): return result # return error message on failure
+            if isinstance(result, str):
+                return result  # return error message on failure
             data[key] = result
         return data
 
@@ -641,7 +690,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
             return
         self._open_dialog(ManagementDialog, "managementDialog", preloaded_data=data)
         ui.message(_("UI Ready."))
-        
+
     @scriptHandler.script(
         description=_("Show available devices to switch playback."),
     )
@@ -655,7 +704,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         if not self.client.client:
             ui.message(_("Spotify client not ready. Please validate your credentials."))
             return
-        
+
         self._devicesDialogLoading = True
         ui.message(_("Fetching devices..."))
 
@@ -663,6 +712,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         def _prepare():
             devices = self.client.get_available_devices()
             wx.CallAfter(self._finish_devices_dialog_load, devices)
+
         _prepare()
 
     def _finish_devices_dialog_load(self, devices):
@@ -677,8 +727,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
     def script_openSettings(self, gesture):
         gui.mainFrame.popupSettingsDialog(
-            settingsDialogs.NVDASettingsDialog,
-            initialCategory=SpotifySettingsPanel
+            settingsDialogs.NVDASettingsDialog, initialCategory=SpotifySettingsPanel
         )
 
     def _get_timer_file_path(self):
@@ -701,7 +750,8 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         try:
             with open(path, "r") as f:
                 content = f.read().strip()
-                if not content: return None
+                if not content:
+                    return None
                 data = json.loads(content)
                 return data.get("end_time")
         except Exception:
@@ -711,14 +761,14 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         """Empty the contents of the timer file (not delete the file)."""
         try:
             with open(self._get_timer_file_path(), "w") as f:
-                f.write("") # Kosongkan isi
+                f.write("")  # Kosongkan isi
         except Exception:
             pass
 
     def _on_sleep_timeout(self):
         """Function that is executed when time expires."""
         self._active_sleep_timer = None
-        self._clear_timer_state() # Hapus jejak di file
+        self._clear_timer_state()  # Hapus jejak di file
         if self.client and self.client.client:
             self.client._execute(self.client.client.pause_playback)
             log.info("Sleep timer executed: Playback paused.")
@@ -744,7 +794,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
                 if self._active_sleep_timer:
                     self._active_sleep_timer.cancel()
                     self._active_sleep_timer = None
-                
+
                 self._clear_timer_state()
                 ui.message(_("Sleep timer cancelled."))
             else:
@@ -766,7 +816,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
             return
 
         self.sleepTimerDialog = SleepTimerDialog(gui.mainFrame, callback=self._handle_sleep_timer)
-        
+
         def on_close(evt):
             if self.sleepTimerDialog:
                 self.sleepTimerDialog.Destroy()
@@ -775,7 +825,3 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
         self.sleepTimerDialog.Bind(wx.EVT_CLOSE, on_close)
         self.sleepTimerDialog.Show()
-
-    @utils.copy_in_thread
-    def script_copyUniversalLink(self, gesture):
-        return self.client.get_current_songlink_url()

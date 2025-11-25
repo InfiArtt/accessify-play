@@ -5,9 +5,10 @@ import ui
 import threading
 from gui import settingsDialogs, guiHelper, messageBox
 import gui
-from .. import spotify_client, donate, updater # Tanda .. berarti naik satu level folder
+from .. import spotify_client, donate, updater  # Tanda .. berarti naik satu level folder
 from .base import AccessifyDialog
 from ..language import AVAILABLE_LANGUAGE_CODES, LANGUAGE_AUTO, LANGUAGE_DISPLAY_OVERRIDES
+
 
 class ClientIDManagementDialog(AccessifyDialog):
     def __init__(self, parent, current_client_id):
@@ -83,14 +84,19 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 
         # Translators: Label for a setting to choose the duration for seek forward/backward actions.
         seek_duration_label = _("Seek Duration (seconds, 1 to 60)")
-        self.seekDurationCtrl = sHelper.addLabeledControl(
-            seek_duration_label, wx.SpinCtrl
-        )
+        self.seekDurationCtrl = sHelper.addLabeledControl(seek_duration_label, wx.SpinCtrl)
         self.seekDurationCtrl.SetRange(1, 60)
         self.seekDurationCtrl.SetValue(config.conf["spotify"]["seekDuration"])
+
+        # Translators: Label for a setting to choose the volume step percentage.
+        volume_step_label = _("Volume Step (1 to 100)")
+        self.volumeStepCtrl = sHelper.addLabeledControl(volume_step_label, wx.SpinCtrl)
+        self.volumeStepCtrl.SetRange(1, 100)
+        self.volumeStepCtrl.SetValue(config.conf["spotify"]["volumeStep"])
+
         keep_alive_label = _("Keep Alive Interval (seconds, 0 = Off, Min = 5)")
         self.keepAliveCtrl = sHelper.addLabeledControl(keep_alive_label, wx.SpinCtrl)
-        self.keepAliveCtrl.SetRange(0, 300) # Maksimal 5 menit
+        self.keepAliveCtrl.SetRange(0, 300)  # Maksimal 5 menit
         self.keepAliveCtrl.SetValue(config.conf["spotify"]["keepAliveInterval"])
         # Translators: Label for a setting to choose the display language for the addon.
         language_label = _("Language:")
@@ -107,8 +113,7 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 
         current_lang_code = config.conf["spotify"]["language"]
         current_label = self.languageLabelByCode.get(
-            current_lang_code,
-            self.languageLabelByCode.get(LANGUAGE_AUTO, language_choices[0])
+            current_lang_code, self.languageLabelByCode.get(LANGUAGE_AUTO, language_choices[0])
         )
         self.languageCtrl.SetValue(current_label)
         self._originalLanguage = current_lang_code
@@ -117,9 +122,7 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
         self.announceTrackChanges = sHelper.addItem(
             wx.CheckBox(self, label=_("Announce track changes automatically:"))
         )
-        self.announceTrackChanges.SetValue(
-            config.conf["spotify"]["announceTrackChanges"]
-        )
+        self.announceTrackChanges.SetValue(config.conf["spotify"]["announceTrackChanges"])
 
         # Updater settings
         self.updateChannelCtrl = sHelper.addLabeledControl(
@@ -129,17 +132,13 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
             style=wx.CB_READONLY,
         )
         self.updateChannelCtrl.SetValue(
-            _("Beta")
-            if config.conf["spotify"]["updateChannel"] == "beta"
-            else _("Stable")
+            _("Beta") if config.conf["spotify"]["updateChannel"] == "beta" else _("Stable")
         )
 
         self.autoCheckUpdatesCtrl = sHelper.addItem(
             wx.CheckBox(self, label=_("Check for updates automatically"))
         )
-        self.autoCheckUpdatesCtrl.SetValue(
-            config.conf["spotify"]["isAutomaticallyCheckForUpdates"]
-        )
+        self.autoCheckUpdatesCtrl.SetValue(config.conf["spotify"]["isAutomaticallyCheckForUpdates"])
 
         self.lastCheckLabel = sHelper.addItem(wx.StaticText(self, label=""))
 
@@ -165,14 +164,12 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
         buttonsSizer.Add(self.donateButton, flag=wx.LEFT, border=5)
 
         self.checkUpdatesButton = wx.Button(self, label=_("Check for Updates"))
-        self.checkUpdatesButton.Bind(
-            wx.EVT_BUTTON, lambda evt: updater.check_for_updates(is_manual=True)
-        )
+        self.checkUpdatesButton.Bind(wx.EVT_BUTTON, lambda evt: updater.check_for_updates(is_manual=True))
         buttonsSizer.Add(self.checkUpdatesButton, flag=wx.LEFT, border=5)
 
         sHelper.addItem(buttonsSizer)
-        self.updateMigrateButtonVisibility() # Set initial visibility of migrate button
-        self.Layout() # Ensure all elements are properly laid out
+        self.updateMigrateButtonVisibility()  # Set initial visibility of migrate button
+        self.Layout()  # Ensure all elements are properly laid out
 
     def updateClientIDButtonLabel(self):
         current_client_id = spotify_client._read_client_id()
@@ -185,18 +182,20 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
         current_client_id = spotify_client._read_client_id()
         dialog = ClientIDManagementDialog(self, current_client_id)
         if dialog.ShowModal() == wx.ID_OK:
-            self.updateClientIDButtonLabel() # Refresh button label after dialog closes
-            self.client.initialize() # Re-initialize client with potentially new ID
+            self.updateClientIDButtonLabel()  # Refresh button label after dialog closes
+            self.client.initialize()  # Re-initialize client with potentially new ID
         dialog.Destroy()
 
     def updateMigrateButtonVisibility(self):
         old_client_id_exists = "clientID" in config.conf["spotify"] and config.conf["spotify"]["clientID"]
-        old_client_secret_exists = "clientSecret" in config.conf["spotify"] and config.conf["spotify"]["clientSecret"]
+        old_client_secret_exists = (
+            "clientSecret" in config.conf["spotify"] and config.conf["spotify"]["clientSecret"]
+        )
         if old_client_id_exists or old_client_secret_exists:
             self.migrateButton.Show()
         else:
             self.migrateButton.Hide()
-        self.Layout() # Re-layout the sizer to reflect visibility changes
+        self.Layout()  # Re-layout the sizer to reflect visibility changes
 
     def _buildLanguageEntries(self):
         entries = [(LANGUAGE_AUTO, _("Follow NVDA language (default)"))]
@@ -209,7 +208,7 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
         # Migration logic (similar to installTasks.py)
         old_client_id = config.conf["spotify"].get("clientID", "")
         old_client_secret = config.conf["spotify"].get("clientSecret", "")
-        
+
         message_parts = []
         migration_performed = False
 
@@ -217,45 +216,55 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
             current_new_client_id = spotify_client._read_client_id()
             if not current_new_client_id:
                 spotify_client._write_client_id(old_client_id)
-                message_parts.append(_("Your Spotify Client ID has been migrated from NVDA's configuration to a new, more portable file."))
+                message_parts.append(
+                    _(
+                        "Your Spotify Client ID has been migrated from NVDA's configuration to a new, more portable file."
+                    )
+                )
                 migration_performed = True
             else:
-                message_parts.append(_("An existing Spotify Client ID was found in the new portable file. The old Client ID from NVDA's configuration was not migrated to avoid overwriting."))
+                message_parts.append(
+                    _(
+                        "An existing Spotify Client ID was found in the new portable file. The old Client ID from NVDA's configuration was not migrated to avoid overwriting."
+                    )
+                )
 
         if "clientID" in config.conf["spotify"]:
             config.conf["spotify"]["clientID"] = ""
             migration_performed = True
         if "clientSecret" in config.conf["spotify"]:
             config.conf["spotify"]["clientSecret"] = ""
-            message_parts.append(_("The 'Client Secret' is no longer used and has been removed from NVDA's configuration."))
+            message_parts.append(
+                _("The 'Client Secret' is no longer used and has been removed from NVDA's configuration.")
+            )
             migration_performed = True
-        
+
         if migration_performed:
             config.conf.save()
             final_message = _("AccessifyPlay Migration Complete\n\n")
             final_message += "\n".join(message_parts)
-            final_message += _("\n\nThese changes improve security and portability. Please restart NVDA for all changes to take full effect.")
+            final_message += _(
+                "\n\nThese changes improve security and portability. Please restart NVDA for all changes to take full effect."
+            )
             ui.message(final_message)
-            self.updateMigrateButtonVisibility() # Hide button after migration
-            self.updateClientIDButtonLabel() # Refresh Client ID button
-            self.client.initialize() # Re-initialize client with potentially new ID
+            self.updateMigrateButtonVisibility()  # Hide button after migration
+            self.updateClientIDButtonLabel()  # Refresh Client ID button
+            self.client.initialize()  # Re-initialize client with potentially new ID
         else:
             ui.message(_("No old Spotify credentials found to migrate."))
-            self.updateMigrateButtonVisibility() # Hide button if no migration needed
+            self.updateMigrateButtonVisibility()  # Hide button if no migration needed
 
     def onGoToDeveloperDashboard(self, evt):
         webbrowser.open("https://developer.spotify.com/dashboard")
-
 
     def onSave(self):
         config.conf["spotify"]["port"] = self.portCtrl.GetValue()
         config.conf["spotify"]["searchLimit"] = self.limitCtrl.GetValue()
         config.conf["spotify"]["seekDuration"] = self.seekDurationCtrl.GetValue()
+        config.conf["spotify"]["volumeStep"] = self.volumeStepCtrl.GetValue()
 
         selected_lang_display = self.languageCtrl.GetValue()
-        selected_code = self.languageCodeByLabel.get(
-            selected_lang_display, LANGUAGE_AUTO
-        )
+        selected_code = self.languageCodeByLabel.get(selected_lang_display, LANGUAGE_AUTO)
         config.conf["spotify"]["language"] = selected_code
 
         if selected_code != self._originalLanguage:
@@ -263,19 +272,15 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
             self._originalLanguage = selected_code
         ka_val = self.keepAliveCtrl.GetValue()
         if ka_val > 0 and ka_val < 5:
-            ka_val = 5 # Paksa ke 5 jika user bandel isi 1, 2, 3, atau 4
+            ka_val = 5  # Paksa ke 5 jika user bandel isi 1, 2, 3, atau 4
             ui.message(_("Keep Alive interval adjusted to minimum 5 seconds."))
-        
+
         config.conf["spotify"]["keepAliveInterval"] = ka_val
-        config.conf["spotify"][
-            "announceTrackChanges"
-        ] = self.announceTrackChanges.IsChecked()
+        config.conf["spotify"]["announceTrackChanges"] = self.announceTrackChanges.IsChecked()
         config.conf["spotify"]["updateChannel"] = (
             "beta" if self.updateChannelCtrl.GetValue() == _("Beta") else "stable"
         )
-        config.conf["spotify"][
-            "isAutomaticallyCheckForUpdates"
-        ] = self.autoCheckUpdatesCtrl.IsChecked()
+        config.conf["spotify"]["isAutomaticallyCheckForUpdates"] = self.autoCheckUpdatesCtrl.IsChecked()
 
     def onValidate(self, evt):
         self.onSave()  # Save current UI values to config.conf before validating
@@ -296,9 +301,7 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
         # Translators: Title for the clear credentials confirmation dialog.
         dialog_title = _("Confirm Clear Credentials")
 
-        result = gui.messageBox(
-            confirmation_msg, dialog_title, wx.YES_NO | wx.ICON_WARNING
-        )
+        result = gui.messageBox(confirmation_msg, dialog_title, wx.YES_NO | wx.ICON_WARNING)
 
         if result == wx.YES:
             ui.message(_("Clearing credentials and cache..."))
@@ -315,9 +318,7 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 
     def showValidationResult(self, success):
         if success:
-            messageBox(
-                _("Validation successful!"), _("Success"), wx.OK | wx.ICON_INFORMATION
-            )
+            messageBox(_("Validation successful!"), _("Success"), wx.OK | wx.ICON_INFORMATION)
         else:
             port = config.conf["spotify"]["port"]
             redirect_uri = f"http://127.0.0.1:{port}/callback"

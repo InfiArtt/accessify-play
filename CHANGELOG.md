@@ -2,31 +2,34 @@
 
 ## Version 1.6.0
 
-This release marks a major paradigm shift in how you interact with Accessify Play. We have introduced a **Command Layer** to streamline controls and reduce keyboard conflicts.
+This release marks a major paradigm shift in how you interact with Accessify Play. We have introduced a **Command Layer** to streamline controls and reduce keyboard conflicts, as mentioned in the v1.5.1 changelog.
 
 ### ⚠️ Important: Breaking Changes to Gestures
 **All previous default global gestures (e.g., `NVDA+Alt+Shift+P`, `NVDA+Alt+Shift+V`, etc.) have been REMOVED.**
 
--   **New Workflow**: The primary entry point for the addon is now **`NVDA+g`**. Pressing this activates the Command Layer, where you can press single keys to control Spotify (e.g., press `p` for Play/Pause, `n` for Next).
--   **Why this change?**: This approach significantly reduces "gesture clutter," ensuring NVDA has more room for other addons and preventing conflicts with system shortcuts. Future development will focus primarily on this Command Layer.
--   **Custom Gestures**: If you have manually assigned your own gestures using NVDA's "Input Gestures" dialog, **your custom gestures will NOT be deleted** and will continue to work. Only the default factory gestures are removed.
+- **New Workflow**: The primary entry point for the addon is now **`NVDA+g`**. Pressing this activates the Command Layer, where you can press single keys to control Spotify (e.g., press `p` for Play/Pause, `n` for Next).
+- **Why this change?** This approach significantly reduces “gesture clutter,” giving NVDA more room for other addons and preventing conflicts with system shortcuts. Future development will focus primarily on this Command Layer.
+- **Custom Gestures**: If you have manually assigned your own gestures using NVDA’s “Input Gestures” dialog, **your custom gestures will NOT be removed** and will continue to function. Only the original factory defaults have been removed.
 
 ### New Features
 
--   **Command Layer (`NVDA+g`)**: A new, powerful mode to control Spotify using single keystrokes.
-    -   **Toggle Like**: Press `L` to toggle the "Liked" status of the current track (Adds to library if not saved, removes if already saved).
-    -   **Quick Settings**: Press `F4` inside the layer to open Accessify Play settings directly.
-    -   **Sticky Mode**: Navigation keys (Volume, Seek, Next/prev.) keep the layer open for rapid adjustments. Single-action keys (like opening a dialog) will automatically close the layer.
-    -   **Help**: Press `F1` inside the layer to view all available commands.
--   **Add Album to Playlist**: You can now add an entire album to a playlist via the context menu in the Search Dialog (when searching for Albums) and the Artist Discography Dialog.
-**Sleep Timer**: Added a Sleep Timer feature (accessible via `Z` in the Command Layer) to pause playback after a specified number of minutes. Setting the timer to `0` cancels it. The timer will continue to work even if NVDA is restarted or the computer is rebooted, unless the timer has already expired.
+- **Command Layer (`NVDA+g`)**: A new, powerful mode to control Spotify using single keystrokes.  
+    * **F1**: Open the list of available commands in the Command Layer.  
+    * **F2**: Open the Command Layer Editor menu.  
+    * **F4**: Quickly open NVDA Settings for Accessify Play.  
+    * Additional keybinds can be learned through the F1 help screen.
+- Albums can now be added to playlists.
+- Tracks that already exist in a playlist can no longer be added again due to limitations in the Spotify API.
+- You can now set the volume step in the Accessify Play Settings, making it easier to increase or decrease the step size as needed.
+- The `L` key now works as intended: it saves a track if it isn’t saved, and unsaves it if it is already saved.
+- Added universal song.link copying to make it easier to share tracks so the link can be opened on platforms other than Spotify.
+- Added sleep timer.
 
-### Improvements
-- **Add to Playlist**: Adding the same track multiple times to the same playlist is still technically possible, but it is no longer allowed because the API behaves destructively. If one of the duplicated entries is removed, both entries get deleted.
--   **Toggle Like (`L`)**: The "Save Track" function has been upgraded to a Toggle. It now checks if a song is already in your library; if it is, it removes it, otherwise, it adds it.
+### Fixed
+- Updated the messages for shuffle/repeat, as the previous messages were incorrect.
 
 ### Contributors
-*   Special thanks to **@rexya2017** for their major work on the new Command Layer system.
+- Special thanks to **@rexya2017** for their major work on the new Command Layer system.
 
 
 ## Version 1.5.0

@@ -4,6 +4,8 @@ import ui
 import gui
 from functools import wraps
 from .dialogs.base import AccessifyDialog
+from .layer_config import LayerConfigManager
+from .dialogs.layer_editor import LayerEditorDialog
 
 
 class LayerHelpDialog(AccessifyDialog):
@@ -26,9 +28,7 @@ class LayerHelpDialog(AccessifyDialog):
         )
         sizer.Add(info, 0, wx.ALL | wx.EXPAND, 10)
 
-        help_lines = [
-            f"{key}: {description}" for key, description in self.entries
-        ]
+        help_lines = [f"{key}: {description}" for key, description in self.entries]
         text_ctrl = wx.TextCtrl(
             self,
             value="\n".join(help_lines),
@@ -46,52 +46,39 @@ class LayerHelpDialog(AccessifyDialog):
 class CommandLayerManager:
     """Handles binding/unbinding of layered commands and related UI."""
 
-    _entry_specs = [
-        # Format: (Gesture, ScriptName, Description, HelpLabel, KeepOpen)
-        ("kb:p", "playPause", "Play or pause the current track on Spotify.", "P", False),
-        ("kb:n", "nextTrack", "Skip to the next track on Spotify.", "N", True),
-        ("kb:b", "previousTrack", "Skip to the previous track on Spotify.", "B", True),
-        ("kb:h", "toggleShuffle", "Toggle Shuffle mode.", "H", False),
-        ("kb:r", "cycleRepeat", "Cycle Repeat mode (Off, Context, Track).", "R", True),
-        ("kb:f", "toggleFollowArtist", "Follow or unfollow the artist of the current track.", "F", False),
-                ("kb:-", "volumeDown", "Decrease Spotify volume.", "-", True),
-        ("kb:=", "volumeUp", "Increase Spotify volume.", "=", True),
-        ("kb:[", "seekBackward", "Seek backward in the current track.", "[", True),
-        ("kb:]", "seekForward", "Seek forward in the current track.", "]", True),
-        ("kb:i", "announceTrack", "Announce the currently playing track.", "I", False),
-        ("kb:t", "announcePlaybackTime", "Announces the current track's playback time.", "T", False),
-        ("kb:e", "announceNextInQueue", "Announce the next track in the queue.", "E", False),
-        ("kb:a", "addToPlaylist", "Add the currently playing track to a playlist.", "A", False),
-        ("kb:c", "copyTrackURL", "Copy the URL of the current track.", "C", False),
-        ("kb:d", "showDevicesDialog", "Show available devices to switch playback.", "D", False),
-        ("kb:j", "showSeekDialog", "Seek to a specific time or jump forward/backward.", "J", False),
-        ("kb:l", "toggleLike", "Like/Unlike Track.", "L", True),
-        ("kb:m", "showManagementDialog", "Manage your Spotify library and playlists.", "M", False),
-        ("kb:q", "showQueueListDialog", "Show the Spotify queue list.", "Q", False),
-        ("kb:s", "showSearchDialog", "Search for an item on Spotify.", "S", False),
-        ("kb:u", "showPlayFromLinkDialog", "Play an item from a Spotify URL.", "U", False),
-        ("kb:v", "setVolume", "Set Spotify volume to a specific percentage.", "V", False),
-        ("kb:x", "copyUniversalLink", "Copy Universal (Song.link) URL.", "X", False),
-        ("kb:z", "showSleepTimerDialog", "Set Sleep Timer.", "Z", False),
-        ("kb:f4", "openSettings", "Open Accessify Play settings.", "F4", False),
-    ]
-
     def __init__(self, plugin):
         self.plugin = plugin
+        self.config_manager = LayerConfigManager()
         self.is_active = False
         self._help_dialog = None
+        self._editor_dialog = None
+        self._refresh_bindings()
+
+    def _refresh_bindings(self):
         self._layer_gestures = self._build_layer_gestures()
         self._help_entries = self._build_help_entries()
 
     def _build_layer_gestures(self):
-        gestures = {spec[0]: spec[1] for spec in self._entry_specs}
+        gestures = self.config_manager.get_gesture_map()
+        # System commands
         gestures["kb:f1"] = "commandLayerHelp"
         gestures["kb:escape"] = "commandLayerCancel"
+        gestures["kb:f2"] = "showLayerEditor"
         return gestures
 
     def _build_help_entries(self):
-        entries = [(spec[3], _(spec[2])) for spec in self._entry_specs]
+        configs = self.config_manager.get_all_configs()
+        entries = []
+        for script, data in configs:
+            gestures = data.get("gestures", [])
+            # Strip kb: prefix and join multiple gestures
+            clean_gestures = [g.replace("kb:", "") for g in gestures]
+            label = ", ".join(clean_gestures) if clean_gestures else _("Unbound")
+            desc = _(data.get("description", ""))
+            entries.append((label, desc))
+
         entries.append(("F1", _("Show this layered command help.")))
+        entries.append(("F2", _("Edit layer shortcuts.")))
         entries.append(("Esc", _("Close the command layer.")))
         return entries
 
@@ -118,11 +105,7 @@ class CommandLayerManager:
             return None
 
         script_name = script.__name__.replace("script_", "")
-        keep_open = False
-        for entry in self._entry_specs:
-            if entry[1] == script_name and len(entry) >= 5:
-                keep_open = entry[4]
-                break
+        keep_open = self.config_manager.should_keep_open(script_name)
 
         @wraps(script)
         def wrapped(gesture):
@@ -131,9 +114,12 @@ class CommandLayerManager:
             finally:
                 if not keep_open:
                     self.finish()
+
         return wrapped
 
-    def handle_unknown_gesture(self):
+    def handle_unknown_gesture(self, gesture):
+        if self.is_modifier(gesture):
+            return  # Ignore modifiers, keep layer open
         self._error_beep()
         self.finish()
 
@@ -158,6 +144,56 @@ class CommandLayerManager:
             self._help_dialog.Show()
 
         wx.CallAfter(_show)
+
+    def show_editor(self):
+        def _show():
+            if self._editor_dialog:
+                self._editor_dialog.Raise()
+                return
+
+            parent = gui.mainFrame
+            self._editor_dialog = LayerEditorDialog(parent, self.config_manager)
+
+            def _on_close(evt):
+                try:
+                    evt.Skip()
+                finally:
+                    self._editor_dialog = None
+                    # Reload bindings when editor closes
+                    self._refresh_bindings()
+                    if self.is_active:
+                        # Re-bind if currently active to apply changes immediately
+                        self.plugin.clearGestureBindings()
+                        self.plugin.bindGestures(self._layer_gestures)
+
+            self._editor_dialog.Bind(wx.EVT_CLOSE, _on_close)
+            self._editor_dialog.Show()
+
+        wx.CallAfter(_show)
+
+    def is_modifier(self, gesture):
+        """Checks if the gesture is just a modifier key."""
+        # Common modifier identifiers in NVDA
+        modifiers = {
+            "kb:control",
+            "kb:leftControl",
+            "kb:rightControl",
+            "kb:shift",
+            "kb:leftShift",
+            "kb:rightShift",
+            "kb:alt",
+            "kb:leftAlt",
+            "kb:rightAlt",
+            "kb:windows",
+            "kb:leftWindows",
+            "kb:rightWindows",
+            "kb:nvda",
+            "kb:insert",
+        }
+        for identifier in gesture.identifiers:
+            if identifier in modifiers:
+                return True
+        return False
 
     def _entry_beep(self):
         tones.beep(440, 30)
