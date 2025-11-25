@@ -1549,6 +1549,20 @@ class ManagementDialog(AccessifyDialog):
     def _handle_play(self, evt=None):
         item = self._get_selected_item()
         if not item: return
+        focused_control = self.FindFocus()
+        if focused_control == self.playlist_tracks_list:
+            selection_index = self.playlist_choices.GetSelection()
+            if selection_index != wx.NOT_FOUND:
+                current_playlist = self.user_playlists[selection_index]
+                context_uri = current_playlist.get("uri")
+                track_uri = item.get("uri")
+                if context_uri and track_uri:
+                    ui.message(_("Playing."))
+                    threading.Thread(
+                        target=self.client.play_context_with_offset,
+                        args=(context_uri, track_uri),
+                    ).start()
+                    return
         uri = item.get("uri")
         self._play_uri(uri)
 
@@ -1924,6 +1938,25 @@ class ManagementDialog(AccessifyDialog):
         self._playlistDetailsDialog = dialog
         dialog.Show()
 
+    def _on_add_album_to_playlist_selected(self, event, playlist_id, playlist_name):
+        album = self._get_selected_item()
+        if not album or album.get("type") != 'album':
+            return
+
+        album_id = album.get("id")
+        ui.message(_("Adding all tracks from '{album}' to '{playlist}'...").format(
+            album=album.get("name"), playlist=playlist_name
+        ))
+        
+        def _process():
+            result = self.client.add_album_to_playlist(playlist_id, album_id)
+            if result is True:
+                wx.CallAfter(ui.message, _("Album added to playlist successfully."))
+            else:
+                wx.CallAfter(ui.message, str(result))
+        
+        threading.Thread(target=_process).start()
+
     def _on_playlist_details_dialog_close(self, evt):
         if self._playlistDetailsDialog:
             self._playlistDetailsDialog = None
@@ -2167,6 +2200,25 @@ class ManagementDialog(AccessifyDialog):
             self._append_menu_item(menu, _("View Discography"), self.on_view_discography)
             if item.get("type") == "album":
                 self._append_menu_item(menu, _("View Album Tracks"), self.on_view_album_tracks)
+                menu.AppendSeparator()
+                playlist_submenu = wx.Menu()
+                owned_playlists_count = 0
+                if self.user_playlists:
+                    for playlist in self.user_playlists:
+                        if playlist.get("owner", {}).get("id") == self.current_user_id:
+                            menu_item = playlist_submenu.Append(wx.ID_ANY, playlist.get("name", "Unknown"))
+                            self.Bind(
+                                wx.EVT_MENU,
+                                lambda event, p_id=playlist.get("id"), p_name=playlist.get("name"): 
+                                    self._on_add_album_to_playlist_selected(event, p_id, p_name),
+                                menu_item
+                            )
+                            owned_playlists_count += 1
+                
+                if owned_playlists_count == 0:
+                    playlist_submenu.Append(wx.ID_ANY, _("No owned playlists found.")).Enable(False)
+                
+                menu.AppendSubMenu(playlist_submenu, _("Add Album to Playlist"))
         elif focused_control == self.tabs_config["saved_shows"]["control"]:
             self._append_menu_item(menu, _("View Episodes"), self.on_view_episodes)
             self._append_menu_item(menu, _("Remove from Library"), self.on_remove_show_from_library)

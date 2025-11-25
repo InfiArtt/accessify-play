@@ -21,12 +21,16 @@ This release marks a major paradigm shift in how you interact with Accessify Pla
 - Albums can now be added to playlists.
 - Tracks that already exist in a playlist can no longer be added again due to limitations in the Spotify API.
 - You can now set the volume step in the Accessify Play Settings, making it easier to increase or decrease the step size as needed.
-- The `L` key now works as intended: it saves a track if it isn’t saved, and unsaves it if it is already saved.
 - Added universal song.link copying to make it easier to share tracks so the link can be opened on platforms other than Spotify.
 - Added sleep timer.
 
 ### Fixed
 - Updated the messages for shuffle/repeat, as the previous messages were incorrect.
+- The `L` key now works as intended: it saves a track if it isn’t saved, and unsaves it if it is already saved.
+- Playing from the playlist management screen will now play the track in the correct context.
+- Viewing albums from the New Releases tab no longer returns incorrect results.
+- Adding an album to a playlist will no longer display playlists that do not belong to the user. (This bug was discovered during internal testing.)
+
 
 ### Contributors
 - Special thanks to **@rexya2017** for their major work on the new Command Layer system.
