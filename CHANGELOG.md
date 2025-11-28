@@ -1,44 +1,41 @@
 # Changelog
 
-## Version 1.6.0-rc.1
+## Version 1.6.0-rc.2
 
 > ⚠️ **Pre-release Notice**
 >
-> This version is a pre-release build. Full documentation for this version is not yet available, so feel free to explore everything freely.  
-> If you encounter any errors or notice anything that doesn’t work as expected, please open an issue and we will do our best to resolve it.
+> This version is a pre-release build. Full documentation is not yet available.
+> If you encounter errors, please open an issue.
 
-This release marks a major paradigm shift in how you interact with Accessify Play. We have introduced a **Command Layer** to streamline controls and reduce keyboard conflicts, as mentioned in the v1.5.1 changelog.
+This release fixes a critical issue in rc.1 regarding the Universal Link feature, alongside the major changes for v1.6.0.
 
-### ⚠️ Important: Breaking Changes to Gestures
+### ⚠️ IMPORTANT: Breaking Changes to Gestures
 **All previous default global gestures (e.g., `NVDA+Alt+Shift+P`, `NVDA+Alt+Shift+V`, etc.) have been REMOVED.**
 
-- **New Workflow**: The primary entry point for the addon is now **`NVDA+g`**. Pressing this activates the Command Layer, where you can press single keys to control Spotify (e.g., press `p` for Play/Pause, `n` for Next).
-- **Why this change?** This approach significantly reduces “gesture clutter,” giving NVDA more room for other addons and preventing conflicts with system shortcuts. Future development will focus primarily on this Command Layer.
-- **Custom Gestures**: If you have manually assigned your own gestures using NVDA’s “Input Gestures” dialog, **your custom gestures will NOT be removed** and will continue to function. Only the original factory defaults have been removed.
+*   **New Workflow**: The primary entry point is now **`NVDA+g`** (Command Layer).
+*   **Custom Gestures**: Manually assigned gestures in NVDA "Input Gestures" will continue to work.
 
 ### New Features
+-   **Command Layer (`NVDA+g`)**: A powerful mode to control Spotify using single keystrokes (`p` for Play, `n` for Next, `x` for Universal Link, etc.).
+    *   **F1**: Show available commands list.
+    *   **F2**: Open the Command Layer Editor.
+    *   **F4**: Quickly open Accessify Play Settings.
+   **Manage Playlists**: You can now add entire **Albums** to playlists directly.
+-   **Duplicate Prevention**: Tracks that already exist in a specific playlist cannot be added again.
+-   **Configurable Volume Step**: Customize the percentage step for volume controls in Settings.
+-  **Universal Link**: Added a command (shortcut `x` in Command Layer) to copy a Song.link/Odesli URL to share music across different platforms.
+-   **Sleep Timer**: Added a sleep timer feature.
 
-- **Command Layer (`NVDA+g`)**: A new, powerful mode to control Spotify using single keystrokes.  
-    * **F1**: Open the list of available commands in the Command Layer.  
-    * **F2**: Open the Command Layer Editor menu.  
-    * **F4**: Quickly open NVDA Settings for Accessify Play.  
-    * Additional keybinds can be learned through the F1 help screen.
-- Albums can now be added to playlists.
-- Tracks that already exist in a playlist can no longer be added again due to limitations in the Spotify API.
-- You can now set the volume step in the Accessify Play Settings, making it easier to increase or decrease the step size as needed.
-- Added universal song.link copying to make it easier to share tracks so the link can be opened on platforms other than Spotify.
-- Added sleep timer.
-
-### Fixed
-- Updated the messages for shuffle/repeat, as the previous messages were incorrect.
-- The `L` key now works as intended: it saves a track if it isn’t saved, and unsaves it if it is already saved.
-- Playing from the playlist management screen will now play the track in the correct context.
-- Viewing albums from the New Releases tab no longer returns incorrect results.
-- Adding an album to a playlist will no longer display playlists that do not belong to the user. (This bug was discovered during internal testing.)
-
+### Bug Fixes
+-   **[Critical] Universal Link**: Fixed the 'Copy Universal Link' command (`x`) which was not registered correctly in v1.6.0-rc.1.
+-   **Shuffle/Repeat**: Updated announcement messages to accurately reflect the current state.
+-   **Like/Unlike Logic**: The `L` key now correctly toggles the saved status of a track.
+-   **Playback Context**: Playing a track from the Playlist Management screen now correctly maintains the playlist context.
+-   **New Releases**: Fixed an issue where viewing albums from the "New Releases" tab returned incorrect results.
+-   **Playlist Ownership**: Adding an album to a playlist will no longer display playlists not owned by the user.
 
 ### Contributors
-- Special thanks to **@rexya2017** for their major work on the new Command Layer system.
+-   Special thanks to **@rexya2017** for the major work on the new Command Layer system.
 
 
 ## Version 1.5.0

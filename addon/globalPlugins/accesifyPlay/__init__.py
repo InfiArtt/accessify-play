@@ -730,6 +730,10 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
             settingsDialogs.NVDASettingsDialog, initialCategory=SpotifySettingsPanel
         )
 
+    @utils.copy_in_thread
+    def script_copyUniversalLink(self, gesture):
+        return self.client.get_current_songlink_url()
+
     def _get_timer_file_path(self):
         """Lokasi file: %USERPROFILE%/.sleeptimer.accessify-play"""
         return os.path.join(os.path.expandvars("%USERPROFILE%"), ".sleeptimer.accessify-play")
