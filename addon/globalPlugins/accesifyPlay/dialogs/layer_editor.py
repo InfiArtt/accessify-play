@@ -4,8 +4,8 @@ from .base import AccessifyDialog
 
 
 class EditCommandDialog(AccessifyDialog):
-    def __init__(self, parent, script_name, current_gestures, keep_open):
-        super().__init__(parent, title=_("Edit Command: {name}").format(name=script_name))
+    def __init__(self, parent, script_name, display_label, current_gestures, keep_open):
+        super().__init__(parent, title=_("Edit Command: {name}").format(name=display_label))
         self.script_name = script_name
         self.result_gestures = current_gestures
         self.result_keep_open = keep_open
@@ -18,7 +18,6 @@ class EditCommandDialog(AccessifyDialog):
         lbl_gesture = wx.StaticText(self, label=_("Shortcut (e.g. p, shift+d):"))
         sizer.Add(lbl_gesture, 0, wx.ALL, 5)
 
-        # We only support editing the first gesture for simplicity in this version
         initial_val = self.result_gestures[0] if self.result_gestures else ""
         if initial_val.startswith("kb:"):
             initial_val = initial_val[3:]
@@ -44,7 +43,6 @@ class EditCommandDialog(AccessifyDialog):
         val = self.txt_gesture.GetValue().strip()
         if val:
             # Automatically prepend kb: if not present (though we stripped it for UI)
-            # We assume all layer commands are keyboard shortcuts.
             if not val.startswith("kb:"):
                 val = f"kb:{val}"
             self.result_gestures = [val]
@@ -59,8 +57,43 @@ class LayerEditorDialog(AccessifyDialog):
         super().__init__(parent, title=_("Command Layer Editor"), size=(600, 400))
         self.config_manager = config_manager
         self.is_dirty = False
+        
+        # Peta untuk menyimpan ID script asli berdasarkan indeks item list
+        self.item_data_map = {}
+        
         self._build_ui()
         self._populate_list()
+
+    def _get_script_labels(self):
+        """Mapping ID script ke Nama Tampilan yang bisa diterjemahkan."""
+        return {
+            "playPause": _("Play/Pause"),
+            "nextTrack": _("Next Track"),
+            "previousTrack": _("Previous Track"),
+            "toggleShuffle": _("Toggle Shuffle"),
+            "cycleRepeat": _("Cycle Repeat"),
+            "toggleFollowArtist": _("Follow/Unfollow Artist"),
+            "volumeDown": _("Volume Down"),
+            "volumeUp": _("Volume Up"),
+            "seekBackward": _("Seek Backward"),
+            "seekForward": _("Seek Forward"),
+            "announceTrack": _("Announce Track"),
+            "announcePlaybackTime": _("Announce Time"),
+            "announceNextInQueue": _("Announce Next in Queue"),
+            "addToPlaylist": _("Add to Playlist"),
+            "copyTrackURL": _("Copy Track URL"),
+            "showDevicesDialog": _("Show Devices"),
+            "showSeekDialog": _("Show Seek Dialog"),
+            "toggleLike": _("Like/Unlike Track"),
+            "showManagementDialog": _("Manage Library"),
+            "showQueueListDialog": _("Show Queue"),
+            "showSearchDialog": _("Search Spotify"),
+            "showPlayFromLinkDialog": _("Play from Link"),
+            "setVolume": _("Set Volume"),
+            "copyUniversalLink": _("Copy Universal Link"),
+            "showSleepTimerDialog": _("Sleep Timer"),
+            "openSettings": _("Settings"),
+        }
 
     def _build_ui(self):
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -101,8 +134,15 @@ class LayerEditorDialog(AccessifyDialog):
 
     def _populate_list(self):
         self.list_ctrl.DeleteAllItems()
+        self.item_data_map.clear()
+        
         configs = self.config_manager.get_all_configs()
-        for script, data in configs:
+        labels_map = self._get_script_labels()
+
+        for i, (script_id, data) in enumerate(configs):
+            # Ambil label yang bagus, kalau tidak ada pakai ID aslinya
+            display_name = labels_map.get(script_id, script_id)
+
             # Strip kb: prefix for display
             gestures_list = [g.replace("kb:", "") for g in data.get("gestures", [])]
             gestures = ", ".join(gestures_list)
@@ -110,10 +150,16 @@ class LayerEditorDialog(AccessifyDialog):
             keep_open = _("Yes") if data.get("keep_open") else _("No")
             desc = _(data.get("description", ""))
 
-            idx = self.list_ctrl.InsertItem(self.list_ctrl.GetItemCount(), script)
+            # Masukkan ke ListCtrl
+            idx = self.list_ctrl.InsertItem(self.list_ctrl.GetItemCount(), display_name)
             self.list_ctrl.SetItem(idx, 1, gestures)
             self.list_ctrl.SetItem(idx, 2, keep_open)
             self.list_ctrl.SetItem(idx, 3, desc)
+            
+            # PENTING: Simpan ID script asli di data item agar bisa diambil saat diedit
+            # Kita gunakan index loop (i) sebagai key map karena SetItemData butuh integer/long
+            self.list_ctrl.SetItemData(idx, i)
+            self.item_data_map[i] = script_id
 
     def on_selection(self, evt):
         self.btn_edit.Enable(True)
@@ -126,21 +172,34 @@ class LayerEditorDialog(AccessifyDialog):
         if idx == -1:
             return
 
-        script_name = self.list_ctrl.GetItemText(idx, 0)
+        # Ambil ID asli menggunakan ItemData yang kita simpan tadi
+        map_key = self.list_ctrl.GetItemData(idx)
+        script_name = self.item_data_map.get(map_key)
+        
+        if not script_name:
+            return
+            
+        # Ambil Label tampilan (untuk judul dialog edit)
+        display_label = self.list_ctrl.GetItemText(idx, 0)
+
         config = self.config_manager.get_script_config(script_name)
         if not config:
             return
 
-        dlg = EditCommandDialog(self, script_name, config["gestures"], config["keep_open"])
+        dlg = EditCommandDialog(self, script_name, display_label, config["gestures"], config["keep_open"])
         if dlg.ShowModal() == wx.ID_OK:
             self.config_manager.set_script_config(script_name, dlg.result_gestures, dlg.result_keep_open)
             self.is_dirty = True
             self._populate_list()
-            # Restore selection
-            find_idx = self.list_ctrl.FindItem(-1, script_name)
-            if find_idx != -1:
-                self.list_ctrl.Select(find_idx)
-                self.list_ctrl.Focus(find_idx)
+            
+            # Restore selection (mencari ulang berdasarkan script_name di map)
+            for list_idx in range(self.list_ctrl.GetItemCount()):
+                key = self.list_ctrl.GetItemData(list_idx)
+                if self.item_data_map.get(key) == script_name:
+                    self.list_ctrl.Select(list_idx)
+                    self.list_ctrl.Focus(list_idx)
+                    break
+                    
         dlg.Destroy()
 
     def on_reset(self, evt):

@@ -232,7 +232,6 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
     def script_showLayerEditor(self, gesture):
         self.commandLayer.show_editor()
-        return self.client.get_current_track_info()
 
     @scriptHandler.script(
         description=_("Announce the currently playing track."),
