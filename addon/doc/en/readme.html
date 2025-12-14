@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" type="text/css" href="../style.css" media="screen">
-<title>Accessify Play 1.4.1</title>
+<title>Accessify Play 1.6.0-rc.2</title>
 </head>
 <body>
 <h1>Accessify Play</h1>
@@ -23,140 +23,24 @@
 <h2>Prerequisites</h2>
 <ul>
 <li>An active <strong>Spotify Premium</strong> subscription.</li>
-<li>NVDA version <strong>2024.4</strong> or later.</li>
+<li>NVDA version <strong>2025.1</strong> or later.</li>
 </ul>
 <h2>A Note on Lyrics</h2>
 <p>This addon does not, and will not, include a feature to display song lyrics. Most methods for obtaining lyrics, such as scraping websites, are done without a proper license from the copyright holders. This is an illegal practice that violates the terms of service of lyrics providers and may infringe on copyright law, potentially leading to legal consequences under regulations like the DMCA (Digital Millennium Copyright Act) in the United States and similar laws worldwide. To ensure this addon remains legal, distributable, and respectful of copyright, this feature is intentionally omitted.</p>
 <h2>License</h2>
 <p>This addon is licensed under the <a href="https://www.gnu.org/licenses/gpl-2.0.html">GNU General Public License v2.0</a>.</p>
 <h2>✨ Feature Universe</h2>
-<p>Accessify Play is packed with features, organized for your convenience:</p>
-<h3>Playback &amp; Information</h3>
-<ul>
-<li><strong>Universal Control:</strong> Play, pause, skip, seek, and adjust volume on any active Spotify Connect device.</li>
-<li><strong>Set Specific Volume:</strong> Set the volume to a precise percentage (0-100) via a dialog.</li>
-<li><strong>Instant Info:</strong> Announce the currently playing track, artist, and album at any time.</li>
-<li><strong>Queue Insights:</strong> Announce the next track in your queue or open a full, interactive list of what's coming up.</li>
-<li><strong>Automatic Announcements:</strong> Optionally, have NVDA announce the new song automatically every time the track changes.</li>
-<li><strong>Share with Ease:</strong> Copy the Spotify URL of the current track to your clipboard.</li>
-<li><strong>Play from Link:</strong> Open a dialog to play any track directly from a Spotify URL.</li>
-</ul>
-<h3>Library Management &amp; Interaction</h3>
-<ul>
-<li><strong>Quick Save:</strong> Instantly save the current track to your "Liked Songs" with a single command.</li>
-<li><strong>Add to Playlist:</strong> Quickly add the current track to any of your playlists.</li>
-<li><strong>Full Management Suite:</strong> Open a powerful multi-tabbed dialog to manage every aspect of your library:<ul>
-<li><strong>Playlists:</strong> Create new playlists, update details, delete them, and manage the tracks within.</li>
-<li><strong>Saved Library:</strong> View and remove tracks from your "Liked Songs".</li>
-<li><strong>Followed Artists:</strong> See all the artists you follow, with options to unfollow or explore their music.</li>
-</ul>
-</li>
-</ul>
-<h3>Discovery</h3>
-<ul>
-<li><strong>Advanced Search:</strong> A powerful search dialog to find songs, albums, artists, playlists, and podcasts.</li>
-<li><strong>Your Top Hits:</strong> See your personal top-played tracks and artists from the last month, 6 months, or all time.</li>
-<li><strong>New Releases:</strong> Browse the latest album and single releases curated for you by Spotify.</li>
-<li><strong>Deep Dives:</strong> From an artist search result, dive into their full discography, or discover related artists.</li>
-<li><strong>Podcast Explorer:</strong> View and play any episode from a podcast you've found.</li>
-</ul>
-<h2>⌨️ Keyboard Command Center</h2>
-<p>| Command                      | Shortcut                             |
-| :--------------------------- | :----------------------------------- |
-| Play/Pause                   | <code>NVDA+Shift+Alt+Space</code>               |
-| Next Track                   | <code>NVDA+Shift+Alt+RightArrow</code>          |
-| Previous Track               | <code>NVDA+Shift+Alt+LeftArrow</code>           |
-| Volume Up                    | <code>NVDA+Shift+Alt+UpArrow</code>             |
-| Volume Down                  | <code>NVDA+Shift+Alt+DownArrow</code>           |
-| Set Specific Volume          | <code>NVDA+Shift+Alt+V</code>                   |
-| Seek Forward (configurable)  | <code>Control+Alt+NVDA+RightArrow</code>        |
-| Seek Backward (configurable) | <code>Control+Alt+NVDA+LeftArrow</code>         |
-| Announce Current Track       | <code>NVDA+Shift+Alt+I</code>                   |
-| Announce Playback Time       | <code>NVDA+Alt+Shift+T</code>                   |
-| Copy Track URL               | <code>NVDA+Shift+Alt+C</code>                   |
-| Open Search Dialog           | <code>NVDA+Shift+Alt+S</code>                   |
-| Play from Link Dialog        | <code>NVDA+Shift+Alt+P</code>                   |
-| Open Queue List              | <code>NVDA+Shift+Alt+Q</code>                   |
-| Announce Next in Queue       | <code>NVDA+Shift+Alt+N</code>                   |
-| Save Track to Library        | <code>NVDA+Alt+Shift+L</code>                   |
-| Add Track to Playlist        | <code>NVDA+Alt+Shift+A</code>                   |
-| Open Management Dialog       | <code>NVDA+Alt+Shift+M</code>                   |</p>
-<hr />
-<h3>A Note on the Spotify Queue Feature: Understanding Its Behavior</h3>
-<p>You may have noticed that the queue list in Accessify Play (<code>NVDA+Shift+Alt+Q</code>) can be both incredibly accurate and, at other times, seem completely out of sync with what's playing next. This behavior is not a bug but a direct consequence of the data provided by the Spotify API.</p>
-<p>Here is the precise breakdown of when the addon's queue list is reliable and when it is not:</p>
-<h4>When the Queue List is ACCURATE</h4>
-<p>The queue list displayed by the addon is a correct representation of what Spotify will play next in two key scenarios:</p>
-<ol>
-<li><strong>Playing a Finite Context Sequentially:</strong> When you are playing a playlist or an album with <strong>Shuffle Mode turned OFF</strong>, the addon's queue list will reliably match the "Next Up" list in the Spotify app.</li>
-<li><strong>Manually Added Tracks:</strong> Any song you manually add using "Add to Queue" will always appear correctly at the top of the list.</li>
-</ol>
-<h4>Where the Discrepancy Occurs</h4>
-<p>The predictability breaks down completely in two very common situations, causing a mismatch between the addon and the Spotify app:</p>
-<ol>
-<li><strong>When Shuffle Mode is ON:</strong> This is the most significant limitation. While the Spotify app knows the special randomized order it has created, the public API used by this addon <strong>does not have access to this shuffled order</strong>. The API will <em>always</em> report the playlist's original, saved sequence, completely ignoring the fact that shuffle is active.</li>
-<li><strong>When Autoplay Takes Over:</strong> After your album or playlist finishes, Spotify's "Autoplay" feature begins playing similar tracks. This is an algorithmic radio stream, and the API <strong>provides no information about what songs are coming up</strong> in this stream.</li>
-</ol>
-<h4>The Addon's Design and the API's Definition</h4>
-<p>To provide a consistent experience, Accessify Play is designed to show exactly what the Spotify API provides. The addon uses the official <code>/me/player/queue</code> endpoint. According to the Spotify Developer documentation, this endpoint is designed to:</p>
-<blockquote>
-<p>Get the list of objects that make up the user's queue.</p>
-</blockquote>
-<p>This means the API's definition of a "queue" is primarily the list of manually added tracks. While the API response also includes the next track from the current context (album/playlist), it cannot provide the full, upcoming sequence for shuffled or algorithmically generated content.</p>
-<h4>Conclusion: How to Use the Queue Feature Effectively</h4>
-<p>Therefore, the Accessify Play queue feature is your reliable tool for two main purposes:</p>
-<ol>
-<li>Viewing the upcoming tracks when you are listening to an <strong>album or playlist with Shuffle turned OFF</strong>.</li>
-<li>Viewing and managing the songs you have <strong>manually added to the queue</strong>, regardless of what is playing.</li>
-</ol>
-<p>It should not be used as a reference when <strong>Shuffle Mode is ON</strong> or when <strong>Autoplay</strong> has started, as the API does not provide the necessary data for those scenarios.</p>
-<hr />
+<p>Accessify Play is packed with features for playback, library management, and discovery.</p>
+<p><a href="features.html">Read more about features in features.html</a></p>
+<h2>⌨️ Keyboard Commands</h2>
+<p>Accessify Play uses a powerful <strong>Command Layer</strong> system. Press <code>NVDA+G</code> to enter this layer, then press single keys to perform actions.</p>
+<p>See the full list of commands in <a href="keybindings.html">keybindings.html</a></p>
 <h2>⚙️ Configuration Guide</h2>
-<p>To use this addon, you need to get a <strong>Client ID</strong> and <strong>Client Secret</strong> from the Spotify Developer Dashboard. Follow these steps carefully.</p>
-<h3>Step 1: Create a Spotify App</h3>
-<ol>
-<li>Open the Accessify Play settings in NVDA (NVDA menu -&gt; Preferences -&gt; Settings -&gt; Accessify Play).</li>
-<li>Click the <strong>"Go to Developer Dashboard"</strong> button. This will open the <a href="https://developer.spotify.com/dashboard">Spotify Developer Dashboard</a> in your web browser. Log in if prompted.</li>
-<li>Click the "Create app" button.</li>
-<li>Fill out the form:<ul>
-<li><strong>App name:</strong> Give it a name (e.g., "NVDA Controller").</li>
-<li><strong>App description:</strong> A short description is fine.</li>
-<li><strong>Redirect URI:</strong> <strong>This is the most important step.</strong> The addon listens on your local machine for the authentication callback. You must enter this URI exactly: <code>http://127.0.0.1:8888/callback</code>
-    &gt; <strong>Note on Port 8888:</strong> Based on private reports, some users experience validation failures. This can happen if another application on your computer (often a local development server) is already using port <code>8888</code>.
-    &gt;
-    &gt; <strong>Future Update:</strong> To prevent this conflict, the default port for the addon <strong>will be changed to <code>8539</code> in a future version.</strong></li>
-</ul>
-</li>
-<li>You may be asked which API to use. <strong>Please select "Web API"</strong>.</li>
-<li>Agree to the terms and click "Save".</li>
-</ol>
-<h3>Step 2: Get Your Credentials</h3>
-<ol>
-<li>On your new app's dashboard, click "Settings".</li>
-<li>You will see your <strong>Client ID</strong>.</li>
-<li>Copy this long string of text.</li>
-</ol>
-<h3>Step 3: Configure the Addon in NVDA</h3>
-<ol>
-<li>Open the NVDA menu (<code>NVDA+N</code>), go to Preferences, then Settings.</li>
-<li>In the categories list, select "Accessify Play".</li>
-<li>Locate the <strong>"Add Client ID"</strong> (or "Display/Edit Client ID") button. Click it to open a dialog where you can paste your <strong>Client ID</strong>.</li>
-<li>Review the other settings:<ul>
-<li><strong>Callback Port:</strong> Only change this if you have a port conflict and you have also changed it in the Spotify Dashboard. <em>(See note in Step 1)</em>.</li>
-<li><strong>Announce track changes automatically:</strong> Check this box if you want NVDA to announce every new song as it begins playing.</li>
-<li><strong>Language:</strong> Choose the display language for the add-on. This setting allows Accessify Play to use a different language than NVDA's main interface. You can select "Follow NVDA language (default)" or force a specific language like "Bahasa Indonesia".</li>
-<li><strong>Update Channel:</strong> Select your preferred update channel.<ul>
-<li><strong>Stable:</strong> Receive only stable, well-tested updates. These correspond to releases from the <code>main</code> branch on GitHub.</li>
-<li><strong>Beta:</strong> Receive pre-release versions with the latest features and bug fixes, but potentially less stability. These correspond to releases from the <code>dev</code> branch on GitHub.</li>
-</ul>
-</li>
-<li><strong>Check for updates automatically:</strong> If checked, the add-on will silently check for new versions every time NVDA starts. If an update is available, a pop-up window will appear. If unchecked, you will only receive updates when you manually check.</li>
-</ul>
-</li>
-<li>Press the <strong>"Validate Credentials"</strong> button. Your web browser will open and ask you to grant permissions. Click "Agree".</li>
-<li>If successful, you will see a "Validation successful!" message. If not, carefully re-check all steps, especially the Redirect URI and your Client ID.</li>
-<li>Click "OK" to save and close the settings. The addon is now ready to use!</li>
-</ol>
+<p>To use this addon, you need to get a <strong>Client ID</strong> and <strong>Client Secret</strong> from the Spotify Developer Dashboard.</p>
+<p><a href="configuration.html">Read the full configuration guide in configuration.html</a></p>
+<h2>🔒 Authentication &amp; Migration (Version 1.3.0)</h2>
+<p>Since version 1.3.0, Accessify Play uses the more secure PKCE authentication.</p>
+<p><a href="authentication.html">Read about authentication and migration in authentication.html</a></p>
 <hr />
 <h2>✨ Update System</h2>
 <p>Accessify Play includes a built-in update system to keep your add-on up-to-date with the latest features and bug fixes. Updates are sourced directly from <a href="https://github.com/InfiArtt/accessify-play/releases">GitHub Releases</a>.</p>
@@ -172,31 +56,6 @@
 <li><strong>Beta:</strong> This channel provides access to pre-release versions, offering the latest features and bug fixes before they are officially released. Beta versions correspond to releases from the <code>dev</code> branch on GitHub. While they offer early access, they might be less stable than official releases.</li>
 </ul>
 <hr />
-<h2>🔒 Authentication &amp; Migration Update (Version 1.3.0)</h2>
-<p>With version 1.3.0, Accessify Play has undergone a significant update to its authentication system to enhance security and improve user experience, especially for portable NVDA installations.</p>
-<ul>
-<li><strong>Enhanced Security with PKCE:</strong> The addon now utilizes the Proof Key for Code Exchange (PKCE) authentication flow. This modern and more secure method eliminates the need for a <code>Client Secret</code>, making your Spotify integration safer.</li>
-<li><strong>Portable Client ID Storage:</strong> Your Spotify Client ID is no longer stored within NVDA's configuration files. Instead, it is now saved in a dedicated, portable file located at <code>%userprofile%/.spotify_client_id.json</code>. This ensures your Client ID remains intact even if you move or reinstall NVDA, and it's easier to manage.</li>
-<li><strong>Simplified Settings:</strong> The 'Client Secret' field has been removed from the Accessify Play settings panel, streamlining the setup process. The 'Client ID' input is now managed via a dynamic button that allows you to easily add, view, or edit your Client ID.</li>
-<li><strong>Seamless Migration:</strong> If you are upgrading from an older version of Accessify Play and have your Client ID (or Client Secret) still stored in NVDA's configuration, a new <strong>"Migrate Old Credentials"</strong> button will appear in the Accessify Play settings panel. Clicking this button will automatically:<ol>
-<li>Move your existing Client ID to the new portable <code>%userprofile%/.spotify_client_id.json</code> file.</li>
-<li>Remove both the old Client ID and the obsolete Client Secret from NVDA's configuration.
-This ensures a smooth transition to the new, more secure system.</li>
-</ol>
-</li>
-</ul>
-<hr />
-<h2>🤔 Why This Authentication Method? (Instead of a Simple Login Button)</h2>
-<p>You might be wondering why Accessify Play requires you to create your own Spotify application and input a Client ID, instead of offering a simple "Login to Spotify" button like many other apps (e.g., Alexa, Google Home, etc.). The answer lies in Spotify's API policies and the challenges faced by independent developers.</p>
-<p>To provide a seamless "Login to Spotify" experience without requiring users to become "mini-developers," an application needs to apply for and be granted an <strong>Extended Quota</strong> from Spotify. The requirements for obtaining such an extended quota are quite extraordinary and often include:</p>
-<ul>
-<li><strong>Significant User Base:</strong> Demonstrating a large and active user base.</li>
-<li><strong>Business Model:</strong> A clear and sustainable business model.</li>
-<li><strong>Legal &amp; Security Reviews:</strong> Extensive legal and security reviews by Spotify.</li>
-<li><strong>Brand Alignment:</strong> Strong alignment with Spotify's brand and strategic goals.</li>
-</ul>
-<p>For a small, independent, and open-source accessibility addon like Accessify Play, meeting these stringent requirements is <strong>almost impossible</strong>. The resources, legal overhead, and user base needed are far beyond what this project can realistically achieve.</p>
-<p>Therefore, the current method, while requiring a few extra steps from the user, is a necessary workaround. It allows Accessify Play to function and provide its valuable accessibility features by leveraging Spotify's standard developer access, without needing to meet the prohibitive criteria for extended quotas. This approach empowers you, the user, to directly control your Spotify API access, ensuring the addon remains functional and accessible.</p>
 <h2>🙏 Acknowledgements</h2>
 <p>This project wouldn't be where it is today without the incredible support and dedication of our community. A heartfelt thank you to all the testers who provided invaluable ideas, helped tirelessly with debugging, and offered supportive encouragement throughout the development process. Your contributions have been instrumental in shaping Accessify Play into what it is. Thank you for making this project a success!</p>
 <hr />

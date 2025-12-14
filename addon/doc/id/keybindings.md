@@ -2,6 +2,8 @@
 
 Bagian ini berfokus pada tombol perintah untuk mengontrol Spotify menggunakan Accessify Play. Accessify play dapat dikontrol melalui Command Layer. Aktifkan Command Layer dengan menekan **NVDA+G**, lalu tekan salah satu tombol berikut:
 
+[Ingin mengubah tombol ini? Baca panduan kustomisasi di customizing_commands.html](customizing_commands.html)
+
 ## **Kontrol pemutaran**
 
 - **P**: Memutar atau menjeda track saat ini di Spotify.
@@ -37,6 +39,11 @@ Bagian ini berfokus pada tombol perintah untuk mengontrol Spotify menggunakan Ac
 - **Z**: Mengatur Sleep Timer.
 - **F4**: Membuka pengaturan Accessify Play.
 - **F1**: Menampilkan bantuan perintah berlapis.
+- **F2**: Menampilkan command layer editor.
 - **Esc (Escape)**: Menutup Command Layer.
 
 Panduan ini dibuat oleh Mahmud Faiz Haifan.
+
+
+---
+[Kembali ke Beranda](README.html)
