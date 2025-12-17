@@ -1,13 +1,10 @@
 # Changelog
 
-## Version 1.6.0-rc.2
+## Version 1.6.0
 
-> ⚠️ **Pre-release Notice**
->
-> This version is a pre-release build. Full documentation is not yet available.
-> If you encounter errors, please open an issue.
+This release introduces major changes to the gesture system, shifting to a Command Layer for a smoother and conflict-free experience. Ideally, this should make using the addon significantly faster and more intuitive.
 
-This release fixes a critical issue in rc.1 regarding the Universal Link feature, alongside the major changes for v1.6.0.
+
 
 ### ⚠️ IMPORTANT: Breaking Changes to Gestures
 **All previous default global gestures (e.g., `NVDA+Alt+Shift+P`, `NVDA+Alt+Shift+V`, etc.) have been REMOVED.**
@@ -20,7 +17,7 @@ This release fixes a critical issue in rc.1 regarding the Universal Link feature
     *   **F1**: Show available commands list.
     *   **F2**: Open the Command Layer Editor.
     *   **F4**: Quickly open Accessify Play Settings.
-   **Manage Playlists**: You can now add entire **Albums** to playlists directly.
+-   **Manage Playlists**: You can now add entire **Albums** to playlists directly.
 -   **Duplicate Prevention**: Tracks that already exist in a specific playlist cannot be added again.
 -   **Configurable Volume Step**: Customize the percentage step for volume controls in Settings.
 -  **Universal Link**: Added a command (shortcut `x` in Command Layer) to copy a Song.link/Odesli URL to share music across different platforms.

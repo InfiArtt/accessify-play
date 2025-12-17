@@ -21,6 +21,7 @@ Search, discover, manage playlists, and control your music with unparalleled fre
 
 *   An active **Spotify Premium** subscription.
 *   NVDA version **2025.1** or later.
+*   Last tested with NVDA **2025.3.2**.
 
 ## A Note on Lyrics
 

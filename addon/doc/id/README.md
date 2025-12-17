@@ -16,6 +16,7 @@ Prasyarat
 
 *   Langganan **Spotify Premium** yang aktif.
 *   NVDA versi **2025.1** atau yang lebih baru.
+*   Terakhir diuji dengan NVDA **2025.3.2**.
 
 Catatan Mengenai Lirik
 ----------------------
