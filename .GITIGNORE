@@ -3,6 +3,7 @@
 
 # Ignore text output files
 *.txt
+*.yaml
 !requirements.txt
 
 # Ignore Python cache
@@ -12,6 +13,7 @@ grabber.py
 
 # Ignore build folders
 build/
+site_scons/
 dist/
 archives/
 DevGuide.wiki/
@@ -19,6 +21,8 @@ DevGuide.wiki/
 pybabel.py
 .gemini/
 .noscan
+.agent/
+.ruff_cache/
 
 addon/doc/*.css
 
