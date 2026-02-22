@@ -1,9 +1,10 @@
 import threading
+from ..core.thread_manager import thread_manager
 
 import ui
 import wx
 
-from .base import AccessifyDialog
+from ..ui.base_dialog import AccessifyDialog
 
 
 class PlayFromLinkDialog(AccessifyDialog):
@@ -51,7 +52,7 @@ class PlayFromLinkDialog(AccessifyDialog):
 			return
 		self.playButton.Disable()
 		self.detailsText.SetValue(_("Checking..."))
-		threading.Thread(target=self._check_thread, args=(url,)).start()
+		thread_manager.submit_task(self._check_thread, url, name='DialogTask', daemon=True)
 
 	def _check_thread(self, url):
 		details = self.client.get_link_details(url)

@@ -1,7 +1,7 @@
 import core
 import wx
 
-from .base import AccessifyDialog
+from ..ui.base_dialog import AccessifyDialog
 
 
 class EditCommandDialog(AccessifyDialog):

@@ -23,11 +23,12 @@ addon_info = AddonInfo(
 	# Translators: Long description to be shown for this add-on on add-on information from add-on store
 	addon_description=_("""Accessify Play provides comprehensive NVDA control for Spotify playback on any Connect-enabled device. A Spotify Premium subscription is required for full functionality."""),
 	# version
-	addon_version="1.6.0",
+	addon_version="1.6.1",
 	# Brief changelog for this version
 	# Translators: what's new content for the add-on version to be shown in the add-on store
-	addon_changelog=_("""- Initial release using the Scons build template.
-- Added various features for Spotify control including playback, library management, and search."""),
+	addon_changelog=_("""-Fix compatibility for NVDA 2025.1 and 2026.1
+- The default Command Layer shortcut has been updated from NVDA+g to NVDA+Alt+g. The upcoming NVDA 2026.1 release introduces a native core feature tied to the NVDA+g shortcut. Changing our default layer activation key prevents severe collisions with NVDA's built-in functionality.
+	"""),
 	# Author(s)
 	addon_author="Rafli I .<rafli08523717409@gmail.com>, Rexya <rexya2017@gmail.com>",
 	# URL for the add-on documentation support

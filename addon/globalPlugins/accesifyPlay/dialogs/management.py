@@ -1,4 +1,5 @@
 import threading
+from ..core.thread_manager import thread_manager
 
 import config
 import gui
@@ -6,7 +7,7 @@ import ui
 import wx
 from gui import guiHelper
 
-from .base import AccessifyDialog
+from ..ui.base_dialog import AccessifyDialog
 
 
 def _get_search_limit(default_value):
@@ -68,10 +69,7 @@ class CreatePlaylistDialog(AccessifyDialog):
 			return
 		self._creating = True
 		self.createButton.Disable()
-		threading.Thread(
-			target=self._create_thread,
-			args=(name, description, public, collaborative),
-		).start()
+		thread_manager.submit_task(self._create_thread, name, description, public, collaborative, name='DialogTask', daemon=True)
 
 	def _create_thread(self, name, description, public, collaborative):
 		result = self.client.create_playlist(name, public, collaborative, description)
@@ -146,10 +144,7 @@ class PlaylistDetailsDialog(AccessifyDialog):
 			return
 		self._saving = True
 		self.saveButton.Disable()
-		threading.Thread(
-			target=self._save_thread,
-			args=(name, description, public, collaborative),
-		).start()
+		thread_manager.submit_task(self._save_thread, name, description, public, collaborative, name='DialogTask', daemon=True)
 
 	def _save_thread(self, name, description, public, collaborative):
 		result = self.client.update_playlist_details(
@@ -257,7 +252,7 @@ class AddToPlaylistDialog(AccessifyDialog):
 			wx.CallAfter(self.Close)
 
 		ui.message(_("Adding to playlist..."))
-		threading.Thread(target=_add).start()
+		thread_manager.submit_task(_add, name='DialogTask', daemon=True)
 		# Nonaktifkan tombol untuk mencegah klik ganda
 		self.add_button.Disable()
 
@@ -333,7 +328,7 @@ class PodcastEpisodesDialog(AccessifyDialog):
 		if not self.episodes:
 			self.episodes_list.Clear()
 			self.episodes_list.Append(_("Loading..."))
-		threading.Thread(target=self._load_more_episodes_thread).start()
+		thread_manager.submit_task(self._load_more_episodes_thread, name='DialogTask', daemon=True)
 
 	def _load_more_episodes_thread(self):
 		results = self.client.get_show_episodes(
@@ -451,10 +446,7 @@ class PodcastEpisodesDialog(AccessifyDialog):
 
 		if show_uri and episode_uri:
 			ui.message(_("Playing."))
-			threading.Thread(
-				target=self.client.play_context_with_offset,
-				args=(show_uri, episode_uri),
-			).start()
+			thread_manager.submit_task(self.client.play_context_with_offset, show_uri, episode_uri, name='DialogTask', daemon=True)
 		else:
 			self._play_uri(episode_uri)
 
@@ -575,7 +567,7 @@ class ArtistDiscographyDialog(AccessifyDialog):
 		self.Bind(wx.EVT_MENU, self.on_copy_link, id=self.MENU_COPY_LINK.GetId())
 
 	def load_data(self):
-		threading.Thread(target=self._load_data_thread).start()
+		thread_manager.submit_task(self._load_data_thread, name='DialogTask', daemon=True)
 
 	def _load_data_thread(self):
 		artist_info = self.client.get_artist_details(self.artist_id)
@@ -620,7 +612,7 @@ class ArtistDiscographyDialog(AccessifyDialog):
 		if self._all_tracks_loading or not self._all_tracks_can_load_more:
 			return
 		self._all_tracks_loading = True
-		threading.Thread(target=self._load_more_all_tracks_thread).start()
+		thread_manager.submit_task(self._load_more_all_tracks_thread, name='DialogTask', daemon=True)
 
 	def _load_more_all_tracks_thread(self):
 		batch = []
@@ -905,7 +897,7 @@ class ArtistDiscographyDialog(AccessifyDialog):
 			else:
 				wx.CallAfter(ui.message, _("Track added successfully."))
 
-		threading.Thread(target=_add_thread).start()
+		thread_manager.submit_task(_add_thread, name='DialogTask', daemon=True)
 
 	def _on_add_album_to_playlist_action(self, playlist_id, playlist_name, album_id, album_name):
 		ui.message(
@@ -921,7 +913,7 @@ class ArtistDiscographyDialog(AccessifyDialog):
 			else:
 				wx.CallAfter(ui.message, str(result))
 
-		threading.Thread(target=_thread).start()
+		thread_manager.submit_task(_thread, name='DialogTask', daemon=True)
 
 
 class AlbumTracksDialog(AccessifyDialog):
@@ -996,7 +988,7 @@ class AlbumTracksDialog(AccessifyDialog):
 		self._loading = True
 		self.tracks_list.Clear()
 		self.tracks_list.Append(_("Loading..."))
-		threading.Thread(target=self._load_tracks_thread).start()
+		thread_manager.submit_task(self._load_tracks_thread, name='DialogTask', daemon=True)
 
 	def _load_tracks_thread(self):
 		album_id = self.album.get("id")
@@ -1082,10 +1074,7 @@ class AlbumTracksDialog(AccessifyDialog):
 
 		if album_uri and track_uri:
 			ui.message(_("Playing from album..."))
-			threading.Thread(
-				target=self.client.play_context_with_offset,
-				args=(album_uri, track_uri),
-			).start()
+			thread_manager.submit_task(self.client.play_context_with_offset, album_uri, track_uri, name='DialogTask', daemon=True)
 		else:
 			self._play_uri(track_uri)
 
@@ -1123,7 +1112,7 @@ class AlbumTracksDialog(AccessifyDialog):
 			else:
 				wx.CallAfter(ui.message, _("Track added successfully."))
 
-		threading.Thread(target=_add_thread).start()
+		thread_manager.submit_task(_add_thread, name='DialogTask', daemon=True)
 
 
 class PlaylistTracksDialog(AccessifyDialog):
@@ -1209,7 +1198,7 @@ class PlaylistTracksDialog(AccessifyDialog):
 		if not self.tracks:
 			self.tracks_list.Clear()
 			self.tracks_list.Append(_("Loading..."))
-		threading.Thread(target=self._load_more_tracks_thread).start()
+		thread_manager.submit_task(self._load_more_tracks_thread, name='DialogTask', daemon=True)
 
 	def _load_more_tracks_thread(self):
 		playlist_id = self.playlist.get("id")
@@ -1351,10 +1340,7 @@ class PlaylistTracksDialog(AccessifyDialog):
 
 		if playlist_uri and track_uri:
 			ui.message(_("Playing from playlist..."))
-			threading.Thread(
-				target=self.client.play_context_with_offset,
-				args=(playlist_uri, track_uri),
-			).start()
+			thread_manager.submit_task(self.client.play_context_with_offset, playlist_uri, track_uri, name='DialogTask', daemon=True)
 		else:
 			self._play_uri(track_uri)
 
@@ -1446,7 +1432,7 @@ class RelatedArtistsDialog(AccessifyDialog):
 					for artist in self.related_artists:
 						wx.CallAfter(self.artists_list.Append, artist["name"])
 
-		threading.Thread(target=_load).start()
+		thread_manager.submit_task(_load, name='DialogTask', daemon=True)
 
 	def get_selected_artist(self):
 		selection = self.artists_list.GetSelection()
@@ -1508,7 +1494,7 @@ class RelatedArtistsDialog(AccessifyDialog):
 						_("You are now following {artist_name}.").format(artist_name=artist["name"]),
 					)
 
-			threading.Thread(target=_follow).start()
+			thread_manager.submit_task(_follow, name='DialogTask', daemon=True)
 
 
 class ManagementDialog(AccessifyDialog):
@@ -1539,8 +1525,8 @@ class ManagementDialog(AccessifyDialog):
 		for tab_cfg in self.tabs_config.values():
 			if tab_cfg["control"] == focused_control:
 				list_control = tab_cfg["control"]
-				data_source_attr = config["data_attr"]
-				item_parser = config.get("item_parser", lambda item: item)
+				data_source_attr = tab_cfg["data_attr"]
+				item_parser = tab_cfg.get("item_parser", lambda item: item)
 
 				selection = list_control.GetSelection()
 				if selection == wx.NOT_FOUND:
@@ -1568,10 +1554,7 @@ class ManagementDialog(AccessifyDialog):
 				track_uri = item.get("uri")
 				if context_uri and track_uri:
 					ui.message(_("Playing."))
-					threading.Thread(
-						target=self.client.play_context_with_offset,
-						args=(context_uri, track_uri),
-					).start()
+					thread_manager.submit_task(self.client.play_context_with_offset, context_uri, track_uri, name='DialogTask', daemon=True)
 					return
 		uri = item.get("uri")
 		self._play_uri(uri)
@@ -1621,7 +1604,7 @@ class ManagementDialog(AccessifyDialog):
 			else:
 				wx.CallAfter(ui.message, _("Track added successfully."))
 
-		threading.Thread(target=_add_thread).start()
+		thread_manager.submit_task(_add_thread, name='DialogTask', daemon=True)
 
 	def _handle_refresh(self, evt=None):
 		focused_control = self.FindFocus()
@@ -1745,21 +1728,21 @@ class ManagementDialog(AccessifyDialog):
 		loader_func(initial_data=initial_data)
 
 	def _populate_generic_list(self, key, data):
-		config = self.tabs_config.get(key)
-		if not config:
+		tab_cfg = self.tabs_config.get(key)
+		if not tab_cfg:
 			return
 
-		setattr(self, config["data_attr"], data)
-		config["control"].Clear()
+		setattr(self, tab_cfg["data_attr"], data)
+		tab_cfg["control"].Clear()
 
 		if not data:
-			config["control"].Append(_("No items found."))
+			tab_cfg["control"].Append(_("No items found."))
 			return
 
 		for item in data:
-			parsed_item = config["item_parser"](item)
-			display_string = config["formatter"](parsed_item)
-			config["control"].Append(display_string)
+			parsed_item = tab_cfg["item_parser"](item)
+			display_string = tab_cfg["formatter"](parsed_item)
+			tab_cfg["control"].Append(display_string)
 
 	def _load_data_thread(self, key, loader_func):
 		data = loader_func()
@@ -1888,7 +1871,7 @@ class ManagementDialog(AccessifyDialog):
 		if initial_data:
 			self._populate_playlists_combobox(initial_data)
 		else:
-			threading.Thread(target=self._load_playlists_thread).start()
+			thread_manager.submit_task(self._load_playlists_thread, name='DialogTask', daemon=True)
 
 	def _load_playlists_thread(self):
 		data = self.client.get_user_playlists()
@@ -1959,7 +1942,7 @@ class ManagementDialog(AccessifyDialog):
 			else:
 				wx.CallAfter(self._populate_playlist_tracks, tracks_data)
 
-		threading.Thread(target=_load).start()
+		thread_manager.submit_task(_load, name='DialogTask', daemon=True)
 
 	def _populate_playlist_tracks(self, tracks_data):
 		self.playlist_tracks_list.Clear()
@@ -2035,7 +2018,7 @@ class ManagementDialog(AccessifyDialog):
 			else:
 				wx.CallAfter(ui.message, str(result))
 
-		threading.Thread(target=_process).start()
+		thread_manager.submit_task(_process, name='DialogTask', daemon=True)
 
 	def _on_playlist_details_dialog_close(self, evt):
 		if self._playlistDetailsDialog:
@@ -2069,7 +2052,7 @@ class ManagementDialog(AccessifyDialog):
 					)
 					wx.CallAfter(self.load_playlists)
 
-			threading.Thread(target=_delete).start()
+			thread_manager.submit_task(_delete, name='DialogTask', daemon=True)
 
 	def on_unfollow_playlist(self, evt):
 		selection_index = self.playlist_choices.GetSelection()
@@ -2094,7 +2077,7 @@ class ManagementDialog(AccessifyDialog):
 					)
 					wx.CallAfter(self.load_playlists)
 
-			threading.Thread(target=_unfollow).start()
+			thread_manager.submit_task(_unfollow, name='DialogTask', daemon=True)
 
 	def on_remove_track_from_playlist(self, evt=None):
 		track_selection = self.playlist_tracks_list.GetSelection()
@@ -2128,7 +2111,7 @@ class ManagementDialog(AccessifyDialog):
 					)
 					wx.CallAfter(self.on_playlist_selected)
 
-			threading.Thread(target=_remove).start()
+			thread_manager.submit_task(_remove, name='DialogTask', daemon=True)
 
 	def _handle_reorder_track(self, direction):
 		"""Handles the logic for reordering a track up or down."""
@@ -2171,10 +2154,7 @@ class ManagementDialog(AccessifyDialog):
 
 		# 3. Call the API in the background
 		playlist_id = self.user_playlists[playlist_selection]["id"]
-		threading.Thread(
-			target=self._finish_reorder_track,
-			args=(playlist_id, from_index, to_index),
-		).start()
+		thread_manager.submit_task(self._finish_reorder_track, playlist_id, from_index, to_index, name='DialogTask', daemon=True)
 
 	def _finish_reorder_track(self, playlist_id, from_index, to_index):
 		"""The background thread that calls the API and handles the result."""
@@ -2386,7 +2366,7 @@ class ManagementDialog(AccessifyDialog):
 			track_name=item["name"]
 		)
 		if gui.messageBox(msg, _("Confirm Remove Track"), wx.YES_NO | wx.ICON_WARNING) == wx.YES:
-			threading.Thread(target=self._remove_from_library_thread, args=(item["id"], item["name"])).start()
+			thread_manager.submit_task(self._remove_from_library_thread, item["id"], item["name"], name='DialogTask', daemon=True)
 
 	def _remove_from_library_thread(self, track_id, track_name):
 		result = self.client.remove_tracks_from_library([track_id])
@@ -2406,9 +2386,7 @@ class ManagementDialog(AccessifyDialog):
 			album_name=item["name"]
 		)
 		if gui.messageBox(msg, _("Confirm Remove Album"), wx.YES_NO | wx.ICON_WARNING) == wx.YES:
-			threading.Thread(
-				target=self._remove_album_from_library_thread, args=(item["id"], item["name"])
-			).start()
+			thread_manager.submit_task(self._remove_album_from_library_thread, item["id"], item["name"], name='DialogTask', daemon=True)
 
 	def _remove_album_from_library_thread(self, album_id, album_name):
 		result = self.client.remove_albums_from_library([album_id])
@@ -2428,9 +2406,7 @@ class ManagementDialog(AccessifyDialog):
 			show_name=item["name"]
 		)
 		if gui.messageBox(msg, _("Confirm Remove Show"), wx.YES_NO | wx.ICON_WARNING) == wx.YES:
-			threading.Thread(
-				target=self._remove_show_from_library_thread, args=(item["id"], item["name"])
-			).start()
+			thread_manager.submit_task(self._remove_show_from_library_thread, item["id"], item["name"], name='DialogTask', daemon=True)
 
 	def _remove_show_from_library_thread(self, show_id, show_name):
 		result = self.client.remove_shows_from_library([show_id])
@@ -2448,7 +2424,7 @@ class ManagementDialog(AccessifyDialog):
 			return
 		msg = _("Are you sure you want to unfollow {artist_name}?").format(artist_name=artist["name"])
 		if gui.messageBox(msg, _("Confirm Unfollow"), wx.YES_NO | wx.ICON_WARNING) == wx.YES:
-			threading.Thread(target=self._unfollow_artist_thread, args=(artist["id"], artist["name"])).start()
+			thread_manager.submit_task(self._unfollow_artist_thread, artist["id"], artist["name"], name='DialogTask', daemon=True)
 
 	def _unfollow_artist_thread(self, artist_id, artist_name):
 		result = self.client.unfollow_artists([artist_id])

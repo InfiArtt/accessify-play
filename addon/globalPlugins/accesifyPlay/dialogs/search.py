@@ -1,12 +1,13 @@
 # accesifyPlay/dialogs/search.py
 
 import threading
+from ..core.thread_manager import thread_manager
 
 import config
 import ui
 import wx
 
-from .base import AccessifyDialog
+from ..ui.base_dialog import AccessifyDialog
 from .management import (
 	AlbumTracksDialog,
 	ArtistDiscographyDialog,
@@ -49,7 +50,7 @@ class SearchDialog(AccessifyDialog):
 		self.queryText.SetFocus()
 
 		# Memuat playlist di latar belakang saat dialog dibuka. Ini sudah benar.
-		threading.Thread(target=self._load_user_playlists).start()
+		thread_manager.submit_task(self._load_user_playlists, name='DialogTask', daemon=True)
 
 	def _init_ui(self):
 		"""Builds the user interface of the dialog."""
@@ -147,7 +148,7 @@ class SearchDialog(AccessifyDialog):
 			return
 
 		index_to_focus = len(self._rendered_items)
-		threading.Thread(target=self._search_thread, args=(index_to_focus,)).start()
+		thread_manager.submit_task(self._search_thread, index_to_focus, name='DialogTask', daemon=True)
 
 	def _search_thread(self, index_to_focus):
 		"""Fetches data from the Spotify client in a background thread."""
@@ -224,10 +225,7 @@ class SearchDialog(AccessifyDialog):
 			context_uri = album_info.get("uri")
 			if context_uri and track_uri:
 				ui.message(_("Playing."))
-				threading.Thread(
-					target=self.client.play_context_with_offset,
-					args=(context_uri, track_uri),
-				).start()
+				thread_manager.submit_task(self.client.play_context_with_offset, context_uri, track_uri, name='DialogTask', daemon=True)
 			else:
 				self._play_uri(track_uri)
 			return
@@ -389,7 +387,7 @@ class SearchDialog(AccessifyDialog):
 				is_followed_status = result[0] if isinstance(result, list) and result else False
 				wx.CallAfter(show_menu, is_followed_status)
 
-			threading.Thread(target=_check_and_show).start()
+			thread_manager.submit_task(_check_and_show, name='DialogTask', daemon=True)
 		else:
 			show_menu()
 
@@ -418,7 +416,7 @@ class SearchDialog(AccessifyDialog):
 			else:
 				wx.CallAfter(ui.message, _("Track added successfully."))
 
-		threading.Thread(target=_add_thread).start()
+		thread_manager.submit_task(_add_thread, name='DialogTask', daemon=True)
 
 	def on_save_album(self, evt=None):
 		item = self._get_item_at_index(self.resultsList.GetSelection())
@@ -444,7 +442,7 @@ class SearchDialog(AccessifyDialog):
 			else:
 				wx.CallAfter(ui.message, str(result))
 
-		threading.Thread(target=_process).start()
+		thread_manager.submit_task(_process, name='DialogTask', daemon=True)
 
 	def on_save_show(self, evt=None):
 		item = self._get_item_at_index(self.resultsList.GetSelection())
@@ -482,7 +480,7 @@ class SearchDialog(AccessifyDialog):
 					ui.message, _("You are now following {artist_name}.").format(artist_name=item["name"])
 				)
 
-		threading.Thread(target=_follow).start()
+		thread_manager.submit_task(_follow, name='DialogTask', daemon=True)
 
 	def on_view_discography(self, evt=None):
 		item = self._get_item_at_index(self.resultsList.GetSelection())
@@ -510,7 +508,7 @@ class SearchDialog(AccessifyDialog):
 			else:
 				wx.CallAfter(ui.message, message)
 
-		threading.Thread(target=_thread_action).start()
+		thread_manager.submit_task(_thread_action, name='DialogTask', daemon=True)
 
 	def _get_item_at_index(self, index):
 		"""

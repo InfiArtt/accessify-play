@@ -1,10 +1,11 @@
 import threading
+from ..core.thread_manager import thread_manager
 
 import ui
 import wx
 from gui import guiHelper
 
-from .base import AccessifyDialog
+from ..ui.base_dialog import AccessifyDialog
 
 
 class SeekDialog(AccessifyDialog):
@@ -45,7 +46,7 @@ class SeekDialog(AccessifyDialog):
 			return
 
 		ui.message(_("Seeking..."))
-		threading.Thread(target=self._seek_thread, args=(time_str,)).start()
+		thread_manager.submit_task(self._seek_thread, time_str, name='DialogTask', daemon=True)
 		self.Close()
 
 	def _seek_thread(self, time_str):

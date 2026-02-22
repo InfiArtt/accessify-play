@@ -1,9 +1,10 @@
 import threading
+from ..core.thread_manager import thread_manager
 
 import ui
 import wx
 
-from .base import AccessifyDialog
+from ..ui.base_dialog import AccessifyDialog
 
 
 class DevicesDialog(AccessifyDialog):
@@ -71,7 +72,7 @@ class DevicesDialog(AccessifyDialog):
 
 		# Tutup dialog dan mulai proses pemindahan di thread lain
 		self.Close()
-		threading.Thread(target=self._change_device_thread, args=(device_id,)).start()
+		thread_manager.submit_task(self._change_device_thread, device_id, name='DialogTask', daemon=True)
 
 	def _change_device_thread(self, device_id):
 		result = self.client.transfer_playback_to_device(device_id)

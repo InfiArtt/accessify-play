@@ -10,6 +10,8 @@
 __pycache__/
 *.pyc
 grabber.py
+refactor_dialogs.py
+.pytest_cache/
 
 # Ignore build folders
 build/
@@ -17,6 +19,7 @@ site_scons/
 dist/
 archives/
 DevGuide.wiki/
+tests/
 
 pybabel.py
 .gemini/

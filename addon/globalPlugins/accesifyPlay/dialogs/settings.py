@@ -1,4 +1,5 @@
 import threading
+from ..core.thread_manager import thread_manager
 import webbrowser
 
 import config
@@ -9,7 +10,7 @@ from gui import guiHelper, messageBox, settingsDialogs
 
 from .. import donate, spotify_client, updater  # Tanda .. berarti naik satu level folder
 from ..language import AVAILABLE_LANGUAGE_CODES, LANGUAGE_AUTO, LANGUAGE_DISPLAY_OVERRIDES
-from .base import AccessifyDialog
+from ..ui.base_dialog import AccessifyDialog
 
 
 class ClientIDManagementDialog(AccessifyDialog):
@@ -286,7 +287,7 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 	def onValidate(self, evt):
 		self.onSave()  # Save current UI values to config.conf before validating
 		ui.message(_("Validating credentials with Spotify..."))
-		threading.Thread(target=self.run_validation).start()
+		thread_manager.submit_task(self.run_validation, name='DialogTask', daemon=True)
 
 	def run_validation(self):
 		success = self.client.validate()  # Validate without explicit parameters
@@ -306,7 +307,7 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 
 		if result == wx.YES:
 			ui.message(_("Clearing credentials and cache..."))
-			threading.Thread(target=self._clear_credentials_thread).start()
+			thread_manager.submit_task(self._clear_credentials_thread, name='DialogTask', daemon=True)
 
 	def _clear_credentials_thread(self):
 		message = self.client.clear_credentials_and_cache()

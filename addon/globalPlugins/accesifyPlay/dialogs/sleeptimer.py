@@ -1,7 +1,7 @@
 import wx
 from gui import guiHelper
 
-from .base import AccessifyDialog
+from ..ui.base_dialog import AccessifyDialog
 
 
 class SleepTimerDialog(AccessifyDialog):

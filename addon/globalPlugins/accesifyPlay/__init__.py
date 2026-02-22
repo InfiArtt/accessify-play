@@ -6,11 +6,13 @@ import sys
 import threading
 import time
 
+from .core.thread_manager import thread_manager
+
 import config
 import globalPluginHandler
 import gui
 import scriptHandler
-import ui
+import ui as nvda_ui
 import wx
 from gui import settingsDialogs
 from logHandler import log
@@ -90,17 +92,13 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		# Polling untuk perubahan lagu
 		self.last_track_id = None
 		self.is_running = True
-		self.polling_thread = threading.Thread(target=self.track_change_poller)
-		self.polling_thread.daemon = True
-		self.polling_thread.start()
-
-		self.keep_alive_thread = threading.Thread(target=self.keep_alive_worker)
-		self.keep_alive_thread.daemon = True
-		self.keep_alive_thread.start()
-
-		threading.Thread(target=self.client.initialize, daemon=True).start()
+		thread_manager.create_poller(self.track_change_poller, interval_seconds=1, name="TrackChangePoller")
+		thread_manager.submit_task(self.keep_alive_worker, daemon=True, name="KeepAliveWorker")
+		thread_manager.submit_task(self.client.initialize, daemon=True, name="ClientInit")
+		
 		if config.conf["spotify"]["isAutomaticallyCheckForUpdates"]:
-			threading.Thread(target=updater.check_for_updates, args=(False,), daemon=True).start()
+			thread_manager.submit_task(updater.check_for_updates, False, daemon=True, name="UpdaterCheck")
+			
 		self._check_resume_sleep_timer()
 		self._migrate_old_gestures()
 
@@ -120,9 +118,9 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 				if "nvda" in gest_lower and "g" in gest_lower and "alt" not in gest_lower and "control" not in gest_lower and "shift" not in gest_lower:
 					for action in list(actions):
 						is_target = False
-						if isinstance(action, str) and "accesifyPlay" in action:
+						if isinstance(action, str) and "commandLayerToggle" in action:
 							is_target = True
-						elif hasattr(action, "scriptName") and "accesifyPlay" in str(getattr(action, "scriptName", "")):
+						elif hasattr(action, "scriptName") and "commandLayerToggle" in str(getattr(action, "scriptName", "")):
 							is_target = True
 
 						if is_target:
@@ -149,12 +147,25 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	def getScript(self, gesture):
 		if not self.commandLayer.is_active:
 			return super().getScript(gesture)
-		script = super().getScript(gesture)
-		wrapped = self.commandLayer.wrap_script(script)
-		if wrapped:
-			return wrapped
+
+		# Dalam mode command layer, manual matching tanpa mengubah _gestureBindings NVDA
+		for identifier in gesture.identifiers:
+			script_name = self.commandLayer._layer_gestures.get(identifier)
+			if script_name:
+				script_func = getattr(self, "script_" + script_name, None)
+				if script_func:
+					return self.commandLayer.wrap_script(script_func)
+
+		# Tombol asing ditekan (tidak terdaftar di layer)
+		if self.commandLayer.is_modifier(gesture):
+			return None  # Biarkan NVDA meresolusi modifier key
+
 		self.commandLayer.handle_unknown_gesture(gesture)
-		return None
+
+		# Telan tombol mati agar tidak bocor ke sistem Windows 
+		def dummyScript(gesture):
+			pass
+		return dummyScript
 
 	def terminate(self):
 		super().terminate()
@@ -173,10 +184,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			pass
 
 		# Ensure background polling threads gracefully exit to avoid NVDA restart freeze
-		if hasattr(self, "polling_thread") and self.polling_thread.is_alive():
-			self.polling_thread.join(timeout=1.0)
-		if hasattr(self, "keep_alive_thread") and self.keep_alive_thread.is_alive():
-			self.keep_alive_thread.join(timeout=1.0)
+		thread_manager.stop_all(timeout=1.0)
 
 		for dialog_attr in [
 			"searchDialog",
@@ -209,7 +217,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 						self.last_track_id = current_track_id
 						if current_track_id:
 							track_string = self.client.get_simple_track_string(playback["item"])
-							wx.CallAfter(ui.message, track_string)
+							wx.CallAfter(nvda_ui.message, track_string)
 			except Exception as e:
 				log.error(f"Error in Spotify polling thread: {e}", exc_info=True)
 
@@ -250,15 +258,15 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 				if wx.TheClipboard.Open():
 					wx.TheClipboard.SetData(wx.TextDataObject(text))
 					wx.TheClipboard.Close()
-					ui.message(_("Link copied"))
+					nvda_ui.message(_("Link copied"))
 				else:
-					ui.message(_("Could not open clipboard."))
+					nvda_ui.message(_("Could not open clipboard."))
 			except Exception as e:
 				log.error(f"Failed to copy to clipboard: {e}", exc_info=True)
-				ui.message(_("Clipboard error"))
+				nvda_ui.message(_("Clipboard error"))
 		else:
 			# Jika bukan link, berarti pesan error dari client
-			ui.message(text)
+			nvda_ui.message(text)
 
 	def _destroy_dialog(self, attr_name, evt):
 		dialog = getattr(self, attr_name, None)
@@ -274,7 +282,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		description=_("Accessify Play layer commands. Press F1 for help."),
 		gesture="kb:NVDA+alt+g",
 	)
-	def script_commandLayerToggle(self, gesture):
+	def script_activateCommandLayer(self, gesture):
 		self.commandLayer.activate()
 
 	def script_commandLayerHelp(self, gesture):
@@ -564,7 +572,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			getattr(self, dialog_attr).Raise()
 			return
 		if not self.client.client:
-			ui.message(_("Spotify client not ready. Please validate your credentials."))
+			nvda_ui.message(_("Spotify client not ready. Please validate your credentials."))
 			return
 
 		dialog = dialog_class(gui.mainFrame, self.client, *args, **kwargs)
@@ -609,14 +617,14 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			self.queueListDialog.Raise()
 			return
 		if self._queueDialogLoading:
-			ui.message(_("Queue dialog is still loading, please wait."))
+			nvda_ui.message(_("Queue dialog is still loading, please wait."))
 			return
 		if not self.client.client:
-			ui.message(_("Spotify client not ready. Please validate your credentials."))
+			nvda_ui.message(_("Spotify client not ready. Please validate your credentials."))
 			return
 
 		self._queueDialogLoading = True
-		ui.message(_("Please Wait..."))
+		nvda_ui.message(_("Please Wait..."))
 
 		@utils.run_in_thread
 		def _prepare():
@@ -628,10 +636,10 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	def _finish_queue_dialog_load(self, data):
 		self._queueDialogLoading = False
 		if isinstance(data, str):
-			ui.message(data)
+			nvda_ui.message(data)
 			return
 		self._open_dialog(QueueListDialog, "queueListDialog", queue_data=data)
-		ui.message(_("UI Ready."))
+		nvda_ui.message(_("UI Ready."))
 
 	@scriptHandler.script(
 		description=_("Add the currently playing track to a playlist."),
@@ -641,14 +649,14 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			self.addToPlaylistDialog.Raise()
 			return
 		if self._addToPlaylistLoading:
-			ui.message(_("Dialog is still loading, please wait."))
+			nvda_ui.message(_("Dialog is still loading, please wait."))
 			return
 		if not self.client.client:
-			ui.message(_("Spotify client not ready. Please validate your credentials."))
+			nvda_ui.message(_("Spotify client not ready. Please validate your credentials."))
 			return
 
 		self._addToPlaylistLoading = True
-		ui.message(_("Preparing playlists..."))
+		nvda_ui.message(_("Preparing playlists..."))
 
 		@utils.run_in_thread
 		def _prepare():
@@ -678,10 +686,10 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	def _finish_add_to_playlist_dialog(self, payload):
 		self._addToPlaylistLoading = False
 		if isinstance(payload, str):
-			ui.message(payload)
+			nvda_ui.message(payload)
 			return
 		if not payload["playlists"]:
-			ui.message(_("No playlists owned by you were found."))
+			nvda_ui.message(_("No playlists owned by you were found."))
 			return
 		self._open_dialog(
 			AddToPlaylistDialog,
@@ -698,14 +706,14 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			self.managementDialog.Raise()
 			return
 		if self._managementDialogLoading:
-			ui.message(_("Management data is still loading, please wait."))
+			nvda_ui.message(_("Management data is still loading, please wait."))
 			return
 		if not self.client.client:
-			ui.message(_("Spotify client not ready. Please validate your credentials."))
+			nvda_ui.message(_("Spotify client not ready. Please validate your credentials."))
 			return
 
 		self._managementDialogLoading = True
-		ui.message(_("Please Wait..."))
+		nvda_ui.message(_("Please Wait..."))
 
 		@utils.run_in_thread
 		def _prepare():
@@ -738,10 +746,10 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	def _finish_management_dialog_load(self, data):
 		self._managementDialogLoading = False
 		if isinstance(data, str):
-			ui.message(data)
+			nvda_ui.message(data)
 			return
 		self._open_dialog(ManagementDialog, "managementDialog", preloaded_data=data)
-		ui.message(_("UI Ready."))
+		nvda_ui.message(_("UI Ready."))
 
 	@scriptHandler.script(
 		description=_("Show available devices to switch playback."),
@@ -751,14 +759,14 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			self.devicesDialog.Raise()
 			return
 		if self._devicesDialogLoading:
-			ui.message(_("Devices dialog is still loading, please wait."))
+			nvda_ui.message(_("Devices dialog is still loading, please wait."))
 			return
 		if not self.client.client:
-			ui.message(_("Spotify client not ready. Please validate your credentials."))
+			nvda_ui.message(_("Spotify client not ready. Please validate your credentials."))
 			return
 
 		self._devicesDialogLoading = True
-		ui.message(_("Fetching devices..."))
+		nvda_ui.message(_("Fetching devices..."))
 
 		@utils.run_in_thread
 		def _prepare():
@@ -770,10 +778,10 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	def _finish_devices_dialog_load(self, devices):
 		self._devicesDialogLoading = False
 		if isinstance(devices, str):
-			ui.message(devices)
+			nvda_ui.message(devices)
 			return
 		if not devices:
-			ui.message(_("No available devices found."))
+			nvda_ui.message(_("No available devices found."))
 			return
 		self._open_dialog(DevicesDialog, "devicesDialog", devices_info=devices)
 
@@ -852,9 +860,9 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 					self._active_sleep_timer = None
 
 				self._clear_timer_state()
-				ui.message(_("Sleep timer cancelled."))
+				nvda_ui.message(_("Sleep timer cancelled."))
 			else:
-				ui.message(_("No sleep timer is running anyway, thanks for wasting your time."))
+				nvda_ui.message(_("No sleep timer is running anyway, thanks for wasting your time."))
 			return
 		if self._active_sleep_timer:
 			self._active_sleep_timer.cancel()
@@ -862,7 +870,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		end_timestamp = time.time() + seconds
 		self._save_timer_state(end_timestamp)
 
-		ui.message(_("Sleep timer set for {min} minutes.").format(min=minutes))
+		nvda_ui.message(_("Sleep timer set for {min} minutes.").format(min=minutes))
 		self._active_sleep_timer = threading.Timer(seconds, self._on_sleep_timeout)
 		self._active_sleep_timer.start()
 

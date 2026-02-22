@@ -5,7 +5,7 @@ import tones
 import ui
 import wx
 
-from .dialogs.base import AccessifyDialog
+from .ui.base_dialog import AccessifyDialog
 from .dialogs.layer_editor import LayerEditorDialog
 from .layer_config import LayerConfigManager
 
@@ -89,7 +89,6 @@ class CommandLayerManager:
 			self._error_beep()
 			return
 		self.is_active = True
-		self.plugin.bindGestures(self._layer_gestures)
 		self._entry_beep()
 
 	def finish(self, announce=False):
@@ -98,7 +97,6 @@ class CommandLayerManager:
 				ui.message(_("Command layer closed"))
 			return
 		self.is_active = False
-		self.plugin.clearGestureBindings()
 		if announce:
 			ui.message(_("Command layer closed"))
 
@@ -164,9 +162,7 @@ class CommandLayerManager:
 					# Reload bindings when editor closes
 					self._refresh_bindings()
 					if self.is_active:
-						# Re-bind if currently active to apply changes immediately
-						self.plugin.clearGestureBindings()
-						self.plugin.bindGestures(self._layer_gestures)
+						pass
 
 			self._editor_dialog.Bind(wx.EVT_CLOSE, _on_close)
 			self._editor_dialog.Show()

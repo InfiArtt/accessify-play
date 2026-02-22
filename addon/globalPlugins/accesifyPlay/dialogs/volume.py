@@ -1,10 +1,11 @@
 import threading
+from ..core.thread_manager import thread_manager
 
 import ui
 import wx
 from gui import guiHelper
 
-from .base import AccessifyDialog
+from ..ui.base_dialog import AccessifyDialog
 
 
 class SetVolumeDialog(AccessifyDialog):
@@ -39,7 +40,7 @@ class SetVolumeDialog(AccessifyDialog):
 	def onSet(self, evt):
 		volume = self.volumeCtrl.GetValue()
 		ui.message(_("Setting volume to {volume}%...").format(volume=volume))
-		threading.Thread(target=self._set_volume_thread, args=(volume,)).start()
+		thread_manager.submit_task(self._set_volume_thread, volume, name='DialogTask', daemon=True)
 		self.Close()
 
 	def _set_volume_thread(self, volume):

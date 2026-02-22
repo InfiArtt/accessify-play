@@ -1,9 +1,10 @@
 import threading
+from ..core.thread_manager import thread_manager
 
 import ui
 import wx
 
-from .base import AccessifyDialog
+from ..ui.base_dialog import AccessifyDialog
 
 
 class QueueListDialog(AccessifyDialog):
@@ -106,7 +107,7 @@ class QueueListDialog(AccessifyDialog):
 			ui.message(_("Already playing the selected item."))
 			return
 		ui.message(_("Skipping to selected queue item..."))
-		threading.Thread(target=self._skip_to_queue_item, args=(selection,)).start()
+		thread_manager.submit_task(self._skip_to_queue_item, selection, name='DialogTask', daemon=True)
 
 	def _skip_to_queue_item(self, selection_index):
 		try:
@@ -130,7 +131,7 @@ class QueueListDialog(AccessifyDialog):
 		self._announce_refresh_result = speak_status
 		if speak_status:
 			ui.message(_("Refreshing queue..."))
-		threading.Thread(target=self._refresh_thread).start()
+		thread_manager.submit_task(self._refresh_thread, name='DialogTask', daemon=True)
 
 	def _refresh_thread(self):
 		try:
