@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 import config
 import requests
 import spotipy
+import urllib3
 from logHandler import log
 from spotipy.exceptions import SpotifyException
 from spotipy.oauth2 import CacheFileHandler, SpotifyPKCE
@@ -108,6 +109,12 @@ class SpotifyClient:
 			else:
 				self.client = None
 				log.info(_("Spotify: No valid token in cache."))
+		except (requests.exceptions.ConnectionError, urllib3.exceptions.MaxRetryError) as e:
+			self.client = None
+			log.debug(f"Spotify silent initialization network error (offline): {e}")
+		except (requests.exceptions.ReadTimeout, requests.exceptions.Timeout, urllib3.exceptions.ReadTimeoutError, TimeoutError) as e:
+			self.client = None
+			log.debug(f"Spotify silent initialization timeout: {e}")
 		except Exception as e:
 			self.client = None
 			log.error(f"{_('Spotify: Silent initialization failed:')} {e}", exc_info=True)
@@ -131,6 +138,14 @@ class SpotifyClient:
 				self.client = None
 				log.warning(_("Spotify: Could not get token, even with interactive login."))
 				return False
+		except (requests.exceptions.ConnectionError, urllib3.exceptions.MaxRetryError) as e:
+			self.client = None
+			log.debug(f"Spotify interactive validation network error: {e}")
+			return False
+		except (requests.exceptions.ReadTimeout, requests.exceptions.Timeout, urllib3.exceptions.ReadTimeoutError, TimeoutError) as e:
+			self.client = None
+			log.debug(f"Spotify interactive validation timeout: {e}")
+			return False
 		except Exception as e:
 			self.client = None
 			log.error(f"{_('Spotify: Interactive validation failed:')} {e}", exc_info=True)
@@ -160,6 +175,9 @@ class SpotifyClient:
 				self.initialize()  # Try to refresh the token silently
 				return _("Token expired, please try again.")
 			return _("Spotify command failed: {error_message}").format(error_message=e.msg)
+		except (requests.exceptions.ConnectionError, urllib3.exceptions.MaxRetryError) as e:
+			log.debug(f"Spotify connection error (Offline / Network issue): {e}")
+			return _("Connection to Spotify failed. Please check your internet connection.")
 		except Exception as e:
 			log.error(
 				f"{_('Spotify command failed with an unexpected error:')} {e}",
@@ -177,6 +195,14 @@ class SpotifyClient:
 				kwargs["additional_types"] = "episode"
 			result = command(*args, **kwargs)
 			return result
+		except (requests.exceptions.ReadTimeout, requests.exceptions.Timeout, urllib3.exceptions.ReadTimeoutError, TimeoutError) as e:
+			# Jangan print traceback lengkap jika sekadar internet putus/server Spotify lambat
+			log.debug(f"Spotify ReadTimeout (background task): {e}")
+			return _("Connection to Spotify timed out. Please try again.")
+		except (requests.exceptions.ConnectionError, urllib3.exceptions.MaxRetryError) as e:
+			# Luring total tanpa koneksi internet sama sekali
+			log.debug(f"Spotify ConnectionError (Offline server/DNS failure): {e}")
+			return _("Connection to Spotify failed. Please check your internet connection.")
 		except SpotifyException as e:
 			log.error(f"{_('Spotify command failed:')} {e}", exc_info=True)
 			if e.http_status == 401:  # Unauthorized
@@ -215,9 +241,19 @@ class SpotifyClient:
 		except requests.exceptions.ConnectionError:
 			try:
 				devices_result = self.client.devices()
+			except requests.exceptions.ConnectionError as retry_e:
+				# Jangan spam log console dengan StackTrace saat kabel internet tercabut total
+				log.debug(f"Spotify network connection failed on retry (Offline): {retry_e}")
+				return False
+			except (requests.exceptions.ReadTimeout, requests.exceptions.Timeout, urllib3.exceptions.ReadTimeoutError, TimeoutError) as retry_e:
+				log.debug(f"Spotify ReadTimeout on fetching devices (retry): {retry_e}")
+				return False
 			except Exception as retry_e:
 				log.error(f"{_('Spotify: Could not fetch devices on retry:')} {retry_e}", exc_info=True)
 				return False
+		except (requests.exceptions.ReadTimeout, requests.exceptions.Timeout, urllib3.exceptions.ReadTimeoutError, TimeoutError) as e:
+			log.debug(f"Spotify ReadTimeout on fetching devices: {e}")
+			return False
 		except Exception as e:
 			log.error(f"{_('Spotify: Could not fetch devices:')} {e}", exc_info=True)
 			return False
@@ -244,6 +280,12 @@ class SpotifyClient:
 				self.client.transfer_playback(target_device_id, force_play=False)
 				self.device_id = target_device_id
 				return True
+			except (requests.exceptions.ConnectionError, urllib3.exceptions.MaxRetryError) as e:
+				log.debug(f"{_('Spotify: Failed to wake up device (Offline):')} {e}")
+				self.device_id = None
+			except (requests.exceptions.ReadTimeout, requests.exceptions.Timeout, urllib3.exceptions.ReadTimeoutError, TimeoutError) as e:
+				log.debug(f"{_('Spotify: Failed to wake up device (Timeout):')} {e}")
+				self.device_id = None
 			except Exception as e:
 				log.error(f"{_('Spotify: Failed to wake up device:')} {e}", exc_info=True)
 				self.device_id = None  # Reset karena gagal

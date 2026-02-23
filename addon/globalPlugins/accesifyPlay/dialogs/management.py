@@ -1608,15 +1608,21 @@ class ManagementDialog(AccessifyDialog):
 
 	def _handle_refresh(self, evt=None):
 		focused_control = self.FindFocus()
-		if not isinstance(focused_control, (wx.ListBox, wx.TreeCtrl)):
+		if not isinstance(focused_control, (wx.ListBox, wx.TreeCtrl, wx.ComboBox)):
 			current_page = self.notebook.GetCurrentPage()
 			if not current_page or not current_page.GetChildren():
 				return
-			focused_control = current_page.GetChildren()[0]
+			# Default to the first control on the page (usually a sizer or panel, but let's try to get a meaningful child)
+			children = current_page.GetChildren()
+			if hasattr(self, 'playlist_choices') and current_page == self.playlist_choices.GetParent():
+				focused_control = self.playlist_choices
+			else:
+				focused_control = children[0]
 
-		if focused_control == self.playlist_tree:
-			self.on_refresh_playlists()
-			return
+		if hasattr(self, 'playlist_choices') and hasattr(self, 'playlist_tracks_list'):
+			if focused_control in (self.playlist_choices, self.playlist_tracks_list):
+				self.on_refresh_playlists()
+				return
 
 		for tab_cfg in self.tabs_config.values():
 			if tab_cfg["control"] == focused_control:

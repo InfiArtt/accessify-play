@@ -5,7 +5,7 @@
 This update focuses on ensuring smooth, long-term compatibility with future NVDA releases, as well as fixing a critical bug related to the Command Layer shortcut introduced in the previous version.
 
 ### ⚠️ IMPORTANT: Command Layer Shortcut Changed
-**The default Command Layer shortcut has been updated from `NVDA+g` to `NVDA+Alt+g`.**
+**The default Command Layer shortcut has been updated from `NVDA+g` to `NVDA+Alt+gThe default Command Layer shortcut has been updated from `NVDA+g` to `NVDA+Alt+g`.**
 - **Why?** The upcoming NVDA 2026.1 release introduces a native core feature tied to the `NVDA+g` shortcut. Changing our default layer activation key prevents severe collisions with NVDA's built-in functionality.
 - **Seamless Migration**: For existing users returning from previous versions, your old `NVDA+g` shortcut for the command layer will be automatically migrated to the new `NVDA+Alt+g` standard upon updating this add-on to version 1.6.1. Any other manual user customizations to this particular shortcut will gracefully carry over without being overwritten.
 
@@ -13,6 +13,9 @@ This update focuses on ensuring smooth, long-term compatibility with future NVDA
 - **Command Layer Disappearance Fix**: Addressed a critical bug where the `NVDA+Alt+g` shortcut would stop working and permanently disappear from the NVDA Input Gestures map after being toggled just once. The internal gesture handling mechanism has been completely redesigned to intercept keystrokes dynamically without constantly requesting NVDA to flush and rewrite its gesture variables.
 - **Enhanced Thread Management**: Replaced raw Python threading calls with a centralized `ThreadManager`. This prevents background tasks (like Spotify connection keep-alives and UI pop-ups) from becoming orphaned "zombies" or triggering system exceptions when NVDA is reloaded or gracefully shut down.
 - **Dialog Codebase Consolidation**: Completely refactored generic dialog handling into a single `ui/base_dialog.py` module to eliminate redundant classes and mitigate importing errors. Module shadowing bug when importing NVDA's built-in `ui.message` and `config` objects has also been fixed.
+- **Installer Issue Resolved**: Fixed an installation error affecting the addon launcher for a subset of users.
+- **Improved Offline Resilience & Log Optimization**: Suppressed severe traceback log spamming when the internet connection drops or a network timeout occurs. Internal Spotify polling errors (`ConnectionError`, `MaxRetryError`) during device wakeups and authentications are now gracefully caught as low-level debug events, keeping the NVDA logger clean during offline states.
+- **Management Dialog Refresh Fix**: Resolved an `AttributeError` crash that occurred when attempting to refresh the playlist view via a keyboard shortcut. The refresh logic has been successfully migrated from a deprecated treeview structure to the new dropdown-based UI layout.
 
 ## Version 1.6.0
 
