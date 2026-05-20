@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" type="text/css" href="../style.css" media="screen">
-<title>Accessify Play 1.6.0</title>
+<title>Accessify Play 1.7.0</title>
 </head>
 <body>
 <h1>Accessify Play</h1>
@@ -25,8 +25,13 @@
 <li>An active <strong>Spotify Premium</strong> subscription.</li>
 <li>NVDA version <strong>2024.4</strong> or later.</li>
 </ul>
-<h2>A Note on Lyrics</h2>
-<p>This addon does not, and will not, include a feature to display song lyrics. Most methods for obtaining lyrics, such as scraping websites, are done without a proper license from the copyright holders. This is an illegal practice that violates the terms of service of lyrics providers and may infringe on copyright law, potentially leading to legal consequences under regulations like the DMCA (Digital Millennium Copyright Act) in the United States and similar laws worldwide. To ensure this addon remains legal, distributable, and respectful of copyright, this feature is intentionally omitted.</p>
+<h2>🎤 Lyrics Support</h2>
+<p>Accessify Play now includes <strong>lyrics support</strong> powered by <a href="https://lrclib.net">lrclib.net</a> — a free, open, and community-driven lyrics database. All lyrics served by lrclib.net are released under the <strong>Creative Commons Zero (CC0)</strong> license, meaning they are in the public domain and can be used freely without any copyright concern. This is the key distinction that makes this feature legal, distributable, and fully compliant — unlike scraping from unlicensed sources.</p>
+<p>Two lyrics modes are available inside the <strong>Command Layer</strong> (<code>NVDA+Alt+g</code>):</p>
+<ul>
+<li><strong><code>W</code> — Lyrics Window</strong>: Opens a popup showing the full, plain-text lyrics for the current song. Navigate line by line with arrow keys — NVDA reads each line as you go.</li>
+<li><strong><code>Y</code> — Auto Lyric Reading</strong>: NVDA automatically speaks each lyric line in real time, perfectly synchronized with the music as it plays. Press <code>Y</code> again to stop.</li>
+</ul>
 <h2>License</h2>
 <p>This addon is licensed under the <a href="https://www.gnu.org/licenses/gpl-2.0.html">GNU General Public License v2.0</a>.</p>
 <h2>✨ Feature Universe</h2>
@@ -40,6 +45,8 @@
 <li><strong>Automatic Announcements:</strong> Optionally, have NVDA announce the new song automatically every time the track changes.</li>
 <li><strong>Share with Ease:</strong> Copy the Spotify URL of the current track to your clipboard.</li>
 <li><strong>Play from Link:</strong> Open a dialog to play any track directly from a Spotify URL.</li>
+<li><strong>Lyrics Window (<code>W</code>):</strong> Open a popup showing the full plain-text lyrics for the current track, navigable line by line with arrow keys.</li>
+<li><strong>Auto Lyric Reading (<code>Y</code>):</strong> Toggle NVDA automatically speaking each lyric line in real time, synchronized to the music.</li>
 </ul>
 <h3>Library Management &amp; Interaction</h3>
 <ul>
@@ -81,6 +88,36 @@
 | Save Track to Library        | <code>NVDA+Alt+Shift+L</code>                   |
 | Add Track to Playlist        | <code>NVDA+Alt+Shift+A</code>                   |
 | Open Management Dialog       | <code>NVDA+Alt+Shift+M</code>                   |</p>
+<h3>Command Layer (<code>NVDA+Alt+g</code>) Quick Reference</h3>
+<blockquote>
+<p>Press <code>NVDA+Alt+g</code> first to enter the command layer, then press the single key listed below.</p>
+</blockquote>
+<p>| Key | Action |
+| :-- | :----- |
+| <code>P</code> | Play / Pause |
+| <code>N</code> | Next Track |
+| <code>B</code> | Previous Track |
+| <code>S</code> | Search |
+| <code>V</code> | Set Volume |
+| <code>I</code> | Announce current track |
+| <code>T</code> | Announce playback time |
+| <code>L</code> | Like / Unlike track |
+| <code>H</code> | Toggle Shuffle |
+| <code>R</code> | Cycle Repeat |
+| <code>Q</code> | Queue list |
+| <code>A</code> | Add to playlist |
+| <code>M</code> | Management dialog |
+| <code>D</code> | Switch device |
+| <code>U</code> | Play from link |
+| <code>J</code> | Seek dialog |
+| <code>X</code> | Copy Universal (Song.link) URL |
+| <code>Z</code> | Sleep timer |
+| <code>W</code> | <strong>Lyrics Window</strong> |
+| <code>Y</code> | <strong>Toggle Auto Lyric Reading</strong> |
+| <code>F1</code> | Show command help |
+| <code>F2</code> | Open Command Layer Editor |
+| <code>F4</code> | Open settings |
+| <code>Escape</code> | Close command layer |</p>
 <hr />
 <h3>A Note on the Spotify Queue Feature: Understanding Its Behavior</h3>
 <p>You may have noticed that the queue list in Accessify Play (<code>NVDA+Shift+Alt+Q</code>) can be both incredibly accurate and, at other times, seem completely out of sync with what's playing next. This behavior is not a bug but a direct consequence of the data provided by the Spotify API.</p>

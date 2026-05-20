@@ -2,7 +2,6 @@
 
 import os
 import re
-import threading
 import time
 
 import addonHandler
@@ -15,6 +14,8 @@ import wx
 from gui import messageBox
 from logHandler import log
 
+from .core.thread_manager import thread_manager
+
 # Constants for the GitHub repository
 OWNER = "InfiArtt"
 REPO = "accessify-play"
@@ -26,7 +27,7 @@ def check_for_updates(is_manual=False):
 		if not config.conf["spotify"]["isAutomaticallyCheckForUpdates"]:
 			return
 
-	threading.Thread(target=_perform_check, args=(is_manual,)).start()
+	thread_manager.submit_task(_perform_check, is_manual, daemon=True, name="UpdaterCheck")
 
 
 def _parse_version(version_string):
@@ -130,49 +131,60 @@ def _find_latest_release_for_channel(releases, channel):
 	return None
 
 
-class UpdateDialog(wx.Frame):
+class UpdateDialog(wx.Dialog):
 	def __init__(self, parent, release_info):
 		self.release_info = release_info
 		self.latest_version = release_info["tag_name"]
 		title = _("AccessifyPlay Update Available")
-		super().__init__(parent, title=title, size=(640, 480))
+		super().__init__(parent, title=title, size=(640, 480), style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER)
 		self.Centre()
-		panel = wx.Panel(self)
 		main_sizer = wx.BoxSizer(wx.VERTICAL)
 
 		text = _(
 			"A new version of AccessifyPlay is available: {version}\n\nChanges in this version:\n"
 		).format(version=self.latest_version)
 
-		self.info_text = wx.TextCtrl(panel, value=text, style=wx.TE_MULTILINE | wx.TE_READONLY)
+		self.info_text = wx.TextCtrl(self, value=text, style=wx.TE_MULTILINE | wx.TE_READONLY)
 		main_sizer.Add(self.info_text, 1, wx.ALL | wx.EXPAND, 10)
 
 		self.info_text.SetValue(text + release_info.get("body", _("No changelog provided.")))
 
 		buttons_sizer = wx.BoxSizer(wx.HORIZONTAL)
-		self.update_button = wx.Button(panel, label=_("&Download and Install"))
+		self.update_button = wx.Button(self, label=_("&Download and Install"))
 		self.update_button.Bind(wx.EVT_BUTTON, self.on_update)
 		buttons_sizer.Add(self.update_button, 0, wx.RIGHT, 10)
 
-		self.cancel_button = wx.Button(panel, label=_("&Later"))
-		self.cancel_button.Bind(wx.EVT_BUTTON, lambda evt: self.Close())
+		self.cancel_button = wx.Button(self, wx.ID_CANCEL, label=_("&Later"))
+		self.cancel_button.Bind(wx.EVT_BUTTON, lambda evt: self.EndModal(wx.ID_CANCEL))
 		buttons_sizer.Add(self.cancel_button)
 
 		main_sizer.Add(buttons_sizer, 0, wx.ALIGN_CENTER | wx.BOTTOM, 10)
-		panel.SetSizer(main_sizer)
+		self.SetSizer(main_sizer)
+		self.Bind(wx.EVT_CHAR_HOOK, self._on_char_hook)
 		self.Raise()
+
+	def _on_char_hook(self, evt):
+		if evt.GetKeyCode() == wx.WXK_ESCAPE:
+			self.EndModal(wx.ID_CANCEL)
+		else:
+			evt.Skip()
 
 	def on_update(self, event):
 		self.update_button.Disable()
 		self.cancel_button.Disable()
 		self.info_text.SetValue(_("Downloading update... Please wait."))
-		threading.Thread(target=download_and_install, args=[self.release_info]).start()
+		thread_manager.submit_task(download_and_install, self.release_info, daemon=True, name="DownloadInstall")
 
 
 def show_update_dialog(release_info):
 	"""Creates and shows the update dialog."""
-	dialog = UpdateDialog(gui.mainFrame, release_info)
-	dialog.Show()
+	gui.mainFrame.prePopup()
+	try:
+		dialog = UpdateDialog(gui.mainFrame, release_info)
+		dialog.ShowModal()
+	finally:
+		dialog.Destroy()
+		gui.mainFrame.postPopup()
 
 
 def download_and_install(release_info):

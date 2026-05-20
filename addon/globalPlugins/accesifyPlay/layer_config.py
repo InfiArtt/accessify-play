@@ -43,6 +43,8 @@ class LayerConfigManager:
 		("copyUniversalLink", "kb:x", _("Copy Universal (Song.link) URL."), "X", False),
 		("showSleepTimerDialog", "kb:z", _("Set Sleep Timer."), "Z", False),
 		("openSettings", "kb:f4", _("Open Accessify Play settings."), "F4", False),
+		("showLyricsWindow", "kb:w", _("Show lyrics window for the current track."), "W", False),
+		("toggleAutoReadLyrics", "kb:y", _("Toggle automatic lyric reading as the song plays."), "Y", False),
 	]
 
 	def __init__(self):

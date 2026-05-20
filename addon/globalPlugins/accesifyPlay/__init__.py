@@ -43,6 +43,8 @@ from .dialogs.seek import SeekDialog  # noqa: E402
 from .dialogs.settings import SpotifySettingsPanel  # noqa: E402
 from .dialogs.sleeptimer import SleepTimerDialog  # noqa: E402
 from .dialogs.volume import SetVolumeDialog  # noqa: E402
+from .dialogs.lyrics_window import LyricsDialog  # noqa: E402
+from .lyrics import LyricsAutoReader, fetch_lyrics  # noqa: E402
 
 # Define the configuration specification
 confspec = {
@@ -80,6 +82,12 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		self.devicesDialog = None
 		self.seekDialog = None
 		self.sleepTimerDialog = None
+		self.lyricsDialog = None
+
+		# Lyrics state
+		self._auto_reader = LyricsAutoReader()
+		self._lyrics_cache = {}  # track_id → {"plain", "synced", "track_name", "artist_name"}
+		self._auto_reader_synced_lyrics = None  # current synced LRC text used for resync
 
 		self._queueDialogLoading = False
 		self._addToPlaylistLoading = False
@@ -92,7 +100,8 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		# Polling untuk perubahan lagu
 		self.last_track_id = None
 		self.is_running = True
-		thread_manager.create_poller(self.track_change_poller, interval_seconds=1, name="TrackChangePoller")
+		thread_manager.create_poller(self.track_change_poller, interval_seconds=5, name="TrackChangePoller")
+		thread_manager.create_poller(self._lyric_resync_poller, interval_seconds=10, name="LyricResyncPoller")
 		thread_manager.submit_task(self.keep_alive_worker, daemon=True, name="KeepAliveWorker")
 		thread_manager.submit_task(self.client.initialize, daemon=True, name="ClientInit")
 		
@@ -100,49 +109,6 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			thread_manager.submit_task(updater.check_for_updates, False, daemon=True, name="UpdaterCheck")
 			
 		self._check_resume_sleep_timer()
-		self._migrate_old_gestures()
-
-	def _migrate_old_gestures(self):
-		"""Migrates old NVDA+g shortcuts to NVDA+alt+g automatically handling backward compatibility."""
-		try:
-			from inputCore import manager
-			if getattr(manager, "userGestureMap", None) is None:
-				return
-			
-			changed = False
-			# In NVDA, userGestureMap._map values are sets of string actions (historically)
-			# We must iterate over a copy of the items to allow safe removal using the official API
-			for gesture_id, actions in list(manager.userGestureMap._map.items()):
-				gest_lower = gesture_id.lower()
-				# Look for nvda+g without alt, control, or shift
-				if "nvda" in gest_lower and "g" in gest_lower and "alt" not in gest_lower and "control" not in gest_lower and "shift" not in gest_lower:
-					for action in list(actions):
-						is_target = False
-						if isinstance(action, str) and "commandLayerToggle" in action:
-							is_target = True
-						elif hasattr(action, "scriptName") and "commandLayerToggle" in str(getattr(action, "scriptName", "")):
-							is_target = True
-
-						if is_target:
-							# Use the official API to remove, so NVDA caches are updated properly
-							try:
-								from inputCore import InputGesture
-								# Parse gesture string if needed or use internal helper to unbind
-								manager.userGestureMap.remove(gesture_id, action)
-								changed = True
-							except Exception as remove_err:
-								log.debug(f"Accessify Play: direct API remove failed: {remove_err}, attempting fallback set removal.")
-								try:
-									actions.remove(action)
-									changed = True
-								except KeyError:
-									pass
-			
-			if changed:
-				log.info("Accessify Play: Migrated old NVDA+g gesture to standard bindings/removed duplicates.")
-				manager.userGestureMap.save()
-		except Exception as e:
-			log.debug(f"Accessify Play: Could not migrate old gestures: {e}")
 
 	def getScript(self, gesture):
 		if not self.commandLayer.is_active:
@@ -183,6 +149,9 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		except (ValueError, AttributeError):
 			pass
 
+		# Stop lyric auto-reader before shutting down threads
+		self._auto_reader.stop()
+
 		# Ensure background polling threads gracefully exit to avoid NVDA restart freeze
 		thread_manager.stop_all(timeout=1.0)
 
@@ -196,35 +165,224 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			"seekDialog",
 			"devicesDialog",
 			"sleepTimerDialog",
+			"lyricsDialog",
 		]:
 			dialog = getattr(self, dialog_attr, None)
 			if dialog:
 				dialog.Destroy()
 
 	def track_change_poller(self):
-		"""Thread latar belakang yang mengecek perubahan lagu."""
-		while self.is_running:
-			try:
-				if config.conf["spotify"]["announceTrackChanges"] and self.client.client:
-					playback = self.client._execute_web_api(self.client.client.current_playback)
-					current_track_id = (
-						playback.get("item", {}).get("id")
-						if playback and isinstance(playback, dict)
-						else None
-					)
+		"""Single-pass poll for track changes. Called repeatedly by thread_manager.create_poller().
+		Do NOT add a while loop here — create_poller() already handles the polling cycle.
+		"""
+		try:
+			needs_poll = (
+				config.conf["spotify"]["announceTrackChanges"]
+				or self._auto_reader.is_active
+			)
+			if not (needs_poll and self.client.client):
+				return
 
-					if self.last_track_id != current_track_id:
-						self.last_track_id = current_track_id
-						if current_track_id:
-							track_string = self.client.get_simple_track_string(playback["item"])
-							wx.CallAfter(nvda_ui.message, track_string)
-			except Exception as e:
-				log.error(f"Error in Spotify polling thread: {e}", exc_info=True)
+			playback = self.client._execute_web_api(self.client.client.current_playback)
+			current_track_id = (
+				playback.get("item", {}).get("id")
+				if playback and isinstance(playback, dict)
+				else None
+			)
 
-			for _ in range(5):
-				if not self.is_running:
-					return
-				time.sleep(1)
+			if self.last_track_id != current_track_id:
+				self.last_track_id = current_track_id
+				if current_track_id:
+					if config.conf["spotify"]["announceTrackChanges"]:
+						track_string = self.client.get_simple_track_string(playback["item"])
+						wx.CallAfter(nvda_ui.message, track_string)
+					if self._auto_reader.is_active:
+						thread_manager.submit_task(
+							self._restart_auto_reader,
+							playback["item"],
+							playback.get("progress_ms", 0),
+							daemon=True,
+							name="LyricsNewTrack",
+						)
+		except Exception as e:
+			log.error(f"Error in Spotify polling thread: {e}", exc_info=True)
+
+	# --- LYRICS SUPPORT METHODS ---
+
+	def _lyric_resync_poller(self):
+		"""Re-syncs lyric timers every 10 s to correct for seek/pause drift.
+		Only does work when auto-reader is active.
+		"""
+		if not (self._auto_reader.is_active and self._auto_reader_synced_lyrics):
+			return
+		try:
+			if not self.client.client:
+				return
+			playback = self.client._execute_web_api(self.client.client.current_playback)
+			if not isinstance(playback, dict) or not playback.get("is_playing"):
+				return  # Don't resync while paused — timers are effectively frozen
+			progress_ms = playback.get("progress_ms", 0)
+			self._auto_reader.resync(self._auto_reader_synced_lyrics, progress_ms)
+		except Exception as e:
+			log.debug(f"AccessifyPlay lyric resync error: {e}")
+
+	def _restart_auto_reader(self, item, progress_ms):
+		"""Fetch lyrics for a new track and restart the auto-reader.
+		Called in a background thread when track_change_poller detects a song change.
+		"""
+		track_name = item.get("name", "")
+		artist_name = (item.get("artists") or [{}])[0].get("name", "")
+		album_name = item.get("album", {}).get("name", "")
+		duration_ms = item.get("duration_ms", 0)
+		track_id = item.get("id")
+
+		cached = self._lyrics_cache.get(track_id)
+		if cached:
+			synced = cached.get("synced")
+		else:
+			result = fetch_lyrics(track_name, artist_name, album_name, duration_ms)
+			synced = result.get("syncedLyrics") if result else None
+			self._lyrics_cache[track_id] = {
+				"plain": result.get("plainLyrics") if result else None,
+				"synced": synced,
+				"track_name": track_name,
+				"artist_name": artist_name,
+			}
+
+		if synced:
+			self._auto_reader_synced_lyrics = synced
+			self._auto_reader.start(synced, progress_ms)
+		else:
+			self._auto_reader.stop()
+			self._auto_reader_synced_lyrics = None
+			wx.CallAfter(
+				nvda_ui.message,
+				_("No synced lyrics found for {track}.").format(track=track_name),
+			)
+
+	# --- SCRIPT: LYRICS WINDOW ---
+
+	@scriptHandler.script(
+		description=_("Show lyrics window for the current track."),
+	)
+	def script_showLyricsWindow(self, gesture):
+		if self.lyricsDialog:
+			self.lyricsDialog.Raise()
+			return
+		if not self.client.client:
+			nvda_ui.message(_("Spotify client not ready. Please validate your credentials."))
+			return
+		nvda_ui.message(_("Loading lyrics..."))
+
+		@utils.run_in_thread
+		def _fetch():
+			playback = self.client._execute(self.client.client.current_playback)
+			if not isinstance(playback, dict) or not playback.get("item"):
+				wx.CallAfter(nvda_ui.message, _("Nothing is currently playing."))
+				return
+			item = playback["item"]
+			track_name = item.get("name", "")
+			artist_name = (item.get("artists") or [{}])[0].get("name", "")
+			album_name = item.get("album", {}).get("name", "")
+			duration_ms = item.get("duration_ms", 0)
+			track_id = item.get("id")
+
+			cached = self._lyrics_cache.get(track_id)
+			if cached:
+				plain = cached.get("plain")
+			else:
+				result = fetch_lyrics(track_name, artist_name, album_name, duration_ms)
+				plain = result.get("plainLyrics") if result else None
+				synced = result.get("syncedLyrics") if result else None
+				self._lyrics_cache[track_id] = {
+					"plain": plain,
+					"synced": synced,
+					"track_name": track_name,
+					"artist_name": artist_name,
+				}
+			wx.CallAfter(self._open_lyrics_dialog, track_name, artist_name, plain)
+
+		_fetch()
+
+	def _open_lyrics_dialog(self, track_name, artist_name, plain_lyrics):
+		if self.lyricsDialog:
+			self.lyricsDialog.Raise()
+			return
+		dialog = LyricsDialog(gui.mainFrame, track_name, artist_name, plain_lyrics)
+
+		def on_close(evt):
+			self._destroy_dialog("lyricsDialog", evt)
+
+		dialog.Bind(wx.EVT_CLOSE, on_close)
+		self.lyricsDialog = dialog
+		dialog.Show()
+		nvda_ui.message(_("Lyrics window for {track} opened.").format(track=track_name))
+
+	# --- SCRIPT: AUTO-READ LYRICS ---
+
+	@scriptHandler.script(
+		description=_("Toggle automatic lyric reading as the song plays."),
+	)
+	def script_toggleAutoReadLyrics(self, gesture):
+		if self._auto_reader.is_active:
+			self._auto_reader.stop()
+			self._auto_reader_synced_lyrics = None
+			nvda_ui.message(_("Auto lyric reading stopped."))
+			return
+
+		if not self.client.client:
+			nvda_ui.message(_("Spotify client not ready. Please validate your credentials."))
+			return
+		nvda_ui.message(_("Loading synced lyrics..."))
+
+		@utils.run_in_thread
+		def _fetch():
+			playback = self.client._execute(self.client.client.current_playback)
+			if not isinstance(playback, dict) or not playback.get("item"):
+				wx.CallAfter(nvda_ui.message, _("Nothing is currently playing."))
+				return
+			item = playback["item"]
+			track_name = item.get("name", "")
+			artist_name = (item.get("artists") or [{}])[0].get("name", "")
+			album_name = item.get("album", {}).get("name", "")
+			duration_ms = item.get("duration_ms", 0)
+			track_id = item.get("id")
+			progress_ms = playback.get("progress_ms", 0)
+
+			cached = self._lyrics_cache.get(track_id)
+			if cached:
+				synced = cached.get("synced")
+			else:
+				result = fetch_lyrics(track_name, artist_name, album_name, duration_ms)
+				synced = result.get("syncedLyrics") if result else None
+				self._lyrics_cache[track_id] = {
+					"plain": result.get("plainLyrics") if result else None,
+					"synced": synced,
+					"track_name": track_name,
+					"artist_name": artist_name,
+				}
+
+			if not synced:
+				wx.CallAfter(
+					nvda_ui.message,
+					_("No synced lyrics found for {track}.").format(track=track_name),
+				)
+				return
+
+			self._auto_reader_synced_lyrics = synced
+			started = self._auto_reader.start(synced, progress_ms)
+			if started:
+				wx.CallAfter(
+					nvda_ui.message,
+					_("Auto lyric reading on for {track}.").format(track=track_name),
+				)
+			else:
+				wx.CallAfter(
+					nvda_ui.message,
+					_("No synced lyrics found for {track}.").format(track=track_name),
+				)
+
+		_fetch()
 
 	def keep_alive_worker(self):
 		"""Thread untuk mengirim ping ke Spotify agar koneksi tetap hidup."""
