@@ -1,5 +1,46 @@
 # Changelog
 
+## Version 1.7.0
+
+This release introduces **Lyrics support** — a brand new accessibility feature that lets users read or listen to song lyrics in real time while using Spotify. Several important bug fixes are also included, resolving a critical gesture deletion bug, threading issues, and an accessibility problem with the update dialog.
+
+### New Feature: Lyrics (via lrclib.net)
+
+Two new commands have been added to the Command Layer (`NVDA+Alt+g`):
+
+- **`W` — Lyrics Window**: Opens a popup dialog showing the full, plain-text lyrics for the currently playing song. Navigate through the lyrics line by line using arrow keys — NVDA will read each line as you move through them.
+- **`Y` — Auto Lyric Reading**: Toggles automatic lyric reading. When enabled, NVDA will speak each lyric line aloud in real time, precisely synchronized with the music as it plays.
+  - Announces *"Auto lyric reading on for [song name]."* when activated, and *"Auto lyric reading stopped."* when toggled off.
+  - If no synced lyrics are found for the current track, NVDA announces *"No synced lyrics found for [song name]."*
+  - Automatically re-syncs every 10 seconds to compensate for any drift caused by seeking or pausing.
+  - When the track changes, the auto-reader stops the old timers and seamlessly loads lyrics for the new song.
+  - Lyrics are fetched via [lrclib.net](https://lrclib.net) (no account or API key required). If an exact match by artist, title, album and duration is not found, a fuzzy keyword search is attempted automatically as a fallback.
+  - Fetched lyrics are cached per track during the session to avoid redundant network requests.
+
+### Bug Fixes
+
+- **Critical Gesture Deletion Bug Fixed**: Resolved a critical bug where a user's custom Input Gesture binding for the Command Layer would be **permanently deleted** from NVDA's Input Gestures map after the first NVDA restart following installation. The internal gesture migration routine introduced in v1.6.1 was incorrectly identifying user-created bindings as legacy leftovers and removing them. This routine has been fully removed. The default `NVDA+Alt+g` shortcut remains unaffected and continues to work as normal.
+- **Orphaned Update Threads Fixed**: The update checker (`check_for_updates`) and the update downloader (`download_and_install`) were still using raw `threading.Thread` calls, bypassing the centralized `ThreadManager`. These threads are now properly submitted via `ThreadManager`, ensuring they stop cleanly when NVDA is reloaded or shut down.
+- **Update Dialog Accessibility Fixed**: The "Update Available" dialog was implemented as a `wx.Frame` instead of a `wx.Dialog`. This meant it had no modal behavior, did not report the correct role to screen readers, and could not be dismissed with the `Escape` key. It has been rewritten as a proper `wx.Dialog` with full keyboard support and correct NVDA focus handling via `prePopup()`/`postPopup()`.
+- **Track Change Poller Double-Loop Fixed**: The `track_change_poller` method contained its own `while` loop and `time.sleep()` calls, which ran *on top of* the polling loop already managed by `ThreadManager.create_poller()`. This caused the effective polling interval to be ~25 seconds instead of the intended 5. The internal loop has been removed; `create_poller` now solely manages the interval.
+
+## Version 1.6.1
+
+This update focuses on ensuring smooth, long-term compatibility with future NVDA releases, as well as fixing a critical bug related to the Command Layer shortcut introduced in the previous version.
+
+### ⚠️ IMPORTANT: Command Layer Shortcut Changed
+**The default Command Layer shortcut has been updated from `NVDA+g` to `NVDA+Alt+gThe default Command Layer shortcut has been updated from `NVDA+g` to `NVDA+Alt+g`.**
+- **Why?** The upcoming NVDA 2026.1 release introduces a native core feature tied to the `NVDA+g` shortcut. Changing our default layer activation key prevents severe collisions with NVDA's built-in functionality.
+- **Seamless Migration**: For existing users returning from previous versions, your old `NVDA+g` shortcut for the command layer will be automatically migrated to the new `NVDA+Alt+g` standard upon updating this add-on to version 1.6.1. Any other manual user customizations to this particular shortcut will gracefully carry over without being overwritten.
+
+### 🛠️ Fixes & Improvements
+- **Command Layer Disappearance Fix**: Addressed a critical bug where the `NVDA+Alt+g` shortcut would stop working and permanently disappear from the NVDA Input Gestures map after being toggled just once. The internal gesture handling mechanism has been completely redesigned to intercept keystrokes dynamically without constantly requesting NVDA to flush and rewrite its gesture variables.
+- **Enhanced Thread Management**: Replaced raw Python threading calls with a centralized `ThreadManager`. This prevents background tasks (like Spotify connection keep-alives and UI pop-ups) from becoming orphaned "zombies" or triggering system exceptions when NVDA is reloaded or gracefully shut down.
+- **Dialog Codebase Consolidation**: Completely refactored generic dialog handling into a single `ui/base_dialog.py` module to eliminate redundant classes and mitigate importing errors. Module shadowing bug when importing NVDA's built-in `ui.message` and `config` objects has also been fixed.
+- **Installer Issue Resolved**: Fixed an installation error affecting the addon launcher for a subset of users.
+- **Improved Offline Resilience & Log Optimization**: Suppressed severe traceback log spamming when the internet connection drops or a network timeout occurs. Internal Spotify polling errors (`ConnectionError`, `MaxRetryError`) during device wakeups and authentications are now gracefully caught as low-level debug events, keeping the NVDA logger clean during offline states.
+- **Management Dialog Refresh Fix**: Resolved an `AttributeError` crash that occurred when attempting to refresh the playlist view via a keyboard shortcut. The refresh logic has been successfully migrated from a deprecated treeview structure to the new dropdown-based UI layout.
+
 ## Version 1.6.0
 
 This release introduces major changes to the gesture system, shifting to a Command Layer for a smoother and conflict-free experience. Ideally, this should make using the addon significantly faster and more intuitive.

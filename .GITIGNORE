@@ -3,22 +3,29 @@
 
 # Ignore text output files
 *.txt
+*.yaml
 !requirements.txt
 
 # Ignore Python cache
 __pycache__/
 *.pyc
 grabber.py
+refactor_dialogs.py
+.pytest_cache/
 
 # Ignore build folders
 build/
+site_scons/
 dist/
 archives/
 DevGuide.wiki/
+tests/
 
 pybabel.py
 .gemini/
 .noscan
+.agent/
+.ruff_cache/
 
 addon/doc/*.css
 

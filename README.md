@@ -20,9 +20,14 @@ Search, discover, manage playlists, and control your music with unparalleled fre
 *   An active **Spotify Premium** subscription.
 *   NVDA version **2024.4** or later.
 
-## A Note on Lyrics
+## 🎤 Lyrics Support
 
-This addon does not, and will not, include a feature to display song lyrics. Most methods for obtaining lyrics, such as scraping websites, are done without a proper license from the copyright holders. This is an illegal practice that violates the terms of service of lyrics providers and may infringe on copyright law, potentially leading to legal consequences under regulations like the DMCA (Digital Millennium Copyright Act) in the United States and similar laws worldwide. To ensure this addon remains legal, distributable, and respectful of copyright, this feature is intentionally omitted.
+Accessify Play now includes **lyrics support** powered by [lrclib.net](https://lrclib.net) — a free, open, and community-driven lyrics database. All lyrics served by lrclib.net are released under the **Creative Commons Zero (CC0)** license, meaning they are in the public domain and can be used freely without any copyright concern. This is the key distinction that makes this feature legal, distributable, and fully compliant — unlike scraping from unlicensed sources.
+
+Two lyrics modes are available inside the **Command Layer** (`NVDA+Alt+g`):
+
+- **`W` — Lyrics Window**: Opens a popup showing the full, plain-text lyrics for the current song. Navigate line by line with arrow keys — NVDA reads each line as you go.
+- **`Y` — Auto Lyric Reading**: NVDA automatically speaks each lyric line in real time, perfectly synchronized with the music as it plays. Press `Y` again to stop.
 
 ## License
 
@@ -41,6 +46,8 @@ Accessify Play is packed with features, organized for your convenience:
 *   **Automatic Announcements:** Optionally, have NVDA announce the new song automatically every time the track changes.
 *   **Share with Ease:** Copy the Spotify URL of the current track to your clipboard.
 *   **Play from Link:** Open a dialog to play any track directly from a Spotify URL.
+*   **Lyrics Window (`W`):** Open a popup showing the full plain-text lyrics for the current track, navigable line by line with arrow keys.
+*   **Auto Lyric Reading (`Y`):** Toggle NVDA automatically speaking each lyric line in real time, synchronized to the music.
 
 ### Library Management & Interaction
 
@@ -81,6 +88,37 @@ Accessify Play is packed with features, organized for your convenience:
 | Save Track to Library        | `NVDA+Alt+Shift+L`                   |
 | Add Track to Playlist        | `NVDA+Alt+Shift+A`                   |
 | Open Management Dialog       | `NVDA+Alt+Shift+M`                   |
+
+### Command Layer (`NVDA+Alt+g`) Quick Reference
+
+> Press `NVDA+Alt+g` first to enter the command layer, then press the single key listed below.
+
+| Key | Action |
+| :-- | :----- |
+| `P` | Play / Pause |
+| `N` | Next Track |
+| `B` | Previous Track |
+| `S` | Search |
+| `V` | Set Volume |
+| `I` | Announce current track |
+| `T` | Announce playback time |
+| `L` | Like / Unlike track |
+| `H` | Toggle Shuffle |
+| `R` | Cycle Repeat |
+| `Q` | Queue list |
+| `A` | Add to playlist |
+| `M` | Management dialog |
+| `D` | Switch device |
+| `U` | Play from link |
+| `J` | Seek dialog |
+| `X` | Copy Universal (Song.link) URL |
+| `Z` | Sleep timer |
+| `W` | **Lyrics Window** |
+| `Y` | **Toggle Auto Lyric Reading** |
+| `F1` | Show command help |
+| `F2` | Open Command Layer Editor |
+| `F4` | Open settings |
+| `Escape` | Close command layer |
 
 ---
 
