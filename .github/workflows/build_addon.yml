@@ -83,7 +83,8 @@ jobs:
       - name: Read addon version
         id: addon_meta
         run: |
-          VERSION=$(python -c "import buildVars; print(buildVars.addon_info['addon_version'])")
+          # Pakai grep supaya gak perlu import scons/buildVars
+          VERSION=$(grep -oP 'addon_version="\K[^"]+' buildVars.py)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "tag=v$VERSION"    >> $GITHUB_OUTPUT
 
