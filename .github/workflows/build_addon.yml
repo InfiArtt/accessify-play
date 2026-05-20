@@ -49,14 +49,6 @@ jobs:
       - name: Build addon and generate .pot
         run: scons && scons pot
 
-      - name: Read addon version from buildVars
-        id: addon_meta
-        run: |
-          VERSION=$(python -c "import buildVars; print(buildVars.addon_info['addon_version'])")
-          NAME=$(python -c "import buildVars; print(buildVars.addon_info['addon_name'])")
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "name=$NAME"       >> $GITHUB_OUTPUT
-
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -86,6 +78,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: packaged_addon
+          path: .   # <-- extract langsung ke root, bukan subfolder
 
       - name: Read addon version
         id: addon_meta
@@ -99,33 +92,33 @@ jobs:
         run: |
           VERSION="${{ steps.addon_meta.outputs.version }}"
 
-          # Pull the section for this version out of CHANGELOG.md.
-          # Matches "## Version X.Y.Z" and prints everything until the next "## " heading.
+          # Ambil section versi ini dari CHANGELOG.md saja (bukan semua versi)
           NOTES=$(awk -v ver="## Version $VERSION" '
             /^## /   { if (found) exit; found=0 }
             $0 ~ ver { found=1; next }
             found    { print }
           ' CHANGELOG.md)
 
-          # Strip leading/trailing blank lines
+          # Hapus baris kosong di awal dan akhir
           NOTES=$(echo "$NOTES" | sed -e '/./,$!d' -e 's/[[:space:]]*$//')
 
-          # Compute SHA256 checksum of the addon file
+          # Hitung SHA256 checksum file addon
           CHECKSUM=$(sha256sum *.nvda-addon | awk '{print $1, $2}')
 
-          # Combine notes + checksum footer
+          # Gabungkan notes + footer checksum
           BODY="${NOTES}"$'\n\n---\n**SHA256 Checksum:**\n```\n'"${CHECKSUM}"$'\n```'
 
-          # Write multiline output safely
+          # Tulis multiline output dengan aman
           {
             echo "body<<EOF"
             echo "$BODY"
             echo "EOF"
           } >> $GITHUB_OUTPUT
 
-      - name: Create or update GitHub Release
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           tag_name: ${{ steps.addon_meta.outputs.tag }}
           name: "AccessifyPlay ${{ steps.addon_meta.outputs.version }}"
           body: ${{ steps.changelog.outputs.body }}
@@ -133,7 +126,5 @@ jobs:
             *.nvda-addon
             *.pot
           fail_on_unmatched_files: true
-          # Treat versions containing a hyphen (e.g. 1.8.0-beta) as pre-releases
+          # Versi yang ada tanda '-' (misal 1.8.0-beta) otomatis jadi pre-release
           prerelease: ${{ contains(steps.addon_meta.outputs.version, '-') }}
-          # Create the tag automatically if it doesn't already exist
-          make_latest: true
