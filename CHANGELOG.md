@@ -1,5 +1,13 @@
 # Changelog
 
+## Version 1.7.1
+
+Hotfix release addressing a usability issue with the command layer configuration introduced in v1.7.0.
+
+### 🛠️ Bug Fix
+
+- **Command Layer Auto-Migration Fixed**: New commands added in future updates (such as `W` for Lyrics Window and `Y` for Auto Lyric Reading introduced in v1.7.0) are now automatically available to existing users **without needing to reset to defaults**. Previously, users who already had a `layer_config.json` file would not see new commands at all — the layer would silently skip them, making features like the lyrics window unreachable via the command layer. On startup, AccessifyPlay now checks for any commands missing from the saved config and injects them with their default gestures. All existing user customizations (custom keys, keep-open settings) remain completely untouched.
+
 ## Version 1.7.0
 
 This release introduces **Lyrics support** — a brand new accessibility feature that lets users read or listen to song lyrics in real time while using Spotify. Several important bug fixes are also included, resolving a critical gesture deletion bug, threading issues, and an accessibility problem with the update dialog.

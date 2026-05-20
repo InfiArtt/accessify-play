@@ -1,104 +1,139 @@
-name: build addon
+name: Build & Release Addon
 
 on:
+  # Auto-release when dev is merged into main
   push:
-    tags: ["*"]
-    # To build on main/master branch, uncomment the following line:
-    # branches: [ main , master ]
+    branches: [main, master]
 
+  # Also build (but don't release) on PRs targeting main
   pull_request:
-    branches: [ main, master ]
+    branches: [main, master]
 
+  # Allow manual trigger from the Actions tab
   workflow_dispatch:
 
 jobs:
+  # -----------------------------------------------------------------------
+  # JOB 1: Build the .nvda-addon and .pot files
+  # -----------------------------------------------------------------------
   build:
-
+    name: Build addon
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v6
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - run: echo -e "pre-commit\nscons\nmarkdown">requirements.txt
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
 
-    - name: Set up Python
-      uses: actions/setup-python@v6
-      with:
-        python-version: 3.11
-        cache: 'pip'
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip wheel
+          pip install -r requirements.txt
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip wheel
-        pip install -r requirements.txt
-        sudo apt-get update  -y
-        sudo apt-get install -y gettext
+      - name: Install system gettext tools
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y gettext
 
-    - name: Code checks
-      run: export SKIP=no-commit-to-branch; pre-commit run --all
+      - name: Lint (pre-commit)
+        run: |
+          pip install pre-commit
+          export SKIP=no-commit-to-branch
+          pre-commit run --all-files
 
-    - name: building addon
-      run: scons && scons pot
+      - name: Build addon and generate .pot
+        run: scons && scons pot
 
-    - uses: actions/upload-artifact@v5
-      with:
-        name: packaged_addon
-        path: |
-          ./*.nvda-addon
-          ./*.pot
+      - name: Read addon version from buildVars
+        id: addon_meta
+        run: |
+          VERSION=$(python -c "import buildVars; print(buildVars.addon_info['addon_version'])")
+          NAME=$(python -c "import buildVars; print(buildVars.addon_info['addon_name'])")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "name=$NAME"       >> $GITHUB_OUTPUT
 
-  upload_release:
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: packaged_addon
+          retention-days: 7
+          path: |
+            ./*.nvda-addon
+            ./*.pot
+
+  # -----------------------------------------------------------------------
+  # JOB 2: Create a GitHub Release (only on push to main/master)
+  # -----------------------------------------------------------------------
+  release:
+    name: Create GitHub Release
     runs-on: ubuntu-latest
-    if: ${{ startsWith(github.ref, 'refs/tags/') }}
-    needs: ["build"]
+    needs: build
+    # Only run when a real push lands on main/master (not on PRs)
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
     permissions:
       contents: write
+
     steps:
-    - uses: actions/checkout@v6
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Download release files
-      uses: actions/download-artifact@v6
-      with:
-        name: packaged_addon
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: packaged_addon
 
-    # LANGKAH INI MENGGANTIKAN 'Extract release notes' DAN 'Calculate sha256...' SEBELUMNYA
-    - name: Extract changelog and prepare release body
-      id: release_body_prep
-      run: |
-        # 1. Dapatkan nama tag (misal: v1.5.0) dan bersihkan awalan 'v' jika ada.
-        TAG_NAME=${{ github.ref_name }}
-        CLEAN_TAG=$(echo "$TAG_NAME" | sed 's/^v//')
-        
-        # 2. Ekstrak Catatan Rilis dari changelog.md menggunakan AWK.
-        # Mencari "## Version [Nomor Versi]" dan mencetak isinya hingga heading "## " berikutnya.
-        RELEASE_NOTES=$(awk -v ver="## Version $CLEAN_TAG" '
-          /^## / { p=0 } 
-          $0 ~ ver { p=1; next } 
-          p 
-        ' changelog.md)
-        
-        # Hapus baris kosong di awal dan akhir
-        RELEASE_NOTES=$(echo "$RELEASE_NOTES" | sed '/^\s*$/d')
+      - name: Read addon version
+        id: addon_meta
+        run: |
+          VERSION=$(python -c "import buildVars; print(buildVars.addon_info['addon_version'])")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION"    >> $GITHUB_OUTPUT
 
-        # 3. Siapkan Checksum SHA256
-        SHA256_FOOTER=$'\n\n---\n**SHA256 Checksum:**\n```\n'
-        SHA256_FOOTER+=$(sha256sum *.nvda-addon)
-        SHA256_FOOTER+=$'\n```'
-        
-        # 4. Gabungkan Catatan Rilis dan Checksum, lalu kirim sebagai output rilis
-        FINAL_BODY="${RELEASE_NOTES}${SHA256_FOOTER}"
-        
-        # Gunakan delimiter untuk mengirim multiline output
-        echo "body<<EOF" >> $GITHUB_OUTPUT
-        echo "$FINAL_BODY" >> $GITHUB_OUTPUT
-        echo "EOF" >> $GITHUB_OUTPUT
+      - name: Extract changelog for this version
+        id: changelog
+        run: |
+          VERSION="${{ steps.addon_meta.outputs.version }}"
 
-    - name: Release
-      uses: softprops/action-gh-release@v2
-      with:
-        body: ${{ steps.release_body_prep.outputs.body }}
-        files: |
-          *.nvda-addon
-          *.pot
-        fail_on_unmatched_files: true
-        prerelease: ${{ contains(github.ref, '-') }}
+          # Pull the section for this version out of CHANGELOG.md.
+          # Matches "## Version X.Y.Z" and prints everything until the next "## " heading.
+          NOTES=$(awk -v ver="## Version $VERSION" '
+            /^## /   { if (found) exit; found=0 }
+            $0 ~ ver { found=1; next }
+            found    { print }
+          ' CHANGELOG.md)
+
+          # Strip leading/trailing blank lines
+          NOTES=$(echo "$NOTES" | sed -e '/./,$!d' -e 's/[[:space:]]*$//')
+
+          # Compute SHA256 checksum of the addon file
+          CHECKSUM=$(sha256sum *.nvda-addon | awk '{print $1, $2}')
+
+          # Combine notes + checksum footer
+          BODY="${NOTES}"$'\n\n---\n**SHA256 Checksum:**\n```\n'"${CHECKSUM}"$'\n```'
+
+          # Write multiline output safely
+          {
+            echo "body<<EOF"
+            echo "$BODY"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
+      - name: Create or update GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.addon_meta.outputs.tag }}
+          name: "AccessifyPlay ${{ steps.addon_meta.outputs.version }}"
+          body: ${{ steps.changelog.outputs.body }}
+          files: |
+            *.nvda-addon
+            *.pot
+          fail_on_unmatched_files: true
+          # Treat versions containing a hyphen (e.g. 1.8.0-beta) as pre-releases
+          prerelease: ${{ contains(steps.addon_meta.outputs.version, '-') }}
+          # Create the tag automatically if it doesn't already exist
+          make_latest: true
