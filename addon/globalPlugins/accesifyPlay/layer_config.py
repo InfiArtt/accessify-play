@@ -53,16 +53,37 @@ class LayerConfigManager:
 		self.load()
 
 	def load(self):
-		"""Loads configuration from file or sets defaults."""
+		"""Loads configuration from file, then injects any missing defaults."""
 		try:
 			if os.path.exists(self.config_file):
 				with open(self.config_file) as f:
 					self.config = json.load(f)
+				# Merge new commands that didn't exist in the saved file
+				self._inject_missing_defaults()
 			else:
 				self.reset_to_defaults()
 		except Exception as e:
 			log.error(f"Error loading layer config: {e}", exc_info=True)
 			self.reset_to_defaults()
+
+	def _inject_missing_defaults(self):
+		"""Adds any new commands from _default_specs that are missing from the
+		loaded config. Existing user customizations are left completely untouched.
+		Saves automatically if anything was injected.
+		"""
+		injected = False
+		for script, gesture, desc, label, keep_open in self._default_specs:
+			if script not in self.config:
+				self.config[script] = {
+					"gestures": [gesture],
+					"description": desc,
+					"label": label,
+					"keep_open": keep_open,
+				}
+				injected = True
+				log.info(f"AccessifyPlay: injected new default command '{script}' into layer config.")
+		if injected:
+			self.save()
 
 	def save(self):
 		"""Saves current configuration to file."""

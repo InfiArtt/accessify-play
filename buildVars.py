@@ -23,20 +23,11 @@ addon_info = AddonInfo(
 	# Translators: Long description to be shown for this add-on on add-on information from add-on store
 	addon_description=_("""Accessify Play provides comprehensive NVDA control for Spotify playback on any Connect-enabled device. A Spotify Premium subscription is required for full functionality."""),
 	# version
-	addon_version="1.7.0",
+	addon_version="1.7.1",
 	# Brief changelog for this version
 	# Translators: what's new content for the add-on version to be shown in the add-on store
 	addon_changelog=_("""
-- NEW: Lyrics support via lrclib.net — two modes available in the command layer:
-  - Press W to open a Lyrics Window showing the full lyrics for the current track, navigable line-by-line with arrow keys.
-  - Press Y to toggle Auto Lyric Reading: NVDA will automatically speak each lyric line in real time as the song plays, perfectly synchronized with the music.
-  - Auto lyric reading intelligently re-syncs every 10 seconds to correct for seeks or pauses.
-  - Automatically follows track changes: when you skip a song, lyrics reload seamlessly.
-  - Falls back to fuzzy search if an exact lyrics match is not found.
-- FIX: Resolved a critical bug where a user's custom NVDA+g Input Gesture binding for the command layer would be permanently deleted after the first NVDA restart. The internal gesture migration routine has been removed as it was incorrectly treating user-added bindings as legacy leftovers.
-- FIX: The update checker and download threads now use the centralized ThreadManager, preventing orphaned background threads on NVDA reload.
-- FIX: The Update Available dialog has been changed from a Frame to a proper Dialog, giving it the correct screen reader role, modal behavior, and Escape-to-close support.
-- FIX: The track change poller no longer runs a redundant internal sleep loop on top of the ThreadManager's own polling cycle.
+- FIX: New command layer commands (e.g. W for Lyrics Window, Y for Auto Lyric Reading) are now automatically available to existing users without needing to reset to defaults. On startup, any commands missing from the saved layer_config.json are silently injected with their default gesture. User customizations are left completely untouched.
 	"""),
 	# Author(s)
 	addon_author="Rafli I .<rafli08523717409@gmail.com>, Rexya <rexya2017@gmail.com>",
