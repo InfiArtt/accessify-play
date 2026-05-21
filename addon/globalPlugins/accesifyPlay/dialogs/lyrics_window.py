@@ -172,8 +172,11 @@ class LyricsDialog(AccessifyDialog):
 		"""Enter: seek Spotify to the timestamp of the focused line."""
 		if evt.GetKeyCode() in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER):
 			pos = self.lyrics_ctrl.GetInsertionPoint()
-			xy = self.lyrics_ctrl.PositionToXY(pos)
-			row = xy[1]
+			# Count newlines before cursor to get the 0-indexed line number.
+			# More reliable than PositionToXY which returns (result, col, row)
+			# in wxPython Phoenix — xy[1] is the column, not the row!
+			text_before = self.lyrics_ctrl.GetValue()[:pos]
+			row = text_before.count("\n")
 			timestamp_ms = self._line_timestamps.get(row)
 			if timestamp_ms is not None and self._seek_callback:
 				self._seek_callback(timestamp_ms)
