@@ -1,5 +1,13 @@
 # Changelog
 
+## Version 1.7.2
+
+Hotfix for auto lyric reading stopping behaviour during Spotify pause.
+
+### 🛠️ Bug Fix
+
+- **Lyric Reading Pause Fix**: Auto lyric reading (`Y`) now correctly stops speaking when Spotify playback is paused — from any source (the addon, the Spotify app, a phone, etc.). Previously, all pre-scheduled lyric timers would continue firing and NVDA would keep reading lyrics into silence. Timers are now cancelled within 5 seconds of a pause being detected, and automatically re-synced from the correct position when playback resumes.
+
 ## Version 1.7.1
 
 Hotfix release addressing a usability issue with the command layer configuration introduced in v1.7.0.

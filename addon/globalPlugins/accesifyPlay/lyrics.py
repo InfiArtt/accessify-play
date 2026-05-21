@@ -154,6 +154,13 @@ class LyricsAutoReader:
 		self._active = False
 		self._cancel_timers()
 
+	def pause_timers(self):
+		"""Cancel all pending timers WITHOUT marking the reader as inactive.
+		Call resync() when playback resumes to re-schedule from the new position.
+		This is used when Spotify is paused so timers don't keep firing into silence.
+		"""
+		self._cancel_timers()
+
 	def resync(self, synced_lyrics, progress_ms):
 		"""
 		Re-schedule timers from a new playback position.

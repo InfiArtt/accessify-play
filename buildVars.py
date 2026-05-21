@@ -23,11 +23,11 @@ addon_info = AddonInfo(
 	# Translators: Long description to be shown for this add-on on add-on information from add-on store
 	addon_description=_("""Accessify Play provides comprehensive NVDA control for Spotify playback on any Connect-enabled device. A Spotify Premium subscription is required for full functionality."""),
 	# version
-	addon_version="1.7.1",
+	addon_version="1.7.2",
 	# Brief changelog for this version
 	# Translators: what's new content for the add-on version to be shown in the add-on store
 	addon_changelog=_("""
-- FIX: New command layer commands (e.g. W for Lyrics Window, Y for Auto Lyric Reading) are now automatically available to existing users without needing to reset to defaults. On startup, any commands missing from the saved layer_config.json are silently injected with their default gesture. User customizations are left completely untouched.
+- FIX: Auto lyric reading now correctly pauses when Spotify playback is paused. Previously, scheduled lyric timers would continue firing and NVDA would keep speaking lyrics even while the song was stopped. Timers are now cancelled on pause and re-synced from the correct position on resume.
 	"""),
 	# Author(s)
 	addon_author="Rafli I .<rafli08523717409@gmail.com>, Rexya <rexya2017@gmail.com>",

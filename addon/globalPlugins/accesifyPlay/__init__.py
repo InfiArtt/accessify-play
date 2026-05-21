@@ -88,6 +88,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		self._auto_reader = LyricsAutoReader()
 		self._lyrics_cache = {}  # track_id → {"plain", "synced", "track_name", "artist_name"}
 		self._auto_reader_synced_lyrics = None  # current synced LRC text used for resync
+		self._last_is_playing = None  # tracks play/pause state for lyric timer management
 
 		self._queueDialogLoading = False
 		self._addToPlaylistLoading = False
@@ -184,11 +185,30 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 				return
 
 			playback = self.client._execute_web_api(self.client.client.current_playback)
+			is_playing = (
+				playback.get("is_playing", False)
+				if playback and isinstance(playback, dict)
+				else False
+			)
 			current_track_id = (
 				playback.get("item", {}).get("id")
 				if playback and isinstance(playback, dict)
 				else None
 			)
+
+			# Detect play/pause transitions and manage lyric timers accordingly
+			if self._auto_reader.is_active:
+				if self._last_is_playing and not is_playing:
+					# Just paused — cancel pending timers so lyrics stop speaking
+					self._auto_reader.pause_timers()
+				elif self._last_is_playing is not None and not self._last_is_playing and is_playing:
+					# Just resumed — resync timers from current playback position
+					if self._auto_reader_synced_lyrics:
+						self._auto_reader.resync(
+							self._auto_reader_synced_lyrics,
+							playback.get("progress_ms", 0),
+						)
+			self._last_is_playing = is_playing
 
 			if self.last_track_id != current_track_id:
 				self.last_track_id = current_track_id
