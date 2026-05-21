@@ -241,13 +241,15 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	# --- LYRICS SUPPORT METHODS ---
 
 	def _seek_to_position(self, position_ms):
-		"""Seek Spotify playback to a specific position (milliseconds).
+		"""Seek Spotify playback to an absolute position (milliseconds).
 		Called by LyricsDialog when the user presses Enter on a lyric line.
+		Uses _execute(client.seek_track) directly to perform an ABSOLUTE seek,
+		bypassing the seek_track() wrapper which does a relative offset seek.
 		"""
 		@utils.run_in_thread
 		def _do_seek():
 			try:
-				self.client.seek_track(position_ms)
+				self.client._execute(self.client.client.seek_track, position_ms=position_ms)
 			except Exception as e:
 				log.error(f"AccessifyPlay lyrics seek error: {e}", exc_info=True)
 
