@@ -1,5 +1,17 @@
 # Changelog
 
+## Version 1.8.0
+
+This release significantly upgrades the lyrics experience introduced in v1.7.0. The lyrics window is now fully interactive — synced lyrics are displayed line by line, and you can navigate, seek, and copy directly from the window.
+
+### ✨ New Features
+
+- **Enter-to-Seek**: The lyrics window (`W`) now displays synced lyrics line by line (timestamps are hidden). Press `Enter` on any line to seek Spotify directly to that position in the song. Works from any source of playback (PC, phone, smart speaker, etc.).
+- **Auto-Scroll**: When auto lyric reading (`Y`) is active and the lyrics window is open at the same time, the window cursor automatically follows along and scrolls to the line currently being read by NVDA. No manual scrolling needed.
+- **Jump to Current Button**: A new *Jump to Current* button in the lyrics window fetches the current Spotify playback position and instantly moves the cursor to the matching line — useful when you've been browsing the lyrics and want to return to where the song is now.
+- **Copy Lyrics Button**: Copies all lyrics to the clipboard as plain readable text (no timestamps).
+- **Copy with Timestamps Button**: Copies lyrics in LRC format (`[mm:ss.cs] line text`) to the clipboard. Only shown when synced lyrics are available. Useful for sharing or archiving perfectly timed lyrics.
+
 ## Version 1.7.2
 
 Bugfix release addressing several issues with the lyrics feature introduced in v1.7.0.
@@ -7,7 +19,7 @@ Bugfix release addressing several issues with the lyrics feature introduced in v
 ### 🛠️ Bug Fixes
 
 - **Lyric Reading Pause Fix**: Auto lyric reading (`Y`) now correctly stops speaking when Spotify playback is paused — from any source (the addon, the Spotify app, a phone, etc.). Timers are cancelled within 5 seconds of a pause and automatically re-synced from the correct position when playback resumes.
-- **Double Timer Fix**: Pressing `Y` rapidly twice no longer causes NVDA to read every lyric line twice. A fetch guard now blocks a second fetch attempt while the first is still in progress. NVDA will instead announce *"Lyrics are already loading, please wait."*
+- **Double Timer Fix**: Pressing `Y` rapidly twice no longer causes NVDA to read every lyric line twice. A fetch guard now blocks a second fetch attempt while the first is still in progress.
 - **Lyrics Fetch Failure Feedback**: When lyrics cannot be loaded due to a network timeout or connection error, NVDA now announces *"Could not load lyrics. Please check your internet connection."* instead of silently failing.
 - **Lyrics Window Auto-Update**: The lyrics window (`W`) now automatically refreshes its content when the song changes, instead of continuing to display the previous track's lyrics.
 
