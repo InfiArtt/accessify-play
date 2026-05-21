@@ -2,11 +2,14 @@
 
 ## Version 1.7.2
 
-Hotfix for auto lyric reading stopping behaviour during Spotify pause.
+Bugfix release addressing several issues with the lyrics feature introduced in v1.7.0.
 
-### 🛠️ Bug Fix
+### 🛠️ Bug Fixes
 
-- **Lyric Reading Pause Fix**: Auto lyric reading (`Y`) now correctly stops speaking when Spotify playback is paused — from any source (the addon, the Spotify app, a phone, etc.). Previously, all pre-scheduled lyric timers would continue firing and NVDA would keep reading lyrics into silence. Timers are now cancelled within 5 seconds of a pause being detected, and automatically re-synced from the correct position when playback resumes.
+- **Lyric Reading Pause Fix**: Auto lyric reading (`Y`) now correctly stops speaking when Spotify playback is paused — from any source (the addon, the Spotify app, a phone, etc.). Timers are cancelled within 5 seconds of a pause and automatically re-synced from the correct position when playback resumes.
+- **Double Timer Fix**: Pressing `Y` rapidly twice no longer causes NVDA to read every lyric line twice. A fetch guard now blocks a second fetch attempt while the first is still in progress. NVDA will instead announce *"Lyrics are already loading, please wait."*
+- **Lyrics Fetch Failure Feedback**: When lyrics cannot be loaded due to a network timeout or connection error, NVDA now announces *"Could not load lyrics. Please check your internet connection."* instead of silently failing.
+- **Lyrics Window Auto-Update**: The lyrics window (`W`) now automatically refreshes its content when the song changes, instead of continuing to display the previous track's lyrics.
 
 ## Version 1.7.1
 

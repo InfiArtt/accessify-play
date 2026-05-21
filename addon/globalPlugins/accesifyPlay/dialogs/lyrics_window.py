@@ -43,3 +43,18 @@ class LyricsDialog(AccessifyDialog):
 
 		self.SetSizerAndFit(sizer)
 		self.lyrics_ctrl.SetFocus()
+
+	def update_content(self, track_name, artist_name, plain_lyrics):
+		"""Refresh the dialog title and lyrics for a new track in-place.
+		Called on the wx main thread when the song changes while the window is open.
+		"""
+		title = _("Lyrics: {track} \u2014 {artist}").format(
+			track=track_name,
+			artist=artist_name,
+		)
+		self.SetTitle(title)
+		if not plain_lyrics or not plain_lyrics.strip():
+			plain_lyrics = _("No lyrics found for {track}.").format(track=track_name)
+		self.lyrics_ctrl.SetValue(plain_lyrics)
+		self.lyrics_ctrl.SetInsertionPoint(0)
+		self.lyrics_ctrl.SetFocus()

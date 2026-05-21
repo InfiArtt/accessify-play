@@ -27,7 +27,10 @@ addon_info = AddonInfo(
 	# Brief changelog for this version
 	# Translators: what's new content for the add-on version to be shown in the add-on store
 	addon_changelog=_("""
-- FIX: Auto lyric reading now correctly pauses when Spotify playback is paused. Previously, scheduled lyric timers would continue firing and NVDA would keep speaking lyrics even while the song was stopped. Timers are now cancelled on pause and re-synced from the correct position on resume.
+- FIX: Auto lyric reading now correctly pauses when Spotify is paused and re-syncs when playback resumes.
+- FIX: Pressing Y rapidly twice no longer causes lyrics to be read twice (double timer bug).
+- FIX: When lyrics fail to load due to a network error, NVDA now announces an error message instead of silently failing.
+- FIX: Lyrics window now automatically refreshes its content when the song changes.
 	"""),
 	# Author(s)
 	addon_author="Rafli I .<rafli08523717409@gmail.com>, Rexya <rexya2017@gmail.com>",

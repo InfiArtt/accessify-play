@@ -89,6 +89,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		self._lyrics_cache = {}  # track_id → {"plain", "synced", "track_name", "artist_name"}
 		self._auto_reader_synced_lyrics = None  # current synced LRC text used for resync
 		self._last_is_playing = None  # tracks play/pause state for lyric timer management
+		self._lyrics_fetching = False  # guard against double-fetch on rapid Y/W presses
 
 		self._queueDialogLoading = False
 		self._addToPlaylistLoading = False
@@ -180,6 +181,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			needs_poll = (
 				config.conf["spotify"]["announceTrackChanges"]
 				or self._auto_reader.is_active
+				or self.lyricsDialog is not None  # also poll when lyrics window is open
 			)
 			if not (needs_poll and self.client.client):
 				return
@@ -217,12 +219,21 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 						track_string = self.client.get_simple_track_string(playback["item"])
 						wx.CallAfter(nvda_ui.message, track_string)
 					if self._auto_reader.is_active:
+						# auto-reader handles window update internally via _restart_auto_reader
 						thread_manager.submit_task(
 							self._restart_auto_reader,
 							playback["item"],
 							playback.get("progress_ms", 0),
 							daemon=True,
 							name="LyricsNewTrack",
+						)
+					elif self.lyricsDialog:
+						# Window open but auto-reader off → fetch new lyrics and refresh window
+						thread_manager.submit_task(
+							self._refresh_lyrics_window,
+							playback["item"],
+							daemon=True,
+							name="LyricsWindowRefresh",
 						)
 		except Exception as e:
 			log.error(f"Error in Spotify polling thread: {e}", exc_info=True)
@@ -249,6 +260,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	def _restart_auto_reader(self, item, progress_ms):
 		"""Fetch lyrics for a new track and restart the auto-reader.
 		Called in a background thread when track_change_poller detects a song change.
+		Also updates the lyrics window in-place if it is currently open.
 		"""
 		track_name = item.get("name", "")
 		artist_name = (item.get("artists") or [{}])[0].get("name", "")
@@ -259,15 +271,21 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		cached = self._lyrics_cache.get(track_id)
 		if cached:
 			synced = cached.get("synced")
+			plain = cached.get("plain")
 		else:
 			result = fetch_lyrics(track_name, artist_name, album_name, duration_ms)
 			synced = result.get("syncedLyrics") if result else None
+			plain = result.get("plainLyrics") if result else None
 			self._lyrics_cache[track_id] = {
-				"plain": result.get("plainLyrics") if result else None,
+				"plain": plain,
 				"synced": synced,
 				"track_name": track_name,
 				"artist_name": artist_name,
 			}
+
+		# Update lyrics window in-place if it is open
+		if self.lyricsDialog:
+			wx.CallAfter(self.lyricsDialog.update_content, track_name, artist_name, plain)
 
 		if synced:
 			self._auto_reader_synced_lyrics = synced
@@ -279,6 +297,32 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 				nvda_ui.message,
 				_("No synced lyrics found for {track}.").format(track=track_name),
 			)
+
+	def _refresh_lyrics_window(self, item):
+		"""Fetch plain lyrics for a new track and update the open lyrics window.
+		Called when song changes and window is open but auto-reader is not active.
+		"""
+		track_name = item.get("name", "")
+		artist_name = (item.get("artists") or [{}])[0].get("name", "")
+		album_name = item.get("album", {}).get("name", "")
+		duration_ms = item.get("duration_ms", 0)
+		track_id = item.get("id")
+
+		cached = self._lyrics_cache.get(track_id)
+		if cached:
+			plain = cached.get("plain")
+		else:
+			result = fetch_lyrics(track_name, artist_name, album_name, duration_ms)
+			plain = result.get("plainLyrics") if result else None
+			self._lyrics_cache[track_id] = {
+				"plain": plain,
+				"synced": result.get("syncedLyrics") if result else None,
+				"track_name": track_name,
+				"artist_name": artist_name,
+			}
+
+		if self.lyricsDialog:
+			wx.CallAfter(self.lyricsDialog.update_content, track_name, artist_name, plain)
 
 	# --- SCRIPT: LYRICS WINDOW ---
 
@@ -296,31 +340,45 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
 		@utils.run_in_thread
 		def _fetch():
-			playback = self.client._execute(self.client.client.current_playback)
-			if not isinstance(playback, dict) or not playback.get("item"):
-				wx.CallAfter(nvda_ui.message, _("Nothing is currently playing."))
-				return
-			item = playback["item"]
-			track_name = item.get("name", "")
-			artist_name = (item.get("artists") or [{}])[0].get("name", "")
-			album_name = item.get("album", {}).get("name", "")
-			duration_ms = item.get("duration_ms", 0)
-			track_id = item.get("id")
+			try:
+				playback = self.client._execute(self.client.client.current_playback)
+				if not isinstance(playback, dict) or not playback.get("item"):
+					wx.CallAfter(nvda_ui.message, _("Nothing is currently playing."))
+					return
+				item = playback["item"]
+				track_name = item.get("name", "")
+				artist_name = (item.get("artists") or [{}])[0].get("name", "")
+				album_name = item.get("album", {}).get("name", "")
+				duration_ms = item.get("duration_ms", 0)
+				track_id = item.get("id")
 
-			cached = self._lyrics_cache.get(track_id)
-			if cached:
-				plain = cached.get("plain")
-			else:
-				result = fetch_lyrics(track_name, artist_name, album_name, duration_ms)
-				plain = result.get("plainLyrics") if result else None
-				synced = result.get("syncedLyrics") if result else None
-				self._lyrics_cache[track_id] = {
-					"plain": plain,
-					"synced": synced,
-					"track_name": track_name,
-					"artist_name": artist_name,
-				}
-			wx.CallAfter(self._open_lyrics_dialog, track_name, artist_name, plain)
+				cached = self._lyrics_cache.get(track_id)
+				if cached:
+					plain = cached.get("plain")
+				else:
+					result = fetch_lyrics(track_name, artist_name, album_name, duration_ms)
+					if result is None:
+						# Network / timeout failure
+						wx.CallAfter(
+							nvda_ui.message,
+							_("Could not load lyrics. Please check your internet connection."),
+						)
+						return
+					plain = result.get("plainLyrics")
+					synced = result.get("syncedLyrics")
+					self._lyrics_cache[track_id] = {
+						"plain": plain,
+						"synced": synced,
+						"track_name": track_name,
+						"artist_name": artist_name,
+					}
+				wx.CallAfter(self._open_lyrics_dialog, track_name, artist_name, plain)
+			except Exception as e:
+				log.error(f"AccessifyPlay lyrics window fetch error: {e}", exc_info=True)
+				wx.CallAfter(
+					nvda_ui.message,
+					_("Could not load lyrics. Please check your internet connection."),
+				)
 
 		_fetch()
 
@@ -347,60 +405,84 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		if self._auto_reader.is_active:
 			self._auto_reader.stop()
 			self._auto_reader_synced_lyrics = None
+			self._lyrics_fetching = False
 			nvda_ui.message(_("Auto lyric reading stopped."))
+			return
+
+		# Guard against double-fetch: if a fetch is already in progress, ignore the press
+		if self._lyrics_fetching:
+			nvda_ui.message(_("Lyrics are already loading, please wait."))
 			return
 
 		if not self.client.client:
 			nvda_ui.message(_("Spotify client not ready. Please validate your credentials."))
 			return
+
+		self._lyrics_fetching = True
 		nvda_ui.message(_("Loading synced lyrics..."))
 
 		@utils.run_in_thread
 		def _fetch():
-			playback = self.client._execute(self.client.client.current_playback)
-			if not isinstance(playback, dict) or not playback.get("item"):
-				wx.CallAfter(nvda_ui.message, _("Nothing is currently playing."))
-				return
-			item = playback["item"]
-			track_name = item.get("name", "")
-			artist_name = (item.get("artists") or [{}])[0].get("name", "")
-			album_name = item.get("album", {}).get("name", "")
-			duration_ms = item.get("duration_ms", 0)
-			track_id = item.get("id")
-			progress_ms = playback.get("progress_ms", 0)
+			try:
+				playback = self.client._execute(self.client.client.current_playback)
+				if not isinstance(playback, dict) or not playback.get("item"):
+					wx.CallAfter(nvda_ui.message, _("Nothing is currently playing."))
+					return
+				item = playback["item"]
+				track_name = item.get("name", "")
+				artist_name = (item.get("artists") or [{}])[0].get("name", "")
+				album_name = item.get("album", {}).get("name", "")
+				duration_ms = item.get("duration_ms", 0)
+				track_id = item.get("id")
+				progress_ms = playback.get("progress_ms", 0)
 
-			cached = self._lyrics_cache.get(track_id)
-			if cached:
-				synced = cached.get("synced")
-			else:
-				result = fetch_lyrics(track_name, artist_name, album_name, duration_ms)
-				synced = result.get("syncedLyrics") if result else None
-				self._lyrics_cache[track_id] = {
-					"plain": result.get("plainLyrics") if result else None,
-					"synced": synced,
-					"track_name": track_name,
-					"artist_name": artist_name,
-				}
+				cached = self._lyrics_cache.get(track_id)
+				if cached:
+					synced = cached.get("synced")
+				else:
+					result = fetch_lyrics(track_name, artist_name, album_name, duration_ms)
+					if result is None:
+						# Network / timeout failure — distinct from "no lyrics found"
+						wx.CallAfter(
+							nvda_ui.message,
+							_("Could not load lyrics. Please check your internet connection."),
+						)
+						return
+					synced = result.get("syncedLyrics")
+					self._lyrics_cache[track_id] = {
+						"plain": result.get("plainLyrics"),
+						"synced": synced,
+						"track_name": track_name,
+						"artist_name": artist_name,
+					}
 
-			if not synced:
+				if not synced:
+					wx.CallAfter(
+						nvda_ui.message,
+						_("No synced lyrics found for {track}.").format(track=track_name),
+					)
+					return
+
+				self._auto_reader_synced_lyrics = synced
+				started = self._auto_reader.start(synced, progress_ms)
+				if started:
+					wx.CallAfter(
+						nvda_ui.message,
+						_("Auto lyric reading on for {track}.").format(track=track_name),
+					)
+				else:
+					wx.CallAfter(
+						nvda_ui.message,
+						_("No synced lyrics found for {track}.").format(track=track_name),
+					)
+			except Exception as e:
+				log.error(f"AccessifyPlay auto-read lyrics fetch error: {e}", exc_info=True)
 				wx.CallAfter(
 					nvda_ui.message,
-					_("No synced lyrics found for {track}.").format(track=track_name),
+					_("Could not load lyrics. Please check your internet connection."),
 				)
-				return
-
-			self._auto_reader_synced_lyrics = synced
-			started = self._auto_reader.start(synced, progress_ms)
-			if started:
-				wx.CallAfter(
-					nvda_ui.message,
-					_("Auto lyric reading on for {track}.").format(track=track_name),
-				)
-			else:
-				wx.CallAfter(
-					nvda_ui.message,
-					_("No synced lyrics found for {track}.").format(track=track_name),
-				)
+			finally:
+				self._lyrics_fetching = False
 
 		_fetch()
 
