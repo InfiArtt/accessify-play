@@ -44,7 +44,7 @@ from .dialogs.settings import SpotifySettingsPanel  # noqa: E402
 from .dialogs.sleeptimer import SleepTimerDialog  # noqa: E402
 from .dialogs.volume import SetVolumeDialog  # noqa: E402
 from .dialogs.lyrics_window import LyricsDialog  # noqa: E402
-from .lyrics import LyricsAutoReader, fetch_lyrics  # noqa: E402
+from .lyrics import LyricsAutoReader, fetch_lyrics, parse_lrc  # noqa: E402
 
 # Define the configuration specification
 confspec = {
@@ -240,6 +240,19 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
 	# --- LYRICS SUPPORT METHODS ---
 
+	def _seek_to_position(self, position_ms):
+		"""Seek Spotify playback to a specific position (milliseconds).
+		Called by LyricsDialog when the user presses Enter on a lyric line.
+		"""
+		@utils.run_in_thread
+		def _do_seek():
+			try:
+				self.client.seek_track(position_ms)
+			except Exception as e:
+				log.error(f"AccessifyPlay lyrics seek error: {e}", exc_info=True)
+
+		_do_seek()
+
 	def _lyric_resync_poller(self):
 		"""Re-syncs lyric timers every 10 s to correct for seek/pause drift.
 		Only does work when auto-reader is active.
@@ -285,7 +298,13 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
 		# Update lyrics window in-place if it is open
 		if self.lyricsDialog:
-			wx.CallAfter(self.lyricsDialog.update_content, track_name, artist_name, plain)
+			synced_lines = parse_lrc(synced) if synced else None
+			wx.CallAfter(
+				self.lyricsDialog.update_content,
+				track_name, artist_name, plain,
+				synced_lines=synced_lines,
+				seek_callback=self._seek_to_position,
+			)
 
 		if synced:
 			self._auto_reader_synced_lyrics = synced
@@ -311,18 +330,26 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		cached = self._lyrics_cache.get(track_id)
 		if cached:
 			plain = cached.get("plain")
+			synced = cached.get("synced")
 		else:
 			result = fetch_lyrics(track_name, artist_name, album_name, duration_ms)
 			plain = result.get("plainLyrics") if result else None
+			synced = result.get("syncedLyrics") if result else None
 			self._lyrics_cache[track_id] = {
 				"plain": plain,
-				"synced": result.get("syncedLyrics") if result else None,
+				"synced": synced,
 				"track_name": track_name,
 				"artist_name": artist_name,
 			}
 
 		if self.lyricsDialog:
-			wx.CallAfter(self.lyricsDialog.update_content, track_name, artist_name, plain)
+			synced_lines = parse_lrc(synced) if synced else None
+			wx.CallAfter(
+				self.lyricsDialog.update_content,
+				track_name, artist_name, plain,
+				synced_lines=synced_lines,
+				seek_callback=self._seek_to_position,
+			)
 
 	# --- SCRIPT: LYRICS WINDOW ---
 
@@ -372,7 +399,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 						"track_name": track_name,
 						"artist_name": artist_name,
 					}
-				wx.CallAfter(self._open_lyrics_dialog, track_name, artist_name, plain)
+				wx.CallAfter(self._open_lyrics_dialog, track_name, artist_name, plain, synced_lines=parse_lrc(synced) if synced else None)
 			except Exception as e:
 				log.error(f"AccessifyPlay lyrics window fetch error: {e}", exc_info=True)
 				wx.CallAfter(
@@ -382,11 +409,15 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
 		_fetch()
 
-	def _open_lyrics_dialog(self, track_name, artist_name, plain_lyrics):
+	def _open_lyrics_dialog(self, track_name, artist_name, plain_lyrics, synced_lines=None):
 		if self.lyricsDialog:
 			self.lyricsDialog.Raise()
 			return
-		dialog = LyricsDialog(gui.mainFrame, track_name, artist_name, plain_lyrics)
+		dialog = LyricsDialog(
+			gui.mainFrame, track_name, artist_name, plain_lyrics,
+			synced_lines=synced_lines,
+			seek_callback=self._seek_to_position,
+		)
 
 		def on_close(evt):
 			self._destroy_dialog("lyricsDialog", evt)
