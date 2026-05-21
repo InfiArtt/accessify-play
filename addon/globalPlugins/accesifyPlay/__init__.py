@@ -253,6 +253,23 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
 		_do_seek()
 
+	def _jump_lyrics_to_current(self):
+		"""Fetch the current Spotify playback position and scroll the lyrics
+		window cursor to the matching line. Called by the 'Jump to Current' button.
+		"""
+		@utils.run_in_thread
+		def _do():
+			try:
+				playback = self.client._execute_web_api(self.client.client.current_playback)
+				if playback and isinstance(playback, dict):
+					ms = playback.get("progress_ms", 0)
+					if self.lyricsDialog:
+						wx.CallAfter(self.lyricsDialog.set_current_ms, ms)
+			except Exception as e:
+				log.error(f"AccessifyPlay jump-to-current error: {e}", exc_info=True)
+
+		_do()
+
 	def _lyric_resync_poller(self):
 		"""Re-syncs lyric timers every 10 s to correct for seek/pause drift.
 		Only does work when auto-reader is active.
@@ -304,11 +321,17 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 				track_name, artist_name, plain,
 				synced_lines=synced_lines,
 				seek_callback=self._seek_to_position,
+				jump_callback=self._jump_lyrics_to_current,
 			)
 
 		if synced:
 			self._auto_reader_synced_lyrics = synced
 			self._auto_reader.start(synced, progress_ms)
+			# Re-wire auto-scroll if the window is open
+			if self.lyricsDialog:
+				self._auto_reader.set_line_callback(
+					lambda ms: wx.CallAfter(self.lyricsDialog.set_current_ms, ms)
+				)
 		else:
 			self._auto_reader.stop()
 			self._auto_reader_synced_lyrics = None
@@ -349,6 +372,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 				track_name, artist_name, plain,
 				synced_lines=synced_lines,
 				seek_callback=self._seek_to_position,
+				jump_callback=self._jump_lyrics_to_current,
 			)
 
 	# --- SCRIPT: LYRICS WINDOW ---
@@ -417,15 +441,24 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			gui.mainFrame, track_name, artist_name, plain_lyrics,
 			synced_lines=synced_lines,
 			seek_callback=self._seek_to_position,
+			jump_callback=self._jump_lyrics_to_current,
 		)
 
 		def on_close(evt):
+			# Clear the auto-scroll callback so the reader stops updating the window
+			self._auto_reader.set_line_callback(None)
 			self._destroy_dialog("lyricsDialog", evt)
 
 		dialog.Bind(wx.EVT_CLOSE, on_close)
 		self.lyricsDialog = dialog
 		dialog.Show()
 		nvda_ui.message(_("Lyrics window for {track} opened.").format(track=track_name))
+
+		# If auto-reader is already running, wire up the auto-scroll callback
+		if self._auto_reader.is_active:
+			self._auto_reader.set_line_callback(
+				lambda ms: wx.CallAfter(dialog.set_current_ms, ms)
+			)
 
 	# --- SCRIPT: AUTO-READ LYRICS ---
 
@@ -497,6 +530,11 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 				self._auto_reader_synced_lyrics = synced
 				started = self._auto_reader.start(synced, progress_ms)
 				if started:
+					# Wire auto-scroll if lyrics window is already open
+					if self.lyricsDialog:
+						self._auto_reader.set_line_callback(
+							lambda ms: wx.CallAfter(self.lyricsDialog.set_current_ms, ms)
+						)
 					wx.CallAfter(
 						nvda_ui.message,
 						_("Auto lyric reading on for {track}.").format(track=track_name),

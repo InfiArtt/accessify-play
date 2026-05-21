@@ -115,6 +115,7 @@ class LyricsAutoReader:
 		self._timers = []
 		self._lock = threading.Lock()
 		self._active = False
+		self._line_callback = None  # callable(ms) — called each time a line is spoken
 
 	@property
 	def is_active(self):
@@ -141,7 +142,8 @@ class LyricsAutoReader:
 				if delay_ms < -200:
 					continue
 				delay_s = max(0.0, delay_ms / 1000.0)
-				t = threading.Timer(delay_s, self._speak, args=(text,))
+				# Pass ms so _speak can fire the line_callback for auto-scroll
+				t = threading.Timer(delay_s, self._speak, args=(text, line_ms))
 				t.daemon = True
 				t.start()
 				self._timers.append(t)
@@ -171,6 +173,12 @@ class LyricsAutoReader:
 			return
 		self.start(synced_lyrics, progress_ms)
 
+	def set_line_callback(self, callback):
+		"""Set (or clear) a callable invoked with the timestamp (ms) of each line
+		as it fires. Pass None to disable. Used by the lyrics window for auto-scroll.
+		"""
+		self._line_callback = callback
+
 	# ------------------------------------------------------------------
 	def _cancel_timers(self):
 		with self._lock:
@@ -178,7 +186,9 @@ class LyricsAutoReader:
 				t.cancel()
 			self._timers.clear()
 
-	def _speak(self, text):
+	def _speak(self, text, ms=None):
 		if self._active:
 			import ui as nvda_ui
 			wx.CallAfter(nvda_ui.message, text)
+			if ms is not None and self._line_callback:
+				wx.CallAfter(self._line_callback, ms)
