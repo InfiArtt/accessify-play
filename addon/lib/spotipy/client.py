@@ -11,7 +11,7 @@ from collections import defaultdict
 import requests
 
 from spotipy.exceptions import SpotifyException
-from spotipy.util import Retry
+from spotipy.util import REQUESTS_SESSION, Retry
 
 logger = logging.getLogger(__name__)
 
@@ -211,11 +211,8 @@ class Spotify:
 
     def __del__(self):
         """Make sure the connection (pool) gets closed"""
-        try:
-            if isinstance(self._session, requests.Session):
-                self._session.close()
-        except AttributeError:
-            pass
+        if getattr(self, "_session", None) and isinstance(self._session, REQUESTS_SESSION):
+            self._session.close()
 
     def _build_session(self):
         self._session = requests.Session()
@@ -407,6 +404,10 @@ class Spotify:
     ):
         """ Get Spotify catalog information about an artist's albums
 
+            .. deprecated::
+            This method is deprecated and may be removed in a future version. Use
+            `artist_albums(..., include_groups='...')` instead.
+
             Parameters:
                 - artist_id - the artist ID, URI or URL
                 - include_groups - the types of items to return. One or more of 'album', 'single',
@@ -444,6 +445,11 @@ class Spotify:
                 - country - limit the response to one particular country.
         """
 
+        warnings.warn(
+            "You're using `artist_top_tracks(...)`, "
+            "which is marked as deprecated by Spotify.",
+            DeprecationWarning,
+        )
         trid = self._get_id("artist", artist_id)
         return self._get("artists/" + trid + "/top-tracks", country=country)
 
@@ -451,6 +457,9 @@ class Spotify:
         """ Get Spotify catalog information about artists similar to an
             identified artist. Similarity is based on analysis of the
             Spotify community's listening history.
+
+            .. deprecated::
+            This endpoint has been removed by Spotify and is no longer available.
 
             Parameters:
                 - artist_id - the artist ID, URI or URL
@@ -643,6 +652,11 @@ class Spotify:
             Parameters:
                 - user - the id of the usr
         """
+        warnings.warn(
+            "You're using `user(...)`, "
+            "which is marked as deprecated by Spotify.",
+            DeprecationWarning,
+        )
         return self._get("users/" + user)
 
     def current_user_playlists(self, limit=50, offset=0):
@@ -676,12 +690,16 @@ class Spotify:
         self,
         playlist_id,
         fields=None,
-        limit=100,
+        limit=50,
         offset=0,
         market=None,
         additional_types=("track",)
     ):
         """ Get full details of the tracks of a playlist.
+
+            .. deprecated::
+            This method is deprecated and may be removed in a future version. Use
+            `playlist_items(playlist_id, ..., additional_types=('track',))` instead.
 
             Parameters:
                 - playlist_id - the playlist ID, URI or URL
@@ -704,7 +722,7 @@ class Spotify:
         self,
         playlist_id,
         fields=None,
-        limit=100,
+        limit=50,
         offset=0,
         market=None,
         additional_types=("track", "episode")
@@ -722,7 +740,7 @@ class Spotify:
         """
         plid = self._get_id("playlist", playlist_id)
         return self._get(
-            f"playlists/{plid}/tracks",
+            f"playlists/{plid}/items",
             limit=limit,
             offset=offset,
             fields=fields,
@@ -755,18 +773,22 @@ class Spotify:
         )
 
     def user_playlist(self, user, playlist_id=None, fields=None, market=None):
-        warnings.warn(
-            "You should use `playlist(playlist_id)` instead",
-            DeprecationWarning,
-        )
-
         """ Gets a single playlist of a user
+
+            .. deprecated::
+            This method is deprecated and may be removed in a future version. Use
+            `playlist(playlist_id)` instead.
 
             Parameters:
                 - user - the id of the user
                 - playlist_id - the id of the playlist
                 - fields - which fields to return
         """
+        warnings.warn(
+            "You should use `playlist(playlist_id)` instead",
+            DeprecationWarning,
+        )
+
         if playlist_id is None:
             return self._get(f"users/{user}/starred")
         return self.playlist(playlist_id, fields=fields, market=market)
@@ -780,12 +802,11 @@ class Spotify:
         offset=0,
         market=None,
     ):
-        warnings.warn(
-            "You should use `playlist_tracks(playlist_id)` instead",
-            DeprecationWarning,
-        )
-
         """ Get full details of the tracks of a playlist owned by a user.
+
+            .. deprecated::
+            This method is deprecated and may be removed in a future version. Use
+            `playlist_tracks(playlist_id)` instead.
 
             Parameters:
                 - user - the id of the user
@@ -795,6 +816,10 @@ class Spotify:
                 - offset - the index of the first track to return
                 - market - an ISO 3166-1 alpha-2 country code.
         """
+        warnings.warn(
+            "You should use `playlist_tracks(playlist_id)` instead",
+            DeprecationWarning,
+        )
         return self.playlist_tracks(
             playlist_id,
             limit=limit,
@@ -811,6 +836,12 @@ class Spotify:
                 - limit  - the number of items to return
                 - offset - the index of the first item to return
         """
+        warnings.warn(
+            "You're using `user_playlists(...)`, "
+            "which is marked as deprecated by Spotify. Use "
+            "current_user_playlists(...) instead.",
+            DeprecationWarning,
+        )
         return self._get(
             f"users/{user}/playlists", limit=limit, offset=offset
         )
@@ -825,6 +856,12 @@ class Spotify:
                 - collaborative - is the created playlist collaborative
                 - description - the description of the playlist
         """
+        warnings.warn(
+            "You're using `user_playlist_create(...)`, "
+            "which is marked as deprecated by Spotify. Use "
+            "current_user_playlist_create(...) instead.",
+            DeprecationWarning,
+        )
         data = {
             "name": name,
             "public": public,
@@ -833,6 +870,24 @@ class Spotify:
         }
 
         return self._post(f"users/{user}/playlists", payload=data)
+
+    def current_user_playlist_create(self, name, public=True, collaborative=False, description=""):
+        """ Creates a playlist for the current user
+
+            Parameters:
+                - name - the name of the playlist
+                - public - is the created playlist public
+                - collaborative - is the created playlist collaborative
+                - description - the description of the playlist
+        """
+        data = {
+            "name": name,
+            "public": public,
+            "collaborative": collaborative,
+            "description": description
+        }
+
+        return self._post("me/playlists", payload=data)
 
     def user_playlist_change_details(
         self,
@@ -846,6 +901,10 @@ class Spotify:
         """ This function is no longer in use, please use the recommended function in the warning!
 
             Changes a playlist's name and/or public/private state
+
+            .. deprecated::
+            This method is deprecated and may be removed in a future version. Use
+            `playlist_change_details(playlist_id, ...)` instead.
 
             Parameters:
                 - user - the id of the user
@@ -868,6 +927,10 @@ class Spotify:
 
             Unfollows (deletes) a playlist for a user
 
+            .. deprecated::
+            This method is deprecated and may be removed in a future version. Use
+            `current_user_unfollow_playlist(playlist_id)` instead.
+
             Parameters:
                 - user - the id of the user
                 - name - the name of the playlist
@@ -884,6 +947,10 @@ class Spotify:
         """ This function is no longer in use, please use the recommended function in the warning!
 
             Adds tracks to a playlist
+
+            .. deprecated::
+            This method is deprecated and may be removed in a future version. Use
+            `playlist_add_items(playlist_id, tracks)` instead.
 
             Parameters:
                 - user - the id of the user
@@ -906,6 +973,10 @@ class Spotify:
 
             Adds episodes to a playlist
 
+            .. deprecated::
+            This method is deprecated and may be removed in a future version. Use
+            `playlist_add_items(playlist_id, episodes)` instead.
+
             Parameters:
                 - user - the id of the user
                 - playlist_id - the id of the playlist
@@ -924,6 +995,10 @@ class Spotify:
         """ This function is no longer in use, please use the recommended function in the warning!
 
             Replace all tracks in a playlist for a user
+
+            .. deprecated::
+            This method is deprecated and may be removed in a future version. Use
+            `playlist_replace_items(playlist_id, tracks)` instead.
 
             Parameters:
                 - user - the id of the user
@@ -948,6 +1023,10 @@ class Spotify:
         """ This function is no longer in use, please use the recommended function in the warning!
 
             Reorder tracks in a playlist from a user
+
+            .. deprecated::
+            This method is deprecated and may be removed in a future version. Use
+            `playlist_reorder_items(playlist_id, ...)` instead.
 
             Parameters:
                 - user - the id of the user
@@ -974,6 +1053,10 @@ class Spotify:
 
             Removes all occurrences of the given tracks from the given playlist
 
+            .. deprecated::
+            This method is deprecated and may be removed in a future version. Use
+            `playlist_remove_all_occurrences_of_items(playlist_id, tracks)` instead.
+
             Parameters:
                 - user - the id of the user
                 - playlist_id - the id of the playlist
@@ -994,7 +1077,10 @@ class Spotify:
     ):
         """ This function is no longer in use, please use the recommended function in the warning!
 
-            Removes all occurrences of the given tracks from the given playlist
+            Removes specific occurrences of the given tracks from the given playlist
+
+            .. deprecated::
+            This endpoint has been removed by Spotify and is no longer available.
 
             Parameters:
                 - user - the id of the user
@@ -1007,8 +1093,8 @@ class Spotify:
                 - snapshot_id - optional id of the playlist snapshot
         """
         warnings.warn(
-            "You should use `playlist_remove_specific_occurrences_of_items"
-            "(playlist_id, tracks)` instead",
+            "You're using `user_playlist_remove_specific_occurrences_of_tracks(...)`, "
+            "which is marked as deprecated by Spotify.",
             DeprecationWarning,
         )
         plid = self._get_id("playlist", playlist_id)
@@ -1032,6 +1118,10 @@ class Spotify:
 
             Add the current authenticated user as a follower of a playlist.
 
+            .. deprecated::
+            This method is deprecated and may be removed in a future version. Use
+            `current_user_follow_playlist(playlist_id)` instead.
+
             Parameters:
                 - playlist_owner_id - the user id of the playlist owner
                 - playlist_id - the id of the playlist
@@ -1048,6 +1138,10 @@ class Spotify:
         """ This function is no longer in use, please use the recommended function in the warning!
 
             Check to see if the given users are following the given playlist
+
+            .. deprecated::
+            This method is deprecated and may be removed in a future version. Use
+            `playlist_is_following(playlist_id, user_ids)` instead.
 
             Parameters:
                 - playlist_owner_id - the user id of the playlist owner
@@ -1117,7 +1211,7 @@ class Spotify:
         plid = self._get_id("playlist", playlist_id)
         ftracks = [self._get_uri("track", tid) for tid in items]
         return self._post(
-            f"playlists/{plid}/tracks",
+            f"playlists/{plid}/items",
             payload=ftracks,
             position=position,
         )
@@ -1133,7 +1227,7 @@ class Spotify:
         ftracks = [self._get_uri("track", tid) for tid in items]
         payload = {"uris": ftracks}
         return self._put(
-            f"playlists/{plid}/tracks", payload=payload
+            f"playlists/{plid}/items", payload=payload
         )
 
     def playlist_reorder_items(
@@ -1164,7 +1258,7 @@ class Spotify:
         if snapshot_id:
             payload["snapshot_id"] = snapshot_id
         return self._put(
-            f"playlists/{plid}/tracks", payload=payload
+            f"playlists/{plid}/items", payload=payload
         )
 
     def playlist_remove_all_occurrences_of_items(
@@ -1181,11 +1275,11 @@ class Spotify:
 
         plid = self._get_id("playlist", playlist_id)
         ftracks = [self._get_uri("track", tid) for tid in items]
-        payload = {"tracks": [{"uri": track} for track in ftracks]}
+        payload = {"items": [{"uri": track} for track in ftracks]}
         if snapshot_id:
             payload["snapshot_id"] = snapshot_id
         return self._delete(
-            f"playlists/{plid}/tracks", payload=payload
+            f"playlists/{plid}/items", payload=payload
         )
 
     def playlist_remove_specific_occurrences_of_items(
@@ -1212,14 +1306,14 @@ class Spotify:
                     "positions": tr["positions"],
                 }
             )
-        payload = {"tracks": ftracks}
+        payload = {"items": ftracks}
         if snapshot_id:
             payload["snapshot_id"] = snapshot_id
         return self._delete(
-            f"playlists/{plid}/tracks", payload=payload
+            f"playlists/{plid}/items", payload=payload
         )
 
-    def current_user_follow_playlist(self, playlist_id, public=True):
+    def current_user_follow_playlist(self, playlist_id):
         """
         Add the current authenticated user as a follower of a playlist.
 
@@ -1227,10 +1321,7 @@ class Spotify:
             - playlist_id - the id of the playlist
 
         """
-        return self._put(
-            f"playlists/{playlist_id}/followers",
-            payload={"public": public}
-        )
+        return self._put("me/library", uris=self._get_uri("playlist", playlist_id))
 
     def playlist_is_following(
         self, playlist_id, user_ids
@@ -1244,8 +1335,26 @@ class Spotify:
                 if they follow the playlist. Maximum: 5 ids.
 
         """
+        warnings.warn(
+            "You're using `playlist_is_following(..., user_ids=...)`, "
+            "which is marked as deprecated by Spotify. Use ",
+            "current_user_follow_playlist(...) instead.",
+            DeprecationWarning,
+        )
+
         endpoint = f"playlists/{playlist_id}/followers/contains?ids={','.join(user_ids)}"
         return self._get(endpoint)
+
+    def current_user_saved_items(self, uris):
+        """
+        Check if the current user is following the given artists, users, or playlists
+
+        Parameters:
+            - uris - a list of URIs to check for following status. Maximum: 40 ids.
+
+        """
+        valid_uris = [uri for uri in uris if self._is_uri(uri)]
+        return self._get("me/library/contains", uris=",".join(valid_uris))
 
     def me(self):
         """ Get detailed profile information about the current user.
@@ -1259,10 +1368,20 @@ class Spotify:
         """
         return self.me()
 
-    def current_user_playing_track(self):
+    def current_user_playing_track(self, market=None, additional_types=("track",)):
         """ Get information about the current users currently playing track.
+
+            Parameters:
+                - market - An ISO 3166-1 alpha-2 country code or the
+                           string from_token.
+                - additional_types - list of item types to return.
+                                     valid types are: track and episode
         """
-        return self._get("me/player/currently-playing")
+        return self._get(
+            "me/player/currently-playing",
+            market=market,
+            additional_types=",".join(additional_types)
+        )
 
     def current_user_saved_albums(self, limit=20, offset=0, market=None):
         """ Gets a list of the albums saved in the current authorized user's
@@ -1283,8 +1402,8 @@ class Spotify:
                 - albums - a list of album URIs, URLs or IDs
         """
 
-        alist = [self._get_id("album", a) for a in albums]
-        return self._put("me/albums?ids=" + ",".join(alist))
+        alist = [self._get_uri("album", a) for a in albums]
+        return self._put("me/library", uris=",".join(alist))
 
     def current_user_saved_albums_delete(self, albums=[]):
         """ Remove one or more albums from the current user's
@@ -1293,8 +1412,8 @@ class Spotify:
             Parameters:
                 - albums - a list of album URIs, URLs or IDs
         """
-        alist = [self._get_id("album", a) for a in albums]
-        return self._delete("me/albums/?ids=" + ",".join(alist))
+        alist = [self._get_uri("album", a) for a in albums]
+        return self._delete("me/library", uris=",".join(alist))
 
     def current_user_saved_albums_contains(self, albums=[]):
         """ Check if one or more albums is already saved in
@@ -1303,8 +1422,8 @@ class Spotify:
             Parameters:
                 - albums - a list of album URIs, URLs or IDs
         """
-        alist = [self._get_id("album", a) for a in albums]
-        return self._get("me/albums/contains?ids=" + ",".join(alist))
+        alist = [self._get_uri("album", a) for a in albums]
+        return self._get("me/library/contains", uris=",".join(alist))
 
     def current_user_saved_tracks(self, limit=20, offset=0, market=None):
         """ Gets a list of the tracks saved in the current authorized user's
@@ -1327,8 +1446,8 @@ class Spotify:
         """
         tlist = []
         if tracks is not None:
-            tlist = [self._get_id("track", t) for t in tracks]
-        return self._put("me/tracks/?ids=" + ",".join(tlist))
+            tlist = [self._get_uri("track", t) for t in tracks]
+        return self._put("me/library", uris=",".join(tlist))
 
     def current_user_saved_tracks_delete(self, tracks=None):
         """ Remove one or more tracks from the current user's
@@ -1339,8 +1458,8 @@ class Spotify:
         """
         tlist = []
         if tracks is not None:
-            tlist = [self._get_id("track", t) for t in tracks]
-        return self._delete("me/tracks/?ids=" + ",".join(tlist))
+            tlist = [self._get_uri("track", t) for t in tracks]
+        return self._delete("me/library", uris=",".join(tlist))
 
     def current_user_saved_tracks_contains(self, tracks=None):
         """ Check if one or more tracks is already saved in
@@ -1351,8 +1470,8 @@ class Spotify:
         """
         tlist = []
         if tracks is not None:
-            tlist = [self._get_id("track", t) for t in tracks]
-        return self._get("me/tracks/contains?ids=" + ",".join(tlist))
+            tlist = [self._get_uri("track", t) for t in tracks]
+        return self._get("me/library/contains", uris=",".join(tlist))
 
     def current_user_saved_episodes(self, limit=20, offset=0, market=None):
         """ Gets a list of the episodes saved in the current authorized user's
@@ -1375,8 +1494,8 @@ class Spotify:
         """
         elist = []
         if episodes is not None:
-            elist = [self._get_id("episode", e) for e in episodes]
-        return self._put("me/episodes/?ids=" + ",".join(elist))
+            elist = [self._get_uri("episode", e) for e in episodes]
+        return self._put("me/library", uris=",".join(elist))
 
     def current_user_saved_episodes_delete(self, episodes=None):
         """ Remove one or more episodes from the current user's
@@ -1387,8 +1506,8 @@ class Spotify:
         """
         elist = []
         if episodes is not None:
-            elist = [self._get_id("episode", e) for e in episodes]
-        return self._delete("me/episodes/?ids=" + ",".join(elist))
+            elist = [self._get_uri("episode", e) for e in episodes]
+        return self._delete("me/library", uris=",".join(elist))
 
     def current_user_saved_episodes_contains(self, episodes=None):
         """ Check if one or more episodes is already saved in
@@ -1420,8 +1539,8 @@ class Spotify:
             Parameters:
                 - shows - a list of show URIs, URLs or IDs
         """
-        slist = [self._get_id("show", s) for s in shows]
-        return self._put("me/shows?ids=" + ",".join(slist))
+        slist = [self._get_uri("show", s) for s in shows]
+        return self._put("me/library", uris=",".join(slist))
 
     def current_user_saved_shows_delete(self, shows=[]):
         """ Remove one or more shows from the current user's
@@ -1430,8 +1549,8 @@ class Spotify:
             Parameters:
                 - shows - a list of show URIs, URLs or IDs
         """
-        slist = [self._get_id("show", s) for s in shows]
-        return self._delete("me/shows/?ids=" + ",".join(slist))
+        slist = [self._get_uri("show", s) for s in shows]
+        return self._delete("me/library", uris=",".join(slist))
 
     def current_user_saved_shows_contains(self, shows=[]):
         """ Check if one or more shows is already saved in
@@ -1440,8 +1559,8 @@ class Spotify:
             Parameters:
                 - shows - a list of show URIs, URLs or IDs
         """
-        slist = [self._get_id("show", s) for s in shows]
-        return self._get("me/shows/contains?ids=" + ",".join(slist))
+        slist = [self._get_uri("show", s) for s in shows]
+        return self._get("me/library/contains", uris=",".join(slist))
 
     def current_user_followed_artists(self, limit=20, after=None):
         """ Gets a list of the artists followed by the current authorized user
@@ -1464,11 +1583,11 @@ class Spotify:
             Parameters:
                 - ids - a list of artist URIs, URLs or IDs
         """
-        idlist = []
+        ulist = []
         if ids is not None:
-            idlist = [self._get_id("artist", i) for i in ids]
+            ulist = [self._get_uri("artist", i) for i in ids]
         return self._get(
-            "me/following/contains", ids=",".join(idlist), type="artist"
+            "me/library/contains", uris=",".join(ulist)
         )
 
     def current_user_following_users(self, ids=None):
@@ -1479,11 +1598,11 @@ class Spotify:
             Parameters:
                 - ids - a list of user URIs, URLs or IDs
         """
-        idlist = []
+        ulist = []
         if ids is not None:
-            idlist = [self._get_id("user", i) for i in ids]
+            ulist = [self._get_uri("user", i) for i in ids]
         return self._get(
-            "me/following/contains", ids=",".join(idlist), type="user"
+            "me/library/contains", uris=",".join(ulist)
         )
 
     def current_user_top_artists(
@@ -1540,33 +1659,40 @@ class Spotify:
             Parameters:
                 - ids - a list of artist IDs
         """
-        return self._put("me/following?type=artist&ids=" + ",".join(ids))
+        alist = [self._get_uri("artist", a) for a in ids]
+        return self._put("me/library", uris=",".join(alist))
 
     def user_follow_users(self, ids=[]):
         """ Follow one or more users
             Parameters:
                 - ids - a list of user IDs
         """
-        return self._put("me/following?type=user&ids=" + ",".join(ids))
+        ulist = [self._get_uri("user", a) for a in ids]
+        return self._put("me/library", uris=",".join(ulist))
 
     def user_unfollow_artists(self, ids=[]):
         """ Unfollow one or more artists
             Parameters:
                 - ids - a list of artist IDs
         """
-        return self._delete("me/following?type=artist&ids=" + ",".join(ids))
+        alist = [self._get_uri("artist", a) for a in ids]
+        return self._delete("me/library", uris=",".join(alist))
 
     def user_unfollow_users(self, ids=[]):
         """ Unfollow one or more users
             Parameters:
                 - ids - a list of user IDs
         """
-        return self._delete("me/following?type=user&ids=" + ",".join(ids))
+        ulist = [self._get_uri("user", a) for a in ids]
+        return self._delete("me/library", uris=",".join(ulist))
 
     def featured_playlists(
         self, locale=None, country=None, timestamp=None, limit=20, offset=0
     ):
         """ Get a list of Spotify featured playlists
+
+            .. deprecated::
+            This endpoint has been removed by Spotify and is no longer available.
 
             Parameters:
                 - locale - The desired language, consisting of a lowercase ISO
@@ -1614,6 +1740,11 @@ class Spotify:
                   (the first object). Use with limit to get the next set of
                   items.
         """
+        warnings.warn(
+            "You're using `new_release(...)`, "
+            "which is marked as deprecated by Spotify.",
+            DeprecationWarning,
+        )
         return self._get(
             "browse/new-releases", country=country, limit=limit, offset=offset
         )
@@ -1629,6 +1760,11 @@ class Spotify:
                   language code and an ISO 3166-1 alpha-2 country code, joined
                   by an underscore.
         """
+        warnings.warn(
+            "You're using `category(...)`, "
+            "which is marked as deprecated by Spotify.",
+            DeprecationWarning,
+        )
         return self._get(
             "browse/categories/" + category_id,
             country=country,
@@ -1651,6 +1787,11 @@ class Spotify:
                   (the first object). Use with limit to get the next set of
                   items.
         """
+        warnings.warn(
+            "You're using `categories(...)`, "
+            "which is marked as deprecated by Spotify.",
+            DeprecationWarning,
+        )
         return self._get(
             "browse/categories",
             country=country,
@@ -1663,6 +1804,9 @@ class Spotify:
         self, category_id=None, country=None, limit=20, offset=0
     ):
         """ Get a list of playlists for a specific Spotify category
+
+            .. deprecated::
+            This endpoint has been removed by Spotify and is no longer available.
 
             Parameters:
                 - category_id - The Spotify category ID for the category.
@@ -1700,6 +1844,9 @@ class Spotify:
         """ Get a list of recommended tracks for one to five seeds.
             (at least one of `seed_artists`, `seed_tracks` and `seed_genres`
             are needed)
+
+            .. deprecated::
+            This endpoint has been removed by Spotify and is no longer available.
 
             Parameters:
                 - seed_artists - a list of artist IDs, URIs or URLs
@@ -1761,17 +1908,24 @@ class Spotify:
         return self._get("recommendations", **params)
 
     def recommendation_genre_seeds(self):
+        """ Get a list of genres available for the recommendations function.
+
+            .. deprecated::
+            This endpoint has been removed by Spotify and is no longer available.
+        """
         warnings.warn(
             "You're using `recommendation_genre_seeds(...)`, "
             "which is marked as deprecated by Spotify.",
             DeprecationWarning,
         )
-        """ Get a list of genres available for the recommendations function.
-        """
         return self._get("recommendations/available-genre-seeds")
 
     def audio_analysis(self, track_id):
         """ Get audio analysis for a track based upon its Spotify ID
+
+            .. deprecated::
+            This endpoint has been removed by Spotify and is no longer available.
+
             Parameters:
                 - track_id - a track URI, URL or ID
         """
@@ -1785,6 +1939,10 @@ class Spotify:
 
     def audio_features(self, tracks=[]):
         """ Get audio features for one or multiple tracks based upon their Spotify IDs
+
+            .. deprecated::
+            This endpoint has been removed by Spotify and is no longer available.
+
             Parameters:
                 - tracks - a list of track URIs, URLs or IDs, maximum: 100 ids
         """

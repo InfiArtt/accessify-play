@@ -6,11 +6,21 @@ This release significantly upgrades the lyrics experience introduced in v1.7.0. 
 
 ### ✨ New Features
 
-- **Enter-to-Seek**: The lyrics window (`W`) now displays synced lyrics line by line (timestamps are hidden). Press `Enter` on any line to seek Spotify directly to that position in the song. Works from any source of playback (PC, phone, smart speaker, etc.).
+- **Enter-to-Seek**: The lyrics window (`W`) now displays synced lyrics line by line. Press `Enter` on any line to seek Spotify directly to that position in the song. Works from any source of playback (PC, phone, smart speaker, etc.).
 - **Auto-Scroll**: When auto lyric reading (`Y`) is active and the lyrics window is open at the same time, the window cursor automatically follows along and scrolls to the line currently being read by NVDA. No manual scrolling needed.
 - **Jump to Current Button**: A new *Jump to Current* button in the lyrics window fetches the current Spotify playback position and instantly moves the cursor to the matching line — useful when you've been browsing the lyrics and want to return to where the song is now.
 - **Copy Lyrics Button**: Copies all lyrics to the clipboard as plain readable text (no timestamps).
 - **Copy with Timestamps Button**: Copies lyrics in LRC format (`[mm:ss.cs] line text`) to the clipboard. Only shown when synced lyrics are available. Useful for sharing or archiving perfectly timed lyrics.
+
+### 📦 Dependency Updates
+
+- `spotipy` 2.25.1 → 2.26.0 — includes two security fixes (OAuth HTML sanitization, auth cache file permissions), plus updated library endpoint handling
+- `requests` 2.32.5 → 2.34.2
+- `certifi` 2025.11.12 → 2026.4.22 — updated CA certificates for HTTPS connections
+- `urllib3` 2.5.0 → 2.7.0
+- `idna` 3.11 → 3.15
+- `charset-normalizer` 3.4.4 → 3.4.7
+- `redis` 7.1.0 → 7.4.0
 
 ## Version 1.7.2
 

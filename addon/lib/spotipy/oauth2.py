@@ -8,6 +8,7 @@ __all__ = [
 ]
 
 import base64
+import html
 import logging
 import os
 import time
@@ -21,7 +22,8 @@ import requests
 
 from spotipy.cache_handler import CacheFileHandler, CacheHandler
 from spotipy.exceptions import SpotifyOauthError, SpotifyStateError
-from spotipy.util import CLIENT_CREDS_ENV_VARS, get_host_port, normalize_scope
+from spotipy.util import (CLIENT_CREDS_ENV_VARS, REQUESTS_SESSION,
+                          get_host_port, normalize_scope)
 
 logger = logging.getLogger(__name__)
 
@@ -122,7 +124,7 @@ class SpotifyAuthBase:
 
     def __del__(self):
         """Make sure the connection (pool) gets closed"""
-        if isinstance(self._session, requests.Session):
+        if getattr(self, "_session", None) and isinstance(self._session, REQUESTS_SESSION):
             self._session.close()
 
 
@@ -185,7 +187,7 @@ class SpotifyClientCredentials(SpotifyAuthBase):
         Else fetches a new token and returns it
 
             Parameters:
-            - as_dict - a boolean indicating if returning the access token
+            - as_dict: (deprecated) a boolean indicating if returning the access token
                 as a token_info dictionary, otherwise it will be returned
                 as a string.
         """
@@ -483,8 +485,8 @@ class SpotifyOAuth(SpotifyAuthBase):
         """ Gets the access token for the app given the code
 
             Parameters:
-                - code - the response code
-                - as_dict - a boolean indicating if returning the access token
+                - code: the response code
+                - as_dict: (deprecated) a boolean indicating if returning the access token
                             as a token_info dictionary, otherwise it will be returned
                             as a string.
         """
@@ -577,6 +579,11 @@ class SpotifyOAuth(SpotifyAuthBase):
         return token_info
 
     def get_cached_token(self):
+        """ Gets the cached token for the app
+
+            .. deprecated::
+            This method is deprecated and may be removed in a future version.
+        """
         warnings.warn("Calling get_cached_token directly on the SpotifyOAuth object will be " +
                       "deprecated. Instead, please specify a CacheFileHandler instance as " +
                       "the cache_handler in SpotifyOAuth and use the CacheFileHandler's " +
@@ -1203,6 +1210,11 @@ class SpotifyImplicitGrant(SpotifyAuthBase):
         return token_info
 
     def get_cached_token(self):
+        """ Gets the cached token for the app
+
+            .. deprecated::
+            This method is deprecated and may be removed in a future version.
+        """
         warnings.warn("Calling get_cached_token directly on the SpotifyImplicitGrant " +
                       "object will be deprecated. Instead, please specify a " +
                       "CacheFileHandler instance as the cache_handler in SpotifyOAuth " +
@@ -1241,7 +1253,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         if self.server.auth_code:
             status = "successful"
         elif self.server.error:
-            status = f"failed ({self.server.error})"
+            status = f"failed ({html.escape(str(self.server.error))})"
         else:
             self._write("<html><body><h1>Invalid request</h1></body></html>")
             return
