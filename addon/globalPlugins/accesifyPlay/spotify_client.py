@@ -83,7 +83,9 @@ class SpotifyClient:
 			return None
 
 		port = config.conf["spotify"]["port"]
-		redirect_uri = f"http://127.0.0.1:{port}/callback"
+		redirect_uri = config.conf["spotify"].get("redirectUri", "").strip()
+		if not redirect_uri:
+			redirect_uri = f"http://127.0.0.1:{port}/callback"
 
 		return SpotifyPKCE(
 			client_id=clientID,

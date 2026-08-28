@@ -58,6 +58,7 @@ confspec = {
 	"isAutomaticallyCheckForUpdates": "boolean(default=True)",
 	"lastUpdateCheck": "integer(default=0)",
 	"volumeStep": "integer(default=5, min=1, max=100)",
+	"redirectUri": "string(default='')",
 }
 config.conf.spec["spotify"] = confspec
 
