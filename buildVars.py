@@ -23,14 +23,11 @@ addon_info = AddonInfo(
 	# Translators: Long description to be shown for this add-on on add-on information from add-on store
 	addon_description=_("""Accessify Play provides comprehensive NVDA control for Spotify playback on any Connect-enabled device. A Spotify Premium subscription is required for full functionality."""),
 	# version
-	addon_version="1.8.0",
+	addon_version="1.8.1",
 	# Brief changelog for this version
 	# Translators: what's new content for the add-on version to be shown in the add-on store
 	addon_changelog=_("""
-- NEW: Lyrics window now shows synced lyrics line by line. Press Enter on any line to seek Spotify to that exact position in the song.
-- NEW: When auto lyric reading (Y) is active, the lyrics window cursor automatically scrolls to follow the current line being read.
-- NEW: "Jump to Current" button in the lyrics window jumps the cursor to the line currently playing, without needing to seek.
-- NEW: "Copy Lyrics" button copies all lyrics as plain text. "Copy with Timestamps" button (available when synced lyrics exist) copies in LRC format.
+- FIX: Added a "Custom Callback URL" field in settings to allow users to reuse existing Spotify developer apps (resolves #55).
 	"""),
 	# Author(s)
 	addon_author="Rafli I .<rafli08523717409@gmail.com>, Rexya <rexya2017@gmail.com>",

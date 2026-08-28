@@ -79,6 +79,12 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 		self.portCtrl.SetRange(1024, 65535)
 		self.portCtrl.SetValue(config.conf["spotify"]["port"])
 
+		# Translators: Label for a setting to choose the custom redirect URI.
+		redirect_uri_label = _("Custom Callback URL (Leave blank for default, must be localhost or 127.0.0.1)")
+		self.redirectUriCtrl = sHelper.addLabeledControl(redirect_uri_label, wx.TextCtrl)
+		self.redirectUriCtrl.SetValue(config.conf["spotify"].get("redirectUri", ""))
+
+
 		# Translators: Label for a setting to choose how many search results to load at a time.
 		limit_label = _("Search Results Limit (1 to 50)")
 		self.limitCtrl = sHelper.addLabeledControl(limit_label, wx.SpinCtrl)
@@ -261,6 +267,7 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 
 	def onSave(self):
 		config.conf["spotify"]["port"] = self.portCtrl.GetValue()
+		config.conf["spotify"]["redirectUri"] = self.redirectUriCtrl.GetValue().strip()
 		config.conf["spotify"]["searchLimit"] = self.limitCtrl.GetValue()
 		config.conf["spotify"]["seekDuration"] = self.seekDurationCtrl.GetValue()
 		config.conf["spotify"]["volumeStep"] = self.volumeStepCtrl.GetValue()
@@ -323,7 +330,9 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 			messageBox(_("Validation successful!"), _("Success"), wx.OK | wx.ICON_INFORMATION)
 		else:
 			port = config.conf["spotify"]["port"]
-			redirect_uri = f"http://127.0.0.1:{port}/callback"
+			redirect_uri = config.conf["spotify"].get("redirectUri", "").strip()
+			if not redirect_uri:
+				redirect_uri = f"http://127.0.0.1:{port}/callback"
 			# Translators: An error message shown when Spotify validation fails.
 			# It gives the user instructions on how to fix it, including a redirect URI that they must copy.
 			error_message = _(
