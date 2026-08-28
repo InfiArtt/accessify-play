@@ -1,5 +1,11 @@
 # Changelog
 
+## Version 1.8.1
+
+### 🛠️ Bug Fixes
+
+- **Authentication Setup**: Added a "Custom Callback URL" field in settings. This resolves an issue where Spotify's new restrictive application limits prevented initial setup by allowing users to explicitly match the callback URL of an existing Spotify developer app they already own (Resolves #55).
+
 ## Version 1.8.0
 
 This release significantly upgrades the lyrics experience introduced in v1.7.0. The lyrics window is now fully interactive — synced lyrics are displayed line by line, and you can navigate, seek, and copy directly from the window.
