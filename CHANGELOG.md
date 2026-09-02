@@ -1,5 +1,18 @@
 # Changelog
 
+## Version 1.9.0
+
+### 🎉 New Features
+
+- **Developer Dashboard Bypass**: The add-on now connects using an officially grandfathered Spotify Client ID with Extended Quota mode, completely bypassing Spotify's new 5-user limit! Users no longer need to create a Spotify Developer app to use the add-on.
+- **Browse Categories**: Added a new "Browse Categories" button to the Search Dialog. You can now effortlessly browse Spotify's official moods and genres (Sleep, Focus, Workout, Pop, etc.) and explore all the official playlists inside them.
+- **Play My Top Tracks (NVDA+Alt+G -> G)**: A new shortcut that instantly fetches your 50 most played songs from the last month and queues them up.
+- **Play Recently Played (NVDA+Alt+G -> O)**: A new shortcut that instantly grabs your actual Spotify listening history and queues up your last 50 played tracks in order.
+
+### 🧹 Improvements & Fixes
+
+- **Simplified Setup**: Completely removed all confusing Client ID, Port, and Callback URL configuration fields from the Settings dialog. The setup process is now a seamless, one-click login for everyone.
+
 ## Version 1.8.1
 
 ### 🛠️ Bug Fixes
