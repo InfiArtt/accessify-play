@@ -77,15 +77,9 @@ class SpotifyClient:
 		return CacheFileHandler(cache_path=_get_cache_path())
 
 	def _get_auth_manager(self, open_browser=False):
-		"""Creates a SpotifyPKCE manager."""
-		clientID = _read_client_id()
-		if not clientID:
-			return None
-
-		port = config.conf["spotify"]["port"]
-		redirect_uri = config.conf["spotify"].get("redirectUri", "").strip()
-		if not redirect_uri:
-			redirect_uri = f"http://127.0.0.1:{port}/callback"
+		# We use the ncspot Client ID which has an extended quota and supports PKCE
+		clientID = "d420a117a32841c2b3474932e49fb54b"
+		redirect_uri = "http://127.0.0.1:5588/login"
 
 		return SpotifyPKCE(
 			client_id=clientID,
@@ -142,7 +136,11 @@ class SpotifyClient:
 				return False
 		except (requests.exceptions.ConnectionError, urllib3.exceptions.MaxRetryError) as e:
 			self.client = None
-			log.debug(f"Spotify interactive validation network error: {e}")
+			log.error(f"Spotify: Connection error during validation: {e}")
+			return False
+		except Exception as e:
+			self.client = None
+			log.error(f"Spotify: Error during validation: {e}", exc_info=True)
 			return False
 		except (requests.exceptions.ReadTimeout, requests.exceptions.Timeout, urllib3.exceptions.ReadTimeoutError, TimeoutError) as e:
 			self.client = None
