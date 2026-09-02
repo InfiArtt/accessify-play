@@ -802,14 +802,9 @@ class SpotifyClient:
 		"""Creates a new playlist for the current user."""
 		if not self.client:
 			return _("Spotify client not ready. Please validate your credentials.")
-		try:
-			user_id = self.client.current_user()["id"]
-		except Exception as e:
-			log.error(f"Could not get user ID: {e}", exc_info=True)
-			return _("Could not retrieve user ID.")
+		
 		return self._execute_web_api(
-			self.client.user_playlist_create,
-			user=user_id,
+			self.client.current_user_playlist_create,
 			name=name,
 			public=public,
 			collaborative=collaborative,
@@ -820,14 +815,9 @@ class SpotifyClient:
 		"""Deletes (unfollows) a playlist."""
 		if not self.client:
 			return _("Spotify client not ready. Please validate your credentials.")
-		try:
-			user_id = self.client.current_user()["id"]
-		except Exception as e:
-			log.error(f"Could not get user ID: {e}", exc_info=True)
-			return _("Could not retrieve user ID.")
-
+		
 		return self._execute_web_api(
-			self.client.user_playlist_unfollow, user=user_id, playlist_id=playlist_id
+			self.client.current_user_unfollow_playlist, playlist_id=playlist_id
 		)
 
 	def update_playlist_details(
@@ -1067,7 +1057,24 @@ class SpotifyClient:
 
 	def get_artist_top_tracks(self, artist_id, market="US"):
 		"""Gets an artist's top tracks."""
-		return self._execute_web_api(self.client.artist_top_tracks, artist_id=artist_id, country=market)
+		artist_info = self._execute_web_api(self.client.artist, artist_id=artist_id)
+		if isinstance(artist_info, str):
+			return artist_info
+		artist_name = artist_info.get("name")
+		if not artist_name:
+			return {"tracks": []}
+			
+		search_res = self._execute_web_api(
+			self.client.search, 
+			q=f'artist:"{artist_name}"', 
+			limit=10, 
+			type='track', 
+			market=market
+		)
+		if isinstance(search_res, str):
+			return search_res
+			
+		return {"tracks": search_res.get("tracks", {}).get("items", [])}
 
 	def get_artist_albums(self, artist_id):
 		"""Gets all albums and singles for an artist (paginated)."""
