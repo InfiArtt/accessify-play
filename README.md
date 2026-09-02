@@ -9,7 +9,7 @@
 
 Go beyond simple playback. Accessify Play transforms NVDA into a powerful command center for your entire Spotify experience. Control what's playing on *any* of your devices—your PC, phone, smart speaker, or console—directly from your keyboard, without ever touching the Spotify app.
 
-Search, discover, manage playlists, and control your music with unparalleled freedom. This is how Spotify was meant to be experienced with a screen reader.
+With effortless, zero-configuration setup, you'll be jamming to your favorite tracks, exploring deep cuts, and discovering Spotify's official moods in seconds. No API keys, no developer dashboards, no hassle. Why wouldn't you want Accessify Play running your daily soundtrack?
 
 > **⚠️ Important: Spotify Premium Required!**
 >
@@ -158,7 +158,11 @@ You can choose between two update channels in the settings:
 
 ## 🙏 Acknowledgements
 
-This project wouldn't be where it is today without the incredible support and dedication of our community. A heartfelt thank you to all the testers who provided invaluable ideas, helped tirelessly with debugging, and offered supportive encouragement throughout the development process. Your contributions have been instrumental in shaping Accessify Play into what it is. Thank you for making this project a success!
+This project wouldn't be where it is today without the incredible support and dedication of our community. A heartfelt thank you to all the testers who provided invaluable ideas, helped tirelessly with debugging, and offered supportive encouragement throughout the development process. 
+
+A special shoutout to the open-source [ncspot](https://github.com/hrkfdn/ncspot) project! Their client integration is what allows this accessibility add-on to completely bypass API quotas and provide a seamless, zero-configuration login experience for our users.
+
+Your contributions have been instrumental in shaping Accessify Play into what it is. Thank you for making this project a success!
 
 ---
 
