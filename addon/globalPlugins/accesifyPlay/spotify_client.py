@@ -1098,6 +1098,26 @@ class SpotifyClient:
 		"""Fetches the user's recently played tracks."""
 		return self._execute_web_api(self.client.current_user_recently_played, limit=limit)
 
+	def get_categories(self, country=None, locale=None, limit=50, offset=0):
+		"""Get a list of categories used to tag items in Spotify."""
+		return self._execute_web_api(
+			self.client.categories,
+			country=country,
+			locale=locale,
+			limit=limit,
+			offset=offset
+		)
+
+	def get_category_playlists(self, category_id, country=None, limit=50, offset=0):
+		"""Get a list of Spotify playlists tagged with a particular category."""
+		return self._execute_web_api(
+			self.client.category_playlists,
+			category_id=category_id,
+			country=country,
+			limit=limit,
+			offset=offset
+		)
+
 	def get_artist_top_tracks(self, artist_id, market="US"):
 		"""Gets an artist's top tracks."""
 		artist_info = self._execute_web_api(self.client.artist, artist_id=artist_id)

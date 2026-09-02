@@ -75,6 +75,11 @@ class SearchDialog(AccessifyDialog):
 		self.searchButton = wx.Button(self, label=_("&Search"))
 		self.searchButton.Bind(wx.EVT_BUTTON, self.onSearch)
 		controlsSizer.Add(self.searchButton, flag=wx.LEFT, border=5)
+		
+		self.categoriesButton = wx.Button(self, label=_("&Browse Categories"))
+		self.categoriesButton.Bind(wx.EVT_BUTTON, self.onBrowseCategories)
+		controlsSizer.Add(self.categoriesButton, flag=wx.LEFT, border=5)
+		
 		mainSizer.Add(controlsSizer, flag=wx.EXPAND | wx.ALL, border=5)
 
 		self.resultsList = wx.ListBox(self)
@@ -107,6 +112,11 @@ class SearchDialog(AccessifyDialog):
 		self.Bind(wx.EVT_MENU, self.on_follow_artist, id=self.MENU_FOLLOW.GetId())
 		self.Bind(wx.EVT_MENU, self.on_view_discography, id=self.MENU_DISCO.GetId())
 		self.Bind(wx.EVT_MENU, self.copy_selected_link, id=self.MENU_COPY_LINK.GetId())
+
+	def onBrowseCategories(self, evt):
+		from .categories import CategoriesDialog
+		dlg = CategoriesDialog(self, self.client)
+		dlg.ShowModal()
 
 	def onSearch(self, evt=None):
 		"""Initiates a new search, clearing previous results."""
