@@ -391,6 +391,51 @@ class SpotifyClient:
 			return results
 		return results
 
+	def play_my_top_tracks(self):
+		top_tracks = self._execute_web_api(self.client.current_user_top_tracks, limit=50, time_range="short_term")
+		if isinstance(top_tracks, str):
+			return top_tracks
+		
+		if not top_tracks or not top_tracks.get("items"):
+			return _("No top tracks found.")
+			
+		uris = [track["uri"] for track in top_tracks["items"] if track.get("uri")]
+		if not uris:
+			return _("No playable tracks found.")
+			
+		result = self._execute(self.client.start_playback, uris=uris)
+		if isinstance(result, str):
+			return result
+		
+		return _("Playing your top tracks.")
+
+	def play_recently_played(self):
+		recent_tracks = self._execute_web_api(self.client.current_user_recently_played, limit=50)
+		if isinstance(recent_tracks, str):
+			return recent_tracks
+		
+		if not recent_tracks or not recent_tracks.get("items"):
+			return _("No recently played tracks found.")
+			
+		uris = [item["track"]["uri"] for item in recent_tracks["items"] if item.get("track") and item["track"].get("uri")]
+		
+		# Deduplicate URIs while preserving order for recently played
+		seen = set()
+		unique_uris = []
+		for uri in uris:
+			if uri not in seen:
+				seen.add(uri)
+				unique_uris.append(uri)
+				
+		if not unique_uris:
+			return _("No playable tracks found in history.")
+			
+		result = self._execute(self.client.start_playback, uris=unique_uris)
+		if isinstance(result, str):
+			return result
+			
+		return _("Playing your recently played tracks.")
+
 	def play_item(self, uris):
 		"""
 		Plays a track, episode, album, artist, playlist, or a list of tracks.

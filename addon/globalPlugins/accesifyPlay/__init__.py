@@ -648,6 +648,20 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		return self.client.get_current_track_url()
 
 	@scriptHandler.script(
+		description=_("Play your top tracks from the last month."),
+	)
+	@utils.speak_in_thread
+	def script_playMyTopTracks(self, gesture):
+		return self.client.play_my_top_tracks()
+
+	@scriptHandler.script(
+		description=_("Play your recently played tracks."),
+	)
+	@utils.speak_in_thread
+	def script_playRecentlyPlayed(self, gesture):
+		return self.client.play_recently_played()
+
+	@scriptHandler.script(
 		description=_("Play or pause the current track on Spotify."),
 	)
 	@utils.speak_in_thread

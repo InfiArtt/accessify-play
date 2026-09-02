@@ -17,6 +17,8 @@ class LayerConfigManager:
 
 	_default_specs = [
 		# ScriptName, DefaultGesture, Description, HelpLabel, DefaultKeepOpen
+		("playMyTopTracks", "kb:g", _("Play your top tracks from the last month."), "G", False),
+		("playRecentlyPlayed", "kb:o", _("Play your recently played tracks."), "O", False),
 		("playPause", "kb:p", _("Play or pause the current track on Spotify."), "P", False),
 		("nextTrack", "kb:n", _("Skip to the next track on Spotify."), "N", True),
 		("previousTrack", "kb:b", _("Skip to the previous track on Spotify."), "B", True),
