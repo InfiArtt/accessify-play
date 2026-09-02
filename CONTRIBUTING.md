@@ -19,6 +19,12 @@ To make the process smooth for everyone, please follow these guidelines.
 
 First, please review our [Code of Conduct](CODE_OF_CONDUCT.md). We enforce this code to ensure our community is welcoming and inclusive for everyone.
 
+## 💻 Coding Guidelines
+
+If you are contributing code, please ensure you follow the [official NVDA Developer Guide](https://github.com/nvaccess/nvda/wiki/Development-Guide) and modern Python coding standards (Accessify Play strictly follows Python 3.11 conventions). 
+
+Following the official NVDA coding guidelines makes it significantly easier for the international NVDA add-ons community to review our code, which is essential if this add-on is ever submitted to the official NV Access Add-on Store. We highly encourage all contributors to join the [NVDA Add-ons Community Forum](https://nvda-addons.groups.io/g/nvda-addons) to share ideas and learn best practices.
+
 ## 🚀 Contribution Workflow
 
 We use the "GitHub Flow" model, which means all changes happen through Pull Requests.
