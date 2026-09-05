@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 1.9.1
+### dY>,? Bug Fixes
+- **Settings Crash**: Fixed a critical UI bug where the NVDA settings dialog would crash and overlap with other add-on settings panels, preventing users from clicking the "Validate Credentials" button (Closes #55).
+
 ## Version 1.9.0
 
 ### 🎉 New Features
