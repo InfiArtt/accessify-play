@@ -92,9 +92,6 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 		self.lastCheckLabel = sHelper.addItem(wx.StaticText(self, label=""))
 
 		buttonsSizer = wx.BoxSizer(wx.HORIZONTAL)
-		self.migrateButton = wx.Button(self, label=_("Migrate Old Credentials"))
-		self.migrateButton.Bind(wx.EVT_BUTTON, self.onMigrateCredentials)
-		buttonsSizer.Add(self.migrateButton, flag=wx.LEFT, border=5)
 
 		self.validateButton = wx.Button(self, label=_("Validate Credentials"))
 		self.validateButton.Bind(wx.EVT_BUTTON, self.onValidate)

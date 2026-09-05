@@ -23,10 +23,11 @@ addon_info = AddonInfo(
 	# Translators: Long description to be shown for this add-on on add-on information from add-on store
 	addon_description=_("""Accessify Play provides comprehensive NVDA control for Spotify playback on any Connect-enabled device. A Spotify Premium subscription is required for full functionality."""),
 	# version
-	addon_version="1.9.0",
+	addon_version="1.9.1",
 	# Brief changelog for this version
 	# Translators: what's new content for the add-on version to be shown in the add-on store
 	addon_changelog=_("""
+- **Hotfix (1.9.1)**: Fixed a critical UI bug where the NVDA settings dialog would crash and bleed into other add-on panels, preventing users from validating their credentials.
 - Developer Dashboard Bypass: Fully bypasses Spotify's 5-user limit! Setup is now a seamless one-click login for everyone.
 - Browse Categories: Added a new "Browse Categories" button to the Search Dialog to explore Spotify's official moods and genres.
 - Play My Top Tracks: Press NVDA+Alt+G then G to instantly queue your 50 most played songs from the last month.
