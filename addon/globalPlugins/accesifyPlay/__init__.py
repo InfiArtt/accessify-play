@@ -6,8 +6,6 @@ import sys
 import threading
 import time
 
-from .core.thread_manager import thread_manager
-
 import config
 import globalPluginHandler
 import gui
@@ -23,7 +21,24 @@ lib_path = os.path.join(addon_root, "lib")
 if lib_path not in sys.path:
 	sys.path.insert(0, lib_path)
 
+# The config spec must be registered before any add-on module is imported:
+# importing one can evaluate _() at class-body level, which reads this
+# section, and reading it first would leave it without the spec's defaults.
+confspec = {
+	"searchLimit": "integer(min=1, max=50, default=20)",
+	"seekDuration": "integer(min=1, max=60, default=15)",
+	"language": "string(default='auto')",
+	"announceTrackChanges": "boolean(default=False)",
+	"keepAliveInterval": "integer(min=0, default=30)",
+	"updateChannel": "string(default='stable')",
+	"isAutomaticallyCheckForUpdates": "boolean(default=True)",
+	"lastUpdateCheck": "integer(default=0)",
+	"volumeStep": "integer(default=5, min=1, max=100)",
+}
+config.conf.spec["spotify"] = confspec
+
 # Local addon modules
+from .core.thread_manager import thread_manager  # noqa: E402
 from . import (  # noqa: E402
 	paths,
 	spotify_client,
@@ -49,20 +64,6 @@ from .lyrics import LyricsAutoReader, fetch_lyrics, parse_lrc  # noqa: E402
 from .language import init_translation  # noqa: E402
 
 init_translation()
-
-# Define the configuration specification
-confspec = {
-	"searchLimit": "integer(min=1, max=50, default=20)",
-	"seekDuration": "integer(min=1, max=60, default=15)",
-	"language": "string(default='auto')",
-	"announceTrackChanges": "boolean(default=False)",
-	"keepAliveInterval": "integer(min=0, default=30)",
-	"updateChannel": "string(default='stable')",
-	"isAutomaticallyCheckForUpdates": "boolean(default=True)",
-	"lastUpdateCheck": "integer(default=0)",
-	"volumeStep": "integer(default=5, min=1, max=100)",
-}
-config.conf.spec["spotify"] = confspec
 
 
 class GlobalPlugin(globalPluginHandler.GlobalPlugin):

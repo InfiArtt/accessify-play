@@ -1,5 +1,11 @@
 # Changelog
 
+## Version 1.10.1
+
+### 🛠️ Bug Fixes
+
+- **1.10.0 did not load at all**: the add-on failed while starting up, so none of its commands existed. `NVDA+Alt+G` (or whatever you had assigned) did nothing at all, and the NVDA log showed `KeyError: 'isAutomaticallyCheckForUpdates'`. The add-on registers the description of its settings before reading any of them; in 1.10.0 one of its own modules read a setting a moment too early, which left every setting without its default value. If you installed 1.10.0, this release restores everything; your settings, your login and your custom shortcuts are all untouched.
+
 ## Version 1.10.0
 
 ### 🎉 New Features

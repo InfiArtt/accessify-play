@@ -23,10 +23,11 @@ addon_info = AddonInfo(
 	# Translators: Long description to be shown for this add-on on add-on information from add-on store
 	addon_description=_("""Accessify Play provides comprehensive NVDA control for Spotify playback on any Connect-enabled device. A Spotify Premium subscription is required for full functionality."""),
 	# version
-	addon_version="1.10.0",
+	addon_version="1.10.1",
 	# Brief changelog for this version
 	# Translators: what's new content for the add-on version to be shown in the add-on store
 	addon_changelog=_("""
+- Hotfix (1.10.1): fixed 1.10.0 failing to load at all, which left NVDA+Alt+G and every other command doing nothing.
 - Audiobooks: search for audiobooks and browse their chapters, with playback continuing into the following chapters.
 - Featured Playlists: a new button in the Search dialog opens Spotify's front-page curated playlists.
 - Fixed the command layer no longer responding after its first use (#46). NVDA+Alt+G now works every time, and your shortcuts can no longer be lost.

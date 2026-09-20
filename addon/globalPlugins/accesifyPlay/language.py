@@ -50,20 +50,19 @@ def _normalize_language_setting(lang_code):
 
 
 def get_language_setting():
-	"""The configured add-on language, corrected in place if it is unusable.
+	"""The configured add-on language, or LANGUAGE_AUTO if it is unusable.
 
-	Falls back to LANGUAGE_AUTO if the config section is not registered yet,
-	which happens when a module is imported before the plugin sets its spec.
+	Strictly read-only, and never creates the config section: this runs on the
+	first translated string, which can be during import, and materialising the
+	section before the spec is registered would strip it of its defaults.
 	"""
 	try:
-		spotify_conf = config.conf["spotify"]
-		stored = spotify_conf.get("language")
+		if "spotify" not in config.conf:
+			return LANGUAGE_AUTO
+		stored = config.conf["spotify"].get("language")
 	except Exception:
 		return LANGUAGE_AUTO
-	current_setting = _normalize_language_setting(stored)
-	if current_setting != stored:
-		spotify_conf["language"] = current_setting
-	return current_setting
+	return _normalize_language_setting(stored)
 
 
 def _get_translation():
