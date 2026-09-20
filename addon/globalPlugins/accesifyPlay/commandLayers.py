@@ -1,13 +1,21 @@
-from functools import wraps
+import time
 
 import gui
+import inputCore
+import queueHandler
+import scriptHandler
 import tones
 import ui
 import wx
+from logHandler import log
 
 from .ui.base_dialog import AccessifyDialog
 from .dialogs.layer_editor import LayerEditorDialog
 from .layer_config import LayerConfigManager
+
+from .language import init_translation  # noqa: E402
+
+init_translation()
 
 
 class LayerHelpDialog(AccessifyDialog):
@@ -46,14 +54,36 @@ class LayerHelpDialog(AccessifyDialog):
 
 
 class CommandLayerManager:
-	"""Handles binding/unbinding of layered commands and related UI."""
+	"""Handles the Accessify Play command layer.
+
+	While the layer is open, a capture function is installed on
+	C{inputCore.manager}. This is the same mechanism NVDA uses for input help
+	(see C{inputCore.InputManager._inputHelpCaptor}): the capture function is
+	handed every gesture before it is dispatched, and returns C{False} to
+	swallow it.
+
+	Nothing here ever touches C{_gestureMap}, so the add-on's own gesture
+	bindings, and any the user made in the Input Gestures dialog, cannot be
+	lost. Script lookup is left to NVDA. If this code raises, NVDA logs it and
+	clears the capture function, so a bug can never leave the keyboard stuck in
+	the layer.
+	"""
+
+	#: Seconds of inactivity after which an open layer closes itself.
+	#: A safety net only: every non-modifier gesture already either runs a
+	#: command or closes the layer, so this can only fire if the user opened the
+	#: layer and then walked away.
+	TIMEOUT = 30.0
 
 	def __init__(self, plugin):
 		self.plugin = plugin
 		self.config_manager = LayerConfigManager()
-		self.is_active = False
 		self._help_dialog = None
 		self._editor_dialog = None
+		self._deadline = None
+		# Bind the captor once: a fresh bound method is created on every
+		# attribute access, so identity checks need a stored reference.
+		self._captor = self._capture
 		self._refresh_bindings()
 
 	def _refresh_bindings(self):
@@ -61,12 +91,21 @@ class CommandLayerManager:
 		self._help_entries = self._build_help_entries()
 
 	def _build_layer_gestures(self):
-		gestures = self.config_manager.get_gesture_map()
+		gestures = dict(self.config_manager.get_gesture_map())
 		# System commands
 		gestures["kb:f1"] = "commandLayerHelp"
 		gestures["kb:escape"] = "commandLayerCancel"
 		gestures["kb:f2"] = "showLayerEditor"
-		return gestures
+
+		# NVDA matches gestures on their normalized identifier, so normalize the
+		# identifiers coming from layer_config.json the same way bindGesture does.
+		normalized = {}
+		for identifier, script_name in gestures.items():
+			try:
+				normalized[inputCore.normalizeGestureIdentifier(identifier)] = script_name
+			except Exception:
+				log.error(f"AccessifyPlay: ignoring malformed layer gesture {identifier!r}")
+		return normalized
 
 	def _build_help_entries(self):
 		configs = self.config_manager.get_all_configs()
@@ -84,44 +123,98 @@ class CommandLayerManager:
 		entries.append(("Esc", _("Close the command layer.")))
 		return entries
 
+	# --- Layer state ---
+
+	@property
+	def is_active(self):
+		return inputCore.manager._captureFunc is self._captor
+
 	def activate(self):
 		if self.is_active:
 			self._error_beep()
 			return
-		self.is_active = True
+		if inputCore.manager._captureFunc is not None:
+			# Input help or another add-on is already capturing input. Taking it
+			# over would silently break them, so refuse instead.
+			self._error_beep()
+			return
+		self._deadline = time.monotonic() + self.TIMEOUT
+		inputCore.manager._captureFunc = self._captor
 		self._entry_beep()
 
 	def finish(self, announce=False):
-		if not self.is_active:
-			if announce:
-				ui.message(_("Command layer closed"))
-			return
-		self.is_active = False
+		self._deadline = None
+		# Only clear the capture function if it is still ours; something else
+		# (input help, another add-on) may have taken it over in the meantime.
+		if inputCore.manager._captureFunc is self._captor:
+			inputCore.manager._captureFunc = None
 		if announce:
-			ui.message(_("Command layer closed"))
+			self._queue(ui.message, _("Command layer closed"))
 
-	def wrap_script(self, script):
-		if not script:
-			return None
-
-		script_name = script.__name__.replace("script_", "")
-		keep_open = self.config_manager.should_keep_open(script_name)
-
-		@wraps(script)
-		def wrapped(gesture):
-			try:
-				return script(gesture)
-			finally:
-				if not keep_open:
-					self.finish()
-
-		return wrapped
-
-	def handle_unknown_gesture(self, gesture):
-		if self.is_modifier(gesture):
-			return  # Ignore modifiers, keep layer open
-		self._error_beep()
+	def terminate(self):
+		"""Release the capture function when the plugin is unloaded."""
 		self.finish()
+
+	# --- Gesture capture ---
+
+	def _capture(self, gesture):
+		"""Handle one gesture while the layer is open.
+
+		Called by C{inputCore.manager.executeGesture} on NVDA's keyboard hook
+		thread. Returns C{False} to swallow the gesture, C{True} to let NVDA
+		dispatch it as normal.
+		"""
+		if gesture.isModifier:
+			# Modifier presses keep the layer open. executeGesture discards them
+			# on its own immediately after this call.
+			return True
+
+		if self._deadline is not None and time.monotonic() > self._deadline:
+			# The layer was left open. Close it and let this gesture through, so
+			# the key does what the user would expect outside the layer.
+			self.finish()
+			return True
+
+		script_name = self._lookup(gesture)
+		if not script_name:
+			self._error_beep()
+			self.finish()
+			return False
+
+		script = getattr(self.plugin, f"script_{script_name}", None)
+		if script is None:
+			log.error(f"AccessifyPlay: layer command {script_name!r} has no matching script.")
+			self._error_beep()
+			self.finish()
+			return False
+
+		if self.config_manager.should_keep_open(script_name):
+			self._deadline = time.monotonic() + self.TIMEOUT
+		else:
+			self.finish()
+
+		# Dispatch the way executeGesture would have, so repeat detection and
+		# say-all resumption keep working.
+		scriptHandler.queueScript(script, gesture)
+		return False
+
+	def _lookup(self, gesture):
+		for identifier in gesture.normalizedIdentifiers:
+			script_name = self._layer_gestures.get(identifier)
+			if script_name:
+				return script_name
+		return None
+
+	def _queue(self, func, *args):
+		"""Run func on the main thread.
+
+		The capture function runs on the keyboard hook thread, so anything that
+		touches speech, tones or wx has to be queued, exactly as
+		C{_inputHelpCaptor} does.
+		"""
+		queueHandler.queueFunction(queueHandler.eventQueue, func, *args, _immediate=True)
+
+	# --- Dialogs ---
 
 	def show_help(self):
 		def _show():
@@ -161,40 +254,14 @@ class CommandLayerManager:
 					self._editor_dialog = None
 					# Reload bindings when editor closes
 					self._refresh_bindings()
-					if self.is_active:
-						pass
 
 			self._editor_dialog.Bind(wx.EVT_CLOSE, _on_close)
 			self._editor_dialog.Show()
 
 		wx.CallAfter(_show)
 
-	def is_modifier(self, gesture):
-		"""Checks if the gesture is just a modifier key."""
-		# Common modifier identifiers in NVDA
-		modifiers = {
-			"kb:control",
-			"kb:leftControl",
-			"kb:rightControl",
-			"kb:shift",
-			"kb:leftShift",
-			"kb:rightShift",
-			"kb:alt",
-			"kb:leftAlt",
-			"kb:rightAlt",
-			"kb:windows",
-			"kb:leftWindows",
-			"kb:rightWindows",
-			"kb:nvda",
-			"kb:insert",
-		}
-		for identifier in gesture.identifiers:
-			if identifier in modifiers:
-				return True
-		return False
-
 	def _entry_beep(self):
-		tones.beep(440, 30)
+		self._queue(tones.beep, 440, 30)
 
 	def _error_beep(self):
-		tones.beep(120, 120)
+		self._queue(tones.beep, 120, 120)

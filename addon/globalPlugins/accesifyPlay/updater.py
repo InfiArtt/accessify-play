@@ -16,6 +16,10 @@ from logHandler import log
 
 from .core.thread_manager import thread_manager
 
+from .language import init_translation  # noqa: E402
+
+init_translation()
+
 # Constants for the GitHub repository
 OWNER = "InfiArtt"
 REPO = "accessify-play"
@@ -244,5 +248,9 @@ def download_and_install(release_info):
 	except Exception as e:
 		log.error(f"AccessifyPlay: Download or install failed: {e}", exc_info=True)
 		wx.CallAfter(
-			messageBox, _("Update failed: {error}").format(error=e), _("Error"), wx.OK | wx.ICON_ERROR
+			messageBox,
+			_("The update could not be installed. Please try again, or download it "
+			  "manually from the add-on's website."),
+			_("Update Failed"),
+			wx.OK | wx.ICON_ERROR,
 		)

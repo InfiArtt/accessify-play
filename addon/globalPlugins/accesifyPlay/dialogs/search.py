@@ -15,6 +15,10 @@ from .management import (
 	PodcastEpisodesDialog,
 )
 
+from ..language import init_translation  # noqa: E402
+
+init_translation()
+
 
 class SearchDialog(AccessifyDialog):
 	"""
@@ -63,6 +67,7 @@ class SearchDialog(AccessifyDialog):
 			_("Artist"): "artist",
 			_("Playlist"): "playlist",
 			_("Podcast"): "show",
+			_("Audiobook"): "audiobook",
 		}
 		self.typeBox = wx.ComboBox(self, choices=list(self.search_types.keys()), style=wx.CB_READONLY)
 		self.typeBox.SetValue(_("Song"))
@@ -79,7 +84,12 @@ class SearchDialog(AccessifyDialog):
 		self.categoriesButton = wx.Button(self, label=_("&Browse Categories"))
 		self.categoriesButton.Bind(wx.EVT_BUTTON, self.onBrowseCategories)
 		controlsSizer.Add(self.categoriesButton, flag=wx.LEFT, border=5)
-		
+
+		# Mnemonic is T, not F: Alt+F is already the Follow Artist accelerator.
+		self.featuredButton = wx.Button(self, label=_("Fea&tured Playlists"))
+		self.featuredButton.Bind(wx.EVT_BUTTON, self.onFeaturedPlaylists)
+		controlsSizer.Add(self.featuredButton, flag=wx.LEFT, border=5)
+
 		mainSizer.Add(controlsSizer, flag=wx.EXPAND | wx.ALL, border=5)
 
 		self.resultsList = wx.ListBox(self)
@@ -116,6 +126,11 @@ class SearchDialog(AccessifyDialog):
 	def onBrowseCategories(self, evt):
 		from .categories import CategoriesDialog
 		dlg = CategoriesDialog(self, self.client)
+		dlg.ShowModal()
+
+	def onFeaturedPlaylists(self, evt):
+		from .categories import FeaturedPlaylistsDialog
+		dlg = FeaturedPlaylistsDialog(self, self.client)
 		dlg.ShowModal()
 
 	def onSearch(self, evt=None):
@@ -222,6 +237,11 @@ class SearchDialog(AccessifyDialog):
 		elif item_type == "show":
 			publisher = item.get("publisher", "")
 			display = f"{display} - {publisher}"
+		elif item_type == "audiobook":
+			authors = ", ".join([a.get("name", "") for a in item.get("authors", []) if a.get("name")])
+			byline = authors or item.get("publisher", "")
+			if byline:
+				display = f"{display} - {byline}"
 
 		return display
 
@@ -245,6 +265,7 @@ class SearchDialog(AccessifyDialog):
 			"album": lambda: self._open_album_tracks(item),
 			"show": lambda: self._open_podcast_episodes(item),
 			"playlist": lambda: self._open_playlist_tracks(item),
+			"audiobook": lambda: self._open_audiobook_chapters(item),
 		}
 
 		action = action_map.get(item_type, lambda: self._play_uri(item.get("uri")))
@@ -266,6 +287,11 @@ class SearchDialog(AccessifyDialog):
 
 	def _open_playlist_tracks(self, playlist):
 		dialog = PlaylistTracksDialog(self, self.client, playlist)
+		dialog.Show()
+
+	def _open_audiobook_chapters(self, audiobook):
+		from .audiobooks import AudiobookChaptersDialog
+		dialog = AudiobookChaptersDialog(self, self.client, audiobook["id"], audiobook.get("name"))
 		dialog.Show()
 
 	def _load_user_playlists(self):
@@ -345,6 +371,12 @@ class SearchDialog(AccessifyDialog):
 				menu.AppendSeparator()
 				save_item = menu.Append(wx.ID_ANY, _("Save Show"))
 				self.Bind(wx.EVT_MENU, self.on_save_show, save_item)
+			elif item_type == "audiobook":
+				menu.AppendSeparator()
+				chapters_item = menu.Append(wx.ID_ANY, _("View Chapters"))
+				self.Bind(
+					wx.EVT_MENU, lambda e, a=item: self._open_audiobook_chapters(a), chapters_item
+				)
 			elif item_type == "playlist":
 				is_owned = item.get("owner", {}).get("id") == self._current_user_id
 				if not is_owned:

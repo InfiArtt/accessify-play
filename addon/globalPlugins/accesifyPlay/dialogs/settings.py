@@ -12,6 +12,10 @@ from .. import donate, spotify_client, updater  # Tanda .. berarti naik satu lev
 from ..language import AVAILABLE_LANGUAGE_CODES, LANGUAGE_AUTO, LANGUAGE_DISPLAY_OVERRIDES
 from ..ui.base_dialog import AccessifyDialog
 
+from ..language import init_translation  # noqa: E402
+
+init_translation()
+
 
 
 

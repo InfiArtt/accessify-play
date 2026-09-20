@@ -7,6 +7,10 @@ import ui
 import wx
 from logHandler import log
 
+from .language import init_translation  # noqa: E402
+
+init_translation()
+
 
 def run_in_thread(func):
 	"""

@@ -6,6 +6,10 @@ import wx
 
 from ..ui.base_dialog import AccessifyDialog
 
+from ..language import init_translation  # noqa: E402
+
+init_translation()
+
 
 class QueueListDialog(AccessifyDialog):
 	def __init__(self, parent, client, queue_data):

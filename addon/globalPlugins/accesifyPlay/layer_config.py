@@ -3,6 +3,8 @@ import os
 
 from logHandler import log
 
+from . import paths
+
 
 def N_(message: str) -> str:
 	"""No-op gettext marker so xgettext can pick up strings without translating them at import time."""
@@ -50,7 +52,7 @@ class LayerConfigManager:
 	]
 
 	def __init__(self):
-		self.config_file = os.path.join(os.path.expandvars("%USERPROFILE%"), "layer_config.json")
+		self.config_file = paths.get_data_path(paths.LAYER_CONFIG_FILE)
 		self.config = {}
 		self.load()
 

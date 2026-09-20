@@ -1,7 +1,30 @@
 # Changelog
 
+## Version 1.10.0
+
+### 🎉 New Features
+
+- **Audiobooks**: "Audiobook" is now one of the types you can pick in the Search dialog. Results show the author, and pressing Enter on an audiobook opens its chapter list. Enter on a chapter starts it and keeps playing into the chapters that follow, rather than stopping at the end of the one you picked. The chapter list supports Alt+P to play, Alt+Q to queue and Alt+L to copy a link, and "View Chapters" has been added to the search context menu. Note that Spotify only sells audiobooks in some countries; where they are unavailable, searches return nothing and the add-on tells you the book is not available in your country.
+- **Featured Playlists**: A new "Featured Playlists" button in the Search dialog opens Spotify's front-page curated playlists. Spotify's own greeting for the time of day ("Good morning!") is shown above the list and spoken. Press Enter to browse a playlist's tracks, or use the context menu to play the whole playlist or copy its link.
+
+### 🛠️ Bug Fixes
+
+- **The command layer no longer stops working after the first use (Closes #46)**: `NVDA+Alt+G` could stop responding for the rest of the NVDA session, typing a stray letter into whatever program was open instead of opening the layer. The layer has been rebuilt on the same mechanism NVDA uses for its own Input Help, so it no longer touches gesture bindings at all — which means your shortcuts, including any you set in the Input Gestures dialog, can no longer be lost. If anything inside the layer ever goes wrong, NVDA now switches it off and passes the key through normally instead of leaving the keyboard stuck, and a layer left open by mistake closes itself after 30 seconds.
+- **Custom layer shortcuts with unusual capitalisation now work**: a shortcut saved as `kb:G` rather than `kb:g` was silently ignored. Shortcuts are now matched the same way NVDA matches them.
+- **Choosing a language for the add-on no longer affects the rest of NVDA**: setting a specific language replaced the translation function for every other add-on and for NVDA itself, so unrelated parts of NVDA could start speaking in the language you picked here.
+- **"Follow NVDA language" now really uses the add-on's own translations**: because of the same problem, this setting fell back to NVDA's translations instead, leaving the add-on in English. If you use NVDA in a language the add-on has been translated into, you will now see those translations where you previously saw English.
+- **Connection problems while validating credentials are reported properly**: a timeout was recorded in the log as an unexpected internal error, with a traceback that hid the real cause.
+
+### 🧹 Improvements & Fixes
+
+- **Add-on data has moved out of your user folder**: the Spotify token cache, your command layer shortcuts and any pending sleep timer now live in an `accessifyPlay` folder inside NVDA's own configuration folder, instead of being left loose in `%USERPROFILE%`. Your existing files are moved across automatically the first time this version runs, so **you do not need to log in again**. This keeps your Spotify token with NVDA's configuration, so it travels with a portable copy of NVDA and is removed along with it, rather than staying behind in your user folder after uninstalling.
+- **Errors are explained in plain language**: when something goes wrong with Spotify you now hear what happened and what to do, instead of a developer error such as "Spotify command failed: http status: 400, code: -1 - Invalid limit". Spotify's own reasons are used where it gives one, so you get "There is no previous track to go back to", "This feature requires Spotify Premium" or "No active Spotify device. Start playing something in the Spotify app first". When Spotify is temporarily limiting requests, the add-on now says roughly how long to wait. The technical detail still goes to the NVDA log for bug reports.
+- **Log messages are no longer translated**, so the NVDA log stays readable in English and bug reports are easier to follow.
+- **Removed unused code**: an unused compatibility layer, a duplicate copy of the internal helper functions that could never actually be loaded, leftover handling for the custom Client ID that 1.9.0 made unnecessary, and two obsolete settings left in the configuration.
+
 ## Version 1.9.1
-### dY>,? Bug Fixes
+### 🛠️ Bug Fixes
+
 - **Settings Crash**: Fixed a critical UI bug where the NVDA settings dialog would crash and overlap with other add-on settings panels, preventing users from clicking the "Validate Credentials" button (Closes #55).
 
 ## Version 1.9.0

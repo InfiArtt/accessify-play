@@ -9,6 +9,10 @@ from gui import guiHelper
 
 from ..ui.base_dialog import AccessifyDialog
 
+from ..language import init_translation  # noqa: E402
+
+init_translation()
+
 
 def _get_search_limit(default_value):
 	try:

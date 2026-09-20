@@ -14,49 +14,92 @@ from logHandler import log
 from spotipy.exceptions import SpotifyException
 from spotipy.oauth2 import CacheFileHandler, SpotifyPKCE
 
+from . import paths
+
+from .language import init_translation  # noqa: E402
+
+init_translation()
+
 # This will be the single, shared instance of the client
 _instance = None
 
 
 def _get_cache_path():
-	"""Returns the path to the Spotify token cache file, in the user's %USERPROFILE% directory."""
-	return os.path.join(os.path.expandvars("%USERPROFILE%"), ".spotify_cache.json")
+	"""Returns the path to the Spotify token cache file."""
+	return paths.get_data_path(paths.CACHE_FILE)
 
 
-def _get_client_id_path():
-	"""Returns the path to the Spotify Client ID file, in the user's %USERPROFILE% directory."""
-	return os.path.join(os.path.expandvars("%USERPROFILE%"), ".spotify_client_id.json")
+def _format_retry_delay(seconds):
+	"""'about 30 seconds' / 'about 9 minutes', for a Retry-After value."""
+	try:
+		seconds = int(seconds)
+	except (TypeError, ValueError):
+		return None
+	if seconds < 60:
+		# Translators: how long to wait before retrying, in seconds.
+		return _("about {count} seconds").format(count=max(1, seconds))
+	minutes = max(1, round(seconds / 60))
+	# Translators: how long to wait before retrying, in minutes.
+	return _("about {count} minutes").format(count=minutes)
 
 
-def _read_client_id():
-	"""Reads the Client ID from the dedicated JSON file."""
-	path = _get_client_id_path()
-	if os.path.exists(path):
-		try:
-			with open(path) as f:
-				data = json.load(f)
-				return data.get("clientID", "")
-		except json.JSONDecodeError:
-			log.error(f"Error decoding client ID file: {path}", exc_info=True)
-			return ""
-	return ""
+def _friendly_error(e):
+	"""A message worth saying out loud, for a failed Spotify request.
 
+	Spotify's own wording ("http status: 400, code: -1 - Invalid limit") is
+	written for developers. It goes to the log; the user gets this instead.
+	"""
+	# Player endpoints explain themselves through `reason`, which is far more
+	# specific than the status code, so prefer it when there is one.
+	reason_messages = {
+		"NO_PREV_TRACK": _("There is no previous track to go back to."),
+		"NO_NEXT_TRACK": _("There is no next track to skip to."),
+		"NO_SPECIFIC_TRACK": _("That track is not available."),
+		"ALREADY_PAUSED": _("Spotify is already paused."),
+		"NOT_PAUSED": _("Spotify is already playing."),
+		"NOT_PLAYING_TRACK": _("Nothing is playing right now."),
+		"NOT_PLAYING_CONTEXT": _("Nothing is playing right now."),
+		"NOT_PLAYING_LOCALLY": _("Nothing is playing right now."),
+		"ENDLESS_CONTEXT": _("This cannot be done while a radio station is playing."),
+		"CONTEXT_DISALLOW": _("Spotify does not allow that for what is playing now."),
+		"VOLUME_CONTROL_DISALLOW": _("This device does not let Spotify change its volume."),
+		"NO_ACTIVE_DEVICE": _(
+			"No active Spotify device. Start playing something in the Spotify app first."
+		),
+		"PREMIUM_REQUIRED": _("This feature requires Spotify Premium."),
+		"DEVICE_NOT_CONTROLLABLE": _("Spotify cannot control this device."),
+	}
+	reason = getattr(e, "reason", None)
+	if reason and reason in reason_messages:
+		return reason_messages[reason]
 
-def _write_client_id(client_id):
-	"""Writes the Client ID to the dedicated JSON file."""
-	path = _get_client_id_path()
-	with open(path, "w") as f:
-		json.dump({"clientID": client_id}, f)
+	status = getattr(e, "http_status", None)
 
+	if status == 429:
+		retry_after = None
+		if getattr(e, "headers", None):
+			retry_after = _format_retry_delay(e.headers.get("Retry-After"))
+		if retry_after:
+			return _(
+				"Spotify is limiting requests at the moment. Please try again in {delay}."
+			).format(delay=retry_after)
+		return _("Spotify is limiting requests at the moment. Please try again shortly.")
 
-def _clear_client_id_file():
-	"""Deletes the Client ID JSON file."""
-	path = _get_client_id_path()
-	if os.path.exists(path):
-		os.remove(path)
-		log.info(f"Spotify: Client ID file deleted: {path}")
-	else:
-		log.info(f"Spotify: Client ID file not found at {path}, no deletion needed.")
+	status_messages = {
+		400: _("Spotify could not handle that request. Please try again."),
+		403: _("Spotify would not allow that. Some actions require Spotify Premium."),
+		404: _("Spotify could not find that. It may no longer exist, or it may not be available in your country."),
+		405: _("Spotify does not support that action."),
+		502: _("Spotify is having trouble right now. Please try again in a moment."),
+		503: _("Spotify is having trouble right now. Please try again in a moment."),
+		504: _("Spotify is having trouble right now. Please try again in a moment."),
+	}
+	if status in status_messages:
+		return status_messages[status]
+	if status is not None and status >= 500:
+		return _("Spotify is having trouble right now. Please try again in a moment.")
+
+	return _("Spotify could not complete that request. Please try again.")
 
 
 def get_client():
@@ -73,7 +116,7 @@ class SpotifyClient:
 		self.device_id = None
 
 	def _get_cache_handler(self):
-		"""Creates a CacheFileHandler pointing to the user's %USERPROFILE% directory."""
+		"""Creates a CacheFileHandler pointing at the add-on's data folder."""
 		return CacheFileHandler(cache_path=_get_cache_path())
 
 	def _get_auth_manager(self, open_browser=False):
@@ -91,20 +134,20 @@ class SpotifyClient:
 
 	def initialize(self):
 		"""Silently initializes the client on startup using cached tokens."""
-		log.info(_("Spotify: Attempting silent initialization."))
+		log.info("Spotify: attempting silent initialization.")
 		auth_manager = self._get_auth_manager(open_browser=False)
 		if not auth_manager:
-			log.info(_("Spotify: No credentials configured, skipping initialization."))
+			log.info("Spotify: no credentials configured, skipping initialization.")
 			return
 
 		try:
 			token_info = auth_manager.get_access_token(check_cache=True)
 			if token_info:
 				self.client = spotipy.Spotify(auth_manager=auth_manager, requests_timeout=10)
-				log.info(_("Spotify: Client successfully initialized from cache."))
+				log.info("Spotify: client successfully initialized from cache.")
 			else:
 				self.client = None
-				log.info(_("Spotify: No valid token in cache."))
+				log.info("Spotify: no valid token in cache.")
 		except (requests.exceptions.ConnectionError, urllib3.exceptions.MaxRetryError) as e:
 			self.client = None
 			log.debug(f"Spotify silent initialization network error (offline): {e}")
@@ -113,14 +156,14 @@ class SpotifyClient:
 			log.debug(f"Spotify silent initialization timeout: {e}")
 		except Exception as e:
 			self.client = None
-			log.error(f"{_('Spotify: Silent initialization failed:')} {e}", exc_info=True)
+			log.error(f"Spotify: silent initialization failed: {e}", exc_info=True)
 
 	def validate(self):
 		"""Interactively validates credentials, opening a browser if needed."""
-		log.info(_("Spotify: Attempting interactive validation."))
+		log.info("Spotify: attempting interactive validation.")
 		auth_manager = self._get_auth_manager(open_browser=True)
 		if not auth_manager:
-			log.warning(_("Spotify: Validation failed. Credentials not configured."))
+			log.warning("Spotify: validation failed, credentials not configured.")
 			return False
 
 		try:
@@ -128,27 +171,23 @@ class SpotifyClient:
 			if token_info:
 				self.client = spotipy.Spotify(auth_manager=auth_manager, requests_timeout=10)
 				self.client.current_user()  # Test call
-				log.info(_("Spotify: Validation successful."))
+				log.info("Spotify: validation successful.")
 				return True
 			else:
 				self.client = None
-				log.warning(_("Spotify: Could not get token, even with interactive login."))
+				log.warning("Spotify: could not get a token, even with interactive login.")
 				return False
-		except (requests.exceptions.ConnectionError, urllib3.exceptions.MaxRetryError) as e:
-			self.client = None
-			log.error(f"Spotify: Connection error during validation: {e}")
-			return False
-		except Exception as e:
-			self.client = None
-			log.error(f"Spotify: Error during validation: {e}", exc_info=True)
-			return False
 		except (requests.exceptions.ReadTimeout, requests.exceptions.Timeout, urllib3.exceptions.ReadTimeoutError, TimeoutError) as e:
 			self.client = None
 			log.debug(f"Spotify interactive validation timeout: {e}")
 			return False
+		except (requests.exceptions.ConnectionError, urllib3.exceptions.MaxRetryError) as e:
+			self.client = None
+			log.error(f"Spotify: connection error during validation: {e}")
+			return False
 		except Exception as e:
 			self.client = None
-			log.error(f"{_('Spotify: Interactive validation failed:')} {e}", exc_info=True)
+			log.error(f"Spotify: interactive validation failed: {e}", exc_info=True)
 			return False
 
 	def _execute(self, command, *args, **kwargs):
@@ -170,23 +209,29 @@ class SpotifyClient:
 		except SpotifyException as e:
 			message = str(e).lower()
 			if "restriction" not in message:
-				log.error(f"{_('Spotify command failed:')} {e}", exc_info=True)
+				log.error(f"Spotify command failed: {e}", exc_info=True)
 			if e.http_status == 401:  # Unauthorized
 				self.initialize()  # Try to refresh the token silently
 				return _("Token expired, please try again.")
-			return _("Spotify command failed: {error_message}").format(error_message=e.msg)
+			return _friendly_error(e)
 		except (requests.exceptions.ConnectionError, urllib3.exceptions.MaxRetryError) as e:
 			log.debug(f"Spotify connection error (Offline / Network issue): {e}")
 			return _("Connection to Spotify failed. Please check your internet connection.")
 		except Exception as e:
 			log.error(
-				f"{_('Spotify command failed with an unexpected error:')} {e}",
+				f"Spotify command failed with an unexpected error: {e}",
 				exc_info=True,
 			)
-			return _("An unexpected error occurred.")
+			return _("Something went wrong while talking to Spotify. Please try again.")
 
-	def _execute_web_api(self, command, *args, **kwargs):
-		"""Wrapper for non-playback API calls that don't require a device."""
+	def _execute_web_api(self, command, *args, status_messages=None, **kwargs):
+		"""Wrapper for non-playback API calls that don't require a device.
+
+		status_messages optionally maps an HTTP status code to the message to
+		return for it, so a caller can turn an expected failure (a retired
+		endpoint answering 404, say) into a clear sentence instead of a raw
+		Spotify error.
+		"""
 		if not self.client:
 			return _("Spotify client not ready. Please validate your credentials.")
 
@@ -204,17 +249,30 @@ class SpotifyClient:
 			log.debug(f"Spotify ConnectionError (Offline server/DNS failure): {e}")
 			return _("Connection to Spotify failed. Please check your internet connection.")
 		except SpotifyException as e:
-			log.error(f"{_('Spotify command failed:')} {e}", exc_info=True)
+			if status_messages and e.http_status in status_messages:
+				# An outcome the caller already knows how to explain.
+				log.debug(f"Spotify returned {e.http_status} for {command.__name__}: {e}")
+				return status_messages[e.http_status]
+			log.error(f"Spotify command failed: {e}", exc_info=True)
 			if e.http_status == 401:  # Unauthorized
 				self.initialize()  # Try to refresh the token silently
 				return _("Token expired, please try again.")
-			return _("Spotify command failed: {error_message}").format(error_message=e.msg)
+			return _friendly_error(e)
 		except Exception as e:
 			log.error(
-				f"{_('Spotify command failed with an unexpected error:')} {e}",
+				f"Spotify command failed with an unexpected error: {e}",
 				exc_info=True,
 			)
-			return _("An unexpected error occurred.")
+			return _("Something went wrong while talking to Spotify. Please try again.")
+
+	def _retired_endpoint_message(self):
+		"""Message for endpoints Spotify deprecated in November 2024.
+
+		Apps registered before the cut-off (ours included) kept access, but
+		Spotify can withdraw it at any time, so a 404 or 403 here is an expected
+		answer rather than a fault worth logging a traceback for.
+		"""
+		return _("Spotify has retired this feature, so it is no longer available.")
 
 	def send_keep_alive(self):
 		"""
@@ -249,13 +307,13 @@ class SpotifyClient:
 				log.debug(f"Spotify ReadTimeout on fetching devices (retry): {retry_e}")
 				return False
 			except Exception as retry_e:
-				log.error(f"{_('Spotify: Could not fetch devices on retry:')} {retry_e}", exc_info=True)
+				log.error(f"Spotify: could not fetch devices on retry: {retry_e}", exc_info=True)
 				return False
 		except (requests.exceptions.ReadTimeout, requests.exceptions.Timeout, urllib3.exceptions.ReadTimeoutError, TimeoutError) as e:
 			log.debug(f"Spotify ReadTimeout on fetching devices: {e}")
 			return False
 		except Exception as e:
-			log.error(f"{_('Spotify: Could not fetch devices:')} {e}", exc_info=True)
+			log.error(f"Spotify: could not fetch devices: {e}", exc_info=True)
 			return False
 
 		if not devices_result or not devices_result.get("devices"):
@@ -281,13 +339,13 @@ class SpotifyClient:
 				self.device_id = target_device_id
 				return True
 			except (requests.exceptions.ConnectionError, urllib3.exceptions.MaxRetryError) as e:
-				log.debug(f"{_('Spotify: Failed to wake up device (Offline):')} {e}")
+				log.debug(f"Spotify: failed to wake up device (offline): {e}")
 				self.device_id = None
 			except (requests.exceptions.ReadTimeout, requests.exceptions.Timeout, urllib3.exceptions.ReadTimeoutError, TimeoutError) as e:
-				log.debug(f"{_('Spotify: Failed to wake up device (Timeout):')} {e}")
+				log.debug(f"Spotify: failed to wake up device (timeout): {e}")
 				self.device_id = None
 			except Exception as e:
-				log.error(f"{_('Spotify: Failed to wake up device:')} {e}", exc_info=True)
+				log.error(f"Spotify: failed to wake up device: {e}", exc_info=True)
 				self.device_id = None  # Reset karena gagal
 				return False
 		return False
@@ -629,29 +687,25 @@ class SpotifyClient:
 		return _("Nothing is currently playing.")
 
 	def clear_credentials_and_cache(self):
-		"""Clears clientID from its dedicated file and deletes the Spotify token cache."""
+		"""Deletes the stored Spotify token cache."""
 		try:
-			_clear_client_id_file()
 			config.conf.save()  # Save config to ensure other settings are persisted
-			log.info(_("Spotify: clientID cleared from its dedicated file."))
 
 			cache_path = _get_cache_path()
 			if os.path.exists(cache_path):
 				os.remove(cache_path)
-				log.info(f"{_('Spotify: Token cache file deleted:')} {cache_path}")
+				log.info(f"Spotify: token cache file deleted: {cache_path}")
 			else:
-				log.info(
-					f"{_('Spotify: Token cache file not found at')} {cache_path}, {_('no deletion needed.')}"
-				)
+				log.info(f"Spotify: no token cache file at {cache_path}, nothing to delete.")
 
 			self.client = None
 			return _("Spotify credentials and cache cleared successfully.")
 		except Exception as e:
 			log.error(
-				f"{_('Spotify: Failed to clear credentials and cache:')} {e}",
+				f"Spotify: failed to clear credentials and cache: {e}",
 				exc_info=True,
 			)
-			return _("Failed to clear Spotify credentials and cache: {error}").format(error=e)
+			return _("Could not clear your Spotify login. Please try again.")
 
 	def seek_track(self, offset_ms):
 		"""Seeks the current track forward or backward by offset_ms."""
@@ -1197,6 +1251,42 @@ class SpotifyClient:
 		"""Gets episodes for a show (paginated)."""
 		return self._execute_web_api(self.client.show_episodes, show_id=show_id, limit=limit, offset=offset)
 
+	def get_audiobook_details(self, audiobook_id):
+		"""Gets metadata for a single audiobook.
+
+		Audiobooks are only sold in a handful of markets, so Spotify answers 404
+		for a book that is not available to this account.
+		"""
+		return self._execute_web_api(
+			self.client.get_audiobook,
+			audiobook_id,
+			status_messages={404: _("This audiobook is not available in your country.")},
+		)
+
+	def get_audiobook_chapters(self, audiobook_id, limit=50, offset=0):
+		"""Gets chapters for an audiobook (paginated)."""
+		return self._execute_web_api(
+			self.client.get_audiobook_chapters,
+			audiobook_id,
+			limit=limit,
+			offset=offset,
+			status_messages={404: _("This audiobook is not available in your country.")},
+		)
+
+	def get_featured_playlists(self, limit=50, offset=0):
+		"""Gets Spotify's front-page curated playlists for this account.
+
+		Returns the raw payload, which carries both Spotify's own greeting
+		(``message``, e.g. "Good morning!") and the ``playlists`` page.
+		"""
+		retired = self._retired_endpoint_message()
+		return self._execute_web_api(
+			self.client.featured_playlists,
+			limit=limit,
+			offset=offset,
+			status_messages={404: retired, 403: retired},
+		)
+
 	def get_current_user_profile(self):
 		"""Returns information about the current Spotify user."""
 		return self._execute_web_api(self.client.current_user)
@@ -1278,6 +1368,8 @@ class SpotifyClient:
 			"playlist": _("Playlist"),
 			"show": _("Show"),
 			"episode": _("Episode"),
+			"audiobook": _("Audiobook"),
+			"chapter": _("Chapter"),
 		}
 		return labels.get(entity_type, entity_type.title())
 

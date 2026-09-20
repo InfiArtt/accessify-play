@@ -3,6 +3,11 @@ import webbrowser
 
 import wx
 from gui import messageBox
+from logHandler import log
+
+from .language import init_translation  # noqa: E402
+
+init_translation()
 
 
 def open_donate_link():
@@ -20,10 +25,16 @@ def open_donate_link():
 			== wx.OK
 		):
 			webbrowser.open("https://www.paypal.com/paypalme/rafli23115")
-	except Exception as e:
-		# Fallback message if the browser fails to open
+	except Exception:
+		# Fallback message if the browser fails to open. The raw exception goes
+		# to the log; the user gets the address so they can open it themselves.
+		log.error("AccessifyPlay: could not open the donation link.", exc_info=True)
 		wx.CallAfter(
 			messageBox,
-			f"Could not open donation link. Please visit the addon's page for details.\nError: {e}",
-			"Error",
+			_(
+				"Could not open your web browser. The donation page is at "
+				"https://www.paypal.com/paypalme/rafli23115"
+			),
+			_("Donate"),
+			wx.OK | wx.ICON_ERROR,
 		)

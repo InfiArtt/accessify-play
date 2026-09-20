@@ -23,16 +23,17 @@ addon_info = AddonInfo(
 	# Translators: Long description to be shown for this add-on on add-on information from add-on store
 	addon_description=_("""Accessify Play provides comprehensive NVDA control for Spotify playback on any Connect-enabled device. A Spotify Premium subscription is required for full functionality."""),
 	# version
-	addon_version="1.9.1",
+	addon_version="1.10.0",
 	# Brief changelog for this version
 	# Translators: what's new content for the add-on version to be shown in the add-on store
 	addon_changelog=_("""
-- **Hotfix (1.9.1)**: Fixed a critical UI bug where the NVDA settings dialog would crash and bleed into other add-on panels, preventing users from validating their credentials.
-- Developer Dashboard Bypass: Fully bypasses Spotify's 5-user limit! Setup is now a seamless one-click login for everyone.
-- Browse Categories: Added a new "Browse Categories" button to the Search Dialog to explore Spotify's official moods and genres.
-- Play My Top Tracks: Press NVDA+Alt+G then G to instantly queue your 50 most played songs from the last month.
-- Play Recently Played: Press NVDA+Alt+G then O to instantly queue your actual Spotify listening history.
-- Simplified Setup: Completely removed all confusing Client ID and Port configuration fields from Settings.
+- Audiobooks: search for audiobooks and browse their chapters, with playback continuing into the following chapters.
+- Featured Playlists: a new button in the Search dialog opens Spotify's front-page curated playlists.
+- Fixed the command layer no longer responding after its first use (#46). NVDA+Alt+G now works every time, and your shortcuts can no longer be lost.
+- Fixed the add-on's language setting changing the language of NVDA itself and of other add-ons.
+- "Follow NVDA language" now uses the add-on's own translations instead of falling back to English.
+- Errors are now explained in plain language instead of showing raw Spotify error codes, and rate limits say how long to wait.
+- Your Spotify token, layer shortcuts and sleep timer have moved from your user folder into NVDA's configuration folder. Existing files move across automatically; you do not need to log in again.
 	"""),
 	# Author(s)
 	addon_author="Rafli I .<rafli08523717409@gmail.com>, Rexya <rexya2017@gmail.com>",

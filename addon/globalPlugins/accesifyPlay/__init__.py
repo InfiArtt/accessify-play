@@ -25,7 +25,7 @@ if lib_path not in sys.path:
 
 # Local addon modules
 from . import (  # noqa: E402
-	language,
+	paths,
 	spotify_client,
 	updater,
 	utils,  # Impor decorator dari utils.py
@@ -46,9 +46,12 @@ from .dialogs.volume import SetVolumeDialog  # noqa: E402
 from .dialogs.lyrics_window import LyricsDialog  # noqa: E402
 from .lyrics import LyricsAutoReader, fetch_lyrics, parse_lrc  # noqa: E402
 
+from .language import init_translation  # noqa: E402
+
+init_translation()
+
 # Define the configuration specification
 confspec = {
-	"port": "integer(min=1024, max=65535, default=8539)",
 	"searchLimit": "integer(min=1, max=50, default=20)",
 	"seekDuration": "integer(min=1, max=60, default=15)",
 	"language": "string(default='auto')",
@@ -58,11 +61,8 @@ confspec = {
 	"isAutomaticallyCheckForUpdates": "boolean(default=True)",
 	"lastUpdateCheck": "integer(default=0)",
 	"volumeStep": "integer(default=5, min=1, max=100)",
-	"redirectUri": "string(default='')",
 }
 config.conf.spec["spotify"] = confspec
-
-language._apply_language_preference()
 
 
 class GlobalPlugin(globalPluginHandler.GlobalPlugin):
@@ -70,6 +70,9 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
 	def __init__(self):
 		super().__init__()
+		# Before anything reads a data file: versions up to 1.9.1 kept them in
+		# the user's home directory.
+		paths.migrate_legacy_data()
 		self._is_modifying_playback = False
 		self.client = spotify_client.get_client()
 
@@ -113,32 +116,19 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			
 		self._check_resume_sleep_timer()
 
-	def getScript(self, gesture):
-		if not self.commandLayer.is_active:
-			return super().getScript(gesture)
-
-		# Dalam mode command layer, manual matching tanpa mengubah _gestureBindings NVDA
-		for identifier in gesture.identifiers:
-			script_name = self.commandLayer._layer_gestures.get(identifier)
-			if script_name:
-				script_func = getattr(self, "script_" + script_name, None)
-				if script_func:
-					return self.commandLayer.wrap_script(script_func)
-
-		# Tombol asing ditekan (tidak terdaftar di layer)
-		if self.commandLayer.is_modifier(gesture):
-			return None  # Biarkan NVDA meresolusi modifier key
-
-		self.commandLayer.handle_unknown_gesture(gesture)
-
-		# Telan tombol mati agar tidak bocor ke sistem Windows 
-		def dummyScript(gesture):
-			pass
-		return dummyScript
+	# NOTE: getScript is deliberately NOT overridden. NVDA calls it on every
+	# global plugin for every gesture (including modifier key presses, and
+	# gestures it later discards), and it must stay a pure lookup. The command
+	# layer intercepts gestures through inputCore's capture function instead;
+	# see CommandLayerManager.
 
 	def terminate(self):
 		super().terminate()
 		self.is_running = False
+
+		# Release the input capture before anything else, so a half-torn-down
+		# plugin can never keep hold of the keyboard.
+		self.commandLayer.terminate()
 
 		# Cancel sleep timer safely
 		if self._active_sleep_timer:
@@ -1141,8 +1131,8 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		return self.client.get_current_songlink_url()
 
 	def _get_timer_file_path(self):
-		"""Lokasi file: %USERPROFILE%/.sleeptimer.accessify-play"""
-		return os.path.join(os.path.expandvars("%USERPROFILE%"), ".sleeptimer.accessify-play")
+		"""Where the pending sleep-timer deadline is stored between sessions."""
+		return paths.get_data_path(paths.SLEEP_TIMER_FILE)
 
 	def _save_timer_state(self, end_timestamp):
 		"""Menyimpan waktu target berhenti ke file."""

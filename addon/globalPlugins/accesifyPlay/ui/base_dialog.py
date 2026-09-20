@@ -5,6 +5,10 @@ import ui
 from ..core.thread_manager import thread_manager
 from logHandler import log
 
+from ..language import init_translation  # noqa: E402
+
+init_translation()
+
 class AccessifyDialog(wx.Dialog):
 	"""
 	Strictly managed base dialog.
