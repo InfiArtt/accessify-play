@@ -88,3 +88,17 @@ def conf_get(key, default=None):
 		log.debug(f"AccessifyPlay: setting {key!r} unavailable, using {default!r}.")
 		return default
 	return default if value is None else value
+
+
+def safe_text(value, fallback):
+	"""Coerce a Spotify field into something a wx control will accept.
+
+	Spotify sends null for fields it has no value for -- the personalised
+	"Made For You" mixes come back as stubs with a null name. dict.get's
+	default only applies when the key is absent, not when it is present and
+	null, so None slips through; handing None to a wx list control raises
+	TypeError, and one stub entry aborts the loop and empties the whole list.
+	"""
+	if isinstance(value, str) and value.strip():
+		return value
+	return fallback

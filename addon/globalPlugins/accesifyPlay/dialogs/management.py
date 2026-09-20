@@ -8,6 +8,7 @@ import wx
 from gui import guiHelper
 
 from ..ui.base_dialog import AccessifyDialog
+from ..utils import safe_text
 
 from ..language import init_translation  # noqa: E402
 
@@ -817,7 +818,7 @@ class ArtistDiscographyDialog(AccessifyDialog):
 			playlist_submenu = wx.Menu()
 			if self._user_playlists:
 				for playlist in self._user_playlists:
-					menu_item = playlist_submenu.Append(wx.ID_ANY, playlist.get("name", "Unknown"))
+					menu_item = playlist_submenu.Append(wx.ID_ANY, safe_text(playlist.get("name"), _("Unknown")))
 					self.Bind(
 						wx.EVT_MENU,
 						lambda event, p_id=playlist.get("id"), p_name=playlist.get("name"), a_id=item.get("id"), a_name=item.get("name"): (
@@ -833,7 +834,7 @@ class ArtistDiscographyDialog(AccessifyDialog):
 			playlist_submenu = wx.Menu()
 			if self._user_playlists:
 				for playlist in self._user_playlists:
-					menu_item = playlist_submenu.Append(wx.ID_ANY, playlist.get("name", "Unknown Playlist"))
+					menu_item = playlist_submenu.Append(wx.ID_ANY, safe_text(playlist.get("name"), _("Unknown Playlist")))
 					self.Bind(
 						wx.EVT_MENU,
 						lambda event, p_id=playlist.get("id"), p_name=playlist.get("name"): (
@@ -1051,7 +1052,7 @@ class AlbumTracksDialog(AccessifyDialog):
 		playlist_submenu = wx.Menu()
 		if self.user_playlists:
 			for playlist in self.user_playlists:
-				menu_item = playlist_submenu.Append(wx.ID_ANY, playlist.get("name", "Unknown Playlist"))
+				menu_item = playlist_submenu.Append(wx.ID_ANY, safe_text(playlist.get("name"), _("Unknown Playlist")))
 				self.Bind(
 					wx.EVT_MENU,
 					lambda event, p_id=playlist.get("id"), p_name=playlist.get("name"): (
@@ -2310,7 +2311,7 @@ class ManagementDialog(AccessifyDialog):
 				if self.user_playlists:
 					for playlist in self.user_playlists:
 						if playlist.get("owner", {}).get("id") == self.current_user_id:
-							menu_item = playlist_submenu.Append(wx.ID_ANY, playlist.get("name", "Unknown"))
+							menu_item = playlist_submenu.Append(wx.ID_ANY, safe_text(playlist.get("name"), _("Unknown")))
 							self.Bind(
 								wx.EVT_MENU,
 								lambda event, p_id=playlist.get("id"), p_name=playlist.get("name"): (
@@ -2332,7 +2333,7 @@ class ManagementDialog(AccessifyDialog):
 			playlist_submenu = wx.Menu()
 			if self.user_playlists:
 				for playlist in self.user_playlists:
-					menu_item = playlist_submenu.Append(wx.ID_ANY, playlist.get("name", "Unknown Playlist"))
+					menu_item = playlist_submenu.Append(wx.ID_ANY, safe_text(playlist.get("name"), _("Unknown Playlist")))
 					self.Bind(
 						wx.EVT_MENU,
 						lambda event, p_id=playlist.get("id"), p_name=playlist.get("name"): (

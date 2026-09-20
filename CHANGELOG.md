@@ -1,5 +1,11 @@
 # Changelog
 
+## Version 1.10.3
+
+### 🛠️ Bug Fixes
+
+- **Browse Categories stuck on "Loading"**: some categories, notably *Made For You*, never showed their playlists. Spotify describes its personalised mixes (Daily Mix and similar) without a name, and the add-on could not display an entry with no name, so it gave up before adding any of them to the list. Entries with a missing name or owner are now shown with a placeholder, and entries Spotify will not let the add-on open or play are left out instead of appearing as rows that do nothing. Note that Spotify does not make the personalised mixes available to add-ons at all, so a category containing only those will correctly report that it has no playlists.
+
 ## Version 1.10.2
 
 ### 🛠️ Bug Fixes

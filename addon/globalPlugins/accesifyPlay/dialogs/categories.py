@@ -4,6 +4,7 @@ import threading
 from logHandler import log
 from ..core.thread_manager import thread_manager
 from ..ui.base_dialog import AccessifyDialog
+from ..utils import safe_text
 from .management import PlaylistTracksDialog
 
 from ..language import init_translation  # noqa: E402
@@ -90,7 +91,9 @@ class CategoriesDialog(AccessifyDialog):
 		for cat in items:
 			if cat:
 				self.categories.append(cat)
-				idx = self.categoriesList.InsertItem(self.categoriesList.GetItemCount(), cat.get("name", "Unknown"))
+				idx = self.categoriesList.InsertItem(
+					self.categoriesList.GetItemCount(), safe_text(cat.get("name"), _("Unknown"))
+				)
 				self.categoriesList.SetItemData(idx, len(self.categories) - 1)
 				
 		self.categoriesList.SetColumnWidth(0, wx.LIST_AUTOSIZE)
@@ -149,7 +152,7 @@ class CategoryPlaylistsDialog(AccessifyDialog):
 	MENU_COPY_LINK = wx.NewIdRef()
 
 	def __init__(self, parent, client, category):
-		title = _("{name} Playlists").format(name=category.get("name", "Unknown"))
+		title = _("{name} Playlists").format(name=safe_text(category.get("name"), _("Unknown")))
 		super().__init__(parent, title=title, size=(600, 400))
 		self.client = client
 		self.category = category
@@ -223,10 +226,13 @@ class CategoryPlaylistsDialog(AccessifyDialog):
 		items = playlists_page.get("items", [])
 		
 		for p in items:
-			if p:
+			# Spotify returns stubs with null fields for the personalised
+			# "Made For You" mixes. Without an id there is nothing to open or
+			# play, so they are skipped rather than listed as dead rows.
+			if p and p.get("id"):
 				self.playlists.append(p)
-				name = p.get("name", "Unknown")
-				owner = p.get("owner", {}).get("display_name", "Spotify")
+				name = safe_text(p.get("name"), _("Unknown"))
+				owner = safe_text((p.get("owner") or {}).get("display_name"), "Spotify")
 				idx = self.playlistsList.InsertItem(self.playlistsList.GetItemCount(), name)
 				self.playlistsList.SetItem(idx, 1, owner)
 				self.playlistsList.SetItemData(idx, len(self.playlists) - 1)
@@ -419,10 +425,13 @@ class FeaturedPlaylistsDialog(AccessifyDialog):
 		items = playlists_page.get("items", [])
 
 		for p in items:
-			if p:
+			# Spotify returns stubs with null fields for the personalised
+			# "Made For You" mixes. Without an id there is nothing to open or
+			# play, so they are skipped rather than listed as dead rows.
+			if p and p.get("id"):
 				self.playlists.append(p)
-				name = p.get("name", "Unknown")
-				owner = p.get("owner", {}).get("display_name", "Spotify")
+				name = safe_text(p.get("name"), _("Unknown"))
+				owner = safe_text((p.get("owner") or {}).get("display_name"), "Spotify")
 				idx = self.playlistsList.InsertItem(self.playlistsList.GetItemCount(), name)
 				self.playlistsList.SetItem(idx, 1, owner)
 				self.playlistsList.SetItemData(idx, len(self.playlists) - 1)
