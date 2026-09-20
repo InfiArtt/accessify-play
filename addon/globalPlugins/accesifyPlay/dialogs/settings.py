@@ -9,6 +9,7 @@ import wx
 from gui import guiHelper, messageBox, settingsDialogs
 
 from .. import donate, spotify_client, updater  # Tanda .. berarti naik satu level folder
+from ..utils import conf_get
 from ..language import AVAILABLE_LANGUAGE_CODES, LANGUAGE_AUTO, LANGUAGE_DISPLAY_OVERRIDES
 from ..ui.base_dialog import AccessifyDialog
 
@@ -33,24 +34,24 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 		limit_label = _("Search Results Limit (1 to 50)")
 		self.limitCtrl = sHelper.addLabeledControl(limit_label, wx.SpinCtrl)
 		self.limitCtrl.SetRange(1, 50)
-		self.limitCtrl.SetValue(config.conf["spotify"]["searchLimit"])
+		self.limitCtrl.SetValue(conf_get("searchLimit", 20))
 
 		# Translators: Label for a setting to choose the duration for seek forward/backward actions.
 		seek_duration_label = _("Seek Duration (seconds, 1 to 60)")
 		self.seekDurationCtrl = sHelper.addLabeledControl(seek_duration_label, wx.SpinCtrl)
 		self.seekDurationCtrl.SetRange(1, 60)
-		self.seekDurationCtrl.SetValue(config.conf["spotify"]["seekDuration"])
+		self.seekDurationCtrl.SetValue(conf_get("seekDuration", 15))
 
 		# Translators: Label for a setting to choose the volume step percentage.
 		volume_step_label = _("Volume Step (1 to 100)")
 		self.volumeStepCtrl = sHelper.addLabeledControl(volume_step_label, wx.SpinCtrl)
 		self.volumeStepCtrl.SetRange(1, 100)
-		self.volumeStepCtrl.SetValue(config.conf["spotify"]["volumeStep"])
+		self.volumeStepCtrl.SetValue(conf_get("volumeStep", 5))
 
 		keep_alive_label = _("Keep Alive Interval (seconds, 0 = Off, Min = 5)")
 		self.keepAliveCtrl = sHelper.addLabeledControl(keep_alive_label, wx.SpinCtrl)
 		self.keepAliveCtrl.SetRange(0, 300)  # Maksimal 5 menit
-		self.keepAliveCtrl.SetValue(config.conf["spotify"]["keepAliveInterval"])
+		self.keepAliveCtrl.SetValue(conf_get("keepAliveInterval", 30))
 		# Translators: Label for a setting to choose the display language for the addon.
 		language_label = _("Language:")
 		self.languageEntries = self._buildLanguageEntries()
@@ -64,7 +65,7 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 			style=wx.CB_READONLY,
 		)
 
-		current_lang_code = config.conf["spotify"]["language"]
+		current_lang_code = conf_get("language", LANGUAGE_AUTO)
 		current_label = self.languageLabelByCode.get(
 			current_lang_code, self.languageLabelByCode.get(LANGUAGE_AUTO, language_choices[0])
 		)
@@ -75,7 +76,7 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 		self.announceTrackChanges = sHelper.addItem(
 			wx.CheckBox(self, label=_("Announce track changes automatically:"))
 		)
-		self.announceTrackChanges.SetValue(config.conf["spotify"]["announceTrackChanges"])
+		self.announceTrackChanges.SetValue(conf_get("announceTrackChanges", False))
 
 		# Updater settings
 		self.updateChannelCtrl = sHelper.addLabeledControl(
@@ -85,13 +86,13 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 			style=wx.CB_READONLY,
 		)
 		self.updateChannelCtrl.SetValue(
-			_("Beta") if config.conf["spotify"]["updateChannel"] == "beta" else _("Stable")
+			_("Beta") if conf_get("updateChannel", "stable") == "beta" else _("Stable")
 		)
 
 		self.autoCheckUpdatesCtrl = sHelper.addItem(
 			wx.CheckBox(self, label=_("Check for updates automatically"))
 		)
-		self.autoCheckUpdatesCtrl.SetValue(config.conf["spotify"]["isAutomaticallyCheckForUpdates"])
+		self.autoCheckUpdatesCtrl.SetValue(conf_get("isAutomaticallyCheckForUpdates", True))
 
 		self.lastCheckLabel = sHelper.addItem(wx.StaticText(self, label=""))
 

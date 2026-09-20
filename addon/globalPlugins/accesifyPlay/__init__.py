@@ -102,8 +102,6 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		self._devicesDialogLoading = False
 		self.commandLayer = CommandLayerManager(self)
 
-		settingsDialogs.NVDASettingsDialog.categoryClasses.append(SpotifySettingsPanel)
-
 		# Polling untuk perubahan lagu
 		self.last_track_id = None
 		self.is_running = True
@@ -112,10 +110,30 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		thread_manager.submit_task(self.keep_alive_worker, daemon=True, name="KeepAliveWorker")
 		thread_manager.submit_task(self.client.initialize, daemon=True, name="ClientInit")
 		
-		if config.conf["spotify"]["isAutomaticallyCheckForUpdates"]:
+		if utils.conf_get("isAutomaticallyCheckForUpdates", True):
 			thread_manager.submit_task(updater.check_for_updates, False, daemon=True, name="UpdaterCheck")
 			
 		self._check_resume_sleep_timer()
+
+		# Last, so that a failure above can never leave a panel registered for a
+		# plugin that is not running. terminate() is only called for plugins
+		# that finished __init__, so a leaked entry would survive for the rest
+		# of the NVDA session and the dialog would draw the panel twice over.
+		self._register_settings_panel()
+
+	@staticmethod
+	def _register_settings_panel():
+		"""Add our panel to NVDA's settings dialog, replacing any stale copy.
+
+		Reloading plugins re-imports this module, so an earlier registration
+		points at a different class object with the same name. Matching on the
+		name clears those out instead of stacking another panel on top.
+		"""
+		categories = settingsDialogs.NVDASettingsDialog.categoryClasses
+		for existing in list(categories):
+			if getattr(existing, "__name__", None) == SpotifySettingsPanel.__name__:
+				categories.remove(existing)
+		categories.append(SpotifySettingsPanel)
 
 	# NOTE: getScript is deliberately NOT overridden. NVDA calls it on every
 	# global plugin for every gesture (including modifier key presses, and
@@ -139,7 +157,10 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 				pass
 
 		try:
-			settingsDialogs.NVDASettingsDialog.categoryClasses.remove(SpotifySettingsPanel)
+			categories = settingsDialogs.NVDASettingsDialog.categoryClasses
+			for existing in list(categories):
+				if getattr(existing, "__name__", None) == SpotifySettingsPanel.__name__:
+					categories.remove(existing)
 		except (ValueError, AttributeError):
 			pass
 
@@ -171,7 +192,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		"""
 		try:
 			needs_poll = (
-				config.conf["spotify"]["announceTrackChanges"]
+				utils.conf_get("announceTrackChanges", False)
 				or self._auto_reader.is_active
 				or self.lyricsDialog is not None  # also poll when lyrics window is open
 			)
@@ -207,7 +228,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			if self.last_track_id != current_track_id:
 				self.last_track_id = current_track_id
 				if current_track_id:
-					if config.conf["spotify"]["announceTrackChanges"]:
+					if utils.conf_get("announceTrackChanges", False):
 						track_string = self.client.get_simple_track_string(playback["item"])
 						wx.CallAfter(nvda_ui.message, track_string)
 					if self._auto_reader.is_active:
@@ -552,7 +573,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	def keep_alive_worker(self):
 		"""Thread untuk mengirim ping ke Spotify agar koneksi tetap hidup."""
 		while self.is_running:
-			interval = config.conf["spotify"]["keepAliveInterval"]
+			interval = utils.conf_get("keepAliveInterval", 30)
 
 			if interval == 0:
 				time.sleep(5)
@@ -731,7 +752,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 				return playback
 			if playback and playback.get("device"):
 				current_volume = playback["device"]["volume_percent"]
-				step = config.conf["spotify"]["volumeStep"]
+				step = utils.conf_get("volumeStep", 5)
 				new_volume = min(current_volume + step, 100)
 				self.client._execute(self.client.client.volume, new_volume)
 				return f"{_('Volume')} {new_volume}%"
@@ -753,7 +774,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 				return playback
 			if playback and playback.get("device"):
 				current_volume = playback["device"]["volume_percent"]
-				step = config.conf["spotify"]["volumeStep"]
+				step = utils.conf_get("volumeStep", 5)
 				new_volume = max(current_volume - step, 0)
 				self.client._execute(self.client.client.volume, new_volume)
 				return f"{_('Volume')} {new_volume}%"
@@ -770,7 +791,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			return _("Please wait...")
 		try:
 			self._is_modifying_playback = True
-			seek_duration = config.conf["spotify"]["seekDuration"]
+			seek_duration = utils.conf_get("seekDuration", 15)
 			result = self.client.seek_track(seek_duration * 1000)
 			if isinstance(result, str):
 				return result
@@ -787,7 +808,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			return _("Please wait...")
 		try:
 			self._is_modifying_playback = True
-			seek_duration = config.conf["spotify"]["seekDuration"]
+			seek_duration = utils.conf_get("seekDuration", 15)
 			result = self.client.seek_track(-seek_duration * 1000)
 			if isinstance(result, str):
 				return result

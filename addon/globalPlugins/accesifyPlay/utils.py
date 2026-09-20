@@ -70,3 +70,21 @@ def copy_in_thread(func):
 		thread_manager.submit_task(thread_target, name=f"copy_{func.__name__}", daemon=True)
 
 	return wrapper
+
+
+def conf_get(key, default=None):
+	"""Read one of our settings without ever raising.
+
+	A missing key means the config spec has not been applied to the section.
+	Reading it directly then raises KeyError, and in a settings panel that
+	aborts makeSettings halfway, leaving a half-built panel that corrupts
+	NVDA's whole settings dialog. Falling back to the default degrades one
+	control instead.
+	"""
+	import config
+	try:
+		value = config.conf["spotify"][key]
+	except Exception:
+		log.debug(f"AccessifyPlay: setting {key!r} unavailable, using {default!r}.")
+		return default
+	return default if value is None else value

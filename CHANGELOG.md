@@ -1,5 +1,11 @@
 # Changelog
 
+## Version 1.10.2
+
+### 🛠️ Bug Fixes
+
+- **The Accessify Play settings panel could damage NVDA's settings dialog**: after 1.10.0 failed to start, opening NVDA's settings and selecting Accessify Play showed only the first few options, repeated several times, with another add-on's options mixed in among them. The panel was stopping halfway through building itself because one of its settings was missing a value. Every setting is now read with a fallback, so a missing value can only affect that one option instead of leaving a half-built panel behind, and the panel is registered with NVDA only once the add-on has finished starting successfully.
+
 ## Version 1.10.1
 
 ### 🛠️ Bug Fixes
