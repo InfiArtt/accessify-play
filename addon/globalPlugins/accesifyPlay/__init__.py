@@ -98,7 +98,6 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
 		self._queueDialogLoading = False
 		self._addToPlaylistLoading = False
-		self._managementDialogLoading = False
 		self._devicesDialogLoading = False
 		self.commandLayer = CommandLayerManager(self)
 
@@ -1063,56 +1062,12 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		if self.managementDialog:
 			self.managementDialog.Raise()
 			return
-		if self._managementDialogLoading:
-			nvda_ui.message(_("Management data is still loading, please wait."))
-			return
 		if not self.client.client:
 			nvda_ui.message(_("Spotify client not ready. Please validate your credentials."))
 			return
-
-		self._managementDialogLoading = True
-		nvda_ui.message(_("Please Wait..."))
-
-		@utils.run_in_thread
-		def _prepare():
-			data = self._fetch_management_data()
-			wx.CallAfter(self._finish_management_dialog_load, data)
-
-		_prepare()
-
-	def _fetch_management_data(self):
-		"""Gets all the data needed for ManagementDialog."""
-		data = {}
-		loaders = {
-			"user_profile": self.client.get_current_user_profile,
-			"playlists": self.client.get_user_playlists,
-			"saved_albums": self.client.get_saved_albums,
-			"saved_tracks": self.client.get_saved_tracks,
-			"followed_artists": self.client.get_followed_artists,
-			"top_items": lambda: self.client.get_top_items(item_type="tracks", time_range="medium_term"),
-			"saved_shows": self.client.get_saved_shows,
-			"new_releases": self.client.get_new_releases,
-			"recently_played": self.client.get_recently_played,
-		}
-		for key, func in loaders.items():
-			result = func()
-			# The profile comes first. If even that fails, Spotify is unreachable
-			# or the user is logged out, and one clear message beats a dialog full
-			# of errors. Past that point a failure belongs to its own tab: New
-			# Releases runs on an endpoint Spotify has deprecated, and the day it
-			# goes, the rest of the Library must still open.
-			if isinstance(result, str) and key == "user_profile":
-				return result
-			data[key] = result
-		return data
-
-	def _finish_management_dialog_load(self, data):
-		self._managementDialogLoading = False
-		if isinstance(data, str):
-			nvda_ui.message(data)
-			return
-		self._open_dialog(ManagementDialog, "managementDialog", preloaded_data=data)
-		nvda_ui.message(_("UI Ready."))
+		# Opens straight away: each tab fetches its own list the first time it
+		# is shown, instead of the Library waiting for all of them up front.
+		self._open_dialog(ManagementDialog, "managementDialog")
 
 	@scriptHandler.script(
 		description=_("Show available devices to switch playback."),

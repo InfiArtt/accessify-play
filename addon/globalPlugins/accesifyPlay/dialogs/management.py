@@ -1511,19 +1511,55 @@ class RelatedArtistsDialog(AccessifyDialog):
 
 
 class ManagementDialog(AccessifyDialog):
-	def __init__(self, parent, client, preloaded_data):
+	def __init__(self, parent, client, preloaded_data=None):
 		super().__init__(parent, title=_("Spotify Management"), size=(600, 500))
 		self.client = client
 
+		# Tabs load lazily: each fetches its list the first time it is shown, so
+		# the dialog opens at once instead of after nine requests. Data passed
+		# in here is used as-is and skips that tab's first fetch.
 		self.preloaded_data = preloaded_data or {}
-		self.current_user_id = self.preloaded_data.get("user_profile", {}).get("id")
+		profile = self.preloaded_data.get("user_profile")
+		self.current_user_id = (
+			profile.get("id") if isinstance(profile, dict) else getattr(client, "_current_user_id", None)
+		)
 		self._createPlaylistDialog = None
 		self._playlistDetailsDialog = None
 		self.is_current_playlist_owned = False
 		self.tabs_config = {}
+		#: notebook page -> (loader, list to show "Loading..." in); removed once run.
+		self._page_loaders = {}
 
 		self.init_ui()
 		self._init_shortcuts()
+
+		self.notebook.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, self._on_page_changed)
+		# The first page (Manage Playlists) is visible on opening, so load it now.
+		# Its playlists also feed the "Add to Playlist" menus on the other tabs.
+		self._ensure_page_loaded(self.notebook.GetSelection())
+
+	# --- Lazy tab loading ----------------------------------------------------
+
+	def _register_page(self, page, loader, control=None, initial_data=None):
+		"""Load `page` on first view, unless its data was supplied up front."""
+		if initial_data is not None:
+			loader(initial_data=initial_data)
+			return
+		self._page_loaders[self.notebook.FindPage(page)] = (loader, control)
+
+	def _on_page_changed(self, evt):
+		self._ensure_page_loaded(evt.GetSelection())
+		evt.Skip()
+
+	def _ensure_page_loaded(self, index):
+		entry = self._page_loaders.pop(index, None)
+		if entry is None:
+			return
+		loader, control = entry
+		if control is not None:
+			control.Clear()
+			control.Append(_("Loading..."))
+		loader()
 
 	# --- BAGIAN INTI DARI REFACTORING INTERNAL ---
 	# Fungsi generik untuk mendapatkan item terpilih dari tab yang sedang aktif
@@ -1760,10 +1796,13 @@ class ManagementDialog(AccessifyDialog):
 		refresh_button.Bind(wx.EVT_BUTTON, lambda evt, func=loader_func: func())
 		sizer.Add(refresh_button, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
 
-		initial_data = self.preloaded_data.get(initial_data_key)
-		loader_func(initial_data=initial_data)
+		self._register_page(
+			panel, loader_func, list_control, initial_data=self.preloaded_data.get(initial_data_key)
+		)
 
 	def _populate_generic_list(self, key, data):
+		if not self:
+			return  # closed while this tab was loading
 		tab_cfg = self.tabs_config.get(key)
 		if not tab_cfg:
 			return
@@ -1960,7 +1999,12 @@ class ManagementDialog(AccessifyDialog):
 		self._tracks_timer = None
 		self._tracks_loading = False
 
-		self.load_playlists(initial_data=self.preloaded_data.get("playlists"))
+		self._register_page(
+			panel,
+			self.load_playlists,
+			self.playlist_tracks_list,
+			initial_data=self.preloaded_data.get("playlists"),
+		)
 
 	def on_play_playlist(self, evt):
 		selection_index = self.playlist_choices.GetSelection()
@@ -1979,6 +2023,8 @@ class ManagementDialog(AccessifyDialog):
 		self.load_playlists()
 
 	def load_playlists(self, initial_data=None):
+		if not self:
+			return
 		if isinstance(initial_data, str):
 			# The preload failed; say why, and let Refresh try again.
 			self.user_playlists = []
@@ -1998,10 +2044,13 @@ class ManagementDialog(AccessifyDialog):
 		data = self.client.get_user_playlists()
 		if isinstance(data, str):
 			wx.CallAfter(ui.message, data)
+			wx.CallAfter(self.load_playlists, data)
 		else:
 			wx.CallAfter(self._populate_playlists_combobox, data)
 
 	def _populate_playlists_combobox(self, playlists_data):
+		if not self:
+			return  # closed while playlists were loading
 		# Remember where the user was, so Refresh brings them back to the same
 		# playlist and the same track instead of the top of the first playlist.
 		previous_id = self._shown_playlist_id
@@ -2108,6 +2157,8 @@ class ManagementDialog(AccessifyDialog):
 		thread_manager.submit_task(_load, name='DialogTask', daemon=True)
 
 	def _finish_playlist_tracks(self, tracks_data, token, keep_row):
+		if not self:
+			return  # closed while tracks were loading
 		# The user may have moved to another playlist while this was loading;
 		# only the newest request is allowed to fill the list.
 		if token is not None and token != self._tracks_request:
@@ -2513,7 +2564,9 @@ class ManagementDialog(AccessifyDialog):
 		refresh_button.Bind(wx.EVT_BUTTON, self.load_top_items)
 		sizer.Add(refresh_button, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
 
-		self.load_top_items(initial_data=self.preloaded_data.get("top_items"))
+		self._register_page(
+			panel, self.load_top_items, list_control, initial_data=self.preloaded_data.get("top_items")
+		)
 
 	def load_top_items(self, evt=None, initial_data=None):
 		if initial_data:

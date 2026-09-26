@@ -38,7 +38,7 @@ addon_info = AddonInfo(
 - Fixed synced lyrics being mistimed, dropped, or read with a timestamp spoken aloud.
 - More reliable updates: downloads time out, and a failed update can be retried.
 - Manage Playlists now always shows the playlist you select, and Refresh keeps your place.
-- The Library opens even if one of its lists fails, and features Spotify retires now say so clearly.
+- The Library (M) opens instantly and loads each tab only when you open it. Features Spotify retires now say so clearly.
 - Saving and following moved to Spotify's current library service, ahead of the old one being switched off.
 	"""),
 	# Author(s)
