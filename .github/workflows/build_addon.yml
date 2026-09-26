@@ -12,6 +12,12 @@ on:
   # Allow manual trigger from the Actions tab
   workflow_dispatch:
 
+# Runs on the same branch queue instead of overlapping. Without this, two quick
+# pushes could both see a version as unreleased and both try to publish it.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   # -----------------------------------------------------------------------
   # JOB 1: Build the .nvda-addon and .pot files
@@ -59,14 +65,82 @@ jobs:
             ./*.pot
 
   # -----------------------------------------------------------------------
-  # JOB 2: Create a GitHub Release (only on push to main/master)
+  # JOB 2: Decide whether this push is a release
+  # -----------------------------------------------------------------------
+  # A release is published only when addon_version in buildVars.py has no
+  # release yet. Pushes that leave the version alone (docs, CI, .mailmap, ...)
+  # still build and upload the artifact, but publish nothing. Otherwise
+  # action-gh-release would find the existing release and replace its files
+  # and notes with a rebuild -- a different checksum under the same version,
+  # which breaks anything that pinned it, such as the NVDA Add-on Store.
+  version-check:
+    name: Check version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      tag: ${{ steps.meta.outputs.tag }}
+      released: ${{ steps.meta.outputs.released }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Read version and look for an existing release
+        id: meta
+        run: |
+          # grep, so buildVars.py needn't be imported (it needs SCons).
+          VERSION=$(grep -oP 'addon_version="\K[^"]+' buildVars.py || true)
+          if [ -z "$VERSION" ]; then
+            echo "::error file=buildVars.py::addon_version not found in buildVars.py"
+            exit 1
+          fi
+          TAG="v$VERSION"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG"         >> "$GITHUB_OUTPUT"
+
+          # --exit-code: 0 = tag exists, 2 = no such tag. Anything else is a
+          # failure to check, which must not be read as "not released": that
+          # is exactly the case that would publish a duplicate.
+          STATUS=0
+          git ls-remote --exit-code --tags origin "refs/tags/$TAG" > /dev/null || STATUS=$?
+          case "$STATUS" in
+            0) RELEASED=true ;;
+            2) RELEASED=false ;;
+            *) echo "::error::Could not check whether $TAG exists (git ls-remote exit $STATUS)"
+               exit 1 ;;
+          esac
+          echo "released=$RELEASED" >> "$GITHUB_OUTPUT"
+
+          if [ "$RELEASED" = true ]; then
+            {
+              echo "### $TAG is already released - nothing will be published"
+              echo "Bump \`addon_version\` in buildVars.py, with a matching CHANGELOG.md section, to publish a release."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          # A new version must come with release notes. CHANGELOG.md uses CRLF.
+          # No `grep -q`: it exits at the first match, and under pipefail the
+          # resulting SIGPIPE in `tr` would fail the check at random.
+          if ! tr -d '\r' < CHANGELOG.md | grep -Fx "## Version $VERSION" > /dev/null; then
+            echo "::error file=CHANGELOG.md::No '## Version $VERSION' section for the new version $TAG"
+            exit 1
+          fi
+          echo "### $TAG is new - it will be published as a release" >> "$GITHUB_STEP_SUMMARY"
+
+  # -----------------------------------------------------------------------
+  # JOB 3: Create a GitHub Release (only on push to main/master, new version)
   # -----------------------------------------------------------------------
   release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
-    needs: build
-    # Only run when a real push lands on main/master (not on PRs)
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    needs: [build, version-check]
+    # Only when a real push lands on main/master (not on PRs), and only for a
+    # version that has not been released yet.
+    if: >-
+      github.event_name == 'push' &&
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') &&
+      needs.version-check.outputs.released == 'false'
     permissions:
       contents: write
 
@@ -80,18 +154,10 @@ jobs:
           name: packaged_addon
           path: .   # <-- extract langsung ke root, bukan subfolder
 
-      - name: Read addon version
-        id: addon_meta
-        run: |
-          # Pakai grep supaya gak perlu import scons/buildVars
-          VERSION=$(grep -oP 'addon_version="\K[^"]+' buildVars.py)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "tag=v$VERSION"    >> $GITHUB_OUTPUT
-
       - name: Extract changelog for this version
         id: changelog
         run: |
-          VERSION="${{ steps.addon_meta.outputs.version }}"
+          VERSION="${{ needs.version-check.outputs.version }}"
 
           # Ambil section versi ini dari CHANGELOG.md saja (bukan semua versi)
           NOTES=$(awk -v ver="## Version $VERSION" '
@@ -120,12 +186,14 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          tag_name: ${{ steps.addon_meta.outputs.tag }}
-          name: "AccessifyPlay ${{ steps.addon_meta.outputs.version }}"
+          tag_name: ${{ needs.version-check.outputs.tag }}
+          name: "AccessifyPlay ${{ needs.version-check.outputs.version }}"
           body: ${{ steps.changelog.outputs.body }}
           files: |
             *.nvda-addon
             *.pot
           fail_on_unmatched_files: true
           # Versi yang ada tanda '-' (misal 1.8.0-beta) otomatis jadi pre-release
-          prerelease: ${{ contains(steps.addon_meta.outputs.version, '-') }}
+          prerelease: ${{ contains(needs.version-check.outputs.version, '-') }}
+          # Second line of defence: never replace a file on a published release.
+          overwrite_files: false
