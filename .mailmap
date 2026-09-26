@@ -1,0 +1,15 @@
+# Maps every identity a contributor has committed under to one name and
+# address, so `git shortlog`, `git log` and blame show each person once.
+# Format: Canonical Name <canonical@email> <address used in commits>
+# This changes how git displays history; it does not rewrite any commit.
+
+# Rafli (raf-li): committed as raf-li, Rafli, Raf-li, rafli, Umiko and unknown.
+Rafli <93827765+raf-li@users.noreply.github.com>
+Rafli <93827765+raf-li@users.noreply.github.com> <rafli08523717409@gmail.com>
+# A mistyped `git config user.email` joined the address with the tutorial
+# placeholder "you@example.com".
+Rafli <93827765+raf-li@users.noreply.github.com> <rafli08523717409@gmail.com"you@example.com>
+
+# Rexya (rexya2017): committed as rexya and Rexya.
+Rexya <35487397+rexya2017@users.noreply.github.com>
+Rexya <35487397+rexya2017@users.noreply.github.com> <rexya2017@gmail.com>
