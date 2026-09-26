@@ -37,6 +37,13 @@ confspec = {
 }
 config.conf.spec["spotify"] = confspec
 
+# NVDA 2025's bundled Python leaves out the standard `secrets` module, which
+# spotipy needs to log in. Supply a complete copy only when it is missing, so
+# it never shadows a real one and other add-ons get the full API from it.
+from ._secrets_fallback import install_if_missing as _install_secrets  # noqa: E402
+
+_install_secrets()
+
 # Local addon modules
 from .core.thread_manager import thread_manager  # noqa: E402
 from . import (  # noqa: E402
