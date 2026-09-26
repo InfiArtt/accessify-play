@@ -2655,6 +2655,14 @@ class ManagementDialog(AccessifyDialog):
 			self._append_menu_item(menu, _("View Episodes"), self.on_view_episodes)
 			self._append_menu_item(menu, _("Remove from Library"), self.on_remove_show_from_library)
 		elif focused_control == self.tabs_config["saved_episodes"]["control"]:
+			show = item.get("show") or {}
+			if show.get("id"):
+				show_name = safe_text(show.get("name"), _("this show"))
+				self._append_menu_item(
+					menu,
+					_("View All Episodes of {show}").format(show=show_name),
+					self.on_view_episode_show,
+				)
 			self._append_menu_item(menu, _("Remove from Library"), self.on_remove_episode_from_library)
 		elif focused_control == self.tabs_config["saved_audiobooks"]["control"]:
 			self._append_menu_item(menu, _("View Chapters"), self.on_view_chapters)
@@ -2720,6 +2728,18 @@ class ManagementDialog(AccessifyDialog):
 				ui.message, _("Track '{track_name}' removed from your library.").format(track_name=track_name)
 			)
 			wx.CallAfter(self.load_saved_tracks)
+
+	def on_view_episode_show(self, evt=None):
+		"""Open the full episode list of the show a saved episode belongs to."""
+		episode = self._get_selected_item()
+		show = (episode or {}).get("show") or {}
+		if not show.get("id"):
+			ui.message(_("This episode's show is not available."))
+			return
+		dialog = PodcastEpisodesDialog(
+			self, self.client, show["id"], safe_text(show.get("name"), _("Podcast"))
+		)
+		dialog.Show()
 
 	def on_remove_episode_from_library(self, evt=None):
 		item = self._get_selected_item()

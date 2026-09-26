@@ -376,6 +376,11 @@ class SearchDialog(AccessifyDialog):
 				menu.AppendSubMenu(playlist_submenu, _("Add Album to Playlist"))
 			elif item_type == "show":
 				menu.AppendSeparator()
+				# Enter already opens the episodes; the menu should say so too.
+				episodes_item = menu.Append(wx.ID_ANY, _("View Episodes"))
+				self.Bind(
+					wx.EVT_MENU, lambda e, s=item: self._open_podcast_episodes(s), episodes_item
+				)
 				save_item = menu.Append(wx.ID_ANY, _("Save/Unsave Show"))
 				self.Bind(wx.EVT_MENU, self.on_save_show, save_item)
 			elif item_type == "audiobook":

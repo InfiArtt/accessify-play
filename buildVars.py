@@ -23,10 +23,11 @@ addon_info = AddonInfo(
 	# Translators: Long description to be shown for this add-on on add-on information from add-on store
 	addon_description=_("""Accessify Play provides comprehensive NVDA control for Spotify playback on any Connect-enabled device. A Spotify Premium subscription is required for full functionality."""),
 	# version
-	addon_version="1.11.0",
+	addon_version="1.11.1",
 	# Brief changelog for this version
 	# Translators: what's new content for the add-on version to be shown in the add-on store
 	addon_changelog=_("""
+- 1.11.1: reach a podcast's full episode list from a saved episode, and "View Episodes" for podcasts in search.
 - Saved Episodes and Saved Audiobooks: save individual podcast episodes and audiobooks, and find them in two new Library tabs.
 - One command to save or unsave episodes, shows and audiobooks, like Like/Unlike does for tracks.
 - Remove Duplicates and Clear Playlist, in the Library's Manage Playlists tab.

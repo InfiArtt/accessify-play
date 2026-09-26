@@ -1,5 +1,12 @@
 # Changelog
 
+## Version 1.11.1
+
+### 🛠️ Bug Fixes
+
+- **See all of a podcast's episodes from a saved episode**: the Saved Episodes tab in the Library let you play or remove an episode, but gave no way to reach the rest of that podcast. Its context menu now has "View All Episodes of" followed by the podcast's name, which opens the podcast's full episode list.
+- **"View Episodes" for podcasts in search results**: pressing Enter on a podcast in the Search dialog already opened its episode list, but the context menu only offered "Save/Unsave Show", so it looked as though the episodes couldn't be reached from there. The menu now includes "View Episodes", just as audiobooks have "View Chapters".
+
 ## Version 1.11.0
 
 ### 🎉 New Features
