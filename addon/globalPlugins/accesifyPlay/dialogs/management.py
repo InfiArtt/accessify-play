@@ -1902,6 +1902,11 @@ class ManagementDialog(AccessifyDialog):
 		top_controls_sizer.Add(self.play_playlist_button, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 5)
 		sizer.Add(top_controls_sizer, 0, wx.EXPAND | wx.ALL, 5)
 		self.playlist_choices.Bind(wx.EVT_COMBOBOX, self.on_playlist_selected)
+		# Arrowing through a closed read-only combo box does not raise
+		# EVT_COMBOBOX on every Windows setup, which left the track list on the
+		# old playlist. EVT_TEXT always follows the visible value; the handler
+		# ignores repeats, so both firing for one change loads it only once.
+		self.playlist_choices.Bind(wx.EVT_TEXT, self.on_playlist_selected)
 		self.playlist_tracks_list = wx.ListBox(panel)
 		sizer.Add(self.playlist_tracks_list, 1, wx.EXPAND | wx.ALL, 5)
 
@@ -1937,6 +1942,12 @@ class ManagementDialog(AccessifyDialog):
 		self.user_playlists = []
 		self.current_playlist_tracks = []
 		self.current_playlist_positions = []
+		# Which playlist the track list belongs to, and a counter so that only
+		# the newest track request may fill it.
+		self._shown_playlist_id = None
+		self._tracks_request = 0
+		self._tracks_timer = None
+		self._tracks_loading = False
 
 		self.load_playlists(initial_data=self.preloaded_data.get("playlists"))
 
@@ -1963,6 +1974,9 @@ class ManagementDialog(AccessifyDialog):
 			thread_manager.submit_task(self._load_playlists_thread, name='DialogTask', daemon=True)
 
 	def _load_playlists_thread(self):
+		if not self.current_user_id:
+			# Fetch it here, off the UI thread; the client caches it for below.
+			self.client.get_current_user_id()
 		data = self.client.get_user_playlists()
 		if isinstance(data, str):
 			wx.CallAfter(ui.message, data)
@@ -1970,16 +1984,24 @@ class ManagementDialog(AccessifyDialog):
 			wx.CallAfter(self._populate_playlists_combobox, data)
 
 	def _populate_playlists_combobox(self, playlists_data):
+		# Remember where the user was, so Refresh brings them back to the same
+		# playlist and the same track instead of the top of the first playlist.
+		previous_id = self._shown_playlist_id
+		previous_row = self.playlist_tracks_list.GetSelection()
+
 		self.playlist_choices.Clear()
 
 		self.user_playlists = playlists_data or []
 
 		if not self.current_user_id:
-			profile = self.client.get_current_user_profile()
-			if not isinstance(profile, str):
-				self.current_user_id = profile.get("id")
+			# Never a network call here: this runs on the UI thread. The loader
+			# thread has already fetched it into the client's cache.
+			self.current_user_id = getattr(self.client, "_current_user_id", None)
 
 		if not self.user_playlists:
+			self._shown_playlist_id = None
+			self.current_playlist_tracks = []
+			self.current_playlist_positions = []
 			self.playlist_tracks_list.Clear()
 			self._update_playlist_controls_state()
 			return
@@ -2000,40 +2022,86 @@ class ManagementDialog(AccessifyDialog):
 
 			self.playlist_choices.Append(display_text)
 
-		if self.user_playlists:
-			self.playlist_choices.SetSelection(0)
-			self.on_playlist_selected()
-		else:
-			self._update_playlist_controls_state()
+		# Stay on the playlist that was showing if it still exists (it won't
+		# after being deleted or unfollowed); otherwise start at the top.
+		index = next(
+			(i for i, pl in enumerate(self.user_playlists) if previous_id and pl.get("id") == previous_id),
+			0,
+		)
+		same_playlist = self.user_playlists[index].get("id") == previous_id
+		self.playlist_choices.SetSelection(index)
+		self._show_selected_playlist(force=True, keep_row=previous_row if same_playlist else None)
+
+	#: Wait this long after the selection changes before fetching tracks, so
+	#: arrowing through the playlist box sends one request, not one per playlist.
+	TRACKS_LOAD_DELAY_MS = 300
 
 	def on_playlist_selected(self, evt=None):
+		"""The user moved to a playlist in the combo box."""
+		self._show_selected_playlist(force=False)
+
+	def refresh_current_playlist(self):
+		"""Reload the playlist on screen after changing it, keeping the cursor."""
+		self._show_selected_playlist(force=True, keep_row=self.playlist_tracks_list.GetSelection())
+
+	def _show_selected_playlist(self, force=False, keep_row=None):
 		selection_index = self.playlist_choices.GetSelection()
-		if selection_index == wx.NOT_FOUND:
+		if selection_index == wx.NOT_FOUND or selection_index >= len(self.user_playlists):
 			return
 
 		selected_playlist = self.user_playlists[selection_index]
-		owner_id = selected_playlist.get("owner", {}).get("id")
+		playlist_id = selected_playlist.get("id")
+		# One change can raise both EVT_COMBOBOX and EVT_TEXT; act on it once.
+		if not force and playlist_id == self._shown_playlist_id:
+			return
+		self._shown_playlist_id = playlist_id
+
+		owner_id = (selected_playlist.get("owner") or {}).get("id")
 		self.is_current_playlist_owned = owner_id == self.current_user_id
-		playlist_id = selected_playlist["id"]
-
-		self.playlist_tracks_list.Clear()
-		self.playlist_tracks_list.Append(_("Loading tracks..."))
-
-		self.load_playlist_tracks(playlist_id)
 		self._update_playlist_controls_state()
 
-	def load_playlist_tracks(self, playlist_id):
+		# Drop the previous playlist's rows at once: until the new ones arrive,
+		# Delete or Alt+Up must not act on tracks from the playlist just left.
+		self.current_playlist_tracks = []
+		self.current_playlist_positions = []
+		self.playlist_tracks_list.Clear()
+		self.playlist_tracks_list.Append(_("Loading tracks..."))
+		self._tracks_loading = True
+
+		self._tracks_request += 1
+		token = self._tracks_request
+		if self._tracks_timer is not None:
+			self._tracks_timer.Stop()
+			self._tracks_timer = None
+		if force:
+			self.load_playlist_tracks(playlist_id, token, keep_row)
+		else:
+			self._tracks_timer = wx.CallLater(
+				self.TRACKS_LOAD_DELAY_MS, self.load_playlist_tracks, playlist_id, token, keep_row
+			)
+
+	def load_playlist_tracks(self, playlist_id, token=None, keep_row=None):
+		self._tracks_timer = None
+
 		def _load():
 			tracks_data = self.client.get_playlist_tracks(playlist_id)
-			if isinstance(tracks_data, str):
-				wx.CallAfter(ui.message, tracks_data)
-				wx.CallAfter(self.playlist_tracks_list.Clear)
-			else:
-				wx.CallAfter(self._populate_playlist_tracks, tracks_data)
+			wx.CallAfter(self._finish_playlist_tracks, tracks_data, token, keep_row)
 
 		thread_manager.submit_task(_load, name='DialogTask', daemon=True)
 
-	def _populate_playlist_tracks(self, tracks_data):
+	def _finish_playlist_tracks(self, tracks_data, token, keep_row):
+		# The user may have moved to another playlist while this was loading;
+		# only the newest request is allowed to fill the list.
+		if token is not None and token != self._tracks_request:
+			return
+		self._tracks_loading = False
+		if isinstance(tracks_data, str):
+			ui.message(tracks_data)
+			self.playlist_tracks_list.Clear()
+			return
+		self._populate_playlist_tracks(tracks_data, keep_row)
+
+	def _populate_playlist_tracks(self, tracks_data, keep_row=None):
 		self.playlist_tracks_list.Clear()
 		rows = playlist_rows(tracks_data)
 		self.current_playlist_tracks = [track for track, _pos in rows]
@@ -2049,8 +2117,12 @@ class ManagementDialog(AccessifyDialog):
 			name = safe_text(track.get("name"), _("Unknown Track"))
 			self.playlist_tracks_list.Append(f"{name} - {artists}" if artists else name)
 
-		if self.playlist_tracks_list.GetCount() > 0:
-			self.playlist_tracks_list.SetSelection(0)
+		if not self.current_playlist_tracks:
+			self.playlist_tracks_list.Append(_("This playlist is empty."))
+			return
+		count = self.playlist_tracks_list.GetCount()
+		row = 0 if keep_row in (None, wx.NOT_FOUND) else min(keep_row, count - 1)
+		self.playlist_tracks_list.SetSelection(row)
 
 	def _update_playlist_controls_state(self):
 		"""Enables or disables controls based on playlist ownership."""
@@ -2182,6 +2254,8 @@ class ManagementDialog(AccessifyDialog):
 		if track_selection == wx.NOT_FOUND or playlist_selection == wx.NOT_FOUND:
 			ui.message(_("Please select a track to remove."))
 			return
+		if self._tracks_loading or track_selection >= len(self.current_playlist_tracks):
+			return
 
 		track_data = self.current_playlist_tracks[track_selection]
 		position = self.current_playlist_positions[track_selection]
@@ -2217,7 +2291,7 @@ class ManagementDialog(AccessifyDialog):
 							track_name=track_name
 						),
 					)
-					wx.CallAfter(self.on_playlist_selected)
+					wx.CallAfter(self.refresh_current_playlist)
 
 			thread_manager.submit_task(_remove, name='DialogTask', daemon=True)
 
@@ -2235,6 +2309,9 @@ class ManagementDialog(AccessifyDialog):
 	def on_remove_duplicates(self, evt=None):
 		playlist = self._selected_owned_playlist()
 		if not playlist:
+			return
+		if self._tracks_loading:
+			ui.message(_("Please wait until the playlist has loaded."))
 			return
 		rows = list(zip(self.current_playlist_tracks, self.current_playlist_positions))
 		extra = duplicate_occurrences(rows)
@@ -2257,13 +2334,16 @@ class ManagementDialog(AccessifyDialog):
 				ui.message,
 				_("Removed {count} duplicate copies from '{name}'.").format(count=len(extra), name=name),
 			)
-			wx.CallAfter(self.on_playlist_selected)
+			wx.CallAfter(self.refresh_current_playlist)
 
 		thread_manager.submit_task(_remove, name="DialogTask", daemon=True)
 
 	def on_clear_playlist(self, evt=None):
 		playlist = self._selected_owned_playlist()
 		if not playlist:
+			return
+		if self._tracks_loading:
+			ui.message(_("Please wait until the playlist has loaded."))
 			return
 		if not self.current_playlist_tracks:
 			ui.message(_("This playlist is already empty."))
@@ -2281,7 +2361,7 @@ class ManagementDialog(AccessifyDialog):
 				wx.CallAfter(ui.message, result)
 				return
 			wx.CallAfter(ui.message, _("'{name}' is now empty.").format(name=name))
-			wx.CallAfter(self.on_playlist_selected)
+			wx.CallAfter(self.refresh_current_playlist)
 
 		thread_manager.submit_task(_clear, name="DialogTask", daemon=True)
 
@@ -2291,6 +2371,8 @@ class ManagementDialog(AccessifyDialog):
 		track_selection = self.playlist_tracks_list.GetSelection()
 
 		if track_selection == wx.NOT_FOUND or playlist_selection == wx.NOT_FOUND:
+			return
+		if self._tracks_loading or track_selection >= len(self.current_playlist_tracks):
 			return
 
 		# Edge case checks
@@ -2344,7 +2426,7 @@ class ManagementDialog(AccessifyDialog):
 		if isinstance(result, str):
 			# If the API call fails, announce the error and reload the original playlist state.
 			wx.CallAfter(ui.message, result)
-			wx.CallAfter(self.on_playlist_selected)  # Reload to revert UI
+			wx.CallAfter(self.refresh_current_playlist)  # Reload to revert UI
 		else:
 			wx.CallAfter(ui.message, _("Track moved successfully."))
 

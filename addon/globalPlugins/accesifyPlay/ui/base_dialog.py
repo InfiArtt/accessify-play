@@ -228,6 +228,47 @@ class AccessifyDialog(wx.Dialog):
 				evt.Skip()
 		control.Bind(wx.EVT_CHAR_HOOK, on_char)
 
+	def _owner_of(self, playlist):
+		"""A playlist's owner as {"id", "display_name"}, or None."""
+		owner = (playlist or {}).get("owner") or {}
+		return owner if owner.get("id") else None
+
+	def _follow_owner_label(self, playlist):
+		owner = self._owner_of(playlist)
+		name = safe_text((owner or {}).get("display_name"), (owner or {}).get("id") or _("owner"))
+		return _("Follow/Unfollow Owner: {name}").format(name=name)
+
+	def _toggle_follow_user(self, user):
+		"""Follow the user if not already following them, otherwise unfollow.
+
+		Same model as Save/Unsave: ask Spotify for the current state, flip it,
+		and say which way it went.
+		"""
+		if not self.client or not user or not user.get("id"):
+			return
+		user_id = user["id"]
+		name = safe_text(user.get("display_name"), user_id)
+
+		def _run():
+			if user_id == self.client.get_current_user_id():
+				wx.CallAfter(ui.message, _("That is your own profile."))
+				return
+			state = self.client.check_if_users_followed([user_id])
+			if isinstance(state, str):
+				wx.CallAfter(ui.message, state)
+				return
+			is_following = bool(state and state[0])
+			action = self.client.unfollow_users if is_following else self.client.follow_users
+			result = action([user_id])
+			if isinstance(result, str):
+				wx.CallAfter(ui.message, result)
+			elif is_following:
+				wx.CallAfter(ui.message, _("Unfollowed {name}.").format(name=name))
+			else:
+				wx.CallAfter(ui.message, _("Now following {name}.").format(name=name))
+
+		thread_manager.submit_task(_run, name="ToggleFollowUserTask")
+
 	def _show_lyrics_for_track(self, track):
 		"""Open the lyrics window for a track that need not be playing.
 

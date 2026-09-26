@@ -115,13 +115,15 @@ def init_translation():
 	"""
 	frame = inspect.currentframe().f_back
 	try:
-		module = inspect.getmodule(frame)
-		if module is None:
-			return
-		module._ = _gettext
-		module.ngettext = _ngettext
-		module.pgettext = _pgettext
-		module.npgettext = _npgettext
+		# The caller's globals dict is its module namespace, so write there
+		# directly. inspect.getmodule() would find the same module by scanning
+		# every entry in sys.modules, which is slow when done at import time in
+		# every module, and fails if any loaded module has an unusual __file__.
+		namespace = frame.f_globals
+		namespace["_"] = _gettext
+		namespace["ngettext"] = _ngettext
+		namespace["pgettext"] = _pgettext
+		namespace["npgettext"] = _npgettext
 	finally:
 		# Frames hold references to everything local; drop it explicitly.
 		del frame

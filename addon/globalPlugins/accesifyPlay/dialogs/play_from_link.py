@@ -35,6 +35,12 @@ class PlayFromLinkDialog(AccessifyDialog):
 		self.detailsText.SetMinSize((300, 120))
 		mainSizer.Add(self.detailsText, proportion=1, flag=wx.EXPAND | wx.ALL, border=5)
 
+		# Only shown for user links, which have nothing to play.
+		self.followButton = wx.Button(self, label=_("&Follow/Unfollow"))
+		self.followButton.Bind(wx.EVT_BUTTON, self.onFollow)
+		self.followButton.Hide()
+		mainSizer.Add(self.followButton, flag=wx.LEFT | wx.BOTTOM, border=5)
+
 		buttonsSizer = wx.StdDialogButtonSizer()
 		self.playButton = wx.Button(self, wx.ID_OK, label=_("&Play"))
 		self.playButton.Disable()
@@ -63,21 +69,36 @@ class PlayFromLinkDialog(AccessifyDialog):
 		wx.CallAfter(self.update_details, details)
 
 	def update_details(self, details):
+		self.followButton.Hide()
 		if "error" in details:
 			self.detailsText.SetValue(details["error"])
 			self.link_info = None
+			self.Layout()
 			return
 		self.link_info = details
 		info_lines = details.get("lines") or []
 		self.detailsText.SetValue("\n".join(info_lines))
-		self.playButton.Enable()
-		self.playButton.SetDefault()
+		if details.get("playable", True):
+			self.playButton.Enable()
+			self.playButton.SetDefault()
+		else:
+			self.playButton.Disable()
+			if details.get("user"):
+				self.followButton.Show()
+				self.followButton.SetDefault()
+		self.Layout()
+
+	def onFollow(self, evt=None):
+		if self.link_info and self.link_info.get("user"):
+			self._toggle_follow_user(self.link_info["user"])
 
 	def onPlay(self, evt):
 		if not self.link_info:
 			ui.message(_("Please check a Spotify link first."))
 			return
 
+		if not self.link_info.get("playable", True):
+			return
 		uri = self.link_info.get("uri")
 		self._play_uri(uri)
 		self.Close()

@@ -210,8 +210,8 @@ class SpotifyClient:
 		if not self._ensure_device():
 			return _("No active Spotify device found. Please start playback in your Spotify app.")
 
-		command = self._resolve_command(command)
 		try:
+			command = self._resolve_command(command)
 			if command.__name__ == "current_playback":
 				kwargs["additional_types"] = "episode"
 			if "device_id" in command.__code__.co_varnames:
@@ -248,8 +248,8 @@ class SpotifyClient:
 		if not self.client:
 			return _("Spotify client not ready. Please validate your credentials.")
 
-		command = self._resolve_command(command)
 		try:
+			command = self._resolve_command(command)
 			if command.__name__ == "current_playback":
 				kwargs["additional_types"] = "episode"
 			result = command(*args, **kwargs)
@@ -1065,6 +1065,9 @@ class SpotifyClient:
 			"playlists": "playlist",
 			"shows": "show",
 			"episodes": "episode",
+			"audiobooks": "audiobook",
+			"chapters": "chapter",
+			"users": "user",
 		}
 		entity_type = alias_map.get(entity_type, entity_type)
 		fetchers = {
@@ -1074,6 +1077,18 @@ class SpotifyClient:
 			"playlist": lambda: self._execute_web_api("playlist", entity_id),
 			"show": lambda: self._execute_web_api("show", entity_id),
 			"episode": lambda: self._execute_web_api("episode", entity_id),
+			"audiobook": lambda: self._execute_web_api(
+				"get_audiobook",
+				entity_id,
+				status_messages={404: _("This audiobook is not available in your country.")},
+			),
+			# spotipy has no binding for chapters; the endpoint itself is current.
+			"chapter": lambda: self._execute_web_api(
+				"_get",
+				f"chapters/{entity_id}",
+				status_messages={404: _("This chapter is not available in your country.")},
+			),
+			"user": lambda: self.get_user_profile(entity_id),
 		}
 		fetcher = fetchers.get(entity_type)
 		if not fetcher:
@@ -1088,11 +1103,15 @@ class SpotifyClient:
 			"playlist": self._build_playlist_link_details,
 			"show": self._build_show_link_details,
 			"episode": self._build_episode_link_details,
+			"audiobook": self._build_audiobook_link_details,
+			"chapter": self._build_chapter_link_details,
+			"user": self._build_user_link_details,
 		}
 		builder = builders.get(entity_type)
 		if not builder:
 			return {"error": _("Links of this type are not supported yet.")}
 		info = builder(data)
+		info.setdefault("playable", True)
 		info["type"] = entity_type
 		info["typeLabel"] = self._get_type_label(entity_type)
 		return info
@@ -1396,6 +1415,35 @@ class SpotifyClient:
 		"""Returns information about the current Spotify user."""
 		return self._execute_web_api("current_user")
 
+	def get_current_user_id(self):
+		"""The logged-in user's id, cached; None if it can't be fetched."""
+		cached = getattr(self, "_current_user_id", None)
+		if cached:
+			return cached
+		profile = self.get_current_user_profile()
+		if isinstance(profile, dict) and profile.get("id"):
+			self._current_user_id = profile["id"]
+			return self._current_user_id
+		return None
+
+	def get_user_profile(self, user_id):
+		"""Public profile of any Spotify user (display name, followers)."""
+		return self._execute_web_api(
+			"user", user_id, status_messages={404: _("That Spotify user could not be found.")}
+		)
+
+	def follow_users(self, user_ids):
+		"""Follow one or more Spotify users."""
+		return self._execute_web_api("user_follow_users", ids=user_ids)
+
+	def unfollow_users(self, user_ids):
+		"""Unfollow one or more Spotify users."""
+		return self._execute_web_api("user_unfollow_users", ids=user_ids)
+
+	def check_if_users_followed(self, user_ids):
+		"""Returns a list of booleans, one per user id."""
+		return self._execute_web_api("current_user_following_users", ids=user_ids)
+
 	def get_saved_albums(self):
 		"""Fetches all saved albums from the user's library."""
 		albums = []
@@ -1625,6 +1673,56 @@ class SpotifyClient:
 				"publisher": publisher,
 				"episodeCount": episodes,
 			},
+		}
+
+	def _build_audiobook_link_details(self, data):
+		authors = ", ".join(a.get("name") for a in (data.get("authors") or []) if a.get("name"))
+		narrators = ", ".join(n.get("name") for n in (data.get("narrators") or []) if n.get("name"))
+		lines = [
+			_("Type: Audiobook"),
+			_("Title: {name}").format(name=data.get("name") or ""),
+		]
+		if authors:
+			lines.append(_("Author: {name}").format(name=authors))
+		if narrators:
+			lines.append(_("Narrator: {name}").format(name=narrators))
+		if data.get("publisher"):
+			lines.append(_("Publisher: {name}").format(name=data["publisher"]))
+		lines.append(_("Chapters: {count}").format(count=data.get("total_chapters") or 0))
+		if data.get("explicit"):
+			lines.append(_("Explicit content"))
+		return {"uri": data.get("uri"), "lines": lines, "metadata": {"name": data.get("name")}}
+
+	def _build_chapter_link_details(self, data):
+		audiobook = data.get("audiobook") or {}
+		lines = [
+			_("Type: Chapter"),
+			_("Title: {name}").format(name=data.get("name") or ""),
+		]
+		if audiobook.get("name"):
+			lines.append(_("Audiobook: {name}").format(name=audiobook["name"]))
+		if data.get("chapter_number") is not None:
+			lines.append(_("Chapter {number}").format(number=data["chapter_number"]))
+		lines.append(_("Duration: {duration}").format(duration=self._format_duration(data.get("duration_ms", 0))))
+		# A chapter's own uri is a spotify:episode: URI, which plays as a single item.
+		return {"uri": data.get("uri"), "lines": lines, "metadata": {"name": data.get("name")}}
+
+	def _build_user_link_details(self, data):
+		followers = (data.get("followers") or {}).get("total")
+		lines = [
+			_("Type: User"),
+			_("Name: {name}").format(name=data.get("display_name") or data.get("id") or ""),
+		]
+		if followers is not None:
+			lines.append(_("Followers: {count}").format(count=self._format_followers(followers)))
+		lines.append(_("A user profile cannot be played. Use Follow to follow this user."))
+		return {
+			"uri": data.get("uri"),
+			"lines": lines,
+			# A user has nothing to play; the dialog offers Follow instead.
+			"playable": False,
+			"user": {"id": data.get("id"), "display_name": data.get("display_name")},
+			"metadata": {"name": data.get("display_name")},
 		}
 
 	def _build_episode_link_details(self, data):

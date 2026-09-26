@@ -390,6 +390,13 @@ class SearchDialog(AccessifyDialog):
 				is_owned = item.get("owner", {}).get("id") == self._current_user_id
 				if not is_owned:
 					menu.AppendSeparator()
+					if self._owner_of(item):
+						owner_item = menu.Append(wx.ID_ANY, self._follow_owner_label(item))
+						self.Bind(
+							wx.EVT_MENU,
+							lambda e, u=self._owner_of(item): self._toggle_follow_user(u),
+							owner_item,
+						)
 					if is_followed is True:
 						unfollow_item = menu.Append(wx.ID_ANY, _("Unfollow Playlist"))
 						self.Bind(

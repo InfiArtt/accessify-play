@@ -150,6 +150,9 @@ class CategoryPlaylistsDialog(AccessifyDialog):
 	MENU_VIEW_TRACKS = wx.NewIdRef()
 	MENU_PLAY = wx.NewIdRef()
 	MENU_COPY_LINK = wx.NewIdRef()
+	# Handled in on_menu_item: this dialog binds a catch-all EVT_MENU handler,
+	# which would swallow an item bound on its own.
+	MENU_FOLLOW_OWNER = wx.NewIdRef()
 
 	def __init__(self, parent, client, category):
 		title = _("{name} Playlists").format(name=safe_text(category.get("name"), _("Unknown")))
@@ -259,6 +262,15 @@ class CategoryPlaylistsDialog(AccessifyDialog):
 	def on_playlist_activated(self, evt):
 		self._view_tracks()
 
+	def _menu_playlist(self):
+		idx = self.playlistsList.GetFirstSelected()
+		if idx < 0:
+			return None
+		data_idx = self.playlistsList.GetItemData(idx)
+		if data_idx < 0 or data_idx >= len(self.playlists):
+			return None
+		return self.playlists[data_idx]
+
 	def on_list_key_down(self, evt):
 		keycode = evt.GetKeyCode()
 		if keycode in (wx.WXK_DOWN, wx.WXK_PAGEDOWN, wx.WXK_END):
@@ -281,6 +293,8 @@ class CategoryPlaylistsDialog(AccessifyDialog):
 		menu.Append(self.MENU_VIEW_TRACKS, _("View Tracks in Playlist"))
 		menu.Append(self.MENU_PLAY, _("Play Entire Playlist"))
 		menu.Append(self.MENU_COPY_LINK, _("Copy Playlist Link"))
+		if self._owner_of(self._menu_playlist()):
+			menu.Append(self.MENU_FOLLOW_OWNER, self._follow_owner_label(self._menu_playlist()))
 		
 		self.Bind(wx.EVT_MENU, self.on_menu_item)
 		self.PopupMenu(menu)
@@ -296,7 +310,9 @@ class CategoryPlaylistsDialog(AccessifyDialog):
 		
 		playlist = self.playlists[data_idx]
 		
-		if menu_id == self.MENU_VIEW_TRACKS:
+		if menu_id == self.MENU_FOLLOW_OWNER:
+			self._toggle_follow_user(self._owner_of(playlist))
+		elif menu_id == self.MENU_VIEW_TRACKS:
 			self._view_tracks()
 		elif menu_id == self.MENU_PLAY:
 			self._play_playlist(playlist)
@@ -339,6 +355,9 @@ class FeaturedPlaylistsDialog(AccessifyDialog):
 	MENU_VIEW_TRACKS = wx.NewIdRef()
 	MENU_PLAY = wx.NewIdRef()
 	MENU_COPY_LINK = wx.NewIdRef()
+	# Handled in on_menu_item: this dialog binds a catch-all EVT_MENU handler,
+	# which would swallow an item bound on its own.
+	MENU_FOLLOW_OWNER = wx.NewIdRef()
 
 	def __init__(self, parent, client):
 		super().__init__(parent, title=_("Featured Playlists"), size=(600, 400))
@@ -471,6 +490,15 @@ class FeaturedPlaylistsDialog(AccessifyDialog):
 	def on_playlist_activated(self, evt):
 		self._view_tracks()
 
+	def _menu_playlist(self):
+		idx = self.playlistsList.GetFirstSelected()
+		if idx < 0:
+			return None
+		data_idx = self.playlistsList.GetItemData(idx)
+		if data_idx < 0 or data_idx >= len(self.playlists):
+			return None
+		return self.playlists[data_idx]
+
 	def on_list_key_down(self, evt):
 		keycode = evt.GetKeyCode()
 		if keycode in (wx.WXK_DOWN, wx.WXK_PAGEDOWN, wx.WXK_END):
@@ -497,6 +525,8 @@ class FeaturedPlaylistsDialog(AccessifyDialog):
 		menu.Append(self.MENU_VIEW_TRACKS, _("View Tracks in Playlist"))
 		menu.Append(self.MENU_PLAY, _("Play Entire Playlist"))
 		menu.Append(self.MENU_COPY_LINK, _("Copy Playlist Link"))
+		if self._owner_of(self._menu_playlist()):
+			menu.Append(self.MENU_FOLLOW_OWNER, self._follow_owner_label(self._menu_playlist()))
 
 		self.Bind(wx.EVT_MENU, self.on_menu_item)
 		self.PopupMenu(menu)
@@ -508,7 +538,9 @@ class FeaturedPlaylistsDialog(AccessifyDialog):
 			return
 
 		menu_id = evt.GetId()
-		if menu_id == self.MENU_VIEW_TRACKS:
+		if menu_id == self.MENU_FOLLOW_OWNER:
+			self._toggle_follow_user(self._owner_of(playlist))
+		elif menu_id == self.MENU_VIEW_TRACKS:
 			self._view_tracks()
 		elif menu_id == self.MENU_PLAY:
 			self._play_playlist(playlist)
