@@ -266,6 +266,7 @@ class PodcastEpisodesDialog(AccessifyDialog):
 	MENU_PLAY_EPISODE = wx.NewIdRef()
 	MENU_ADD_QUEUE = wx.NewIdRef()
 	MENU_COPY_LINK = wx.NewIdRef()
+	MENU_SAVE_EPISODE = wx.NewIdRef()
 	DEFAULT_EPISODES_PAGE_SIZE = 30
 
 	def __init__(self, parent, client, show_id, show_name):
@@ -312,9 +313,11 @@ class PodcastEpisodesDialog(AccessifyDialog):
 			(wx.ACCEL_ALT, ord("P"), self.MENU_PLAY_EPISODE.GetId()),
 			(wx.ACCEL_ALT, ord("Q"), self.MENU_ADD_QUEUE.GetId()),
 			(wx.ACCEL_ALT, ord("L"), self.MENU_COPY_LINK.GetId()),  # 'C' untuk Copy
+			(wx.ACCEL_ALT, ord("S"), self.MENU_SAVE_EPISODE.GetId()),
 		]
 		self.SetAcceleratorTable(wx.AcceleratorTable(accel_entries))
 
+		self.Bind(wx.EVT_MENU, self.on_save_episode, id=self.MENU_SAVE_EPISODE.GetId())
 		self.Bind(wx.EVT_MENU, self.on_play_episode, id=self.MENU_PLAY_EPISODE.GetId())
 		self.Bind(wx.EVT_MENU, self.on_add_to_queue, id=self.MENU_ADD_QUEUE.GetId())
 		self.Bind(wx.EVT_MENU, self.on_copy_link, id=self.MENU_COPY_LINK.GetId())
@@ -438,6 +441,7 @@ class PodcastEpisodesDialog(AccessifyDialog):
 		menu.Append(self.MENU_PLAY_EPISODE.GetId(), _("Play Episode\tAlt+P"))
 		menu.Append(self.MENU_ADD_QUEUE.GetId(), _("Add to Queue\tAlt+Q"))
 		menu.Append(self.MENU_COPY_LINK.GetId(), _("Copy Link\tAlt+L"))
+		menu.Append(self.MENU_SAVE_EPISODE.GetId(), _("Save Episode\tAlt+S"))
 
 		self.PopupMenu(menu)
 		menu.Destroy()
@@ -465,6 +469,26 @@ class PodcastEpisodesDialog(AccessifyDialog):
 		if episode:
 			link = episode.get("external_urls", {}).get("spotify")
 			self.copy_link(link)
+
+	def on_save_episode(self, evt=None):
+		episode = self._get_selected_episode()
+		if not episode or not episode.get("id"):
+			return
+		name = safe_text(episode.get("name"), _("this episode"))
+		ui.message(_("Saving '{name}'...").format(name=name))
+		thread_manager.submit_task(
+			self._save_episode_thread, episode["id"], name, name="DialogTask", daemon=True
+		)
+
+	def _save_episode_thread(self, episode_id, episode_name):
+		result = self.client.save_episodes_to_library([episode_id])
+		if isinstance(result, str):
+			wx.CallAfter(ui.message, result)
+		else:
+			wx.CallAfter(
+				ui.message,
+				_("Episode '{name}' saved to your library.").format(name=episode_name),
+			)
 
 
 class ArtistDiscographyDialog(AccessifyDialog):
@@ -1678,6 +1702,23 @@ class ManagementDialog(AccessifyDialog):
 			activate_handler=lambda: self.on_view_episodes(None),
 		)
 		self.init_generic_list_tab(
+			"saved_episodes",
+			_("Saved Episodes"),
+			self.load_saved_episodes,
+			display_formatter=self._format_saved_episode,
+			item_parser=lambda item: item["episode"],
+			initial_data_key="saved_episodes",
+		)
+		self.init_generic_list_tab(
+			"saved_audiobooks",
+			_("Saved Audiobooks"),
+			self.load_saved_audiobooks,
+			display_formatter=self._format_saved_audiobook,
+			item_parser=lambda item: item.get("audiobook", item),
+			initial_data_key="saved_audiobooks",
+			activate_handler=lambda: self.on_view_chapters(None),
+		)
+		self.init_generic_list_tab(
 			"new_releases",
 			_("New Releases"),
 			self.load_new_releases,
@@ -1796,6 +1837,50 @@ class ManagementDialog(AccessifyDialog):
 			threading.Thread(
 				target=lambda: self._load_data_thread("saved_shows", self.client.get_saved_shows)
 			).start()
+
+	def load_saved_episodes(self, initial_data=None):
+		if initial_data is not None:
+			self._populate_generic_list("saved_episodes", initial_data)
+		else:
+			threading.Thread(
+				target=lambda: self._load_data_thread("saved_episodes", self.client.get_saved_episodes)
+			).start()
+
+	def load_saved_audiobooks(self, initial_data=None):
+		if initial_data is not None:
+			self._populate_generic_list("saved_audiobooks", initial_data)
+		else:
+			threading.Thread(
+				target=lambda: self._load_data_thread(
+					"saved_audiobooks", self.client.get_saved_audiobooks
+				)
+			).start()
+
+	def _format_saved_episode(self, episode):
+		name = safe_text(episode.get("name"), _("Unknown Episode"))
+		show = safe_text((episode.get("show") or {}).get("name"), "")
+		release = safe_text(episode.get("release_date"), "")
+		parts = [p for p in (show, release) if p]
+		return f"{name} - {' - '.join(parts)}" if parts else name
+
+	def _format_saved_audiobook(self, audiobook):
+		name = safe_text(audiobook.get("name"), _("Unknown Audiobook"))
+		authors = ", ".join(
+			a.get("name") for a in (audiobook.get("authors") or []) if a.get("name")
+		)
+		byline = authors or safe_text(audiobook.get("publisher"), "")
+		return f"{name} - {byline}" if byline else name
+
+	def on_view_chapters(self, evt=None):
+		"""Open the chapter list for the selected saved audiobook."""
+		audiobook = self._get_selected_item()
+		if not audiobook or not audiobook.get("id"):
+			return
+		from .audiobooks import AudiobookChaptersDialog
+		dialog = AudiobookChaptersDialog(
+			self, self.client, audiobook["id"], safe_text(audiobook.get("name"), _("Audiobook"))
+		)
+		dialog.Show()
 
 	def load_new_releases(self, initial_data=None):
 		if initial_data is not None:
@@ -2328,6 +2413,11 @@ class ManagementDialog(AccessifyDialog):
 		elif focused_control == self.tabs_config["saved_shows"]["control"]:
 			self._append_menu_item(menu, _("View Episodes"), self.on_view_episodes)
 			self._append_menu_item(menu, _("Remove from Library"), self.on_remove_show_from_library)
+		elif focused_control == self.tabs_config["saved_episodes"]["control"]:
+			self._append_menu_item(menu, _("Remove from Library"), self.on_remove_episode_from_library)
+		elif focused_control == self.tabs_config["saved_audiobooks"]["control"]:
+			self._append_menu_item(menu, _("View Chapters"), self.on_view_chapters)
+			self._append_menu_item(menu, _("Remove from Library"), self.on_remove_audiobook_from_library)
 		if item and item.get("type") == "track":
 			menu.AppendSeparator()
 			playlist_submenu = wx.Menu()
@@ -2388,6 +2478,50 @@ class ManagementDialog(AccessifyDialog):
 				ui.message, _("Track '{track_name}' removed from your library.").format(track_name=track_name)
 			)
 			wx.CallAfter(self.load_saved_tracks)
+
+	def on_remove_episode_from_library(self, evt=None):
+		item = self._get_selected_item()
+		if not item or not item.get("id"):
+			return
+		name = safe_text(item.get("name"), _("this episode"))
+		msg = _("Are you sure you want to remove '{name}' from your saved episodes?").format(name=name)
+		if gui.messageBox(msg, _("Confirm Remove Episode"), wx.YES_NO | wx.ICON_WARNING) == wx.YES:
+			thread_manager.submit_task(
+				self._remove_episode_thread, item["id"], name, name='DialogTask', daemon=True
+			)
+
+	def _remove_episode_thread(self, episode_id, episode_name):
+		result = self.client.remove_episodes_from_library([episode_id])
+		if isinstance(result, str):
+			wx.CallAfter(ui.message, result)
+		else:
+			wx.CallAfter(
+				ui.message,
+				_("Episode '{name}' removed from your library.").format(name=episode_name),
+			)
+			wx.CallAfter(self.load_saved_episodes)
+
+	def on_remove_audiobook_from_library(self, evt=None):
+		item = self._get_selected_item()
+		if not item or not item.get("id"):
+			return
+		name = safe_text(item.get("name"), _("this audiobook"))
+		msg = _("Are you sure you want to remove '{name}' from your saved audiobooks?").format(name=name)
+		if gui.messageBox(msg, _("Confirm Remove Audiobook"), wx.YES_NO | wx.ICON_WARNING) == wx.YES:
+			thread_manager.submit_task(
+				self._remove_audiobook_thread, item["id"], name, name='DialogTask', daemon=True
+			)
+
+	def _remove_audiobook_thread(self, audiobook_id, audiobook_name):
+		result = self.client.remove_audiobooks_from_library([audiobook_id])
+		if isinstance(result, str):
+			wx.CallAfter(ui.message, result)
+		else:
+			wx.CallAfter(
+				ui.message,
+				_("Audiobook '{name}' removed from your library.").format(name=audiobook_name),
+			)
+			wx.CallAfter(self.load_saved_audiobooks)
 
 	def on_remove_album_from_library(self, evt):
 		item = self._get_selected_item()

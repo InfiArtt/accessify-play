@@ -1144,6 +1144,98 @@ class SpotifyClient:
 			offset += limit
 		return shows
 
+	def _client_ready_error(self):
+		"""The not-ready message, or None when the client can be used.
+
+		Check this before writing self.client.<method>: that attribute lookup
+		happens at the call site, before _execute_web_api can guard it, so a
+		logged-out user would get an AttributeError rather than a message.
+		"""
+		if not self.client:
+			return _("Spotify client not ready. Please validate your credentials.")
+		return None
+
+	def _paginate_saved(self, command, *args, limit=50, **kwargs):
+		"""Collect every page of a paginated /me/... listing."""
+		items = []
+		offset = 0
+		while True:
+			results = self._execute_web_api(command, *args, limit=limit, offset=offset, **kwargs)
+			if isinstance(results, str):
+				return results  # Error message
+			if not results or not results.get("items"):
+				break
+			items.extend(results["items"])
+			if len(results["items"]) < limit:
+				break
+			offset += limit
+		return items
+
+	def get_saved_episodes(self):
+		"""Fetches all saved podcast episodes from the user's library."""
+		if err := self._client_ready_error():
+			return err
+		return self._paginate_saved(self.client.current_user_saved_episodes)
+
+	def save_episodes_to_library(self, episode_ids):
+		"""Saves one or more episodes to the user's library."""
+		if err := self._client_ready_error():
+			return err
+		return self._execute_web_api(self.client.current_user_saved_episodes_add, episodes=episode_ids)
+
+	def remove_episodes_from_library(self, episode_ids):
+		"""Removes one or more episodes from the user's library."""
+		if err := self._client_ready_error():
+			return err
+		return self._execute_web_api(self.client.current_user_saved_episodes_delete, episodes=episode_ids)
+
+	def check_if_episodes_saved(self, episode_ids):
+		"""Returns a list of booleans, one per episode id."""
+		if err := self._client_ready_error():
+			return err
+		return self._execute_web_api(self.client.current_user_saved_episodes_contains, episodes=episode_ids)
+
+	def check_if_shows_saved(self, show_ids):
+		"""Returns a list of booleans, one per show id."""
+		if err := self._client_ready_error():
+			return err
+		return self._execute_web_api(self.client.current_user_saved_shows_contains, shows=show_ids)
+
+	# --- Saved audiobooks -------------------------------------------------
+	# spotipy has no wrapper for /me/audiobooks, so these go through its
+	# private request helpers. The endpoints themselves are current; only the
+	# Python binding is missing.
+
+	def get_saved_audiobooks(self):
+		"""Fetches all saved audiobooks from the user's library."""
+		if err := self._client_ready_error():
+			return err
+		return self._paginate_saved(self.client._get, "me/audiobooks")
+
+	def save_audiobooks_to_library(self, audiobook_ids):
+		"""Saves one or more audiobooks to the user's library."""
+		if err := self._client_ready_error():
+			return err
+		return self._execute_web_api(
+			self.client._put, f"me/audiobooks?ids={','.join(audiobook_ids)}"
+		)
+
+	def remove_audiobooks_from_library(self, audiobook_ids):
+		"""Removes one or more audiobooks from the user's library."""
+		if err := self._client_ready_error():
+			return err
+		return self._execute_web_api(
+			self.client._delete, f"me/audiobooks?ids={','.join(audiobook_ids)}"
+		)
+
+	def check_if_audiobooks_saved(self, audiobook_ids):
+		"""Returns a list of booleans, one per audiobook id."""
+		if err := self._client_ready_error():
+			return err
+		return self._execute_web_api(
+			self.client._get, f"me/audiobooks/contains?ids={','.join(audiobook_ids)}"
+		)
+
 	def get_new_releases(self):
 		"""Fetches new album releases."""
 		return self._execute_web_api(self.client.new_releases, limit=50)

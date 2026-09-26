@@ -1,5 +1,14 @@
 # Changelog
 
+## Version 1.11.0
+
+### 🎉 New Features
+
+- **Saved Episodes**: you can now save individual podcast episodes to listen to later, instead of only whole shows. In any episode list, open the context menu and choose "Save Episode", or press Alt+S. Saved episodes appear in a new **Saved Episodes** tab in the Library (`M`), showing the episode, its show and its release date, where you can play them or remove them from your library.
+- **Saved Audiobooks**: audiobooks can now be saved to your library as well. In the Search dialog, open the context menu on an audiobook and choose "Save Audiobook". They appear in a new **Saved Audiobooks** tab in the Library, showing the title and author; press Enter to open the chapter list, or use the context menu to view chapters or remove the book from your library.
+
+With these two, everything the add-on can find — tracks, albums, shows, episodes and audiobooks — can now be saved to your Spotify library.
+
 ## Version 1.10.3
 
 ### 🛠️ Bug Fixes

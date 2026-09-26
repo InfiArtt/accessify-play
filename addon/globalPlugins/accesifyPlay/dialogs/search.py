@@ -289,6 +289,24 @@ class SearchDialog(AccessifyDialog):
 		dialog = PlaylistTracksDialog(self, self.client, playlist)
 		dialog.Show()
 
+	def _save_audiobook(self, audiobook):
+		if not audiobook or not audiobook.get("id"):
+			return
+		name = audiobook.get("name") or _("this audiobook")
+		ui.message(_("Saving '{name}'...").format(name=name))
+
+		def _save():
+			result = self.client.save_audiobooks_to_library([audiobook["id"]])
+			if isinstance(result, str):
+				wx.CallAfter(ui.message, result)
+			else:
+				wx.CallAfter(
+					ui.message,
+					_("Audiobook '{name}' saved to your library.").format(name=name),
+				)
+
+		thread_manager.submit_task(_save, name="DialogTask", daemon=True)
+
 	def _open_audiobook_chapters(self, audiobook):
 		from .audiobooks import AudiobookChaptersDialog
 		dialog = AudiobookChaptersDialog(self, self.client, audiobook["id"], audiobook.get("name"))
@@ -377,6 +395,8 @@ class SearchDialog(AccessifyDialog):
 				self.Bind(
 					wx.EVT_MENU, lambda e, a=item: self._open_audiobook_chapters(a), chapters_item
 				)
+				save_book_item = menu.Append(wx.ID_ANY, _("Save Audiobook"))
+				self.Bind(wx.EVT_MENU, lambda e, a=item: self._save_audiobook(a), save_book_item)
 			elif item_type == "playlist":
 				is_owned = item.get("owner", {}).get("id") == self._current_user_id
 				if not is_owned:
