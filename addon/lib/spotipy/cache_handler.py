@@ -12,7 +12,16 @@ import json
 import logging
 import os
 
-from redis import RedisError
+# Accessify Play: redis is not bundled. The add-on only uses CacheFileHandler;
+# RedisError is needed solely by RedisCacheHandler, which is never created.
+# Upstream imports it unconditionally, which forced ~1.9 MB of redis and
+# async_timeout into every release just so `import spotipy` would work.
+# Re-apply this if spotipy is upgraded.
+try:
+    from redis import RedisError
+except ImportError:
+    class RedisError(Exception):
+        """Stand-in used when redis is not installed."""
 
 from spotipy.util import CLIENT_CREDS_ENV_VARS
 

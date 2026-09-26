@@ -40,6 +40,7 @@ addon_info = AddonInfo(
 - Manage Playlists now always shows the playlist you select, and Refresh keeps your place.
 - The Library (M) opens instantly and loads each tab only when you open it. Features Spotify retires now say so clearly.
 - Saving and following moved to Spotify's current library service, ahead of the old one being switched off.
+- 58% smaller libraries, with no .exe or compiled files, so it works the same on 32-bit and 64-bit NVDA.
 	"""),
 	# Author(s)
 	addon_author="Rafli I .<rafli08523717409@gmail.com>, Rexya <rexya2017@gmail.com>",

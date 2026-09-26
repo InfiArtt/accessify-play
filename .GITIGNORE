@@ -5,6 +5,8 @@
 *.txt
 *.yaml
 !requirements.txt
+# Bundled libraries' license texts must ship with them (MIT/Apache require it).
+!addon/lib/*.dist-info/licenses/*.txt
 
 # Ignore Python cache
 __pycache__/
