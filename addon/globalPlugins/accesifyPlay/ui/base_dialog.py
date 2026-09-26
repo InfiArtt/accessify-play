@@ -228,10 +228,72 @@ class AccessifyDialog(wx.Dialog):
 				evt.Skip()
 		control.Bind(wx.EVT_CHAR_HOOK, on_char)
 
+	def _show_lyrics_for_track(self, track):
+		"""Open the lyrics window for a track that need not be playing.
+
+		The window opens as a preview: Enter-to-seek and Jump to Current both
+		act on the current playback position, which has nothing to do with this
+		track, so neither is offered.
+		"""
+		if not track or track.get("type") != "track":
+			return
+		if getattr(self, "_lyrics_loading", False):
+			return
+		track_name = safe_text(track.get("name"), "")
+		artists = track.get("artists") or []
+		artist_name = safe_text((artists[0] if artists else {}).get("name"), "")
+		album_name = safe_text((track.get("album") or {}).get("name"), "")
+		duration_ms = track.get("duration_ms") or 0
+		if not track_name or not artist_name:
+			ui.message(_("Not enough information about this track to look up its lyrics."))
+			return
+
+		self._lyrics_loading = True
+		ui.message(_("Loading lyrics..."))
+
+		def _fetch():
+			from ..lyrics import fetch_lyrics, parse_lrc
+
+			try:
+				result = fetch_lyrics(track_name, artist_name, album_name, duration_ms)
+			except Exception:
+				log.error("AccessifyPlay: lyrics preview fetch failed.", exc_info=True)
+				result = None
+			finally:
+				self._lyrics_loading = False
+			if result is None:
+				wx.CallAfter(ui.message, _("Could not load lyrics. Please check your internet connection."))
+				return
+			plain = result.get("plainLyrics")
+			synced = result.get("syncedLyrics")
+			if not plain and not synced:
+				wx.CallAfter(ui.message, _("No lyrics found for {track}.").format(track=track_name))
+				return
+			wx.CallAfter(
+				self._open_lyrics_preview,
+				track_name,
+				artist_name,
+				plain,
+				parse_lrc(synced) if synced else None,
+			)
+
+		thread_manager.submit_task(_fetch, name="LyricsPreviewTask")
+
+	def _open_lyrics_preview(self, track_name, artist_name, plain, synced_lines):
+		from ..dialogs.lyrics_window import LyricsDialog
+
+		dialog = LyricsDialog(self, track_name, artist_name, plain, synced_lines=synced_lines)
+		dialog.Show()
+		ui.message(_("Lyrics for {track} opened.").format(track=track_name))
+
 	def _append_go_to_options_for_track(self, menu, track_item):
 		if not track_item or track_item.get("type") != "track":
 			return
 		menu.AppendSeparator()
+		# Every track list builds its menu through here, so Show Lyrics is
+		# available wherever a track is: search, albums, playlists, library.
+		lyrics_item = menu.Append(wx.ID_ANY, _("Show Lyrics"))
+		self.Bind(wx.EVT_MENU, lambda evt, t=track_item: self._show_lyrics_for_track(t), lyrics_item)
 		album = track_item.get("album")
 		if album and album.get("uri"):
 			go_to_album_item = menu.Append(wx.ID_ANY, _("Go to Album: {album_name}").format(album_name=album.get("name")))

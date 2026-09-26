@@ -199,7 +199,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			if not (needs_poll and self.client.client):
 				return
 
-			playback = self.client._execute_web_api(self.client.client.current_playback)
+			playback = self.client._execute_web_api("current_playback")
 			is_playing = (
 				playback.get("is_playing", False)
 				if playback and isinstance(playback, dict)
@@ -262,7 +262,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		@utils.run_in_thread
 		def _do_seek():
 			try:
-				self.client._execute(self.client.client.seek_track, position_ms=position_ms)
+				self.client._execute("seek_track", position_ms=position_ms)
 			except Exception as e:
 				log.error(f"AccessifyPlay lyrics seek error: {e}", exc_info=True)
 
@@ -275,7 +275,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		@utils.run_in_thread
 		def _do():
 			try:
-				playback = self.client._execute_web_api(self.client.client.current_playback)
+				playback = self.client._execute_web_api("current_playback")
 				if playback and isinstance(playback, dict):
 					ms = playback.get("progress_ms", 0)
 					if self.lyricsDialog:
@@ -294,7 +294,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		try:
 			if not self.client.client:
 				return
-			playback = self.client._execute_web_api(self.client.client.current_playback)
+			playback = self.client._execute_web_api("current_playback")
 			if not isinstance(playback, dict) or not playback.get("is_playing"):
 				return  # Don't resync while paused — timers are effectively frozen
 			progress_ms = playback.get("progress_ms", 0)
@@ -407,7 +407,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		@utils.run_in_thread
 		def _fetch():
 			try:
-				playback = self.client._execute(self.client.client.current_playback)
+				playback = self.client._execute("current_playback")
 				if not isinstance(playback, dict) or not playback.get("item"):
 					wx.CallAfter(nvda_ui.message, _("Nothing is currently playing."))
 					return
@@ -503,7 +503,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		@utils.run_in_thread
 		def _fetch():
 			try:
-				playback = self.client._execute(self.client.client.current_playback)
+				playback = self.client._execute("current_playback")
 				if not isinstance(playback, dict) or not playback.get("item"):
 					wx.CallAfter(nvda_ui.message, _("Nothing is currently playing."))
 					return
@@ -682,14 +682,14 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			return _("Please wait...")
 		try:
 			self._is_modifying_playback = True
-			playback = self.client._execute(self.client.client.current_playback)
+			playback = self.client._execute("current_playback")
 			if not isinstance(playback, dict):
 				return playback
 			if playback and playback.get("is_playing"):
-				self.client._execute(self.client.client.pause_playback)
+				self.client._execute("pause_playback")
 				return _("Paused")
 			else:
-				self.client._execute(self.client.client.start_playback)
+				self.client._execute("start_playback")
 				return _("Playing")
 		finally:
 			self._is_modifying_playback = False
@@ -703,11 +703,11 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			return _("Please wait...")
 		try:
 			self._is_modifying_playback = True
-			result = self.client._execute(self.client.client.next_track)
+			result = self.client._execute("next_track")
 			if isinstance(result, str):
 				return result
 			time.sleep(0.4)  # Beri jeda agar server Spotify sempat memproses
-			playback = self.client._execute(self.client.client.current_playback)
+			playback = self.client._execute("current_playback")
 			return (
 				self.client.get_current_track_info(playback)
 				if isinstance(playback, dict)
@@ -725,11 +725,11 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			return _("Please wait...")
 		try:
 			self._is_modifying_playback = True
-			result = self.client._execute(self.client.client.previous_track)
+			result = self.client._execute("previous_track")
 			if isinstance(result, str):
 				return result
 			time.sleep(0.4)
-			playback = self.client._execute(self.client.client.current_playback)
+			playback = self.client._execute("current_playback")
 			return (
 				self.client.get_current_track_info(playback)
 				if isinstance(playback, dict)
@@ -747,14 +747,14 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			return _("Please wait...")
 		try:
 			self._is_modifying_playback = True
-			playback = self.client._execute(self.client.client.current_playback)
+			playback = self.client._execute("current_playback")
 			if not isinstance(playback, dict):
 				return playback
 			if playback and playback.get("device"):
 				current_volume = playback["device"]["volume_percent"]
 				step = utils.conf_get("volumeStep", 5)
 				new_volume = min(current_volume + step, 100)
-				self.client._execute(self.client.client.volume, new_volume)
+				self.client._execute("volume", new_volume)
 				return f"{_('Volume')} {new_volume}%"
 			return _("No active device found.")
 		finally:
@@ -769,14 +769,14 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			return _("Please wait...")
 		try:
 			self._is_modifying_playback = True
-			playback = self.client._execute(self.client.client.current_playback)
+			playback = self.client._execute("current_playback")
 			if not isinstance(playback, dict):
 				return playback
 			if playback and playback.get("device"):
 				current_volume = playback["device"]["volume_percent"]
 				step = utils.conf_get("volumeStep", 5)
 				new_volume = max(current_volume - step, 0)
-				self.client._execute(self.client.client.volume, new_volume)
+				self.client._execute("volume", new_volume)
 				return f"{_('Volume')} {new_volume}%"
 			return _("No active device found.")
 		finally:
@@ -856,7 +856,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	)
 	@utils.speak_in_thread
 	def script_toggleLike(self, gesture):
-		playback = self.client._execute(self.client.client.current_playback)
+		playback = self.client._execute("current_playback")
 		if isinstance(playback, str):
 			return playback
 		if not playback or not playback.get("item"):
@@ -887,7 +887,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	)
 	@utils.speak_in_thread
 	def script_toggleFollowArtist(self, gesture):
-		playback = self.client._execute(self.client.client.current_playback)
+		playback = self.client._execute("current_playback")
 		if isinstance(playback, str):
 			return playback
 		if not playback or not playback.get("item"):
@@ -1018,7 +1018,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
 		@utils.run_in_thread
 		def _prepare():
-			playback = self.client._execute(self.client.client.current_playback)
+			playback = self.client._execute("current_playback")
 			if not isinstance(playback, dict) or not playback.get("item"):
 				wx.CallAfter(self._finish_add_to_playlist_dialog, _("Nothing is currently playing."))
 				return
@@ -1192,7 +1192,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		self._active_sleep_timer = None
 		self._clear_timer_state()  # Hapus jejak di file
 		if self.client and self.client.client:
-			self.client._execute(self.client.client.pause_playback)
+			self.client._execute("pause_playback")
 			log.info("Sleep timer executed: Playback paused.")
 
 	def _check_resume_sleep_timer(self):

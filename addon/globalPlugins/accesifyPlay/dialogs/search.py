@@ -31,6 +31,7 @@ class SearchDialog(AccessifyDialog):
 	MENU_FOLLOW = wx.NewIdRef()
 	MENU_DISCO = wx.NewIdRef()
 	MENU_COPY_LINK = wx.NewIdRef()
+	MENU_SHOW_LYRICS = wx.NewIdRef()
 
 	def __init__(self, parent, client):
 		super().__init__(parent, title=_("Search Spotify"))
@@ -115,6 +116,8 @@ class SearchDialog(AccessifyDialog):
 			(wx.ACCEL_ALT, ord("F"), self.MENU_FOLLOW.GetId()),
 			(wx.ACCEL_ALT, ord("D"), self.MENU_DISCO.GetId()),
 			(wx.ACCEL_ALT, ord("L"), self.MENU_COPY_LINK.GetId()),
+			# W, as in the command layer's lyrics window.
+			(wx.ACCEL_ALT, ord("W"), self.MENU_SHOW_LYRICS.GetId()),
 		]
 		self.SetAcceleratorTable(wx.AcceleratorTable(accel_entries))
 		self.Bind(wx.EVT_MENU, self.onPlay, id=self.MENU_PLAY.GetId())
@@ -122,6 +125,7 @@ class SearchDialog(AccessifyDialog):
 		self.Bind(wx.EVT_MENU, self.on_follow_artist, id=self.MENU_FOLLOW.GetId())
 		self.Bind(wx.EVT_MENU, self.on_view_discography, id=self.MENU_DISCO.GetId())
 		self.Bind(wx.EVT_MENU, self.copy_selected_link, id=self.MENU_COPY_LINK.GetId())
+		self.Bind(wx.EVT_MENU, self.on_show_lyrics, id=self.MENU_SHOW_LYRICS.GetId())
 
 	def onBrowseCategories(self, evt):
 		from .categories import CategoriesDialog
@@ -533,6 +537,13 @@ class SearchDialog(AccessifyDialog):
 		item = self._get_item_at_index(self.resultsList.GetSelection())
 		if item and item.get("type") == "artist":
 			self._open_artist_discography(item)
+
+	def on_show_lyrics(self, evt=None):
+		item = self._get_item_at_index(self.resultsList.GetSelection())
+		if not item or item.get("type") != "track":
+			ui.message(_("Lyrics are only available for songs."))
+			return
+		self._show_lyrics_for_track(item)
 
 	def copy_selected_link(self, evt=None):
 		item = self._get_item_at_index(self.resultsList.GetSelection())

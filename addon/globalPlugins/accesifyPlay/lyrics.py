@@ -57,10 +57,31 @@ def _fetch_search(track_name, artist_name):
 	return None
 
 
+_user_agent = None
+
+
+def _get_user_agent():
+	"""Identify ourselves to lrclib with the add-on's real version.
+
+	lrclib asks clients for a name, version and homepage. This used to be a
+	hard-coded "1.6.1", five releases stale.
+	"""
+	global _user_agent
+	if _user_agent is None:
+		try:
+			import addonHandler
+
+			version = addonHandler.getCodeAddon().manifest["version"]
+		except Exception:
+			version = "unknown"
+		_user_agent = f"AccessifyPlay-NVDA-Addon/{version} (+https://github.com/InfiArtt/accessify-play)"
+	return _user_agent
+
+
 def _make_request(url):
 	req = url_request.Request(
 		url,
-		headers={"User-Agent": "AccessifyPlay-NVDA-Addon/1.6.1"},
+		headers={"User-Agent": _get_user_agent()},
 	)
 	try:
 		with url_request.urlopen(req, timeout=10) as resp:
@@ -74,25 +95,48 @@ def _make_request(url):
 # LRC parser
 # ---------------------------------------------------------------------------
 
-_LRC_PATTERN = re.compile(r"\[(\d+):(\d+)\.(\d+)\](.*)")
+# One [mm:ss], [mm:ss.x], [mm:ss.xx] or [mm:ss.xxx] tag. Metadata tags such as
+# [ar:Artist] or [offset:+500] never match, because minutes must be digits.
+_LRC_TIMESTAMP = re.compile(r"\[(\d+):(\d{1,2})(?:[.:](\d{1,3}))?\]")
+
+
+def _timestamp_ms(minutes, seconds, fraction):
+	ms = (int(minutes) * 60 + int(seconds)) * 1000
+	if fraction:
+		# A decimal fraction of a second: ".5" is 500 ms, ".45" is 450 ms and
+		# ".456" is 456 ms. The old parser always multiplied by ten, which only
+		# held for two digits: ".456" came out as 4.56 seconds.
+		ms += int(fraction.ljust(3, "0")[:3])
+	return ms
 
 
 def parse_lrc(lrc_text):
 	"""
 	Parse an LRC-format string into a sorted list of (timestamp_ms, line_text) tuples.
-	Empty lines and lines without parseable timestamps are skipped.
+
+	Handles timestamps with no fraction ([01:23]) and with one to three
+	fractional digits, and lines carrying several timestamps
+	([00:12.00][00:45.00]Chorus), which produce one entry per timestamp.
+	Empty lines and lines without a timestamp are skipped.
 	"""
 	if not lrc_text:
 		return []
 	lines = []
 	for raw in lrc_text.splitlines():
-		m = _LRC_PATTERN.match(raw.strip())
-		if m:
-			minutes, seconds, centiseconds, text = m.groups()
-			ms = (int(minutes) * 60 + int(seconds)) * 1000 + int(centiseconds) * 10
-			text = text.strip()
-			if text:
-				lines.append((ms, text))
+		raw = raw.strip()
+		stamps = []
+		pos = 0
+		while True:
+			m = _LRC_TIMESTAMP.match(raw, pos)
+			if not m:
+				break
+			stamps.append(_timestamp_ms(*m.groups()))
+			pos = m.end()
+		text = raw[pos:].strip()
+		if not stamps or not text:
+			continue
+		for ms in stamps:
+			lines.append((ms, text))
 	return sorted(lines, key=lambda x: x[0])
 
 

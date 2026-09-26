@@ -62,10 +62,12 @@ def _parse_version(version_string):
 	pre_release_parts = [0]
 	# Split by dot or hyphen to handle tags like "beta.1" or "rc-1"
 	for part in re.split(r"[.-]", pre_release_str):
+		# Tag each identifier so ints and strings never meet in a comparison.
+		# SemVer ranks numeric identifiers below alphanumeric ones, hence 0/1.
 		if part.isdigit():
-			pre_release_parts.append(int(part))
+			pre_release_parts.append((0, int(part)))
 		else:
-			pre_release_parts.append(part)
+			pre_release_parts.append((1, part))
 
 	return main_version, tuple(pre_release_parts)
 
@@ -129,9 +131,8 @@ def _find_latest_release_for_channel(releases, channel):
 			if not release["prerelease"]:
 				return release
 	elif channel == "beta":
-		# Find the latest release, even if it's a pre-release
-		for release in releases:
-			return release  # The API returns releases sorted by creation date, so the first one is the latest
+		# The latest release, pre-release or not. The API sorts newest first.
+		return releases[0] if releases else None
 	return None
 
 
@@ -177,22 +178,58 @@ class UpdateDialog(wx.Dialog):
 		self.update_button.Disable()
 		self.cancel_button.Disable()
 		self.info_text.SetValue(_("Downloading update... Please wait."))
-		thread_manager.submit_task(download_and_install, self.release_info, daemon=True, name="DownloadInstall")
+		thread_manager.submit_task(
+			download_and_install, self.release_info, self, daemon=True, name="DownloadInstall"
+		)
+
+	def restore_after_failure(self):
+		"""Give the user their buttons back after a failed download or install."""
+		self.update_button.Enable()
+		self.cancel_button.Enable()
+		self.info_text.SetValue(
+			_("The update could not be installed. You can try again, or choose Later.")
+		)
 
 
 def show_update_dialog(release_info):
 	"""Creates and shows the update dialog."""
 	gui.mainFrame.prePopup()
+	dialog = None
 	try:
 		dialog = UpdateDialog(gui.mainFrame, release_info)
 		dialog.ShowModal()
 	finally:
-		dialog.Destroy()
-		gui.mainFrame.postPopup()
+		try:
+			if dialog:
+				dialog.Destroy()
+		finally:
+			gui.mainFrame.postPopup()
 
 
-def download_and_install(release_info):
-	"""Downloads the addon from the release asset and installs it."""
+#: (connect, read) seconds. A stalled download must not hang its thread forever:
+#: terminate() waits on every managed thread before NVDA can exit.
+DOWNLOAD_TIMEOUT = (10, 60)
+
+
+def _report_failure(dialog):
+	wx.CallAfter(
+		messageBox,
+		_("The update could not be installed. Please try again, or download it "
+		  "manually from the add-on's website."),
+		_("Update Failed"),
+		wx.OK | wx.ICON_ERROR,
+	)
+	if dialog:
+		wx.CallAfter(dialog.restore_after_failure)
+
+
+def download_and_install(release_info, dialog=None):
+	"""Download the release's add-on file, then hand over to the main thread.
+
+	Runs on a worker thread. Only the network transfer happens here: installing
+	and restarting NVDA touch NVDA's own state and must run on the main thread,
+	so they are queued with wx.CallAfter.
+	"""
 	try:
 		assets = release_info.get("assets", [])
 		addon_asset = next((asset for asset in assets if asset["name"].endswith(".nvda-addon")), None)
@@ -205,52 +242,59 @@ def download_and_install(release_info):
 				_("Error"),
 				wx.OK | wx.ICON_ERROR,
 			)
+			if dialog:
+				wx.CallAfter(dialog.restore_after_failure)
 			return
 
 		download_url = addon_asset["browser_download_url"]
-		addon_filename = addon_asset["name"]
+		addon_path = os.path.join(globalVars.appArgs.configPath, addon_asset["name"])
+		partial_path = addon_path + ".part"
 
-		temp_addon_path = os.path.join(globalVars.appArgs.configPath, addon_filename)
-
-		# Use requests to download the file
-		response = requests.get(download_url, stream=True)
+		response = requests.get(download_url, stream=True, timeout=DOWNLOAD_TIMEOUT)
 		response.raise_for_status()
-		with open(temp_addon_path, "wb") as out_file:
+		# Write to a temporary name and rename once complete, so an interrupted
+		# download is never mistaken for a finished one.
+		with open(partial_path, "wb") as out_file:
 			for chunk in response.iter_content(chunk_size=8192):
 				out_file.write(chunk)
+		os.replace(partial_path, addon_path)
 
-		log.info(f"AccessifyPlay: Downloaded update to {temp_addon_path}")
+		log.info(f"AccessifyPlay: Downloaded update to {addon_path}")
+		wx.CallAfter(_install_downloaded, addon_path, dialog)
 
-		# More robust installation: find and remove the old addon first
-		bundle = addonHandler.AddonBundle(temp_addon_path)
+	except Exception as e:
+		log.error(f"AccessifyPlay: Update download failed: {e}", exc_info=True)
+		_report_failure(dialog)
+
+
+def _install_downloaded(addon_path, dialog=None):
+	"""Install the downloaded bundle and restart NVDA. Main thread only."""
+	try:
+		bundle = addonHandler.AddonBundle(addon_path)
 		bundle_name = bundle.manifest["name"]
 
-		current_addons = addonHandler.getAvailableAddons()
 		previous_addon = next(
 			(
 				addon
-				for addon in current_addons
+				for addon in addonHandler.getAvailableAddons()
 				if not addon.isPendingRemove and bundle_name == addon.manifest["name"]
 			),
 			None,
 		)
-
 		if previous_addon:
 			log.info(
 				f"AccessifyPlay: Requesting removal of old version: {previous_addon.manifest['version']}"
 			)
 			previous_addon.requestRemove()
 
-		# Install the downloaded addon
 		addonHandler.installAddonBundle(bundle)
-		core.restart()
-
 	except Exception as e:
-		log.error(f"AccessifyPlay: Download or install failed: {e}", exc_info=True)
-		wx.CallAfter(
-			messageBox,
-			_("The update could not be installed. Please try again, or download it "
-			  "manually from the add-on's website."),
-			_("Update Failed"),
-			wx.OK | wx.ICON_ERROR,
-		)
+		log.error(f"AccessifyPlay: Update install failed: {e}", exc_info=True)
+		_report_failure(dialog)
+		return
+
+	# This runs inside the dialog's modal loop. Close the dialog first and
+	# restart once the loop has unwound and show_update_dialog has cleaned up.
+	if dialog:
+		dialog.EndModal(wx.ID_OK)
+	wx.CallAfter(core.restart)

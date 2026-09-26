@@ -85,10 +85,15 @@ class LyricsDialog(AccessifyDialog):
 			btn_sizer.Add(copy_ts_btn, 0, wx.RIGHT, 6)
 			self._copy_ts_btn = copy_ts_btn
 
-			jump_btn = wx.Button(self, label=_("&Jump to Current"))
-			jump_btn.Bind(wx.EVT_BUTTON, self._on_jump_to_current)
-			btn_sizer.Add(jump_btn, 0, wx.RIGHT, 6)
-			self._jump_btn = jump_btn
+			# Only when this window follows playback. A lyrics preview opened
+			# from a track list has no current position to jump to.
+			if self._jump_callback:
+				jump_btn = wx.Button(self, label=_("&Jump to Current"))
+				jump_btn.Bind(wx.EVT_BUTTON, self._on_jump_to_current)
+				btn_sizer.Add(jump_btn, 0, wx.RIGHT, 6)
+				self._jump_btn = jump_btn
+			else:
+				self._jump_btn = None
 		else:
 			self._copy_ts_btn = None
 			self._jump_btn = None

@@ -30,8 +30,12 @@ addon_info = AddonInfo(
 - Saved Episodes and Saved Audiobooks: save individual podcast episodes and audiobooks, and find them in two new Library tabs.
 - One command to save or unsave episodes, shows and audiobooks, like Like/Unlike does for tracks.
 - Remove Duplicates and Clear Playlist, in the Library's Manage Playlists tab.
+- Show Lyrics for any song in a list without playing it (Alt+W in Search).
 - Fixed removing a track deleting every copy of it from a playlist; now only the selected copy is removed.
 - Fixed moving a track up or down sometimes moving a different track in playlists containing unavailable songs.
+- Fixed commands failing silently when not logged in to Spotify.
+- Fixed synced lyrics being mistimed, dropped, or read with a timestamp spoken aloud.
+- More reliable updates: downloads time out, and a failed update can be retried.
 	"""),
 	# Author(s)
 	addon_author="Rafli I .<rafli08523717409@gmail.com>, Rexya <rexya2017@gmail.com>",
