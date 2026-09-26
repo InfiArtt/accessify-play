@@ -1096,8 +1096,13 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		}
 		for key, func in loaders.items():
 			result = func()
-			if isinstance(result, str):
-				return result  # return error message on failure
+			# The profile comes first. If even that fails, Spotify is unreachable
+			# or the user is logged out, and one clear message beats a dialog full
+			# of errors. Past that point a failure belongs to its own tab: New
+			# Releases runs on an endpoint Spotify has deprecated, and the day it
+			# goes, the rest of the Library must still open.
+			if isinstance(result, str) and key == "user_profile":
+				return result
 			data[key] = result
 		return data
 

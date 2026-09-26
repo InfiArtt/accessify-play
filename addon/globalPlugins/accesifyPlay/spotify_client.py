@@ -923,13 +923,12 @@ class SpotifyClient:
 		)
 
 	def delete_playlist(self, playlist_id):
-		"""Deletes (unfollows) a playlist."""
-		if not self.client:
-			return _("Spotify client not ready. Please validate your credentials.")
-		
-		return self._execute_web_api(
-			"current_user_unfollow_playlist", playlist_id=playlist_id
-		)
+		"""Deletes (unfollows) a playlist.
+
+		Spotify has no real delete: removing your own playlist means unfollowing
+		it, which now goes through /me/library like every other unfollow.
+		"""
+		return self.library_remove(self._uris("playlist", [playlist_id]))
 
 	def update_playlist_details(
 		self, playlist_id, name=None, public=None, collaborative=None, description=None
@@ -1088,7 +1087,7 @@ class SpotifyClient:
 				f"chapters/{entity_id}",
 				status_messages={404: _("This chapter is not available in your country.")},
 			),
-			"user": lambda: self.get_user_profile(entity_id),
+			"user": lambda: self._user_link_data(entity_id),
 		}
 		fetcher = fetchers.get(entity_type)
 		if not fetcher:
@@ -1205,6 +1204,49 @@ class SpotifyClient:
 			offset += limit
 		return shows
 
+	# --- Unified library: /me/library ---------------------------------------
+	# Spotify replaced its per-type save, follow and "contains" endpoints with
+	# three that take Spotify URIs of any kind. spotipy 2.26 already routes most
+	# calls through them; these cover the ones it still sends to deprecated
+	# endpoints (episode contains, playlist unfollow and follow check), and the
+	# audiobook calls it has no binding for at all.
+
+	#: Spotify accepts at most 40 URIs per /me/library request.
+	LIBRARY_BATCH = 40
+
+	@staticmethod
+	def _uris(kind, ids):
+		"""Spotify URIs for ids of one kind; ids that are already URIs pass through."""
+		return [i if str(i).startswith("spotify:") else f"spotify:{kind}:{i}" for i in ids]
+
+	def _library_batches(self, verb, path, uris):
+		"""Send uris in batches; returns the results in order, or the first error message."""
+		results = []
+		for start in range(0, len(uris), self.LIBRARY_BATCH):
+			chunk = uris[start:start + self.LIBRARY_BATCH]
+			result = self._execute_web_api(verb, path, uris=",".join(chunk))
+			if isinstance(result, str):
+				return result
+			results.append(result)
+		return results
+
+	def library_contains(self, uris):
+		"""One boolean per URI: is it saved (or followed) by the current user?"""
+		results = self._library_batches("_get", "me/library/contains", list(uris))
+		if isinstance(results, str):
+			return results
+		return [flag for batch in results for flag in (batch or [])]
+
+	def library_save(self, uris):
+		"""Save tracks, albums, episodes, shows or audiobooks; follow users or playlists."""
+		results = self._library_batches("_put", "me/library", list(uris))
+		return results if isinstance(results, str) else None
+
+	def library_remove(self, uris):
+		"""The reverse of library_save."""
+		results = self._library_batches("_delete", "me/library", list(uris))
+		return results if isinstance(results, str) else None
+
 	def _paginate_saved(self, command, *args, limit=50, **kwargs):
 		"""Collect every page of a paginated /me/... listing."""
 		items = []
@@ -1235,16 +1277,17 @@ class SpotifyClient:
 
 	def check_if_episodes_saved(self, episode_ids):
 		"""Returns a list of booleans, one per episode id."""
-		return self._execute_web_api("current_user_saved_episodes_contains", episodes=episode_ids)
+		# spotipy still sends this one to the deprecated /me/episodes/contains.
+		return self.library_contains(self._uris("episode", episode_ids))
 
 	def check_if_shows_saved(self, show_ids):
 		"""Returns a list of booleans, one per show id."""
 		return self._execute_web_api("current_user_saved_shows_contains", shows=show_ids)
 
 	# --- Saved audiobooks -------------------------------------------------
-	# spotipy has no wrapper for /me/audiobooks, so these go through its
-	# private request helpers. The endpoints themselves are current; only the
-	# Python binding is missing.
+	# Listing uses GET /me/audiobooks, which spotipy has no binding for. Saving,
+	# removing and checking go through /me/library above: Spotify deprecated the
+	# /me/audiobooks PUT, DELETE and contains variants in its favour.
 
 	def get_saved_audiobooks(self):
 		"""Fetches all saved audiobooks from the user's library."""
@@ -1252,25 +1295,20 @@ class SpotifyClient:
 
 	def save_audiobooks_to_library(self, audiobook_ids):
 		"""Saves one or more audiobooks to the user's library."""
-		return self._execute_web_api(
-			"_put", f"me/audiobooks?ids={','.join(audiobook_ids)}"
-		)
+		return self.library_save(self._uris("audiobook", audiobook_ids))
 
 	def remove_audiobooks_from_library(self, audiobook_ids):
 		"""Removes one or more audiobooks from the user's library."""
-		return self._execute_web_api(
-			"_delete", f"me/audiobooks?ids={','.join(audiobook_ids)}"
-		)
+		return self.library_remove(self._uris("audiobook", audiobook_ids))
 
 	def check_if_audiobooks_saved(self, audiobook_ids):
 		"""Returns a list of booleans, one per audiobook id."""
-		return self._execute_web_api(
-			"_get", f"me/audiobooks/contains?ids={','.join(audiobook_ids)}"
-		)
+		return self.library_contains(self._uris("audiobook", audiobook_ids))
 
 	def get_new_releases(self):
 		"""Fetches new album releases."""
-		return self._execute_web_api("new_releases", limit=50)
+		retired = self._retired_endpoint_message()
+		return self._execute_web_api("new_releases", limit=50, status_messages={404: retired, 403: retired})
 
 	def get_recently_played(self, limit=50):
 		"""Fetches the user's recently played tracks."""
@@ -1278,22 +1316,26 @@ class SpotifyClient:
 
 	def get_categories(self, country=None, locale=None, limit=50, offset=0):
 		"""Get a list of categories used to tag items in Spotify."""
+		retired = self._retired_endpoint_message()
 		return self._execute_web_api(
 			"categories",
 			country=country,
 			locale=locale,
 			limit=limit,
-			offset=offset
+			offset=offset,
+			status_messages={404: retired, 403: retired},
 		)
 
 	def get_category_playlists(self, category_id, country=None, limit=50, offset=0):
 		"""Get a list of Spotify playlists tagged with a particular category."""
+		retired = self._retired_endpoint_message()
 		return self._execute_web_api(
 			"category_playlists",
 			category_id=category_id,
 			country=country,
 			limit=limit,
-			offset=offset
+			offset=offset,
+			status_messages={404: retired, 403: retired},
 		)
 
 	def get_artist_top_tracks(self, artist_id, market="US"):
@@ -1369,7 +1411,10 @@ class SpotifyClient:
 
 	def get_related_artists(self, artist_id):
 		"""Gets artists related to a given artist."""
-		return self._execute_web_api("artist_related_artists", artist_id=artist_id)
+		retired = self._retired_endpoint_message()
+		return self._execute_web_api(
+			"artist_related_artists", artist_id=artist_id, status_messages={404: retired, 403: retired}
+		)
 
 	def get_show_episodes(self, show_id, limit=50, offset=0):
 		"""Gets episodes for a show (paginated)."""
@@ -1425,6 +1470,18 @@ class SpotifyClient:
 			self._current_user_id = profile["id"]
 			return self._current_user_id
 		return None
+
+	def _user_link_data(self, user_id):
+		"""Profile for a user link, or just the id if the profile can't be had.
+
+		GET /users/{id} is deprecated with no replacement. It only supplies the
+		display name and follower count; following needs nothing but the id, so
+		a failed lookup must not take the Follow button away.
+		"""
+		profile = self.get_user_profile(user_id)
+		if isinstance(profile, dict) and profile.get("id"):
+			return profile
+		return {"id": user_id, "uri": f"spotify:user:{user_id}", "display_name": None}
 
 	def get_user_profile(self, user_id):
 		"""Public profile of any Spotify user (display name, followers)."""
@@ -1492,13 +1549,17 @@ class SpotifyClient:
 
 	def unfollow_playlist(self, playlist_id):
 		"""Unfollows a playlist."""
-		return self._execute_web_api("current_user_unfollow_playlist", playlist_id=playlist_id)
+		# spotipy still sends this to the deprecated DELETE /playlists/{id}/followers.
+		return self.library_remove(self._uris("playlist", [playlist_id]))
 
-	def check_if_playlist_is_followed(self, playlist_id, user_ids):
-		"""Checks if one or more users are following a playlist."""
-		return self._execute_web_api(
-			"playlist_is_following", playlist_id=playlist_id, user_ids=user_ids
-		)
+	def check_if_playlist_is_followed(self, playlist_id):
+		"""[bool]: whether the current user follows the playlist.
+
+		The deprecated endpoint spotipy uses could ask about any users; its
+		replacement, /me/library/contains, only knows about the current user,
+		which is the only thing the add-on ever asked.
+		"""
+		return self.library_contains(self._uris("playlist", [playlist_id]))
 
 	@staticmethod
 	def _format_duration(duration_ms):

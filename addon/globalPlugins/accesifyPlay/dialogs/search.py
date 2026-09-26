@@ -441,7 +441,7 @@ class SearchDialog(AccessifyDialog):
 		if item.get("type") == "playlist" and item.get("owner", {}).get("id") != self._current_user_id:
 
 			def _check_and_show():
-				result = self.client.check_if_playlist_is_followed(item.get("id"), [self._current_user_id])
+				result = self.client.check_if_playlist_is_followed(item.get("id"))
 				is_followed_status = result[0] if isinstance(result, list) and result else False
 				wx.CallAfter(show_menu, is_followed_status)
 

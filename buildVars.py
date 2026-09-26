@@ -38,6 +38,8 @@ addon_info = AddonInfo(
 - Fixed synced lyrics being mistimed, dropped, or read with a timestamp spoken aloud.
 - More reliable updates: downloads time out, and a failed update can be retried.
 - Manage Playlists now always shows the playlist you select, and Refresh keeps your place.
+- The Library opens even if one of its lists fails, and features Spotify retires now say so clearly.
+- Saving and following moved to Spotify's current library service, ahead of the old one being switched off.
 	"""),
 	# Author(s)
 	addon_author="Rafli I .<rafli08523717409@gmail.com>, Rexya <rexya2017@gmail.com>",

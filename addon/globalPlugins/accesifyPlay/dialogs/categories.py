@@ -82,6 +82,9 @@ class CategoriesDialog(AccessifyDialog):
 			self.categoriesList.DeleteItem(self.categoriesList.GetItemCount() - 1)
 
 		if isinstance(result, str):
+			if not self.categories:
+				self._has_more = False
+				self.categoriesList.Append([result])
 			ui.message(result)
 			return
 
@@ -222,6 +225,9 @@ class CategoryPlaylistsDialog(AccessifyDialog):
 			self.playlistsList.DeleteItem(self.playlistsList.GetItemCount() - 1)
 
 		if isinstance(result, str):
+			if not self.playlists:
+				self._has_more = False
+				self.playlistsList.Append([result, ""])
 			ui.message(result)
 			return
 

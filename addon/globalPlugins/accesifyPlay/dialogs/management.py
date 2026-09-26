@@ -1436,6 +1436,7 @@ class RelatedArtistsDialog(AccessifyDialog):
 			results = self.client.get_related_artists(self.artist_id)
 			if isinstance(results, str):
 				wx.CallAfter(ui.message, results)
+				wx.CallAfter(self.artists_list.Append, results)
 			else:
 				self.related_artists = results.get("artists", [])
 				if not self.related_artists:
@@ -1767,8 +1768,15 @@ class ManagementDialog(AccessifyDialog):
 		if not tab_cfg:
 			return
 
-		setattr(self, tab_cfg["data_attr"], data)
 		tab_cfg["control"].Clear()
+		if isinstance(data, str):
+			# A message rather than data, e.g. an endpoint Spotify has retired.
+			# Show it in the list, where the user will look for the items.
+			setattr(self, tab_cfg["data_attr"], [])
+			tab_cfg["control"].Append(data)
+			return
+
+		setattr(self, tab_cfg["data_attr"], data)
 
 		if not data:
 			tab_cfg["control"].Append(_("No items found."))
@@ -1783,7 +1791,6 @@ class ManagementDialog(AccessifyDialog):
 		data = loader_func()
 		if isinstance(data, str):
 			wx.CallAfter(ui.message, data)
-			return
 		wx.CallAfter(self._populate_generic_list, key, data)
 
 	# --- FUNGSI SPESIFIK & LOADER DATA ---
@@ -1867,7 +1874,9 @@ class ManagementDialog(AccessifyDialog):
 
 	def load_new_releases(self, initial_data=None):
 		if initial_data is not None:
-			self._populate_generic_list("new_releases", initial_data.get("albums", {}).get("items", []))
+			if isinstance(initial_data, dict):
+				initial_data = initial_data.get("albums", {}).get("items", [])
+			self._populate_generic_list("new_releases", initial_data)
 		else:
 
 			def loader():
@@ -1878,7 +1887,9 @@ class ManagementDialog(AccessifyDialog):
 
 	def load_recently_played(self, initial_data=None):
 		if initial_data is not None:
-			self._populate_generic_list("recently_played", initial_data.get("items", []))
+			if isinstance(initial_data, dict):
+				initial_data = initial_data.get("items", [])
+			self._populate_generic_list("recently_played", initial_data)
 		else:
 
 			def loader():
@@ -1968,6 +1979,13 @@ class ManagementDialog(AccessifyDialog):
 		self.load_playlists()
 
 	def load_playlists(self, initial_data=None):
+		if isinstance(initial_data, str):
+			# The preload failed; say why, and let Refresh try again.
+			self.user_playlists = []
+			self.playlist_choices.Clear()
+			self.playlist_tracks_list.Clear()
+			self.playlist_tracks_list.Append(initial_data)
+			return
 		if initial_data:
 			self._populate_playlists_combobox(initial_data)
 		else:
@@ -2499,7 +2517,9 @@ class ManagementDialog(AccessifyDialog):
 
 	def load_top_items(self, evt=None, initial_data=None):
 		if initial_data:
-			self._populate_generic_list("top_items", initial_data.get("items", []))
+			if isinstance(initial_data, dict):
+				initial_data = initial_data.get("items", [])
+			self._populate_generic_list("top_items", initial_data)
 		else:
 			item_type = self.top_item_type_choices[self.top_item_type_box.GetValue()]
 			time_range = self.time_range_choices[self.time_range_box.GetValue()]
