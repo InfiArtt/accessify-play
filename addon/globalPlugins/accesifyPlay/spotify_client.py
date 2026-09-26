@@ -994,6 +994,38 @@ class SpotifyClient:
 			items=track_uris,
 		)
 
+	def remove_track_occurrences(self, playlist_id, occurrences):
+		"""Remove specific copies of tracks, identified by playlist position.
+
+		occurrences is a list of (uri, position) pairs. Unlike
+		remove_tracks_from_playlist, which removes every copy of a URI, this
+		leaves other copies of the same track where they are.
+
+		Spotify accepts at most 100 items per request. Positions are removed
+		highest first, so each request only touches positions above everything
+		still to be sent, and no later position is shifted by an earlier call.
+		"""
+		if err := self._client_ready_error():
+			return err
+		by_position = sorted(occurrences, key=lambda o: o[1], reverse=True)
+		for start in range(0, len(by_position), 100):
+			chunk = by_position[start:start + 100]
+			items = [{"uri": uri, "positions": [pos]} for uri, pos in chunk]
+			result = self._execute_web_api(
+				self.client.playlist_remove_specific_occurrences_of_items,
+				playlist_id,
+				items,
+			)
+			if isinstance(result, str):
+				return result
+		return True
+
+	def clear_playlist(self, playlist_id):
+		"""Remove every item from a playlist, keeping the playlist itself."""
+		if err := self._client_ready_error():
+			return err
+		return self._execute_web_api(self.client.playlist_replace_items, playlist_id, [])
+
 	def reorder_playlist_track(self, playlist_id, from_index, to_index):
 		"""Moves a track in a playlist from one position to another."""
 		# Spotify's API needs the position to insert *before*.

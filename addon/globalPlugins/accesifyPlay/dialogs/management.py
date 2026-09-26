@@ -8,7 +8,7 @@ import wx
 from gui import guiHelper
 
 from ..ui.base_dialog import AccessifyDialog
-from ..utils import safe_text
+from ..utils import duplicate_occurrences, playlist_rows, positions_after_move, safe_text
 
 from ..language import init_translation  # noqa: E402
 
@@ -441,7 +441,7 @@ class PodcastEpisodesDialog(AccessifyDialog):
 		menu.Append(self.MENU_PLAY_EPISODE.GetId(), _("Play Episode\tAlt+P"))
 		menu.Append(self.MENU_ADD_QUEUE.GetId(), _("Add to Queue\tAlt+Q"))
 		menu.Append(self.MENU_COPY_LINK.GetId(), _("Copy Link\tAlt+L"))
-		menu.Append(self.MENU_SAVE_EPISODE.GetId(), _("Save Episode\tAlt+S"))
+		menu.Append(self.MENU_SAVE_EPISODE.GetId(), _("Save/Unsave Episode\tAlt+S"))
 
 		self.PopupMenu(menu)
 		menu.Destroy()
@@ -471,24 +471,7 @@ class PodcastEpisodesDialog(AccessifyDialog):
 			self.copy_link(link)
 
 	def on_save_episode(self, evt=None):
-		episode = self._get_selected_episode()
-		if not episode or not episode.get("id"):
-			return
-		name = safe_text(episode.get("name"), _("this episode"))
-		ui.message(_("Saving '{name}'...").format(name=name))
-		thread_manager.submit_task(
-			self._save_episode_thread, episode["id"], name, name="DialogTask", daemon=True
-		)
-
-	def _save_episode_thread(self, episode_id, episode_name):
-		result = self.client.save_episodes_to_library([episode_id])
-		if isinstance(result, str):
-			wx.CallAfter(ui.message, result)
-		else:
-			wx.CallAfter(
-				ui.message,
-				_("Episode '{name}' saved to your library.").format(name=episode_name),
-			)
+		self._toggle_saved("episode", self._get_selected_episode())
 
 
 class ArtistDiscographyDialog(AccessifyDialog):
@@ -1940,10 +1923,20 @@ class ManagementDialog(AccessifyDialog):
 		self.delete_unfollow_button.Bind(wx.EVT_BUTTON, self.on_delete_or_unfollow_playlist)
 		buttons_sizer.Add(self.delete_unfollow_button, 0, wx.ALL, 5)
 
+		# Mnemonics S and A: Alt+U is taken by "Unfollow Playlist" and Alt+C by Close.
+		self.remove_duplicates_button = wx.Button(panel, label=_("Remove Duplicate&s"))
+		self.remove_duplicates_button.Bind(wx.EVT_BUTTON, self.on_remove_duplicates)
+		buttons_sizer.Add(self.remove_duplicates_button, 0, wx.ALL, 5)
+
+		self.clear_playlist_button = wx.Button(panel, label=_("Cle&ar Playlist"))
+		self.clear_playlist_button.Bind(wx.EVT_BUTTON, self.on_clear_playlist)
+		buttons_sizer.Add(self.clear_playlist_button, 0, wx.ALL, 5)
+
 		sizer.Add(buttons_sizer, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
 
 		self.user_playlists = []
 		self.current_playlist_tracks = []
+		self.current_playlist_positions = []
 
 		self.load_playlists(initial_data=self.preloaded_data.get("playlists"))
 
@@ -2042,15 +2035,19 @@ class ManagementDialog(AccessifyDialog):
 
 	def _populate_playlist_tracks(self, tracks_data):
 		self.playlist_tracks_list.Clear()
-		self.current_playlist_tracks = []
+		rows = playlist_rows(tracks_data)
+		self.current_playlist_tracks = [track for track, _pos in rows]
+		# Real playlist positions, one per visible row. Unavailable tracks are
+		# hidden, so these are not the row indices, and every API call that
+		# takes a position must use these instead.
+		self.current_playlist_positions = [pos for _track, pos in rows]
 
-		for track_info in tracks_data:
-			track = track_info.get("track")
-			if track:
-				self.current_playlist_tracks.append(track)
-				artists = ", ".join([a["name"] for a in track.get("artists", [])])
-				display = f"{track['name']} - {artists}"
-				self.playlist_tracks_list.Append(display)
+		for track in self.current_playlist_tracks:
+			artists = ", ".join(
+				safe_text(a.get("name"), "") for a in (track.get("artists") or []) if a.get("name")
+			)
+			name = safe_text(track.get("name"), _("Unknown Track"))
+			self.playlist_tracks_list.Append(f"{name} - {artists}" if artists else name)
 
 		if self.playlist_tracks_list.GetCount() > 0:
 			self.playlist_tracks_list.SetSelection(0)
@@ -2066,6 +2063,9 @@ class ManagementDialog(AccessifyDialog):
 		]
 		if edit_button:
 			edit_button[0].Enable(is_owned)
+		# Only the owner may change a playlist's contents.
+		self.remove_duplicates_button.Enable(is_owned)
+		self.clear_playlist_button.Enable(is_owned)
 		if is_owned:
 			self.delete_unfollow_button.SetLabel(_("&Delete Playlist"))
 		else:
@@ -2184,30 +2184,106 @@ class ManagementDialog(AccessifyDialog):
 			return
 
 		track_data = self.current_playlist_tracks[track_selection]
+		position = self.current_playlist_positions[track_selection]
 		playlist_data = self.user_playlists[playlist_selection]
 
-		artists = ", ".join([a["name"] for a in track_data.get("artists", [])])
+		track_name = safe_text(track_data.get("name"), _("Unknown Track"))
+		artists = ", ".join(
+			safe_text(a.get("name"), "") for a in (track_data.get("artists") or []) if a.get("name")
+		)
 		confirmation_msg = _(
 			"Are you sure you want to remove '{track_name}' by {artists} from this playlist?"
-		).format(track_name=track_data["name"], artists=artists)
+		).format(track_name=track_name, artists=artists)
+		copies = sum(1 for t in self.current_playlist_tracks if t.get("uri") == track_data.get("uri"))
+		if copies > 1:
+			confirmation_msg += "\n\n" + _(
+				"This track appears {count} times. Only the selected copy will be removed."
+			).format(count=copies)
 		dialog_title = _("Confirm Remove Track")
 
 		if gui.messageBox(confirmation_msg, dialog_title, wx.YES_NO | wx.ICON_WARNING) == wx.YES:
 
 			def _remove():
-				result = self.client.remove_tracks_from_playlist(playlist_data["id"], [track_data["uri"]])
+				# By position, so other copies of the same track stay put.
+				result = self.client.remove_track_occurrences(
+					playlist_data["id"], [(track_data["uri"], position)]
+				)
 				if isinstance(result, str):
 					wx.CallAfter(ui.message, result)
 				else:
 					wx.CallAfter(
 						ui.message,
 						_("Track '{track_name}' removed from playlist.").format(
-							track_name=track_data["name"]
+							track_name=track_name
 						),
 					)
 					wx.CallAfter(self.on_playlist_selected)
 
 			thread_manager.submit_task(_remove, name='DialogTask', daemon=True)
+
+	def _selected_owned_playlist(self):
+		"""The selected playlist, or None (with a message) if it can't be edited."""
+		selection = self.playlist_choices.GetSelection()
+		if selection == wx.NOT_FOUND:
+			ui.message(_("Please select a playlist first."))
+			return None
+		if not self.is_current_playlist_owned:
+			ui.message(_("You cannot modify a playlist you don't own."))
+			return None
+		return self.user_playlists[selection]
+
+	def on_remove_duplicates(self, evt=None):
+		playlist = self._selected_owned_playlist()
+		if not playlist:
+			return
+		rows = list(zip(self.current_playlist_tracks, self.current_playlist_positions))
+		extra = duplicate_occurrences(rows)
+		if not extra:
+			ui.message(_("This playlist has no duplicate tracks."))
+			return
+		name = safe_text(playlist.get("name"), _("this playlist"))
+		msg = _(
+			"'{name}' contains {count} duplicate copies. Remove them, keeping the first copy of each track?"
+		).format(name=name, count=len(extra))
+		if gui.messageBox(msg, _("Remove Duplicates"), wx.YES_NO | wx.ICON_QUESTION) != wx.YES:
+			return
+
+		def _remove():
+			result = self.client.remove_track_occurrences(playlist["id"], extra)
+			if isinstance(result, str):
+				wx.CallAfter(ui.message, result)
+				return
+			wx.CallAfter(
+				ui.message,
+				_("Removed {count} duplicate copies from '{name}'.").format(count=len(extra), name=name),
+			)
+			wx.CallAfter(self.on_playlist_selected)
+
+		thread_manager.submit_task(_remove, name="DialogTask", daemon=True)
+
+	def on_clear_playlist(self, evt=None):
+		playlist = self._selected_owned_playlist()
+		if not playlist:
+			return
+		if not self.current_playlist_tracks:
+			ui.message(_("This playlist is already empty."))
+			return
+		name = safe_text(playlist.get("name"), _("this playlist"))
+		msg = _(
+			"Remove all {count} tracks from '{name}'? The playlist itself is kept, but this cannot be undone."
+		).format(name=name, count=len(self.current_playlist_tracks))
+		if gui.messageBox(msg, _("Clear Playlist"), wx.YES_NO | wx.ICON_WARNING) != wx.YES:
+			return
+
+		def _clear():
+			result = self.client.clear_playlist(playlist["id"])
+			if isinstance(result, str):
+				wx.CallAfter(ui.message, result)
+				return
+			wx.CallAfter(ui.message, _("'{name}' is now empty.").format(name=name))
+			wx.CallAfter(self.on_playlist_selected)
+
+		thread_manager.submit_task(_clear, name="DialogTask", daemon=True)
 
 	def _handle_reorder_track(self, direction):
 		"""Handles the logic for reordering a track up or down."""
@@ -2229,9 +2305,16 @@ class ManagementDialog(AccessifyDialog):
 		from_index = track_selection
 		to_index = from_index - 1 if direction == "up" else from_index + 1
 
-		# 1. Update the data source
+		# Real playlist positions, captured before anything moves.
+		from_position = self.current_playlist_positions[from_index]
+		to_position = self.current_playlist_positions[to_index]
+
+		# 1. Update the data source, keeping the positions in step with it.
 		track_to_move = self.current_playlist_tracks.pop(from_index)
 		self.current_playlist_tracks.insert(to_index, track_to_move)
+		self.current_playlist_positions = positions_after_move(
+			self.current_playlist_positions, from_index, direction
+		)
 
 		# 2. Update the UI ListBox
 		track_label = self.playlist_tracks_list.GetString(from_index)
@@ -2250,7 +2333,10 @@ class ManagementDialog(AccessifyDialog):
 
 		# 3. Call the API in the background
 		playlist_id = self.user_playlists[playlist_selection]["id"]
-		thread_manager.submit_task(self._finish_reorder_track, playlist_id, from_index, to_index, name='DialogTask', daemon=True)
+		thread_manager.submit_task(
+			self._finish_reorder_track, playlist_id, from_position, to_position,
+			name='DialogTask', daemon=True,
+		)
 
 	def _finish_reorder_track(self, playlist_id, from_index, to_index):
 		"""The background thread that calls the API and handles the result."""
@@ -2454,6 +2540,7 @@ class ManagementDialog(AccessifyDialog):
 		if self.is_current_playlist_owned:
 			menu.AppendSeparator()
 			self._append_menu_item(menu, _("Remove Track from Playlist"), self.on_remove_track_from_playlist)
+			self._append_menu_item(menu, _("Remove Duplicates"), self.on_remove_duplicates)
 		selected_track = self._get_selected_item()
 		self._append_go_to_options_for_track(menu, selected_track)
 		self.PopupMenu(menu)

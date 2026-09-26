@@ -290,22 +290,7 @@ class SearchDialog(AccessifyDialog):
 		dialog.Show()
 
 	def _save_audiobook(self, audiobook):
-		if not audiobook or not audiobook.get("id"):
-			return
-		name = audiobook.get("name") or _("this audiobook")
-		ui.message(_("Saving '{name}'...").format(name=name))
-
-		def _save():
-			result = self.client.save_audiobooks_to_library([audiobook["id"]])
-			if isinstance(result, str):
-				wx.CallAfter(ui.message, result)
-			else:
-				wx.CallAfter(
-					ui.message,
-					_("Audiobook '{name}' saved to your library.").format(name=name),
-				)
-
-		thread_manager.submit_task(_save, name="DialogTask", daemon=True)
+		self._toggle_saved("audiobook", audiobook)
 
 	def _open_audiobook_chapters(self, audiobook):
 		from .audiobooks import AudiobookChaptersDialog
@@ -387,7 +372,7 @@ class SearchDialog(AccessifyDialog):
 				menu.AppendSubMenu(playlist_submenu, _("Add Album to Playlist"))
 			elif item_type == "show":
 				menu.AppendSeparator()
-				save_item = menu.Append(wx.ID_ANY, _("Save Show"))
+				save_item = menu.Append(wx.ID_ANY, _("Save/Unsave Show"))
 				self.Bind(wx.EVT_MENU, self.on_save_show, save_item)
 			elif item_type == "audiobook":
 				menu.AppendSeparator()
@@ -395,7 +380,7 @@ class SearchDialog(AccessifyDialog):
 				self.Bind(
 					wx.EVT_MENU, lambda e, a=item: self._open_audiobook_chapters(a), chapters_item
 				)
-				save_book_item = menu.Append(wx.ID_ANY, _("Save Audiobook"))
+				save_book_item = menu.Append(wx.ID_ANY, _("Save/Unsave Audiobook"))
 				self.Bind(wx.EVT_MENU, lambda e, a=item: self._save_audiobook(a), save_book_item)
 			elif item_type == "playlist":
 				is_owned = item.get("owner", {}).get("id") == self._current_user_id
@@ -509,7 +494,7 @@ class SearchDialog(AccessifyDialog):
 	def on_save_show(self, evt=None):
 		item = self._get_item_at_index(self.resultsList.GetSelection())
 		if item:
-			self._save_show_to_library(item)
+			self._toggle_saved("show", item)
 
 	def onAddToQueue(self, evt=None):
 		item = self._get_item_at_index(self.resultsList.GetSelection())

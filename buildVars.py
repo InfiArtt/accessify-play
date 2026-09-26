@@ -27,9 +27,11 @@ addon_info = AddonInfo(
 	# Brief changelog for this version
 	# Translators: what's new content for the add-on version to be shown in the add-on store
 	addon_changelog=_("""
-- Saved Episodes: save individual podcast episodes for later, from any episode list (Alt+S), and find them in a new Saved Episodes tab in the Library.
-- Saved Audiobooks: save audiobooks from search results and find them in a new Saved Audiobooks tab, where Enter opens the chapter list.
-- Both new tabs support removing items from your library.
+- Saved Episodes and Saved Audiobooks: save individual podcast episodes and audiobooks, and find them in two new Library tabs.
+- One command to save or unsave episodes, shows and audiobooks, like Like/Unlike does for tracks.
+- Remove Duplicates and Clear Playlist, in the Library's Manage Playlists tab.
+- Fixed removing a track deleting every copy of it from a playlist; now only the selected copy is removed.
+- Fixed moving a track up or down sometimes moving a different track in playlists containing unavailable songs.
 	"""),
 	# Author(s)
 	addon_author="Rafli I .<rafli08523717409@gmail.com>, Rexya <rexya2017@gmail.com>",

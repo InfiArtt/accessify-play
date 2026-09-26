@@ -4,10 +4,18 @@
 
 ### 🎉 New Features
 
-- **Saved Episodes**: you can now save individual podcast episodes to listen to later, instead of only whole shows. In any episode list, open the context menu and choose "Save Episode", or press Alt+S. Saved episodes appear in a new **Saved Episodes** tab in the Library (`M`), showing the episode, its show and its release date, where you can play them or remove them from your library.
-- **Saved Audiobooks**: audiobooks can now be saved to your library as well. In the Search dialog, open the context menu on an audiobook and choose "Save Audiobook". They appear in a new **Saved Audiobooks** tab in the Library, showing the title and author; press Enter to open the chapter list, or use the context menu to view chapters or remove the book from your library.
+- **Saved Episodes**: you can now save individual podcast episodes to listen to later, instead of only whole shows. In any episode list, open the context menu and choose "Save/Unsave Episode", or press Alt+S. Saved episodes appear in a new **Saved Episodes** tab in the Library (`M`), showing the episode, its show and its release date, where you can play them or remove them from your library.
+- **Saved Audiobooks**: audiobooks can now be saved to your library as well. In the Search dialog, open the context menu on an audiobook and choose "Save/Unsave Audiobook". They appear in a new **Saved Audiobooks** tab in the Library, showing the title and author; press Enter to open the chapter list, or use the context menu to view chapters or remove the book from your library.
+- **Save and unsave with one command**: saving episodes, shows and audiobooks now works like Like/Unlike (`L`) does for tracks. The same command saves the item if it is not in your library and removes it if it is, then tells you which it did, so you never need to know beforehand whether something is already saved.
+- **Remove Duplicates**: a new "Remove Duplicates" button in the Library's Manage Playlists tab (Alt+S), also in the track context menu, removes extra copies of any track that appears more than once, keeping the first copy of each. It tells you how many copies it found and asks before removing anything.
+- **Clear Playlist**: a new "Clear Playlist" button (Alt+A) removes every track from a playlist while keeping the playlist itself, its name and its followers. It asks for confirmation first.
 
-With these two, everything the add-on can find — tracks, albums, shows, episodes and audiobooks — can now be saved to your Spotify library.
+With these, everything the add-on can find — tracks, albums, shows, episodes and audiobooks — can now be saved to your Spotify library.
+
+### 🛠️ Bug Fixes
+
+- **Removing a track now removes only the copy you selected**: if a track appeared more than once in a playlist, removing it deleted every copy. Now only the selected one goes, and when there are other copies the confirmation tells you how many times the track appears.
+- **Moving a track up or down could move the wrong one**: in a playlist containing songs that are no longer available, which the add-on hides from the list, Alt+Up and Alt+Down could move a different track from the one you selected, because the add-on counted the visible rows rather than the real positions in the playlist. Tracks now always move exactly as you expect, however many unavailable songs the playlist contains.
 
 ## Version 1.10.3
 

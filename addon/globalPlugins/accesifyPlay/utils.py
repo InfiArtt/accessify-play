@@ -102,3 +102,64 @@ def safe_text(value, fallback):
 	if isinstance(value, str) and value.strip():
 		return value
 	return fallback
+
+
+# --- Playlist position helpers ------------------------------------------
+# A playlist listing can contain entries whose track is null (removed or
+# unavailable songs). The add-on hides those rows, so a row's index in the
+# list is not its position in the playlist. Every API call that takes a
+# position must use the real one.
+
+
+def playlist_rows(items):
+	"""Visible rows from a raw playlist listing, with their real positions.
+
+	Returns a list of (track, position) pairs, skipping null tracks.
+	"""
+	rows = []
+	for position, item in enumerate(items or []):
+		track = (item or {}).get("track")
+		if track:
+			rows.append((track, position))
+	return rows
+
+
+def duplicate_occurrences(rows):
+	"""Later copies of any track that appears more than once.
+
+	Keeps the first copy of each URI and returns (uri, position) pairs for the
+	rest. Local files are ignored: Spotify's API cannot remove them, and one
+	rejected item would fail the whole request.
+	"""
+	seen = set()
+	extra = []
+	for track, position in rows:
+		uri = track.get("uri")
+		if not uri or uri.startswith("spotify:local:"):
+			continue
+		if uri in seen:
+			extra.append((uri, position))
+		else:
+			seen.add(uri)
+	return extra
+
+
+def positions_after_move(positions, row, direction):
+	"""New real positions after moving the track at `row` one row up or down.
+
+	Mirrors SpotifyClient.reorder_playlist_track. Moving up inserts the track
+	at the position of the row above, pushing that row and any hidden null
+	entries in between down by one. Moving down places it after the row
+	below, pulling that row and the hidden entries between up by one. Rows
+	outside the pair keep their positions.
+	"""
+	new = list(positions)
+	if direction == "up":
+		above = positions[row - 1]
+		new[row - 1] = above
+		new[row] = above + 1
+	else:
+		below = positions[row + 1]
+		new[row] = below - 1
+		new[row + 1] = below
+	return new

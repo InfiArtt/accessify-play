@@ -5,6 +5,8 @@ import ui
 from ..core.thread_manager import thread_manager
 from logHandler import log
 
+from ..utils import safe_text
+
 from ..language import init_translation  # noqa: E402
 
 init_translation()
@@ -147,6 +149,47 @@ class AccessifyDialog(wx.Dialog):
 			wx.CallAfter(ui.message, result)
 		else:
 			wx.CallAfter(ui.message, _("Album '{album_name}' saved successfully.").format(album_name=album.get("name")))
+
+	#: Client methods for each kind of item that can be saved to the library:
+	#: (check, save, remove). Each takes a list of ids.
+	_SAVABLE = {
+		"episode": ("check_if_episodes_saved", "save_episodes_to_library", "remove_episodes_from_library"),
+		"show": ("check_if_shows_saved", "save_shows_to_library", "remove_shows_from_library"),
+		"audiobook": (
+			"check_if_audiobooks_saved",
+			"save_audiobooks_to_library",
+			"remove_audiobooks_from_library",
+		),
+	}
+
+	def _toggle_saved(self, kind, item):
+		"""Save the item if it is not in the library, otherwise remove it.
+
+		Same model as Like/Unlike (L) for tracks: one action that asks Spotify
+		for the current state, flips it, and says which way it went, so the
+		user never has to know the state beforehand.
+		"""
+		if not self.client or not item or not item.get("id"):
+			return
+		check, save, remove = self._SAVABLE[kind]
+		name = safe_text(item.get("name"), _("This item"))
+		item_id = item["id"]
+
+		def _run():
+			state = getattr(self.client, check)([item_id])
+			if isinstance(state, str):
+				wx.CallAfter(ui.message, state)
+				return
+			is_saved = bool(state and state[0])
+			result = getattr(self.client, remove if is_saved else save)([item_id])
+			if isinstance(result, str):
+				wx.CallAfter(ui.message, result)
+			elif is_saved:
+				wx.CallAfter(ui.message, _("'{name}' removed from your library.").format(name=name))
+			else:
+				wx.CallAfter(ui.message, _("'{name}' saved to your library.").format(name=name))
+
+		thread_manager.submit_task(_run, name="ToggleSavedTask")
 
 	def _save_show_to_library(self, show):
 		if not self.client or not show or show.get("type") != "show" or not show.get("id"):
