@@ -69,10 +69,18 @@ class SearchDialog(AccessifyDialog):
 			_("Podcast"): "show",
 			_("Audiobook"): "audiobook",
 		}
+		# Each label is created right before its control, so screen readers
+		# announce it as the control's name.
+		# Translators: Label of the search type list (Song, Album, Artist, ...) in the Search dialog.
+		typeLabel = wx.StaticText(self, label=_("Type:"))
+		controlsSizer.Add(typeLabel, flag=wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, border=5)
 		self.typeBox = wx.ComboBox(self, choices=list(self.search_types.keys()), style=wx.CB_READONLY)
 		self.typeBox.SetValue(_("Song"))
 		controlsSizer.Add(self.typeBox, flag=wx.ALIGN_CENTER_VERTICAL)
 
+		# Translators: Label of the text field where the search words are typed in the Search dialog.
+		queryLabel = wx.StaticText(self, label=_("Search for:"))
+		controlsSizer.Add(queryLabel, flag=wx.ALIGN_CENTER_VERTICAL | wx.LEFT, border=10)
 		self.queryText = wx.TextCtrl(self, style=wx.TE_PROCESS_ENTER)
 		self.queryText.Bind(wx.EVT_TEXT_ENTER, self.onSearch)
 		controlsSizer.Add(self.queryText, proportion=1, flag=wx.EXPAND | wx.LEFT, border=5)
@@ -92,6 +100,9 @@ class SearchDialog(AccessifyDialog):
 
 		mainSizer.Add(controlsSizer, flag=wx.EXPAND | wx.ALL, border=5)
 
+		# Translators: Label of the list of search results in the Search dialog.
+		resultsLabel = wx.StaticText(self, label=_("Results:"))
+		mainSizer.Add(resultsLabel, flag=wx.LEFT | wx.TOP, border=5)
 		self.resultsList = wx.ListBox(self)
 		self._bind_list_activation(self.resultsList, self._on_item_activated)
 		self.resultsList.Bind(wx.EVT_CONTEXT_MENU, self.on_results_context_menu)
