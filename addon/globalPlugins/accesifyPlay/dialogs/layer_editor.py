@@ -81,6 +81,8 @@ class LayerEditorDialog(AccessifyDialog):
 	def _get_script_labels(self):
 		"""Translatable display names for each script id."""
 		return {
+			"playMyTopTracks": _("Play My Top Tracks"),
+			"playRecentlyPlayed": _("Play Recently Played"),
 			"playPause": _("Play/Pause"),
 			"nextTrack": _("Next Track"),
 			"previousTrack": _("Previous Track"),
@@ -107,6 +109,8 @@ class LayerEditorDialog(AccessifyDialog):
 			"copyUniversalLink": _("Copy Universal Link"),
 			"showSleepTimerDialog": _("Sleep Timer"),
 			"openSettings": _("Settings"),
+			"showLyricsWindow": _("Lyrics Window"),
+			"toggleAutoReadLyrics": _("Auto-Read Lyrics"),
 		}
 
 	def _build_ui(self):

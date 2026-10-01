@@ -420,6 +420,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 				cached = self._lyrics_cache.get(track_id)
 				if cached:
 					plain = cached.get("plain")
+					synced = cached.get("synced")
 				else:
 					result = fetch_lyrics(track_name, artist_name, album_name, duration_ms)
 					if result is None:

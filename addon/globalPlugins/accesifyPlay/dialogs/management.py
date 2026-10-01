@@ -1066,6 +1066,7 @@ class AlbumTracksDialog(AccessifyDialog):
 			no_playlist_item.Enable(False)
 
 		menu.AppendSubMenu(playlist_submenu, _("Add to Playlist"))
+		self._append_go_to_options_for_track(menu, track)
 
 		self.PopupMenu(menu)
 		menu.Destroy()
@@ -1333,6 +1334,11 @@ class PlaylistTracksDialog(AccessifyDialog):
 		menu.Append(self.MENU_PLAY.GetId(), _("Play\tAlt+P"))
 		menu.Append(self.MENU_ADD_QUEUE.GetId(), _("Add to Queue\tAlt+Q"))
 		menu.Append(self.MENU_COPY_LINK.GetId(), _("Copy Link\tAlt+L"))
+		# Read the row directly: _get_selected_track loads more on the
+		# Load More row, which opening a menu must not do.
+		selection = self.tracks_list.GetSelection()
+		if selection != wx.NOT_FOUND and selection < len(self.tracks):
+			self._append_go_to_options_for_track(menu, self.tracks[selection])
 		self.PopupMenu(menu)
 		menu.Destroy()
 
