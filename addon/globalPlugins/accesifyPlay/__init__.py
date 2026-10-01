@@ -30,9 +30,6 @@ confspec = {
 	"language": "string(default='auto')",
 	"announceTrackChanges": "boolean(default=False)",
 	"keepAliveInterval": "integer(min=0, default=30)",
-	"updateChannel": "string(default='stable')",
-	"isAutomaticallyCheckForUpdates": "boolean(default=True)",
-	"lastUpdateCheck": "integer(default=0)",
 	"volumeStep": "integer(default=5, min=1, max=100)",
 }
 config.conf.spec["spotify"] = confspec
@@ -49,7 +46,6 @@ from .core.thread_manager import thread_manager  # noqa: E402
 from . import (  # noqa: E402
 	paths,
 	spotify_client,
-	updater,
 	utils,  # Impor decorator dari utils.py
 )
 from .commandLayers import CommandLayerManager  # noqa: E402
@@ -115,10 +111,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		thread_manager.create_poller(self._lyric_resync_poller, interval_seconds=10, name="LyricResyncPoller")
 		thread_manager.submit_task(self.keep_alive_worker, daemon=True, name="KeepAliveWorker")
 		thread_manager.submit_task(self.client.initialize, daemon=True, name="ClientInit")
-		
-		if utils.conf_get("isAutomaticallyCheckForUpdates", True):
-			thread_manager.submit_task(updater.check_for_updates, False, daemon=True, name="UpdaterCheck")
-			
+
 		self._check_resume_sleep_timer()
 
 		# Last, so that a failure above can never leave a panel registered for a

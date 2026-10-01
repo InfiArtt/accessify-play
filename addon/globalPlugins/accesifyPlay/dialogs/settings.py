@@ -8,7 +8,7 @@ import ui
 import wx
 from gui import guiHelper, messageBox, settingsDialogs
 
-from .. import donate, spotify_client, updater  # Tanda .. berarti naik satu level folder
+from .. import donate, spotify_client
 from ..utils import conf_get
 from ..language import AVAILABLE_LANGUAGE_CODES, LANGUAGE_AUTO, LANGUAGE_DISPLAY_OVERRIDES
 from ..ui.base_dialog import AccessifyDialog
@@ -78,24 +78,6 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 		)
 		self.announceTrackChanges.SetValue(conf_get("announceTrackChanges", False))
 
-		# Updater settings
-		self.updateChannelCtrl = sHelper.addLabeledControl(
-			_("Update Channel:"),
-			wx.ComboBox,
-			choices=[_("Stable"), _("Beta")],
-			style=wx.CB_READONLY,
-		)
-		self.updateChannelCtrl.SetValue(
-			_("Beta") if conf_get("updateChannel", "stable") == "beta" else _("Stable")
-		)
-
-		self.autoCheckUpdatesCtrl = sHelper.addItem(
-			wx.CheckBox(self, label=_("Check for updates automatically"))
-		)
-		self.autoCheckUpdatesCtrl.SetValue(conf_get("isAutomaticallyCheckForUpdates", True))
-
-		self.lastCheckLabel = sHelper.addItem(wx.StaticText(self, label=""))
-
 		buttonsSizer = wx.BoxSizer(wx.HORIZONTAL)
 
 		self.validateButton = wx.Button(self, label=_("Validate Credentials"))
@@ -109,10 +91,6 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 		self.donateButton = wx.Button(self, label=_("Donate"))
 		self.donateButton.Bind(wx.EVT_BUTTON, lambda evt: donate.open_donate_link())
 		buttonsSizer.Add(self.donateButton, flag=wx.LEFT, border=5)
-
-		self.checkUpdatesButton = wx.Button(self, label=_("Check for Updates"))
-		self.checkUpdatesButton.Bind(wx.EVT_BUTTON, lambda evt: updater.check_for_updates(is_manual=True))
-		buttonsSizer.Add(self.checkUpdatesButton, flag=wx.LEFT, border=5)
 
 		sHelper.addItem(buttonsSizer)
 		self.Layout()  # Ensure all elements are properly laid out
@@ -143,10 +121,6 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 
 		config.conf["spotify"]["keepAliveInterval"] = ka_val
 		config.conf["spotify"]["announceTrackChanges"] = self.announceTrackChanges.IsChecked()
-		config.conf["spotify"]["updateChannel"] = (
-			"beta" if self.updateChannelCtrl.GetValue() == _("Beta") else "stable"
-		)
-		config.conf["spotify"]["isAutomaticallyCheckForUpdates"] = self.autoCheckUpdatesCtrl.IsChecked()
 
 	def onValidate(self, evt):
 		self.onSave()  # Save current UI values to config.conf before validating

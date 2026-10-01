@@ -133,26 +133,11 @@ Thanks to a massive backend update in version 1.9.0, Accessify Play now complete
 
 ---
 
-## 🔄 Update System
+## 🔄 Updates
 
-Accessify Play includes a built-in update system to keep your add-on up-to-date with the latest features and bug fixes. Updates are sourced directly from [GitHub Releases](https://github.com/InfiArtt/accessify-play/releases).
+Accessify Play is updated through NVDA's Add-on Store (NVDA menu → Tools → Add-on Store), which tells you when a new version is available. Every release is also published on [GitHub Releases](https://github.com/InfiArtt/accessify-play/releases) if you prefer to install it yourself.
 
-### Automatic Updates
-
-If "Check for updates automatically" is enabled in the settings, Accessify Play will perform a silent check for new versions every time NVDA starts. If an update is available for your selected channel (Stable or Beta), a pop-up window will appear, showing the new version and its changelog. You can then choose to download and install the update or postpone it.
-
-If no update is available, or if an error occurs during the background check (e.g., no internet connection), the add-on will remain silent and not display any messages.
-
-### Manual Updates
-
-You can manually check for updates at any time by navigating to the Accessify Play settings panel (NVDA menu -> Preferences -> Settings -> Accessify Play) and clicking the **"Check for Updates"** button. The process is similar to automatic updates: if a new version is found, a pop-up will appear; otherwise, a message will confirm that you are running the latest version.
-
-### Update Channels
-
-You can choose between two update channels in the settings:
-
-*   **Stable:** This is the recommended channel for most users. You will receive only stable, thoroughly tested releases. These updates correspond to releases published from the add-on's `main` branch on GitHub.
-*   **Beta:** This channel provides access to pre-release versions, offering the latest features and bug fixes before they are officially released. Beta versions correspond to releases from the `dev` branch on GitHub. While they offer early access, they might be less stable than official releases.
+Versions before 1.12.0 had their own built-in update checker. It was removed in 1.12.0, now that the Add-on Store takes care of updates.
 
 ---
 
