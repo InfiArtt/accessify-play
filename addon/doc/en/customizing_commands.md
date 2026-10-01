@@ -1,37 +1,32 @@
-# Customizing the Command Layer
+# Customizing the command layer
 
-Accessify Play gives you full freedom to customize the shortcuts within the Command Layer to suit your workflow.
+You can change which key runs each command in the layer, and whether the layer stays open afterwards.
 
-## How to Access the Editor
+## Opening the editor
 
-1.  Activate the Command Layer by pressing `NVDA+G`.
-2.  Press `F2` to open the **Command Layer Editor**.
+Press `NVDA+Alt+G`, then `F2`. The **Command Layer Editor** lists every command with four columns:
 
-## Using the Editor
+* **Command**: the command's name, for example Play/Pause.
+* **Shortcut**: the key that runs it inside the layer.
+* **Keep Open**: whether the layer stays open after the command runs.
+* **Description**: what the command does.
 
-The editor dialog displays a list of all available commands. For each command, you can see:
-*   **Command**: The name of the command (e.g., Play/Pause).
-*   **Shortcut**: The key to press while in the layer (e.g., `p`).
-*   **Keep Open**: Whether the layer stays active after the command is executed.
-*   **Description**: A brief explanation of what the command does.
+## Changing a command
 
-### Editing a Command
+1. Select the command and press `Enter`, or the **Edit** button.
+2. In **Shortcut**, type the key to use, for example `p` or `shift+d`. Type special keys by name: `space`, `leftArrow`, `pageUp`, `end`, `f12` and so on. Leave it empty to remove the command from the layer.
+3. Check **Keep layer open after executing** if you want to be able to press the command again straight away, as for volume or skipping tracks.
+4. Press OK.
 
-1.  Select a command from the list using the arrow keys.
-2.  Press the **Edit...** button or press `Enter`.
-3.  In the dialog that appears:
-    *   **Shortcut**: Enter the new key you wish to use (e.g., `space` or `ctrl+p`). **Important:** For special keys, you must type their names textually (e.g., `space`, `leftarrow`, `pageup`, `end`, `f12`).
-    *   **Keep layer open**: Check this box if you want the Command Layer to remain active after you press this key. This is useful for repetitive commands like volume or skipping tracks.
-4.  Click **OK** to save.
+**Reset to Defaults** puts every command back to its original key and Keep Open setting, after asking you.
 
-### Resetting to Defaults
+When you close the editor after making changes, the new keys work right away. Accessify Play also offers to restart NVDA, which you can decline.
 
-If you wish to revert all shortcuts to their original default settings, press the **Reset to Defaults** button and confirm your choice.
+`F1`, `F2` and `Escape` always keep their meaning in the layer and can't be reassigned.
 
-## Applying Changes
+## A shortcut without the layer
 
-When you are done making changes, press the **Close** button. Accessify Play may ask you to restart NVDA to fully apply the new configuration.
-
+To run a command with a single gesture, without pressing `NVDA+Alt+G` first, assign it in NVDA's Input Gestures dialog (NVDA menu, Preferences, Input Gestures), under **Accessify Play**. You can change `NVDA+Alt+G` itself there too ("Accessify Play layer commands").
 
 ---
-[Back to Keybindings](keybindings.html)
+[Back to Command keys](keybindings.html)

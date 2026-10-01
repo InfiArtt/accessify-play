@@ -1,21 +1,16 @@
-# Putar dari Tautan (Play from URL)
+# Putar dari Tautan
 
-Fitur ini memungkinkan Anda memutar konten Spotify apa pun secara instan jika Anda memiliki tautan (URL) Spotify-nya. Ini berguna jika Anda menyalin tautan dari web atau menerima rekomendasi dari teman.
+Putar apa pun dari tautan Spotify, misalnya yang dikirim teman. Tekan `NVDA+Alt+G` lalu `U`.
 
-## Cara Menggunakan
+1. Tempel tautannya di **Spotify URL**, misalnya `https://open.spotify.com/track/4n7jnSxVLd8QioibtTDBDq`. Tautan `spotify:` (URI) juga bisa.
+2. Tekan **Check**. Rinciannya muncul di **Link Details**, supaya Anda bisa memastikan itu yang benar.
+3. Tekan **Play**. Tombol ini tersedia setelah tautan yang bisa diputar diperiksa.
 
-1.  Buka dialog **Putar dari Tautan** (shortcut bawaan `U` di Command Layer).
-2.  **Tempel Tautan:** Di kotak teks pertama, tempel (CTRL+V) URL Spotify yang Anda miliki.
-    *   Contoh URL: `https://open.spotify.com/track/31LiWabHMcL1d55XdzWJ05`
-3.  **Periksa Tautan (Check):** Tekan tombol `Check`. Accessify Play akan memverifikasi tautan tersebut dan mengambil informasi tentang lagu, album, atau playlist yang dituju.
-4.  **Tinjau Detail:** Informasi tentang konten (Judul, Artis, Jenis) akan muncul di kotak teks hanya-baca. Pastikan ini adalah konten yang benar.
-5.  **Play:** Jika detail sudah muncul dan benar, tombol `Play` akan aktif. Tekan tombol tersebut untuk mulai mendengarkan.
+Tautan yang didukung: lagu, album, artis, playlist, podcast (acara), episode, buku audio, dan bab.
 
-## Tips
+Tautan ke profil pengguna Spotify tidak bisa diputar. Sebagai gantinya, rinciannya menunjukkan siapa orang itu, dan tombol **Follow/Unfollow** muncul menggantikan Play.
 
-*   Fitur ini mendukung berbagai jenis tautan Spotify, termasuk Trek, Album, Playlist, Artis, dan Show.
-*   Jika tautan tidak valid, pesan kesalahan akan ditampilkan di kotak detail.
- 
- 
----  
-[Kembali ke Fitur](features.html)
+Jika tautannya bukan tautan Spotify, atau jenisnya tidak didukung Accessify Play, Link Details akan memberitahukannya.
+
+---
+[Kembali ke Beranda](readme.html)

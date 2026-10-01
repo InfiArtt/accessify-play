@@ -110,10 +110,10 @@ if (cssFile := Path("style.css")).is_file():
 	cssTarget = env.Command(str(cssPath), str(cssFile), Copy("$TARGET", "$SOURCE"))
 	env.Depends(addon, cssTarget)
 
-if (readmeFile := Path("readme.md")).is_file():
-	readmePath = docsDir / buildVars.baseLanguage / readmeFile
-	readmeTarget = env.Command(str(readmePath), str(readmeFile), Copy("$TARGET", "$SOURCE"))
-	env.Depends(addon, readmeTarget)
+# The add-on ships its own guide in addon/doc/<lang>/readme.md, so the
+# template's copy of the repository readme into addon/doc/en is left out: on
+# Windows "readme.md" also matches README.md and would overwrite the guide,
+# while on Linux (CI) it would not, so builds would differ by machine.
 
 for mdFile in env.Glob(docsDir/"*/*.md"):
 	# the title of the html file is translated based on the contents of something in the moFile for a language.

@@ -1,16 +1,10 @@
-# Devices Dialog
+# Devices
 
-The Devices Dialog (`D` in Command Layer) allows you to transfer music playback to other Spotify Connect devices (e.g., your phone, smart speaker, or another computer).
+Accessify Play controls Spotify wherever it is playing: this computer, your phone, a smart speaker, a console or anything else that supports Spotify Connect.
 
-## How to Use
+To move playback to another device, press `NVDA+Alt+G` then `D`. The list shows your available devices; the one playing now is marked "(Active)" and is selected. Choose a device and press `Enter` (or **Switch Device**). The music stops where it was and continues on the device you chose.
 
-1.  Open the dialog by pressing `D` within the Accessify Play Command Layer (`NVDA+G`).
-2.  The list will show all detected devices. The currently active device is marked with "(Active)".
-3.  Select your target device using Up/Down arrows.
-4.  Press `Enter` (or click "Switch Device") to transfer playback to that device.
-
-> **Note:** Accessify Play acts as a *controller*. Music will stop on this device and start playing on the device you selected.
-
+A device only appears while the Spotify app on it is open and signed in to your account. If the list is empty, open Spotify on the device you want to use.
 
 ---
-[Back to Features](features.html)
+[Back to Home](readme.html)

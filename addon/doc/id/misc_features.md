@@ -1,27 +1,46 @@
-# Fitur Lainnya (Misc)
+# Fitur lain
 
-Selain kontrol pemutaran utama dan manajemen pustaka, Accessify Play memiliki berbagai alat bantu yang berguna di dalam Command Layer.
+Semua tombol di bawah ditekan setelah `NVDA+Alt+G`.
 
-## Mode Pemutaran
+## Acak dan ulangi
 
-*   **Acak (Shuffle):** Tekan `H` untuk mengaktifkan atau menonaktifkan mode acak.
-*   **Mode Ulang (Repeat):** Tekan `R` untuk menggilir mode pengulangan: *Off* (Mati) -> *Context* (Ulangi Album/Playlist) -> *Track* (Ulangi Lagu Ini).
+* `H` menghidupkan atau mematikan mode acak.
+* `R` mengganti mode ulangi: semua (album atau playlist), satu lagu, mati.
 
-## Berbagi Musik
+## Volume
 
-*   **Salin Tautan (Copy Link):** Tekan `C` untuk menyalin tautan Spotify dari lagu yang sedang diputar ke papan klip Anda. Anda bisa menempelkannya di WhatsApp, X, dll.
-*   **Salin Tautan Universal:** Tekan `X` untuk menyalin tautan **Song.link** (Odesli). Tautan ini pintar; saat teman Anda membukanya, mereka bisa memilih untuk mendengarkan di Apple Music, YouTube Music, Deezer, dll., tidak hanya Spotify.
+* `=` dan `-` menaikkan dan menurunkan volume sebesar pengaturan Volume Step (bawaannya 5%).
+* `V` mengatur volume tepat dari 0 sampai 100.
 
-## Alat Bantu
+## Melompat dalam lagu
 
-*   **Pengatur Waktu Tidur (Sleep Timer):**
-    1.  Tekan `Z` untuk membuka dialog Sleep Timer.
-    2.  Masukkan durasi dalam menit (misalnya `30`).
-    3.  Tekan Enter. Musik akan otomatis berhenti setelah waktu tersebut habis.
-    4.  Untuk membatalkan, buka kembali dialog dan masukkan `0`.
+* `]` dan `[` melompat maju dan mundur sejauh pengaturan Seek Duration (bawaannya 15 detik).
+* `J` membuka **Seek / Jump**. Ketik waktu seperti `1:30` (atau `1:02:30`) untuk pergi ke titik itu, jumlah detik seperti `30` untuk melompat maju, atau angka negatif seperti `-10` untuk melompat mundur.
 
-*   **Pengaturan (Settings):** Tekan `F4` untuk membuka panel pengaturan Accessify Play di dalam preferensi NVDA. Di sini Anda bisa mengatur perilaku pengumuman lagu, bahasa, pembaruan otomatis, dan banyak lagi yang lainnya.
- 
- 
----  
-[Kembali ke Fitur](features.html)
+## Yang sedang diputar
+
+* `I` mengumumkan lagu, artis, dan album yang sedang diputar.
+* `T` mengumumkan sudah sejauh mana lagu diputar, dan panjang lagunya.
+* Untuk mendengar setiap lagu baru saat dimulai, aktifkan **Announce track changes automatically** di [pengaturan](configuration.html).
+
+## Suka dan ikuti
+
+* `L` menambahkan lagu yang sedang diputar ke Liked Songs, atau menghapusnya jika sudah ada.
+* `F` mengikuti artis lagu yang sedang diputar, atau berhenti mengikutinya.
+
+## Putar cepat
+
+* `G` memutar lagu teratas Anda sebulan terakhir.
+* `O` memutar lagu yang baru Anda putar.
+
+## Berbagi
+
+* `C` menyalin tautan Spotify lagu yang sedang diputar.
+* `X` menyalin tautan [Song.link](https://song.link). Siapa pun yang membukanya bisa mendengarkan di layanan yang mereka pakai, seperti Apple Music, YouTube Music, atau Deezer, bukan hanya Spotify.
+
+## Timer tidur
+
+`Z` membuka timer tidur. Masukkan jumlah menit (sampai 240) lalu tekan **Start Timer**; saat waktunya habis, musik dijeda. Timer tetap berjalan walaupun NVDA dimulai ulang. Untuk membatalkannya, buka timer tidur lagi dan masukkan 0.
+
+---
+[Kembali ke Beranda](readme.html)

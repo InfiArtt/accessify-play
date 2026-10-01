@@ -1,49 +1,74 @@
-# Tombol Perintah Accessify Play
+# Tombol perintah
 
-Bagian ini berfokus pada tombol perintah untuk mengontrol Spotify menggunakan Accessify Play. Accessify play dapat dikontrol melalui Command Layer. Aktifkan Command Layer dengan menekan **NVDA+G**, lalu tekan salah satu tombol berikut:
+Tekan **`NVDA+Alt+G`** untuk membuka lapisan perintah, lalu tekan salah satu tombol di bawah. Ini satu-satunya pintasan bawaan add-on.
 
-[Ingin mengubah tombol ini? Baca panduan kustomisasi di customizing_commands.html](customizing_commands.html)
+* `F1` menampilkan semua tombol, jadi Anda tidak perlu menghafalnya.
+* `Escape` menutup lapisan tanpa melakukan apa pun.
+* Tombol yang tidak ada di lapisan akan menutupnya dengan bunyi bip rendah.
+* Beberapa perintah membiarkan lapisan tetap terbuka, supaya Anda bisa langsung menekannya lagi (misalnya `N` beberapa kali untuk melewati beberapa lagu). Perintah ini ditandai "tetap terbuka" di bawah. Tekan `Escape` bila sudah selesai. Anda bisa memilih perintah mana yang tetap terbuka: lihat [Mengubah tombol lapisan perintah](customizing_commands.html).
+* Jika lapisan dibiarkan terbuka tanpa ada tombol yang ditekan selama 30 detik, tombol berikutnya yang Anda tekan akan menutup lapisan dan berfungsi seperti biasa.
 
-## **Kontrol pemutaran**
+## Pemutaran
 
-- **P**: Memutar atau menjeda track saat ini di Spotify.
-- **N**: Lompat ke track berikutnya di Spotify.
-- **B**: Lompat ke track sebelumnya di Spotify.
-- **-**: Menurunkan volume Spotify.
-- **=**: Menaikkan volume Spotify.
-- **V**: Mengatur volume Spotify ke persentase tertentu.
-- **[**: Mundur dalam track saat ini.
-- **]**: Maju dalam track saat ini.
-- **J**: Lompat ke waktu tertentu atau maju/mundur.
-- **U**: Memutar item dari URL Spotify.
+| Tombol | Perintah |
+| :----- | :------- |
+| `P` | Putar atau jeda |
+| `N` | Lagu berikutnya (tetap terbuka) |
+| `B` | Lagu sebelumnya (tetap terbuka) |
+| `=` | Naikkan volume (tetap terbuka) |
+| `-` | Turunkan volume (tetap terbuka) |
+| `V` | Atur volume ke persentase tertentu |
+| `]` | Lompat maju (tetap terbuka) |
+| `[` | Lompat mundur (tetap terbuka) |
+| `J` | Pergi ke waktu tertentu, atau lompat maju atau mundur |
+| `H` | Acak hidup atau mati |
+| `R` | Ulangi: semua, satu lagu, mati (tetap terbuka) |
+| `G` | Putar lagu teratas Anda sebulan terakhir |
+| `O` | Putar lagu yang baru Anda putar |
+| `D` | Pilih perangkat untuk memutar |
 
-## **Pengumuman**
+## Informasi
 
-- **I**: Mengumumkan track yang sedang diputar.
-- **T**: Mengumumkan waktu pemutaran track saat ini.
-- **E**: Mengumumkan track berikutnya dalam antrean.
+| Tombol | Perintah |
+| :----- | :------- |
+| `I` | Umumkan lagu yang sedang diputar |
+| `T` | Umumkan waktu pemutaran |
+| `E` | Umumkan lagu berikutnya di antrean |
+| `Q` | Buka antrean |
 
-## **Lain-lain**
+## Pustaka dan berbagi
 
-- **H**: Mengaktifkan/nonaktifkan mode Shuffle.
-- **R**: Mengubah mode Repeat (Off, Context, Track).
-- **F**: Follow atau unfollow artis dari track saat ini.
-- **A**: Menambahkan track yang sedang diputar ke playlist.
-- **C**: Menyalin URL track saat ini.
-- **D**: Menampilkan perangkat yang tersedia untuk mengalihkan pemutaran.
-- **L**: Like/Unlike Track.
-- **M**: Mengelola pustaka Spotify dan playlist Anda.
-- **Q**: Menampilkan daftar antrean Spotify.
-- **S**: Mencari item di Spotify.
-- **X**: Menyalin URL Universal (Song.link).
-- **Z**: Mengatur Sleep Timer.
-- **F4**: Membuka pengaturan Accessify Play.
-- **F1**: Menampilkan bantuan perintah berlapis.
-- **F2**: Menampilkan command layer editor.
-- **Esc (Escape)**: Menutup Command Layer.
+| Tombol | Perintah |
+| :----- | :------- |
+| `L` | Sukai atau batal sukai lagu ini (tetap terbuka) |
+| `F` | Ikuti atau berhenti mengikuti artis lagu ini |
+| `A` | Tambahkan lagu ini ke salah satu playlist Anda |
+| `M` | Buka Pustaka |
+| `S` | Buka Pencarian |
+| `U` | Putar dari tautan Spotify |
+| `C` | Salin tautan Spotify lagu ini |
+| `X` | Salin tautan Song.link lagu ini |
 
-Panduan ini dibuat oleh Mahmud Faiz Haifan.
+## Lirik
 
+| Tombol | Perintah |
+| :----- | :------- |
+| `W` | Buka jendela lirik |
+| `Y` | Pembacaan lirik otomatis hidup atau mati |
+
+## Lainnya
+
+| Tombol | Perintah |
+| :----- | :------- |
+| `Z` | Timer tidur |
+| `F4` | Pengaturan Accessify Play |
+| `F1` | Tampilkan tombol lapisan perintah |
+| `F2` | Ubah tombol lapisan perintah |
+| `Escape` | Tutup lapisan perintah |
+
+## Pintasan di luar lapisan
+
+Setiap perintah di atas (kecuali `F1`, `F2`, dan `Escape`) juga tercantum di dialog Input Gestures NVDA (menu NVDA, Preferences, Input Gestures), di bawah **Accessify Play**. Tetapkan gestur di sana untuk menjalankan perintah secara langsung, tanpa membuka lapisan terlebih dahulu.
 
 ---
-[Kembali ke Beranda](README.html)
+[Kembali ke Beranda](readme.html)

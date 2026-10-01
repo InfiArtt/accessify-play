@@ -1,48 +1,71 @@
-# Panduan Pencarian
+# Pencarian
 
-Dialog Pencarian (`S` di Command Layer) adalah pusat penemuan Anda di Accessify Play. Fitur ini dirancang untuk memberikan akses cepat dan mendalam ke database Spotify yang luas.
+Buka Pencarian dengan `NVDA+Alt+G` lalu `S`.
 
-## Filter Pencarian
+## Mencari
 
-Di bagian atas dialog, terdapat kotak pilihan (Combobox) yang menentukan jenis konten yang Anda cari:
+1. Di **Type**, pilih apa yang dicari: Song, Album, Artist, Playlist, Podcast, atau Audiobook.
+2. Di **Search for**, ketik pencarian Anda lalu tekan `Enter` (atau tombol **Search**).
+3. Telusuri daftar **Results** dengan tombol panah.
 
-*   **Lagu (Song):** Mencari lagu individual.
-*   **Album:** Mencari album penuh.
-*   **Artis (Artist):** Mencari profil musisi atau band.
-*   **Playlist:** Mencari daftar putar publik.
-*   **Podcast:** Mencari acara podcast.
+Jika masih ada hasil lain, item terakhir adalah "Load More". Tekan `Enter` padanya untuk menambahkan halaman berikutnya. Ukuran halaman mengikuti pengaturan Search Results Limit.
 
-## Interaksi Hasil Pencarian
+## Fungsi Enter
 
-Daftar hasil pencarian bersifat interaktif. Tindakan yang terjadi saat Anda menekan `Enter` (atau klik ganda) bergantung pada jenis item:
+* **Lagu**: memutarnya, lalu melanjutkan ke lagu berikutnya di albumnya.
+* **Album**: membuka daftar lagu album.
+* **Artis**: membuka diskografi artis (lihat di bawah).
+* **Playlist**: membuka daftar lagu playlist.
+* **Podcast**: membuka daftar episode.
+* **Buku audio**: membuka daftar bab; memutar satu bab akan berlanjut ke bab-bab berikutnya.
 
-*   **Lagu:** Langsung memutar lagu tersebut (dan melanjutkan ke lagu berikutnya dalam album jika memungkinkan).
-*   **Artis:** Membuka **Dialog Diskografi**, yang menampilkan album dan single artis tersebut.
-*   **Album:** Membuka daftar lagu dalam album tersebut.
-*   **Playlist:** Membuka daftar lagu dalam playlist tersebut.
-*   **Podcast:** Membuka daftar episode podcast.
+## Pintasan di daftar hasil
 
-> **Tip:** Jika hasil pencarian banyak, gulir ke bawah untuk menemukan tombol "Load More" (Muat Lebih Banyak).
+| Pintasan | Fungsi |
+| :------- | :----- |
+| `Alt+P` | Putar |
+| `Alt+Q` | Tambahkan ke antrean (lagu, album, dan playlist; album dan playlist dimasukkan lagu per lagu) |
+| `Alt+L` | Salin tautan Spotify |
+| `Alt+W` | Tampilkan lirik lagu tanpa memutarnya |
+| `Alt+F` | Ikuti artis |
+| `Alt+D` | Buka diskografi artis |
 
-## Menu Konteks & Pintasan
+## Menu konteks
 
-Tekan tombol `Aplikasi` (atau `Shift+F10`, atau klik kanan) pada item hasil pencarian untuk membuka menu konteks dengan opsi lebih lanjut. Opsi yang tersedia berubah sesuai konteks:
+Tekan tombol Applications atau `Shift+F10` pada sebuah hasil untuk pilihan lainnya. Selain Play, Add to Queue, dan Copy Link, tergantung jenis itemnya:
 
-### Pintasan Cepat (Dalam Dialog)
+* **Lagu**: Add to Playlist (submenu berisi playlist Anda sendiri), Show Lyrics, Go to Album, Go to Artist.
+* **Album**: Save Album, Add Album to Playlist. Lagu yang sudah ada di playlist dilewati.
+* **Artis**: Follow Artist, View Discography.
+* **Playlist buatan orang lain**: Follow Playlist atau Unfollow Playlist, dan Follow/Unfollow Owner untuk mengikuti orang yang membuatnya.
+* **Podcast**: View Episodes, Save/Unsave Show.
+* **Buku audio**: View Chapters, Save/Unsave Audiobook.
 
-*   `Alt+P`: Putar item yang dipilih.
-*   `Alt+Q`: Tambahkan ke antrean (Queue).
-*   `Alt+F`: Follow Artis (jika item adalah artis).
-*   `Alt+D`: Lihat Diskografi (jika item adalah artis).
-*   `Alt+L`: Salin Tautan Spotify.
+"Save/Unsave" dan "Follow/Unfollow" bekerja seperti Sukai/Batal Sukai: item disimpan jika belum ada di pustaka Anda dan dihapus jika sudah ada, lalu Anda diberi tahu mana yang dilakukan.
 
-### Tindakan Spesifik
+## Daftar lagu, episode, dan bab
 
-*   **Untuk Lagu:** Anda dapat menambahkannya ke playlist Anda melalui submenu "Add to Playlist".
-*   **Untuk Album:** Anda dapat menyimpannya ke pustaka ("Save Album") atau menambahkan seluruh album ke playlist.
-*   **Untuk Playlist:** Anda dapat "Follow" playlist orang lain untuk menyimpannya ke pustaka Anda.
-*   **Untuk Artis:** "View Discography" memungkinkan Anda menjelajahi karya lengkap mereka tanpa meninggalkan dialog.
- 
- 
----  
-[Kembali ke Fitur](features.html)
+Jendela yang terbuka dari sebuah hasil (lagu album, lagu playlist, episode, bab) bekerja dengan cara yang sama: `Enter` atau **Play** memutar item yang dipilih di dalam album, playlist, acara, atau bukunya, sehingga pemutaran berlanjut dari situ. `Alt+P`, `Alt+Q`, dan `Alt+L` untuk memutar, memasukkan ke antrean, dan menyalin tautan, dan menu konteksnya berisi pilihan yang sama seperti di atas. Daftar yang panjang diakhiri dengan "Load More".
+
+Di daftar episode, `Alt+S` (atau Save/Unsave Episode di menu konteks) menyimpan episode ke pustaka Anda atau menghapusnya.
+
+## Diskografi artis
+
+Jendela diskografi punya empat tab:
+
+* **Artist Info**: pengikut, popularitas, genre, dan tautan artis.
+* **Top Tracks**: lagu-lagu populer artis.
+* **All Tracks**: semua lagu dari album dan single artis, tanpa duplikat, dimuat per halaman.
+* **Albums and Singles**: tekan `Enter` untuk membuka lagu-lagu sebuah album.
+
+## Browse Categories dan Featured Playlists
+
+* **Browse Categories** menampilkan suasana dan genre dari Spotify (seperti Focus, Sleep, Workout, atau Pop). Tekan `Enter` pada salah satunya untuk melihat playlist-nya. Daftar bertambah otomatis saat Anda mencapai bagian akhir.
+* **Featured Playlists** menampilkan playlist yang sedang ditonjolkan Spotify, dengan sapaannya di atas daftar.
+
+Di kedua daftar playlist itu, `Enter` membuka lagu-lagu playlist, dan menu konteks menyediakan View Tracks in Playlist, Play Entire Playlist, Copy Playlist Link, dan Follow/Unfollow Owner.
+
+Spotify tidak menyediakan mix pribadi seperti Daily Mix untuk add-on, jadi mix itu tidak muncul di sini. Spotify juga sudah mengumumkan akan menghentikan Browse Categories, Featured Playlists, dan New Releases. Jika salah satunya dimatikan, daftarnya akan berisi "Spotify has retired this feature, so it is no longer available."
+
+---
+[Kembali ke Beranda](readme.html)

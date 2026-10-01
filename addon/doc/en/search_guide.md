@@ -1,48 +1,71 @@
-# Search Guide
+# Search
 
-The Search Dialog (`S` in Command Layer) is your discovery hub in Accessify Play. It's designed to provide fast, deep access to Spotify's vast database.
+Open Search with `NVDA+Alt+G` then `S`.
 
-## Search Filters
+## Searching
 
-At the top of the dialog, a Combobox determines the type of content you are looking for:
+1. In **Type**, choose what to look for: Song, Album, Artist, Playlist, Podcast or Audiobook.
+2. In **Search for**, type your search and press `Enter` (or the **Search** button).
+3. Move through the **Results** list with the arrow keys.
 
-*   **Song:** Search for individual tracks.
-*   **Album:** Search for full albums.
-*   **Artist:** Search for musician or band profiles.
-*   **Playlist:** Search for public playlists.
-*   **Podcast:** Search for podcast shows.
+If there are more results, the last item is "Load More". Press `Enter` on it to add the next page. The page size is the Search Results Limit setting.
 
-## Interacting with Results
+## What Enter does
 
-The search results list is interactive. The action triggered when you press `Enter` (or double-click) depends on the item type:
+* **Song**: plays it, continuing with the rest of its album.
+* **Album**: opens the album's track list.
+* **Artist**: opens the artist's discography (see below).
+* **Playlist**: opens the playlist's track list.
+* **Podcast**: opens the list of episodes.
+* **Audiobook**: opens the list of chapters; playing a chapter continues into the next ones.
 
-*   **Song:** Immediately plays the track (and continues to the next song in the album context if possible).
-*   **Artist:** Opens the **Discography Dialog**, listing the artist's albums and singles.
-*   **Album:** Opens the list of tracks within that album.
-*   **Playlist:** Opens the list of tracks within that playlist.
-*   **Podcast:** Opens the list of episodes for that podcast.
+## Shortcuts in the results
 
-> **Tip:** If there are many results, scroll to the bottom to find the "Load More" button.
+| Shortcut | Action |
+| :------- | :----- |
+| `Alt+P` | Play |
+| `Alt+Q` | Add to queue (songs, albums and playlists; albums and playlists are queued track by track) |
+| `Alt+L` | Copy the Spotify link |
+| `Alt+W` | Show the song's lyrics without playing it |
+| `Alt+F` | Follow the artist |
+| `Alt+D` | Open the artist's discography |
 
-## Context Menu & Shortcuts
+## Context menu
 
-Press the `Applications` key (or `Shift+F10`, or right-click) on any result to open a context menu with advanced options. The available options change dynamically:
+Press the Applications key or `Shift+F10` on a result for more options. Besides Play, Add to Queue and Copy Link, depending on the item:
 
-### Quick Shortcuts (Inside Dialog)
+* **Song**: Add to Playlist (a submenu of your own playlists), Show Lyrics, Go to Album, Go to Artist.
+* **Album**: Save Album, Add Album to Playlist. Songs already in the playlist are skipped.
+* **Artist**: Follow Artist, View Discography.
+* **Playlist made by someone else**: Follow Playlist or Unfollow Playlist, and Follow/Unfollow Owner, to follow the person who made it.
+* **Podcast**: View Episodes, Save/Unsave Show.
+* **Audiobook**: View Chapters, Save/Unsave Audiobook.
 
-*   `Alt+P`: Play the selected item.
-*   `Alt+Q`: Add to Queue.
-*   `Alt+F`: Follow Artist (if item is an artist).
-*   `Alt+D`: View Discography (if item is an artist).
-*   `Alt+L`: Copy Spotify Link.
+"Save/Unsave" and "Follow/Unfollow" work like Like/Unlike: they save the item if it isn't in your library and remove it if it is, then tell you which they did.
 
-### Specific Actions
+## Track lists, episodes and chapters
 
-*   **For Songs:** You can add them to your own playlists via the "Add to Playlist" submenu.
-*   **For Albums:** You can save them to your library ("Save Album") or add the entire album to a playlist.
-*   **For Playlists:** You can "Follow" other users' playlists to save them to your library.
-*   **For Artists:** "View Discography" lets you explore their full body of work without leaving the dialog.
- 
- 
----  
-[Back to Features](features.html)
+The windows that open from a result (album tracks, playlist tracks, episodes, chapters) work the same way: `Enter` or **Play** plays the selected item in its album, playlist, show or book, so playback carries on from there. `Alt+P`, `Alt+Q` and `Alt+L` play, queue and copy the link, and the context menu has the same options as above. Long lists end with "Load More".
+
+In an episode list, `Alt+S` (or Save/Unsave Episode in the context menu) saves the episode to your library or removes it.
+
+## Artist discography
+
+The discography window has four tabs:
+
+* **Artist Info**: followers, popularity, genres and the artist's link.
+* **Top Tracks**: popular songs by the artist.
+* **All Tracks**: every song from the artist's albums and singles, without duplicates, loaded page by page.
+* **Albums and Singles**: press `Enter` to open an album's tracks.
+
+## Browse Categories and Featured Playlists
+
+* **Browse Categories** lists Spotify's moods and genres (such as Focus, Sleep, Workout or Pop). Press `Enter` on one to see its playlists. More load automatically as you reach the end of the list.
+* **Featured Playlists** shows the playlists Spotify is currently featuring, with its greeting above the list.
+
+In both playlist lists, `Enter` opens the playlist's tracks, and the context menu offers View Tracks in Playlist, Play Entire Playlist, Copy Playlist Link and Follow/Unfollow Owner.
+
+Spotify does not make its personalised mixes, such as Daily Mix, available to add-ons, so they don't appear here. Spotify has also announced that it will retire Browse Categories, Featured Playlists and New Releases. If it switches one off, the list says "Spotify has retired this feature, so it is no longer available."
+
+---
+[Back to Home](readme.html)

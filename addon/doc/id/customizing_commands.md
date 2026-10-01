@@ -1,37 +1,32 @@
-# Menyesuaikan Command Layer
+# Mengubah tombol lapisan perintah
 
-Accessify Play memberikan Anda kebebasan penuh untuk menyesuaikan shortcut dalam Command Layer agar sesuai dengan preferensi Anda.
+Anda bisa mengubah tombol yang menjalankan setiap perintah di lapisan, dan apakah lapisan tetap terbuka sesudahnya.
 
-## Cara Mengakses Editor
+## Membuka editor
 
-1.  Aktifkan Command Layer dengan menekan `NVDA+G`.
-2.  Tekan `F2` untuk membuka **Command Layer Editor**.
+Tekan `NVDA+Alt+G`, lalu `F2`. **Command Layer Editor** menampilkan semua perintah dalam empat kolom:
 
-## Menggunakan Editor
+* **Command**: nama perintah, misalnya Play/Pause.
+* **Shortcut**: tombol yang menjalankannya di dalam lapisan.
+* **Keep Open**: apakah lapisan tetap terbuka setelah perintah dijalankan.
+* **Description**: apa yang dilakukan perintah itu.
 
-Dialog editor menampilkan daftar semua perintah yang tersedia. Untuk setiap perintah, Anda dapat melihat:
-*   **Command**: Nama perintah (misalnya, Play/Pause).
-*   **Shortcut**: Tombol yang ditekan saat berada di layer (misalnya, `p`).
-*   **Keep Open**: Apakah layer tetap aktif setelah perintah dijalankan.
-*   **Description**: Penjelasan singkat tentang fungsi perintah.
+## Mengubah perintah
 
-### Mengedit Perintah
+1. Pilih perintahnya lalu tekan `Enter`, atau tombol **Edit**.
+2. Di **Shortcut**, ketik tombol yang ingin dipakai, misalnya `p` atau `shift+d`. Tombol khusus diketik dengan namanya: `space`, `leftArrow`, `pageUp`, `end`, `f12`, dan seterusnya. Kosongkan untuk mengeluarkan perintah dari lapisan.
+3. Centang **Keep layer open after executing** jika Anda ingin bisa langsung menekan perintah itu lagi, seperti untuk volume atau melewati lagu.
+4. Tekan OK.
 
-1.  Pilih perintah dari daftar menggunakan panah atas/bawah.
-2.  Tekan tombol **Edit...** atau tekan `Enter`.
-3.  Di dialog yang muncul:
-    *   **Shortcut**: Masukkan tombol baru yang Anda inginkan (misalnya, `space` atau `ctrl+p`). **Penting:** Untuk tombol khusus, Anda harus mengetik nama tombol tersebut secara tekstual (misalnya: `space`, `leftarrow`, `pageup`, `end`, `f12`).
-    *   **Keep layer open**: Centang kotak ini jika Anda ingin Command Layer tetap aktif setelah Anda menekan tombol ini. Ini berguna untuk perintah berulang seperti volume atau skip track.
-4.  Klik **OK** untuk menyimpan.
+**Reset to Defaults** mengembalikan semua perintah ke tombol dan pengaturan Keep Open aslinya, setelah bertanya kepada Anda.
 
-### Mengembalikan ke Pengaturan Awal
+Saat editor ditutup setelah ada perubahan, tombol baru langsung berfungsi. Accessify Play juga menawarkan untuk memulai ulang NVDA, yang boleh Anda tolak.
 
-Jika Anda ingin mengembalikan semua shortcut ke pengaturan default, tekan tombol **Reset to Defaults**, lalu konfirmasi pilihan Anda.
+`F1`, `F2`, dan `Escape` selalu punya fungsi yang sama di lapisan dan tidak bisa diubah.
 
-## Penerapan Perubahan
+## Pintasan tanpa lapisan
 
-Setelah selesai melakukan perubahan, tekan tombol **Close**. Accessify Play mungkin akan meminta Anda untuk me-restart NVDA agar perubahan diterapkan sepenuhnya.
- 
- 
----  
-[Kembali ke Pintasan](keybindings.html)
+Untuk menjalankan perintah dengan satu gestur, tanpa menekan `NVDA+Alt+G` lebih dulu, tetapkan gesturnya di dialog Input Gestures NVDA (menu NVDA, Preferences, Input Gestures), di bawah **Accessify Play**. `NVDA+Alt+G` sendiri juga bisa diubah di sana ("Accessify Play layer commands").
+
+---
+[Kembali ke Tombol perintah](keybindings.html)

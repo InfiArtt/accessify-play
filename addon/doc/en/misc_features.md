@@ -1,27 +1,46 @@
-# Miscellaneous Features
+# More tools
 
-Beyond basic playback and library management, Accessify Play includes several meaningful utilities within the Command Layer.
+All keys below are pressed after `NVDA+Alt+G`.
 
-## Playback Modes
+## Shuffle and repeat
 
-*   **Shuffle:** Press `H` to toggle shuffle mode on or off.
-*   **Repeat:** Press `R` to cycle through repeat modes: *Off* -> *Context* (Repeat Album/Playlist) -> *Track* (Repeat this song).
+* `H` turns shuffle on or off.
+* `R` cycles repeat: all (the album or playlist), one track, off.
+
+## Volume
+
+* `=` and `-` turn the volume up and down by the Volume Step setting (5% by default).
+* `V` sets an exact volume from 0 to 100.
+
+## Seeking
+
+* `]` and `[` seek forward and backward by the Seek Duration setting (15 seconds by default).
+* `J` opens **Seek / Jump**. Type a time such as `1:30` (or `1:02:30`) to go to that point, a number of seconds such as `30` to jump forward, or a negative number such as `-10` to jump back.
+
+## What's playing
+
+* `I` announces the current track, artist and album.
+* `T` announces how far into the track you are, and its length.
+* To hear each new track as it starts, turn on **Announce track changes automatically** in the [settings](configuration.html).
+
+## Likes and follows
+
+* `L` adds the current track to your Liked Songs, or removes it if it is already there.
+* `F` follows the artist of the current track, or unfollows them.
+
+## Quick play
+
+* `G` plays your top tracks of the last month.
+* `O` plays your recently played tracks.
 
 ## Sharing
 
-*   **Copy Link:** Press `C` to copy the Spotify URL of the current track to your clipboard.
-*   **Copy Universal Link:** Press `X` to copy a **Song.link** (Odesli) URL. This smart link allows recipients to listen on Apple Music, YouTube Music, Deezer, etc., not just Spotify.
+* `C` copies the current track's Spotify link.
+* `X` copies a [Song.link](https://song.link) link instead. Whoever opens it can listen on the service they use, such as Apple Music, YouTube Music or Deezer, not only Spotify.
 
-## Utilities
+## Sleep timer
 
-*   **Sleep Timer:**
-    1.  Press `Z` to open the Sleep Timer dialog.
-    2.  Enter duration in minutes (e.g., `30`).
-    3.  Press Enter. Music will automatically pause after the timer expires.
-    4.  To cancel, open the dialog again and enter `0`.
-
-*   **Settings:** Press `F4` to open the Accessify Play settings panel within NVDA preferences. Here you can configure audio output, track announcement behavior, and auto-updates.
-
+`Z` opens the sleep timer. Enter a number of minutes (up to 240) and press **Start Timer**; when the time is up, the music pauses. The timer keeps running even if you restart NVDA. To cancel it, open the sleep timer again and enter 0.
 
 ---
-[Back to Features](features.html)
+[Back to Home](readme.html)
