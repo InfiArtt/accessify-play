@@ -2397,6 +2397,10 @@ class ManagementDialog(AccessifyDialog):
 			_("Time Range:"), wx.ComboBox, choices=list(self.time_range_choices.keys()), style=wx.CB_READONLY
 		)
 		self.time_range_box.SetSelection(1)
+		self._top_items_request = 0
+		self._top_items_timer = None
+		self.top_item_type_box.Bind(wx.EVT_COMBOBOX, self._on_top_items_choice)
+		self.time_range_box.Bind(wx.EVT_COMBOBOX, self._on_top_items_choice)
 
 		list_control = wx.ListBox(panel)
 		sizer.Add(list_control, 1, wx.EXPAND | wx.ALL, 5)
@@ -2424,20 +2428,50 @@ class ManagementDialog(AccessifyDialog):
 			panel, self.load_top_items, list_control, initial_data=self.preloaded_data.get("top_items")
 		)
 
+	#: As for the playlist box: arrowing through Show or Time Range sends one
+	#: request once the user stops, not one per choice passed over.
+	TOP_ITEMS_LOAD_DELAY_MS = 300
+
+	def _on_top_items_choice(self, evt=None):
+		if self._top_items_timer is not None:
+			self._top_items_timer.Stop()
+		self._top_items_timer = wx.CallLater(self.TOP_ITEMS_LOAD_DELAY_MS, self.load_top_items)
+
 	def load_top_items(self, evt=None, initial_data=None):
 		if initial_data:
 			if isinstance(initial_data, dict):
 				initial_data = initial_data.get("items", [])
 			self._populate_generic_list("top_items", initial_data)
-		else:
-			item_type = self.top_item_type_choices[self.top_item_type_box.GetValue()]
-			time_range = self.time_range_choices[self.time_range_box.GetValue()]
+			return
+		if self._top_items_timer is not None:
+			self._top_items_timer.Stop()
+			self._top_items_timer = None
+		item_type = self.top_item_type_choices[self.top_item_type_box.GetValue()]
+		time_range = self.time_range_choices[self.time_range_box.GetValue()]
+		self._top_items_request += 1
+		token = self._top_items_request
+		control = self.tabs_config["top_items"]["control"]
+		control.Clear()
+		control.Append(_("Loading..."))
 
-			def loader():
-				data = self.client.get_top_items(item_type=item_type, time_range=time_range)
-				return data.get("items", []) if isinstance(data, dict) else data
+		def _load():
+			data = self.client.get_top_items(item_type=item_type, time_range=time_range)
+			if isinstance(data, dict):
+				data = data.get("items", [])
+			wx.CallAfter(self._finish_top_items, data, token)
 
-			threading.Thread(target=lambda: self._load_data_thread("top_items", loader)).start()
+		thread_manager.submit_task(_load, name="DialogTask", daemon=True)
+
+	def _finish_top_items(self, data, token):
+		if not self:
+			return  # closed while loading
+		# A slower answer for a choice the user has already moved past must
+		# not replace the list for the current one.
+		if token != self._top_items_request:
+			return
+		if isinstance(data, str):
+			ui.message(data)
+		self._populate_generic_list("top_items", data)
 
 	# --- Shortcuts and context menus ---
 	def _init_shortcuts(self):
