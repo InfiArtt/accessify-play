@@ -72,14 +72,14 @@ class LayerEditorDialog(AccessifyDialog):
 		self.config_manager = config_manager
 		self.is_dirty = False
 
-		# Peta untuk menyimpan ID script asli berdasarkan indeks item list
+		# Item data -> script id. SetItemData only stores integers.
 		self.item_data_map = {}
 
 		self._build_ui()
 		self._populate_list()
 
 	def _get_script_labels(self):
-		"""Mapping ID script ke Nama Tampilan yang bisa diterjemahkan."""
+		"""Translatable display names for each script id."""
 		return {
 			"playPause": _("Play/Pause"),
 			"nextTrack": _("Next Track"),
@@ -155,7 +155,7 @@ class LayerEditorDialog(AccessifyDialog):
 		labels_map = self._get_script_labels()
 
 		for i, (script_id, data) in enumerate(configs):
-			# Ambil label yang bagus, kalau tidak ada pakai ID aslinya
+			# Fall back to the script id when there is no display name.
 			display_name = labels_map.get(script_id, script_id)
 
 			# Strip kb: prefix for display
@@ -165,14 +165,12 @@ class LayerEditorDialog(AccessifyDialog):
 			keep_open = _("Yes") if data.get("keep_open") else _("No")
 			desc = _(data.get("description", ""))
 
-			# Masukkan ke ListCtrl
 			idx = self.list_ctrl.InsertItem(self.list_ctrl.GetItemCount(), display_name)
 			self.list_ctrl.SetItem(idx, 1, gestures)
 			self.list_ctrl.SetItem(idx, 2, keep_open)
 			self.list_ctrl.SetItem(idx, 3, desc)
 
-			# PENTING: Simpan ID script asli di data item agar bisa diambil saat diedit
-			# Kita gunakan index loop (i) sebagai key map karena SetItemData butuh integer/long
+			# Remember which script this row is, for on_edit.
 			self.list_ctrl.SetItemData(idx, i)
 			self.item_data_map[i] = script_id
 
@@ -187,14 +185,12 @@ class LayerEditorDialog(AccessifyDialog):
 		if idx == -1:
 			return
 
-		# Ambil ID asli menggunakan ItemData yang kita simpan tadi
 		map_key = self.list_ctrl.GetItemData(idx)
 		script_name = self.item_data_map.get(map_key)
 
 		if not script_name:
 			return
 
-		# Ambil Label tampilan (untuk judul dialog edit)
 		display_label = self.list_ctrl.GetItemText(idx, 0)
 
 		config = self.config_manager.get_script_config(script_name)
@@ -207,7 +203,7 @@ class LayerEditorDialog(AccessifyDialog):
 			self.is_dirty = True
 			self._populate_list()
 
-			# Restore selection (mencari ulang berdasarkan script_name di map)
+			# Reselect the edited script; the list was rebuilt.
 			for list_idx in range(self.list_ctrl.GetItemCount()):
 				key = self.list_ctrl.GetItemData(list_idx)
 				if self.item_data_map.get(key) == script_name:

@@ -216,7 +216,6 @@ class AddToPlaylistDialog(AccessifyDialog):
 		self.add_button = wx.Button(panel, label=_("&Add to Playlist"))
 		self.add_button.Bind(wx.EVT_BUTTON, self.on_add_to_playlist)
 		buttons_sizer.Add(self.add_button, 0, wx.ALL, 5)
-		# Menjadikan tombol ini sebagai aksi default saat Enter ditekan
 		self.add_button.SetDefault()
 
 		# Translators: Label for the "Cancel" button in the "Add to Playlist" dialog.
@@ -228,7 +227,6 @@ class AddToPlaylistDialog(AccessifyDialog):
 
 		panel.SetSizer(sizer)
 		sizer.Fit(self)
-		# Menempatkan fokus awal pada pilihan playlist untuk navigasi yang mudah
 		self.playlist_combobox.SetFocus()
 
 	def on_playlist_selected(self, evt):
@@ -253,12 +251,11 @@ class AddToPlaylistDialog(AccessifyDialog):
 						playlist_name=selected_playlist_name
 					),
 				)
-			# Menutup dialog setelah aksi selesai
 			wx.CallAfter(self.Close)
 
 		ui.message(_("Adding to playlist..."))
 		thread_manager.submit_task(_add, name='DialogTask', daemon=True)
-		# Nonaktifkan tombol untuk mencegah klik ganda
+		# Prevent adding twice.
 		self.add_button.Disable()
 
 
@@ -312,7 +309,7 @@ class PodcastEpisodesDialog(AccessifyDialog):
 		accel_entries = [
 			(wx.ACCEL_ALT, ord("P"), self.MENU_PLAY_EPISODE.GetId()),
 			(wx.ACCEL_ALT, ord("Q"), self.MENU_ADD_QUEUE.GetId()),
-			(wx.ACCEL_ALT, ord("L"), self.MENU_COPY_LINK.GetId()),  # 'C' untuk Copy
+			(wx.ACCEL_ALT, ord("L"), self.MENU_COPY_LINK.GetId()),
 			(wx.ACCEL_ALT, ord("S"), self.MENU_SAVE_EPISODE.GetId()),
 		]
 		self.SetAcceleratorTable(wx.AcceleratorTable(accel_entries))
@@ -421,7 +418,6 @@ class PodcastEpisodesDialog(AccessifyDialog):
 		self.on_play_episode()
 
 	def _get_selected_episode(self):
-		"""Helper untuk mendapatkan data episode yang dipilih."""
 		selection = self.episodes_list.GetSelection()
 		if (
 			selection == wx.NOT_FOUND
@@ -496,7 +492,7 @@ class ArtistDiscographyDialog(AccessifyDialog):
 		self._all_tracks_loading = False
 		self._all_tracks_can_load_more = False
 		self._all_tracks_load_more_label = f"--- {_('Load More')} ---"
-		self._user_playlists = user_playlists  # <--- UBAH BARIS INI
+		self._user_playlists = user_playlists
 		self.init_ui()
 		self.load_data()
 		self._create_accelerators()
@@ -505,7 +501,6 @@ class ArtistDiscographyDialog(AccessifyDialog):
 		panel = wx.Panel(self)
 		main_sizer = wx.BoxSizer(wx.VERTICAL)
 
-		# --- PERUBAHAN 1: Menggunakan wx.Notebook untuk membuat Tab ---
 		self.notebook = wx.Notebook(panel)
 		main_sizer.Add(self.notebook, 1, wx.EXPAND | wx.ALL, 5)
 
@@ -864,7 +859,6 @@ class ArtistDiscographyDialog(AccessifyDialog):
 		item = self._get_selected_item()
 		if item:
 			self._play_uri(item.get("uri"))
-			# self.Close()
 
 	def on_add_to_queue(self, evt=None):
 		item = self._get_selected_item()
@@ -1368,148 +1362,6 @@ class PlaylistTracksDialog(AccessifyDialog):
 			self.copy_link(link)
 
 
-class RelatedArtistsDialog(AccessifyDialog):
-	MENU_PLAY = wx.NewIdRef()
-	MENU_ADD_QUEUE = wx.NewIdRef()
-	MENU_COPY_LINK = wx.NewIdRef()
-	MENU_DISCOGRAPHY = wx.NewIdRef()
-	MENU_FOLLOW = wx.NewIdRef()
-
-	def __init__(self, parent, client, artist_id, artist_name):
-		title = _("Artists Related to {artist_name}").format(artist_name=artist_name)
-		super().__init__(parent, title=title, size=(500, 400))
-		self.client = client
-		self.artist_id = artist_id
-		self.related_artists = []
-		self.init_ui()
-		self.load_data()
-		self._create_accelerators()
-
-	def init_ui(self):
-		panel = wx.Panel(self)
-		sizer = wx.BoxSizer(wx.VERTICAL)
-
-		self.artists_list = wx.ListBox(panel)
-		sizer.Add(self.artists_list, 1, wx.EXPAND | wx.ALL, 5)
-		self._bind_list_activation(self.artists_list, self.on_play)
-		self.artists_list.Bind(wx.EVT_CONTEXT_MENU, self.on_context_menu)
-
-		buttons_sizer = wx.BoxSizer(wx.HORIZONTAL)
-		play_button = wx.Button(panel, label=_("&Play"))
-		play_button.Bind(wx.EVT_BUTTON, self.on_play)
-		buttons_sizer.Add(play_button, 0, wx.ALL, 5)
-
-		discography_button = wx.Button(panel, label=_("&View Discography"))
-		discography_button.Bind(wx.EVT_BUTTON, self.on_view_discography)
-		buttons_sizer.Add(discography_button, 0, wx.ALL, 5)
-
-		follow_button = wx.Button(panel, label=_("&Follow"))
-		follow_button.Bind(wx.EVT_BUTTON, self.on_follow)
-		buttons_sizer.Add(follow_button, 0, wx.ALL, 5)
-
-		close_button = wx.Button(panel, id=wx.ID_CANCEL, label=_("&Close"))
-		self.bind_close_button(close_button)
-		buttons_sizer.Add(close_button, 0, wx.ALL, 5)
-
-		sizer.Add(buttons_sizer, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
-		panel.SetSizer(sizer)
-
-	def _create_accelerators(self):
-		accel_entries = [
-			(wx.ACCEL_ALT, ord("P"), self.MENU_PLAY.GetId()),
-			(wx.ACCEL_ALT, ord("Q"), self.MENU_ADD_QUEUE.GetId()),
-			(wx.ACCEL_ALT, ord("L"), self.MENU_COPY_LINK.GetId()),
-			(wx.ACCEL_ALT, ord("D"), self.MENU_DISCOGRAPHY.GetId()),
-			(wx.ACCEL_ALT, ord("F"), self.MENU_FOLLOW.GetId()),
-		]
-		self.SetAcceleratorTable(wx.AcceleratorTable(accel_entries))
-		self.Bind(wx.EVT_MENU, self.on_play, id=self.MENU_PLAY.GetId())
-		self.Bind(wx.EVT_MENU, self.on_add_to_queue, id=self.MENU_ADD_QUEUE.GetId())
-		self.Bind(wx.EVT_MENU, self.on_copy_link, id=self.MENU_COPY_LINK.GetId())
-		self.Bind(wx.EVT_MENU, self.on_view_discography, id=self.MENU_DISCOGRAPHY.GetId())
-		self.Bind(wx.EVT_MENU, self.on_follow, id=self.MENU_FOLLOW.GetId())
-
-	def load_data(self):
-		self.artists_list.Clear()
-
-		def _load():
-			results = self.client.get_related_artists(self.artist_id)
-			if isinstance(results, str):
-				wx.CallAfter(ui.message, results)
-				wx.CallAfter(self.artists_list.Append, results)
-			else:
-				self.related_artists = results.get("artists", [])
-				if not self.related_artists:
-					wx.CallAfter(self.artists_list.Append, _("No related artists found."))
-				else:
-					for artist in self.related_artists:
-						wx.CallAfter(self.artists_list.Append, artist["name"])
-
-		thread_manager.submit_task(_load, name='DialogTask', daemon=True)
-
-	def get_selected_artist(self):
-		selection = self.artists_list.GetSelection()
-		if selection == wx.NOT_FOUND:
-			ui.message(_("Please select an artist."))
-			return None
-		return self.related_artists[selection]
-
-	def on_context_menu(self, evt):
-		artist = self.get_selected_artist()
-		if not artist:
-			return
-		menu = wx.Menu()
-		menu.Append(self.MENU_PLAY.GetId(), _("Play Artist Radio\tAlt+P"))
-		menu.Append(self.MENU_ADD_QUEUE.GetId(), _("Add to Queue\tAlt+Q"))
-		menu.Append(self.MENU_COPY_LINK.GetId(), _("Copy Link\tAlt+L"))
-		menu.AppendSeparator()
-		menu.Append(self.MENU_DISCOGRAPHY.GetId(), _("View Discography\tAlt+D"))
-		menu.Append(self.MENU_FOLLOW.GetId(), _("Follow Artist\tAlt+F"))
-		self.PopupMenu(menu)
-		menu.Destroy()
-
-	def on_play(self, evt=None):
-		artist = self.get_selected_artist()
-		if artist:
-			self._play_uri(artist.get("uri"))
-			self.Close()
-
-	def on_add_to_queue(self, evt=None):
-		artist = self.get_selected_artist()
-		if artist:
-			self._queue_add_context(artist.get("uri"), "artist", artist.get("name"))
-
-	def on_copy_link(self, evt=None):
-		artist = self.get_selected_artist()
-		if artist:
-			link = artist.get("external_urls", {}).get("spotify")
-			self.copy_link(link)
-
-	def on_view_discography(self, evt=None):
-		artist = self.get_selected_artist()
-		if artist:
-			dialog = ArtistDiscographyDialog(
-				self, self.client, artist["id"], artist["name"], self.user_playlists
-			)
-			dialog.Show()
-
-	def on_follow(self, evt=None):
-		artist = self.get_selected_artist()
-		if artist:
-
-			def _follow():
-				result = self.client.follow_artists([artist["id"]])
-				if isinstance(result, str):
-					wx.CallAfter(ui.message, result)
-				else:
-					wx.CallAfter(
-						ui.message,
-						_("You are now following {artist_name}.").format(artist_name=artist["name"]),
-					)
-
-			thread_manager.submit_task(_follow, name='DialogTask', daemon=True)
-
-
 class ManagementDialog(AccessifyDialog):
 	def __init__(self, parent, client, preloaded_data=None):
 		super().__init__(parent, title=_("Spotify Management"), size=(600, 500))
@@ -1561,8 +1413,7 @@ class ManagementDialog(AccessifyDialog):
 			control.Append(_("Loading..."))
 		loader()
 
-	# --- BAGIAN INTI DARI REFACTORING INTERNAL ---
-	# Fungsi generik untuk mendapatkan item terpilih dari tab yang sedang aktif
+	# The selected item in whichever tab's list has focus.
 	def _get_selected_item(self):
 		focused_control = self.FindFocus()
 		if focused_control == self.playlist_tracks_list:
@@ -1832,8 +1683,7 @@ class ManagementDialog(AccessifyDialog):
 			wx.CallAfter(ui.message, data)
 		wx.CallAfter(self._populate_generic_list, key, data)
 
-	# --- FUNGSI SPESIFIK & LOADER DATA ---
-	# Fungsi loader tetap ada, tapi sekarang lebih sederhana
+	# --- Tab loaders ---
 
 	def load_saved_tracks(self, initial_data=None):
 		if initial_data is not None:
@@ -2554,7 +2404,7 @@ class ManagementDialog(AccessifyDialog):
 				if item["type"] == "track"
 				else item["name"]
 			),
-			"item_parser": lambda item: item,  # <--- TAMBAHKAN BARIS INI
+			"item_parser": lambda item: item,
 		}
 
 		self._bind_list_activation(list_control, self._handle_play)
@@ -2583,7 +2433,7 @@ class ManagementDialog(AccessifyDialog):
 
 			threading.Thread(target=lambda: self._load_data_thread("top_items", loader)).start()
 
-	# --- Shortcut dan Menu Konteks ---
+	# --- Shortcuts and context menus ---
 	def _init_shortcuts(self):
 		self._shortcutPlayId = wx.NewIdRef()
 		self._shortcutAddId = wx.NewIdRef()
@@ -2879,7 +2729,7 @@ class ManagementDialog(AccessifyDialog):
 		else:
 			ui.message(_("Please select a show to view episodes."))
 
-	# --- HELPER LAINNYA ---
+	# --- Other helpers ---
 	def _append_menu_item(self, menu, label, handler):
 		item = menu.Append(wx.ID_ANY, label)
 		menu.Bind(wx.EVT_MENU, handler, item)

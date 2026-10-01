@@ -16,13 +16,11 @@ class SleepTimerDialog(AccessifyDialog):
 		mainSizer = wx.BoxSizer(wx.VERTICAL)
 		sHelper = guiHelper.BoxSizerHelper(self, sizer=mainSizer)
 
-		# Input menit
 		label = _("Stop audio in (minutes): (Enter 0 to cancel timer)")
 		self.minutesCtrl = sHelper.addLabeledControl(label, wx.SpinCtrl)
 		self.minutesCtrl.SetRange(0, 240)
-		self.minutesCtrl.SetValue(30)  # Default 30 menit
+		self.minutesCtrl.SetValue(30)
 
-		# Tombol
 		buttonsSizer = wx.StdDialogButtonSizer()
 		okButton = wx.Button(self, wx.ID_OK, label=_("&Start Timer"))
 		okButton.SetDefault()

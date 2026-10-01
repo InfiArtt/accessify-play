@@ -1,6 +1,4 @@
-import threading
 from ..core.thread_manager import thread_manager
-import webbrowser
 
 import config
 import gui
@@ -11,7 +9,6 @@ from gui import guiHelper, messageBox, settingsDialogs
 from .. import donate, spotify_client
 from ..utils import conf_get
 from ..language import AVAILABLE_LANGUAGE_CODES, LANGUAGE_AUTO, LANGUAGE_DISPLAY_OVERRIDES
-from ..ui.base_dialog import AccessifyDialog
 
 from ..language import init_translation  # noqa: E402
 
@@ -50,7 +47,7 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 
 		keep_alive_label = _("Keep Alive Interval (seconds, 0 = Off, Min = 5)")
 		self.keepAliveCtrl = sHelper.addLabeledControl(keep_alive_label, wx.SpinCtrl)
-		self.keepAliveCtrl.SetRange(0, 300)  # Maksimal 5 menit
+		self.keepAliveCtrl.SetRange(0, 300)
 		self.keepAliveCtrl.SetValue(conf_get("keepAliveInterval", 30))
 		# Translators: Label for a setting to choose the display language for the addon.
 		language_label = _("Language:")
@@ -116,7 +113,7 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 			self._originalLanguage = selected_code
 		ka_val = self.keepAliveCtrl.GetValue()
 		if ka_val > 0 and ka_val < 5:
-			ka_val = 5  # Paksa ke 5 jika user bandel isi 1, 2, 3, atau 4
+			ka_val = 5
 			ui.message(_("Keep Alive interval adjusted to minimum 5 seconds."))
 
 		config.conf["spotify"]["keepAliveInterval"] = ka_val
@@ -134,8 +131,8 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 	def onClearCredentials(self, evt):
 		# Translators: Confirmation message before clearing Spotify credentials and cache.
 		confirmation_msg = _(
-			"Are you sure you want to delete your stored Spotify access token? You will need to re-enter your credentials "
-			"and re-authenticate with Spotify to use the addon again."
+			"Are you sure you want to delete your stored Spotify access token? "
+			"You will need to sign in to Spotify again to use the add-on."
 		)
 		# Translators: Title for the clear credentials confirmation dialog.
 		dialog_title = _("Confirm Clear Credentials")
@@ -151,19 +148,16 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 		wx.CallAfter(self._update_ui_after_clear, message)
 
 	def _update_ui_after_clear(self, message):
-		# self.clientID.SetValue("")
 		ui.message(message)
 
 	def showValidationResult(self, success):
 		if success:
 			messageBox(_("Validation successful!"), _("Success"), wx.OK | wx.ICON_INFORMATION)
 		else:
-			redirect_uri = "http://127.0.0.1:5588/login"
-			# Translators: An error message shown when Spotify validation fails.
-			# It gives the user instructions on how to fix it, including a redirect URI that they must copy.
+			# Translators: An error message shown when signing in to Spotify fails.
 			error_message = _(
-				"Validation failed. Please check the following:\n\n"
-				"1. Your Client ID is correct.\n"
-				"2. In your Spotify App settings, the Redirect URI is set to exactly:\n{uri}"
-			).format(uri=redirect_uri)
+				"Could not sign in to Spotify. Make sure you finished signing in "
+				"in your web browser and that you are connected to the internet, "
+				"then try again."
+			)
 			messageBox(error_message, _("Validation Failed"), wx.OK | wx.ICON_ERROR)

@@ -46,7 +46,7 @@ from .core.thread_manager import thread_manager  # noqa: E402
 from . import (  # noqa: E402
 	paths,
 	spotify_client,
-	utils,  # Impor decorator dari utils.py
+	utils,
 )
 from .commandLayers import CommandLayerManager  # noqa: E402
 from .dialogs.devices import DevicesDialog  # noqa: E402
@@ -104,7 +104,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		self._devicesDialogLoading = False
 		self.commandLayer = CommandLayerManager(self)
 
-		# Polling untuk perubahan lagu
+		# Poll for track changes.
 		self.last_track_id = None
 		self.is_running = True
 		thread_manager.create_poller(self.track_change_poller, interval_seconds=5, name="TrackChangePoller")
@@ -570,7 +570,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		_fetch()
 
 	def keep_alive_worker(self):
-		"""Thread untuk mengirim ping ke Spotify agar koneksi tetap hidup."""
+		"""Ping Spotify periodically to keep the connection alive."""
 		while self.is_running:
 			interval = utils.conf_get("keepAliveInterval", 30)
 
@@ -593,7 +593,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 				time.sleep(1)
 
 	def _set_clipboard(self, text):
-		"""Metode aman untuk mengakses clipboard dari main thread."""
+		"""Copy a link to the clipboard; must run on the main thread."""
 		if not text:
 			return
 		if text.startswith("http"):
@@ -608,7 +608,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 				log.error(f"Failed to copy to clipboard: {e}", exc_info=True)
 				nvda_ui.message(_("Clipboard error"))
 		else:
-			# Jika bukan link, berarti pesan error dari client
+			# Anything that is not a link is a message from the client.
 			nvda_ui.message(text)
 
 	def _destroy_dialog(self, attr_name, evt):
@@ -705,7 +705,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			result = self.client._execute("next_track")
 			if isinstance(result, str):
 				return result
-			time.sleep(0.4)  # Beri jeda agar server Spotify sempat memproses
+			time.sleep(0.4)  # Give Spotify a moment to apply the change.
 			playback = self.client._execute("current_playback")
 			return (
 				self.client.get_current_track_info(playback)
@@ -868,7 +868,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		if isinstance(check, str):
 			return check
 
-		is_saved = check[0]  # True jika sudah dilike, False jika belum
+		is_saved = check[0]
 
 		if is_saved:
 			result = self.client.remove_tracks_from_library([track_id])
@@ -924,7 +924,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			return _("Now following artist: {artist_name}.").format(artist_name=artist_name)
 
 	def _open_dialog(self, dialog_class, dialog_attr, *args, **kwargs):
-		"""Fungsi helper generik untuk membuka dialog."""
+		"""Open a dialog, or bring it to the front if it is already open."""
 		if getattr(self, dialog_attr, None):
 			getattr(self, dialog_attr).Raise()
 			return
@@ -934,7 +934,6 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
 		dialog = dialog_class(gui.mainFrame, self.client, *args, **kwargs)
 
-		# Membuat handler close dinamis
 		def on_close(evt):
 			self._destroy_dialog(dialog_attr, evt)
 
@@ -1117,7 +1116,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		return paths.get_data_path(paths.SLEEP_TIMER_FILE)
 
 	def _save_timer_state(self, end_timestamp):
-		"""Menyimpan waktu target berhenti ke file."""
+		"""Save the time the sleep timer should stop playback."""
 		try:
 			with open(self._get_timer_file_path(), "w") as f:
 				json.dump({"end_time": end_timestamp}, f)
@@ -1125,7 +1124,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			log.error(f"Error saving sleep timer: {e}")
 
 	def _read_timer_state(self):
-		"""Membaca waktu target dari file."""
+		"""Read the saved sleep timer end time, if any."""
 		path = self._get_timer_file_path()
 		if not os.path.exists(path):
 			return None
@@ -1143,14 +1142,14 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		"""Empty the contents of the timer file (not delete the file)."""
 		try:
 			with open(self._get_timer_file_path(), "w") as f:
-				f.write("")  # Kosongkan isi
+				f.write("")
 		except Exception:
 			pass
 
 	def _on_sleep_timeout(self):
 		"""Function that is executed when time expires."""
 		self._active_sleep_timer = None
-		self._clear_timer_state()  # Hapus jejak di file
+		self._clear_timer_state()
 		if self.client and self.client.client:
 			self.client._execute("pause_playback")
 			log.info("Sleep timer executed: Playback paused.")

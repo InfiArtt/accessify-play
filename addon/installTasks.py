@@ -111,18 +111,18 @@ def _defensive_cleanup_nvda_import_tracker(addon_name: str):
 
 	to_remove = []
 	for mod in tracker_set:
-		# Modul tanpa hasattr("__file__") (Seperti modul C-level)
+		# C-level modules have no __file__ at all.
 		if not hasattr(mod, "__file__"):
 			to_remove.append(mod)
 			continue
 			
-		# Modul built in (Meskipun terkadang tidak memiliki attribute __file__ sama sekali, dobel cek)
+		# Built-in modules, in case one does carry a __file__.
 		spec = getattr(mod, "__spec__", None)
 		if spec and getattr(spec, "origin", None) == "built-in":
 			to_remove.append(mod)
 			continue
 			
-		# Filter ekstra: jika secara misterius modul bukan dari ADDON_DIR
+		# Anything else that does not live in the add-on directory.
 		try:
 			file_path = getattr(mod, "__file__", "")
 			if not file_path or not str(file_path).startswith(_ADDON_DIR):

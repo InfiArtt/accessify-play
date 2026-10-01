@@ -2216,13 +2216,11 @@ msgstr "Memvalidasi kredensial dengan Spotify..."
 
 #: addon\globalPlugins\accesifyPlay\dialogs\settings.py:297
 msgid ""
-"Are you sure you want to clear your Spotify Client ID, and delete the stored "
-"access token? You will need to re-enter your credentials and re-authenticate "
-"with Spotify to use the addon again."
+"Are you sure you want to delete your stored Spotify access token? You will "
+"need to sign in to Spotify again to use the add-on."
 msgstr ""
-"Yakin ingin menghapus ID Klien Spotify dan menghapus token akses yang "
-"tersimpan? Anda harus memasukkan kembali kredensial dan mengautentikasi "
-"ulang dengan Spotify untuk menggunakan add-on ini lagi."
+"Yakin ingin menghapus token akses Spotify yang tersimpan? Anda harus masuk "
+"ke Spotify lagi untuk menggunakan add-on ini."
 
 #. Translators: Title for the clear credentials confirmation dialog.
 #: addon\globalPlugins\accesifyPlay\dialogs\settings.py:302
@@ -2242,19 +2240,12 @@ msgid "Success"
 msgstr "Berhasil"
 
 #: addon\globalPlugins\accesifyPlay\dialogs\settings.py:328
-#, python-brace-format
 msgid ""
-"Validation failed. Please check the following:\n"
-"\n"
-"1. Your Client ID is correct.\n"
-"2. In your Spotify App settings, the Redirect URI is set to exactly:\n"
-"{uri}"
+"Could not sign in to Spotify. Make sure you finished signing in in your web "
+"browser and that you are connected to the internet, then try again."
 msgstr ""
-"Validasi gagal. Silakan periksa hal berikut:\n"
-"\n"
-"1. ID Klien Anda sudah benar.\n"
-"2. Di pengaturan Aplikasi Spotify Anda, URI Pengalihan diatur persis ke:\n"
-"{uri}"
+"Tidak dapat masuk ke Spotify. Pastikan Anda sudah menyelesaikan proses masuk "
+"di browser web dan terhubung ke internet, lalu coba lagi."
 
 #: addon\globalPlugins\accesifyPlay\dialogs\settings.py:332
 msgid "Validation Failed"

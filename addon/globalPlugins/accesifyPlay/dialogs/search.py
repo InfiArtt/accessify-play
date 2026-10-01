@@ -1,6 +1,5 @@
 # accesifyPlay/dialogs/search.py
 
-import threading
 from ..core.thread_manager import thread_manager
 
 import config
@@ -54,7 +53,7 @@ class SearchDialog(AccessifyDialog):
 		self._create_accelerators()
 		self.queryText.SetFocus()
 
-		# Memuat playlist di latar belakang saat dialog dibuka. Ini sudah benar.
+		# Load the user's playlists for "Add to Playlist" in the background.
 		thread_manager.submit_task(self._load_user_playlists, name='DialogTask', daemon=True)
 
 	def _init_ui(self):

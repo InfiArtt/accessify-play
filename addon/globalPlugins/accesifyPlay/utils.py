@@ -13,10 +13,7 @@ init_translation()
 
 
 def run_in_thread(func):
-	"""
-	Decorator untuk menjalankan fungsi di background thread tanpa menangani output.
-	Berguna untuk tugas yang tidak perlu memberikan feedback langsung.
-	"""
+	"""Run the function in a background thread, ignoring its result."""
 
 	@wraps(func)
 	def wrapper(*args, **kwargs):
@@ -26,10 +23,7 @@ def run_in_thread(func):
 
 
 def speak_in_thread(func):
-	"""
-	Decorator yang menjalankan fungsi di background thread dan
-	mengucapkan (speak) hasilnya melalui ui.message.
-	"""
+	"""Run the method in a background thread and speak the message it returns."""
 
 	@wraps(func)
 	def wrapper(self, *args, **kwargs):
@@ -48,20 +42,15 @@ def speak_in_thread(func):
 
 
 def copy_in_thread(func):
-	"""
-	Decorator yang menjalankan fungsi di background thread dan menyalin (copy)
-	hasilnya ke clipboard.
-	"""
+	"""Run the method in a background thread and copy its result to the clipboard."""
 
 	@wraps(func)
 	def wrapper(self, *args, **kwargs):
-		# 'self' dari argumen wrapper adalah instance dari GlobalPlugin
 		plugin_instance = self
 
 		def thread_target():
 			try:
 				result_text = func(self, *args, **kwargs)
-				# Panggil _set_clipboard dari instance plugin
 				wx.CallAfter(plugin_instance._set_clipboard, result_text)
 			except Exception as e:
 				log.error(f"Error in copy_in_thread for {func.__name__}: {e}", exc_info=True)

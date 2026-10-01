@@ -1,6 +1,5 @@
 import wx
 import ui
-import threading
 from logHandler import log
 from ..core.thread_manager import thread_manager
 from ..ui.base_dialog import AccessifyDialog

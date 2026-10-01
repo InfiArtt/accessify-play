@@ -1,4 +1,3 @@
-import threading
 from ..core.thread_manager import thread_manager
 
 import ui

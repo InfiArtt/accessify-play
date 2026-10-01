@@ -1,6 +1,5 @@
 # spotify_client.py
 
-import json
 import os
 import time
 import webbrowser
@@ -136,10 +135,6 @@ class SpotifyClient:
 		"""Silently initializes the client on startup using cached tokens."""
 		log.info("Spotify: attempting silent initialization.")
 		auth_manager = self._get_auth_manager(open_browser=False)
-		if not auth_manager:
-			log.info("Spotify: no credentials configured, skipping initialization.")
-			return
-
 		try:
 			token_info = auth_manager.get_access_token(check_cache=True)
 			if token_info:
@@ -162,10 +157,6 @@ class SpotifyClient:
 		"""Interactively validates credentials, opening a browser if needed."""
 		log.info("Spotify: attempting interactive validation.")
 		auth_manager = self._get_auth_manager(open_browser=True)
-		if not auth_manager:
-			log.warning("Spotify: validation failed, credentials not configured.")
-			return False
-
 		try:
 			token_info = auth_manager.get_access_token(check_cache=False)
 			if token_info:
@@ -255,11 +246,11 @@ class SpotifyClient:
 			result = command(*args, **kwargs)
 			return result
 		except (requests.exceptions.ReadTimeout, requests.exceptions.Timeout, urllib3.exceptions.ReadTimeoutError, TimeoutError) as e:
-			# Jangan print traceback lengkap jika sekadar internet putus/server Spotify lambat
+			# A slow network or a slow Spotify is not worth a full traceback.
 			log.debug(f"Spotify ReadTimeout (background task): {e}")
 			return _("Connection to Spotify timed out. Please try again.")
 		except (requests.exceptions.ConnectionError, urllib3.exceptions.MaxRetryError) as e:
-			# Luring total tanpa koneksi internet sama sekali
+			# Fully offline: no internet connection at all.
 			log.debug(f"Spotify ConnectionError (Offline server/DNS failure): {e}")
 			return _("Connection to Spotify failed. Please check your internet connection.")
 		except SpotifyException as e:
@@ -314,7 +305,7 @@ class SpotifyClient:
 			try:
 				devices_result = self.client.devices()
 			except requests.exceptions.ConnectionError as retry_e:
-				# Jangan spam log console dengan StackTrace saat kabel internet tercabut total
+				# Offline: don't flood the log with tracebacks.
 				log.debug(f"Spotify network connection failed on retry (Offline): {retry_e}")
 				return False
 			except (requests.exceptions.ReadTimeout, requests.exceptions.Timeout, urllib3.exceptions.ReadTimeoutError, TimeoutError) as retry_e:
@@ -360,7 +351,7 @@ class SpotifyClient:
 				self.device_id = None
 			except Exception as e:
 				log.error(f"Spotify: failed to wake up device: {e}", exc_info=True)
-				self.device_id = None  # Reset karena gagal
+				self.device_id = None
 				return False
 		return False
 
@@ -403,7 +394,7 @@ class SpotifyClient:
 		if not item:
 			return ""
 
-		item_type = item.get("type")  # 'type' ada di dalam objek 'item' itu sendiri
+		item_type = item.get("type")
 
 		if item_type == "track":
 			track = item.get("name")
@@ -549,20 +540,6 @@ class SpotifyClient:
 	def add_to_queue(self, uri):
 		return self._execute("add_to_queue", uri=uri)
 
-	def get_track_details_from_url(self, url):
-		info = self.get_link_details(url)
-		if "error" in info:
-			return info
-		if info.get("type") != "track":
-			return {"error": _("The provided link is not a track link.")}
-		metadata = info.get("metadata", {})
-		return {
-			"uri": info.get("uri"),
-			"name": metadata.get("name"),
-			"artists": metadata.get("artists"),
-			"duration": metadata.get("duration"),
-		}
-
 	def get_next_track_in_queue(self, queue_data=None):
 		if queue_data is None:
 			queue_data = self._execute_web_api("queue")
@@ -665,14 +642,6 @@ class SpotifyClient:
 				break
 			filtered.append(item)
 		return filtered
-
-	def rebuild_queue(self, uris, progress_ms=0):
-		result = self._execute("start_playback", uris=uris)
-		if isinstance(result, str):
-			return result
-		if progress_ms:
-			self.seek_track(progress_ms)
-		return True
 
 	def skip_to_queue_index(self, target_index):
 		"""
@@ -780,16 +749,13 @@ class SpotifyClient:
 		if isinstance(playback, str):
 			return playback
 
-		# Jika tidak ada playback aktif
 		if not playback or not isinstance(playback, dict):
 			return _("No active playback found. Please play something first.")
 
-		# Cek status sekarang
 		current_state = playback.get("shuffle_state")
 		new_state = not current_state
 
 		try:
-			# Kita panggil langsung lewat _execute agar handle device_id otomatis
 			result = self._execute("shuffle", state=new_state)
 			if isinstance(result, str) and "restriction" in result.lower():
 				return _("Shuffle control is disabled for this playback context.")
@@ -865,7 +831,7 @@ class SpotifyClient:
 			uris = [uris]
 		current_tracks = self.get_playlist_tracks(playlist_id)
 		if isinstance(current_tracks, str):
-			return current_tracks  # Return error jika gagal ambil list
+			return current_tracks
 		existing_uris = set()
 		for item in current_tracks:
 			track = item.get("track")
@@ -997,22 +963,11 @@ class SpotifyClient:
 			return uris
 		return []
 
-	def remove_tracks_from_playlist(self, playlist_id, track_uris):
-		"""Removes tracks from a specified playlist."""
-		log.info(f"remove_tracks_from_playlist called with: {track_uris}")
-		# This specific spotipy function expects a list of URI strings, not dicts.
-		return self._execute_web_api(
-			"playlist_remove_all_occurrences_of_items",
-			playlist_id=playlist_id,
-			items=track_uris,
-		)
-
 	def remove_track_occurrences(self, playlist_id, occurrences):
 		"""Remove specific copies of tracks, identified by playlist position.
 
-		occurrences is a list of (uri, position) pairs. Unlike
-		remove_tracks_from_playlist, which removes every copy of a URI, this
-		leaves other copies of the same track where they are.
+		occurrences is a list of (uri, position) pairs. Other copies of the
+		same track stay where they are.
 
 		Spotify accepts at most 100 items per request. Positions are removed
 		highest first, so each request only touches positions above everything
@@ -1409,28 +1364,9 @@ class SpotifyClient:
 		"""Gets profile information for the given artist."""
 		return self._execute_web_api("artist", artist_id=artist_id)
 
-	def get_related_artists(self, artist_id):
-		"""Gets artists related to a given artist."""
-		retired = self._retired_endpoint_message()
-		return self._execute_web_api(
-			"artist_related_artists", artist_id=artist_id, status_messages={404: retired, 403: retired}
-		)
-
 	def get_show_episodes(self, show_id, limit=50, offset=0):
 		"""Gets episodes for a show (paginated)."""
 		return self._execute_web_api("show_episodes", show_id=show_id, limit=limit, offset=offset)
-
-	def get_audiobook_details(self, audiobook_id):
-		"""Gets metadata for a single audiobook.
-
-		Audiobooks are only sold in a handful of markets, so Spotify answers 404
-		for a book that is not available to this account.
-		"""
-		return self._execute_web_api(
-			"get_audiobook",
-			audiobook_id,
-			status_messages={404: _("This audiobook is not available in your country.")},
-		)
 
 	def get_audiobook_chapters(self, audiobook_id, limit=50, offset=0):
 		"""Gets chapters for an audiobook (paginated)."""
@@ -1526,10 +1462,6 @@ class SpotifyClient:
 	def remove_albums_from_library(self, album_ids):
 		"""Removes one or more albums from the user's library."""
 		return self._execute_web_api("current_user_saved_albums_delete", albums=album_ids)
-
-	def check_if_albums_saved(self, album_ids):
-		"""Checks if one or more albums are already in the user's library."""
-		return self._execute_web_api("current_user_saved_albums_contains", albums=album_ids)
 
 	def save_shows_to_library(self, show_ids):
 		"""Saves one or more shows to the user's library."""

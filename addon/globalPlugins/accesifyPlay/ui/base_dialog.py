@@ -19,16 +19,15 @@ class AccessifyDialog(wx.Dialog):
 
 	def __init__(self, *args, **kwargs):
 		parent = args[0] if args else kwargs.get("parent")
-		# Ekstrak 'client' jika dilempar secara eksklusif ke init
+		# Dialogs pass the client either as a keyword...
 		self.client = kwargs.pop("client", None) 
 		if not self.client and len(args) > 1:
-			# Beberapa dialog lama melempar parent dan client sebagai pos args
+			# ...or as the second positional argument.
 			self.client = args[1] 
 
 		super().__init__(*args, **kwargs)
 		self._parentDialog = parent if isinstance(parent, wx.Dialog) else None
 		
-		# Bindings esensial
 		self.Bind(wx.EVT_CHAR_HOOK, self._on_char_hook)
 		self.Bind(wx.EVT_CLOSE, self._on_dialog_close, self)
 
@@ -44,10 +43,7 @@ class AccessifyDialog(wx.Dialog):
 			evt.Skip()
 
 	def _on_dialog_close(self, evt):
-		"""
-		Menangani penutupan dialog. Event ini akan di-unbind setelahnya
-		untuk menghindari circular reference. Memanggil Destroy eksplisit.
-		"""
+		"""Destroy the dialog on close, unbinding first to avoid a reference cycle."""
 		evt.Skip()
 		
 		# Unbind event prior to destroy
@@ -67,7 +63,7 @@ class AccessifyDialog(wx.Dialog):
 			except Exception:
 				pass
 
-	# --- SPOTIFY ACTIONS (DIKELOLA DENGAN THREAD MANAGER) ---
+	# --- Spotify actions (run through the thread manager) ---
 
 	def _play_uri(self, uri):
 		if not self.client: return
@@ -190,20 +186,6 @@ class AccessifyDialog(wx.Dialog):
 				wx.CallAfter(ui.message, _("'{name}' saved to your library.").format(name=name))
 
 		thread_manager.submit_task(_run, name="ToggleSavedTask")
-
-	def _save_show_to_library(self, show):
-		if not self.client or not show or show.get("type") != "show" or not show.get("id"):
-			wx.CallAfter(ui.message, _("Could not save. Invalid show data provided."))
-			return
-		ui.message(_("Saving '{show_name}' to your library...").format(show_name=show.get("name")))
-		thread_manager.submit_task(self._save_show_thread, show, name="SaveShowTask")
-
-	def _save_show_thread(self, show):
-		result = self.client.save_shows_to_library([show.get("id")])
-		if isinstance(result, str):
-			wx.CallAfter(ui.message, result)
-		else:
-			wx.CallAfter(ui.message, _("Show '{show_name}' saved successfully.").format(show_name=show.get("name")))
 
 	def copy_link(self, link):
 		if not link:

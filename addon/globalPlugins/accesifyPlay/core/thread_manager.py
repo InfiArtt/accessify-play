@@ -24,7 +24,7 @@ class ThreadManager:
 			return None
 
 		with self._lock:
-			# Bersihkan thread yang sudah mati dari tracking list
+			# Forget threads that have finished.
 			self._threads = [t for t in self._threads if t.is_alive()]
 
 			def wrapped_target(*a, **kw):
