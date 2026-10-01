@@ -1103,11 +1103,17 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			return
 		self._open_dialog(DevicesDialog, "devicesDialog", devices_info=devices)
 
+	@scriptHandler.script(
+		description=_("Open Accessify Play settings."),
+	)
 	def script_openSettings(self, gesture):
 		gui.mainFrame.popupSettingsDialog(
 			settingsDialogs.NVDASettingsDialog, initialCategory=SpotifySettingsPanel
 		)
 
+	@scriptHandler.script(
+		description=_("Copy Universal (Song.link) URL."),
+	)
 	@utils.copy_in_thread
 	def script_copyUniversalLink(self, gesture):
 		return self.client.get_current_songlink_url()
@@ -1192,6 +1198,9 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		self._active_sleep_timer = threading.Timer(seconds, self._on_sleep_timeout)
 		self._active_sleep_timer.start()
 
+	@scriptHandler.script(
+		description=_("Set Sleep Timer."),
+	)
 	def script_showSleepTimerDialog(self, gesture):
 		if self.sleepTimerDialog:
 			self.sleepTimerDialog.Raise()
