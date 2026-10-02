@@ -116,7 +116,8 @@ class LayerEditorDialog(AccessifyDialog):
 	def _build_ui(self):
 		sizer = wx.BoxSizer(wx.VERTICAL)
 
-		# List Control
+		# Translators: Label of a list or text field, read by screen readers.
+		sizer.Add(wx.StaticText(self, label=_("Commands:")), 0, wx.LEFT | wx.TOP, 5)
 		self.list_ctrl = wx.ListCtrl(self, style=wx.LC_REPORT | wx.LC_SINGLE_SEL)
 		self.list_ctrl.InsertColumn(0, _("Command"), width=200)
 		self.list_ctrl.InsertColumn(1, _("Shortcut"), width=100)

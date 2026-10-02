@@ -12,7 +12,7 @@ init_translation()
 
 
 class SetVolumeDialog(AccessifyDialog):
-	def __init__(self, parent, client):
+	def __init__(self, parent, client, initial_volume=None):
 		super().__init__(parent, title=_("Set Spotify Volume"))
 		self.client = client
 		mainSizer = wx.BoxSizer(wx.VERTICAL)
@@ -22,7 +22,8 @@ class SetVolumeDialog(AccessifyDialog):
 		label = _("Volume (0-100):")
 		self.volumeCtrl = sHelper.addLabeledControl(label, wx.SpinCtrl)
 		self.volumeCtrl.SetRange(0, 100)
-		self.volumeCtrl.SetValue(50)  # Default value
+		# The device's current volume, so the field starts where the user is.
+		self.volumeCtrl.SetValue(50 if initial_volume is None else initial_volume)
 
 		# Action buttons
 		buttonsSizer = wx.StdDialogButtonSizer()

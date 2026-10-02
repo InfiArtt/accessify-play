@@ -41,7 +41,7 @@ class AudiobookChaptersDialog(AccessifyDialog):
 		self._chapters_offset = 0
 		self._chapters_loading = False
 		self._chapters_has_more = True
-		self._chapters_load_more_label = f"--- {_('Load More')} ---"
+		self._chapters_load_more_label = "--- {} ---".format(_("Load More"))
 		self._chapters_page_size = _get_search_limit(self.DEFAULT_CHAPTERS_PAGE_SIZE)
 		self.init_ui()
 		self.load_chapters()
@@ -51,6 +51,8 @@ class AudiobookChaptersDialog(AccessifyDialog):
 		panel = wx.Panel(self)
 		sizer = wx.BoxSizer(wx.VERTICAL)
 
+		# Translators: Label of a list or text field, read by screen readers.
+		sizer.Add(wx.StaticText(panel, label=_("Chapters:")), 0, wx.LEFT | wx.TOP, 5)
 		self.chapters_list = wx.ListBox(panel)
 		sizer.Add(self.chapters_list, 1, wx.EXPAND | wx.ALL, 5)
 

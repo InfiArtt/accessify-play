@@ -60,6 +60,8 @@ class LyricsDialog(AccessifyDialog):
 
 		display_text = self._prepare_display(lyrics, track_name, synced_lines)
 
+		# Translators: Label of a list or text field, read by screen readers.
+		sizer.Add(wx.StaticText(self, label=_("Lyrics:")), 0, wx.LEFT | wx.TOP, 5)
 		self.lyrics_ctrl = wx.TextCtrl(
 			self,
 			value=display_text,

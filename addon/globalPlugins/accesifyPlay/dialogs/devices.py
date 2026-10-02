@@ -18,6 +18,8 @@ class DevicesDialog(AccessifyDialog):
 
 		mainSizer = wx.BoxSizer(wx.VERTICAL)
 
+		# Translators: Label of a list or text field, read by screen readers.
+		mainSizer.Add(wx.StaticText(self, label=_("Devices:")), 0, wx.LEFT | wx.TOP, 10)
 		self.devicesList = wx.ListBox(self)
 		mainSizer.Add(self.devicesList, 1, wx.EXPAND | wx.ALL, 10)
 

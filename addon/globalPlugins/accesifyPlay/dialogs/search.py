@@ -230,7 +230,7 @@ class SearchDialog(AccessifyDialog):
 			return
 
 		if self.can_load_more:
-			self.resultsList.Append(f"--- {_('Load More')} ---")
+			self.resultsList.Append("--- {} ---".format(_("Load More")))
 
 		if self._rendered_items:
 			self.resultsList.SetSelection(focus_index)
@@ -363,7 +363,7 @@ class SearchDialog(AccessifyDialog):
 
 			if item_type == "artist":
 				menu.AppendSeparator()
-				menu.Append(self.MENU_FOLLOW.GetId(), _("Follow Artist\tAlt+F"))
+				menu.Append(self.MENU_FOLLOW.GetId(), _("Follow/Unfollow Artist\tAlt+F"))
 				menu.Append(self.MENU_DISCO.GetId(), _("View Discography\tAlt+D"))
 
 			elif item_type == "album":
@@ -544,14 +544,25 @@ class SearchDialog(AccessifyDialog):
 		if not item or item.get("type") != "artist":
 			return
 
+		# Like F in the command layer: ask Spotify whether the artist is
+		# followed, then do the opposite and say which it was.
 		def _follow():
-			result = self.client.follow_artists([item["id"]])
+			name = item.get("name") or _("Unknown")
+			state = self.client.check_if_artists_followed([item["id"]])
+			if isinstance(state, str):
+				wx.CallAfter(ui.message, state)
+				return
+			following = bool(state and state[0])
+			if following:
+				result = self.client.unfollow_artists([item["id"]])
+				done = _("Unfollowed artist: {artist_name}.")
+			else:
+				result = self.client.follow_artists([item["id"]])
+				done = _("Now following artist: {artist_name}.")
 			if isinstance(result, str):
 				wx.CallAfter(ui.message, result)
 			else:
-				wx.CallAfter(
-					ui.message, _("You are now following {artist_name}.").format(artist_name=item["name"])
-				)
+				wx.CallAfter(ui.message, done.format(artist_name=name))
 
 		thread_manager.submit_task(_follow, name='DialogTask', daemon=True)
 

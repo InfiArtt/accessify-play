@@ -10,7 +10,7 @@ Semua tombol di bawah ditekan setelah `NVDA+Alt+G`.
 ## Volume
 
 * `=` dan `-` menaikkan dan menurunkan volume sebesar pengaturan Volume Step (bawaannya 5%).
-* `V` mengatur volume tepat dari 0 sampai 100.
+* `V` mengatur volume tepat dari 0 sampai 100, dimulai dari volume saat ini.
 
 ## Melompat dalam lagu
 
@@ -19,7 +19,7 @@ Semua tombol di bawah ditekan setelah `NVDA+Alt+G`.
 
 ## Yang sedang diputar
 
-* `I` mengumumkan lagu, artis, dan album yang sedang diputar.
+* `I` mengumumkan lagu, artis, dan album yang sedang diputar, dan memberi tahu jika sedang dijeda.
 * `T` mengumumkan sudah sejauh mana lagu diputar, dan panjang lagunya.
 * Untuk mendengar setiap lagu baru saat dimulai, aktifkan **Announce track changes automatically** di [pengaturan](configuration.html).
 
@@ -40,7 +40,7 @@ Semua tombol di bawah ditekan setelah `NVDA+Alt+G`.
 
 ## Timer tidur
 
-`Z` membuka timer tidur. Masukkan jumlah menit (sampai 240) lalu tekan **Start Timer**; saat waktunya habis, musik dijeda. Timer tetap berjalan walaupun NVDA dimulai ulang. Untuk membatalkannya, buka timer tidur lagi dan masukkan 0.
+`Z` membuka timer tidur. Masukkan jumlah menit (sampai 240) lalu tekan **Start Timer**; saat waktunya habis, musik dijeda dan NVDA memberitahukannya. Timer tetap berjalan walaupun NVDA dimulai ulang. Untuk membatalkannya, buka timer tidur lagi dan masukkan 0.
 
 ---
 [Kembali ke Beranda](readme.html)

@@ -10,7 +10,7 @@ All keys below are pressed after `NVDA+Alt+G`.
 ## Volume
 
 * `=` and `-` turn the volume up and down by the Volume Step setting (5% by default).
-* `V` sets an exact volume from 0 to 100.
+* `V` sets an exact volume from 0 to 100, starting from the current volume.
 
 ## Seeking
 
@@ -19,7 +19,7 @@ All keys below are pressed after `NVDA+Alt+G`.
 
 ## What's playing
 
-* `I` announces the current track, artist and album.
+* `I` announces the current track, artist and album, and says if it is paused.
 * `T` announces how far into the track you are, and its length.
 * To hear each new track as it starts, turn on **Announce track changes automatically** in the [settings](configuration.html).
 
@@ -40,7 +40,7 @@ All keys below are pressed after `NVDA+Alt+G`.
 
 ## Sleep timer
 
-`Z` opens the sleep timer. Enter a number of minutes (up to 240) and press **Start Timer**; when the time is up, the music pauses. The timer keeps running even if you restart NVDA. To cancel it, open the sleep timer again and enter 0.
+`Z` opens the sleep timer. Enter a number of minutes (up to 240) and press **Start Timer**; when the time is up, the music pauses and NVDA tells you so. The timer keeps running even if you restart NVDA. To cancel it, open the sleep timer again and enter 0.
 
 ---
 [Back to Home](readme.html)

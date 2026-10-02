@@ -27,7 +27,7 @@ Jika masih ada hasil lain, item terakhir adalah "Load More". Tekan `Enter` padan
 | `Alt+Q` | Tambahkan ke antrean (lagu, album, dan playlist; album dan playlist dimasukkan lagu per lagu) |
 | `Alt+L` | Salin tautan Spotify |
 | `Alt+W` | Tampilkan lirik lagu tanpa memutarnya |
-| `Alt+F` | Ikuti artis |
+| `Alt+F` | Ikuti atau berhenti mengikuti artis |
 | `Alt+D` | Buka diskografi artis |
 
 ## Menu konteks
@@ -36,7 +36,7 @@ Tekan tombol Applications atau `Shift+F10` pada sebuah hasil untuk pilihan lainn
 
 * **Lagu**: Add to Playlist (submenu berisi playlist Anda sendiri), Show Lyrics, Go to Album, Go to Artist.
 * **Album**: Save Album, Add Album to Playlist. Lagu yang sudah ada di playlist dilewati.
-* **Artis**: Follow Artist, View Discography.
+* **Artis**: Follow/Unfollow Artist, View Discography.
 * **Playlist buatan orang lain**: Follow Playlist atau Unfollow Playlist, dan Follow/Unfollow Owner untuk mengikuti orang yang membuatnya.
 * **Podcast**: View Episodes, Save/Unsave Show.
 * **Buku audio**: View Chapters, Save/Unsave Audiobook.

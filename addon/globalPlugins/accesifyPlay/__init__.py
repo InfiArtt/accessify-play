@@ -755,7 +755,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 				step = utils.conf_get("volumeStep", 5)
 				new_volume = min(current_volume + step, 100)
 				self.client._execute("volume", new_volume)
-				return f"{_('Volume')} {new_volume}%"
+				return _("Volume {volume}%").format(volume=new_volume)
 			return _("No active device found.")
 		finally:
 			self._is_modifying_playback = False
@@ -777,7 +777,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 				step = utils.conf_get("volumeStep", 5)
 				new_volume = max(current_volume - step, 0)
 				self.client._execute("volume", new_volume)
-				return f"{_('Volume')} {new_volume}%"
+				return _("Volume {volume}%").format(volume=new_volume)
 			return _("No active device found.")
 		finally:
 			self._is_modifying_playback = False
@@ -958,7 +958,22 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		description=_("Set Spotify volume to a specific percentage."),
 	)
 	def script_setVolume(self, gesture):
-		self._open_dialog(SetVolumeDialog, "setVolumeDialog")
+		if self.setVolumeDialog:
+			self.setVolumeDialog.Raise()
+			return
+
+		# Read the current volume first, so the dialog opens showing it rather
+		# than changing the value under the user once it has been announced.
+		def _fetch():
+			playback = self.client._execute("current_playback")
+			device = playback.get("device") if isinstance(playback, dict) else None
+			volume = device.get("volume_percent") if isinstance(device, dict) else None
+			wx.CallAfter(
+				self._open_dialog, SetVolumeDialog, "setVolumeDialog",
+				initial_volume=volume if isinstance(volume, int) else None,
+			)
+
+		thread_manager.submit_task(_fetch, name="VolumeDialogTask", daemon=True)
 
 	@scriptHandler.script(
 		description=_("Seek to a specific time or jump forward/backward."),
@@ -1158,8 +1173,10 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		self._active_sleep_timer = None
 		self._clear_timer_state()
 		if self.client and self.client.client:
-			self.client._execute("pause_playback")
+			result = self.client._execute("pause_playback")
 			log.info("Sleep timer executed: Playback paused.")
+			if not isinstance(result, str):
+				wx.CallAfter(nvda_ui.message, _("Sleep timer ended. Playback paused."))
 
 	def _check_resume_sleep_timer(self):
 		"""Called at startup: Checks if there are any unfinished timers."""
@@ -1186,7 +1203,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 				self._clear_timer_state()
 				nvda_ui.message(_("Sleep timer cancelled."))
 			else:
-				nvda_ui.message(_("No sleep timer is running anyway, thanks for wasting your time."))
+				nvda_ui.message(_("No sleep timer is running."))
 			return
 		if self._active_sleep_timer:
 			self._active_sleep_timer.cancel()

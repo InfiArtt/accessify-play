@@ -360,34 +360,44 @@ class SpotifyClient:
 			playback = self._execute("current_playback")
 		if isinstance(playback, str):
 			return playback
-		if not playback or not playback.get("item") or not playback.get("is_playing"):
+		if not playback or not playback.get("item"):
 			return _("Nothing is currently playing.")
 
+		playing = playback.get("is_playing")
 		item_type = playback.get("currently_playing_type")
 		item = playback["item"]
 
 		if item_type == "track":
 			track_name = item.get("name")
 			artists = ", ".join([a["name"] for a in item.get("artists", [])])
-			album = item.get("album", {}).get("name")
-
-			parts = [f"{_('Currently playing:')} {track_name} {_('by')} {artists}"]
+			album = (item.get("album") or {}).get("name")
 			if album:
-				parts.append(f"{_('from the album')} {album}")
-			return " ".join(parts)
+				if playing:
+					message = _("Currently playing: {track} by {artists}, from the album {album}")
+				else:
+					message = _("Paused: {track} by {artists}, from the album {album}")
+				return message.format(track=track_name, artists=artists, album=album)
+			if playing:
+				message = _("Currently playing: {track} by {artists}")
+			else:
+				message = _("Paused: {track} by {artists}")
+			return message.format(track=track_name, artists=artists)
 
 		elif item_type == "episode":
 			episode_name = item.get("name")
 			show_info = item.get("show", {})
 			show_name = show_info.get("name")
-
-			return _("Playing episode: {episode_name} from the show {show_name}").format(
-				episode_name=episode_name, show_name=show_name
-			)
+			if playing:
+				message = _("Playing episode: {episode_name} from the show {show_name}")
+			else:
+				message = _("Paused episode: {episode_name} from the show {show_name}")
+			return message.format(episode_name=episode_name, show_name=show_name)
 
 		else:
 			name = item.get("name", _("Unknown Item"))
-			return _("Currently playing: {name}").format(name=name)
+			if playing:
+				return _("Currently playing: {name}").format(name=name)
+			return _("Paused: {name}").format(name=name)
 
 	def get_simple_track_string(self, item):
 		"""Returns a simple 'Title - Artist/Show' string from a playback item."""
@@ -550,7 +560,8 @@ class SpotifyClient:
 			return _("Queue is empty.")
 
 		next_item = queue_items[0]
-		return f"{self._describe_queue_item(next_item, _('Next in queue'))} {self._queue_autoplay_notice()}"
+		description = self._describe_queue_item(next_item, _("Next in queue"))
+		return f"{description} {self._queue_autoplay_notice()}"
 
 	def get_full_queue(self):
 		queue_data = self._execute_web_api("queue")

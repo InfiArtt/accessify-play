@@ -19,6 +19,8 @@ class QueueListDialog(AccessifyDialog):
 		self._refresh_in_progress = False
 
 		mainSizer = wx.BoxSizer(wx.VERTICAL)
+		# Translators: Label of a list or text field, read by screen readers.
+		mainSizer.Add(wx.StaticText(self, label=_("Queue:")), 0, wx.LEFT | wx.TOP, 5)
 		self.queueList = wx.ListBox(self)
 		self._bind_list_activation(self.queueList, self.play_selected_queue_item)
 

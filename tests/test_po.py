@@ -56,7 +56,7 @@ check(f"every translation formats with the original's arguments ({bad[:3] or 'al
 # Fixes made while reviewing the old translations.
 for msgid, expected in (("Now following artist: {artist_name}.", "Sekarang mengikuti artis: {artist_name}."),
                         ("Copy Link\tAlt+L", "Salin Tautan\tAlt+L"), ("Add to Queue\tAlt+Q", "Tambahkan ke Antrean\tAlt+Q"),
-                        ("Follow Artist\tAlt+F", "Ikuti Artis\tAlt+F"), ("Repeat: One Track", "Ulangi: Satu Trek"),
+                        ("Follow/Unfollow Artist\tAlt+F", "Ikuti/Berhenti Mengikuti Artis\tAlt+F"), ("Repeat: One Track", "Ulangi: Satu Trek"),
                         ("Show:", "Tampilkan:")):
     check(f"fixed: {msgid!r} -> {expected!r}", entries.get(msgid) == expected)
 check("menu shortcuts after a tab are never translated",

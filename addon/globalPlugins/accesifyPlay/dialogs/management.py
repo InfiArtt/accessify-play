@@ -275,7 +275,7 @@ class PodcastEpisodesDialog(AccessifyDialog):
 		self._episodes_offset = 0
 		self._episodes_loading = False
 		self._episodes_has_more = True
-		self._episodes_load_more_label = f"--- {_('Load More')} ---"
+		self._episodes_load_more_label = "--- {} ---".format(_("Load More"))
 		self._episodes_page_size = _get_search_limit(self.DEFAULT_EPISODES_PAGE_SIZE)
 		self.init_ui()
 		self.load_episodes()
@@ -285,6 +285,8 @@ class PodcastEpisodesDialog(AccessifyDialog):
 		panel = wx.Panel(self)
 		sizer = wx.BoxSizer(wx.VERTICAL)
 
+		# Translators: Label of a list or text field, read by screen readers.
+		sizer.Add(wx.StaticText(panel, label=_("Episodes:")), 0, wx.LEFT | wx.TOP, 5)
 		self.episodes_list = wx.ListBox(panel)
 		sizer.Add(self.episodes_list, 1, wx.EXPAND | wx.ALL, 5)
 
@@ -491,7 +493,7 @@ class ArtistDiscographyDialog(AccessifyDialog):
 		self._current_album_tracks = []
 		self._all_tracks_loading = False
 		self._all_tracks_can_load_more = False
-		self._all_tracks_load_more_label = f"--- {_('Load More')} ---"
+		self._all_tracks_load_more_label = "--- {} ---".format(_("Load More"))
 		self._user_playlists = user_playlists
 		self.init_ui()
 		self.load_data()
@@ -953,9 +955,9 @@ class AlbumTracksDialog(AccessifyDialog):
 		if release:
 			summary += f" — {release}"
 		if artist_names:
-			summary += f"\n{_('Artist(s): {artists}').format(artists=artist_names)}"
+			summary += "\n" + _("Artist(s): {artists}").format(artists=artist_names)
 		if subtitle:
-			summary += f"\n{_('Type: {album_type}').format(album_type=subtitle)}"
+			summary += "\n" + _("Type: {album_type}").format(album_type=subtitle)
 		summary_ctrl = wx.StaticText(panel, label=summary)
 		main_sizer.Add(summary_ctrl, 0, wx.ALL, 5)
 
@@ -1138,7 +1140,7 @@ class PlaylistTracksDialog(AccessifyDialog):
 		self._tracks_offset = 0
 		self._tracks_loading = False
 		self._tracks_has_more = True
-		self._tracks_load_more_label = f"--- {_('Load More')} ---"
+		self._tracks_load_more_label = "--- {} ---".format(_("Load More"))
 		self._tracks_page_size = _get_search_limit(self.DEFAULT_PLAYLIST_PAGE_SIZE)
 
 		self._init_ui()
@@ -1813,6 +1815,8 @@ class ManagementDialog(AccessifyDialog):
 		# old playlist. EVT_TEXT always follows the visible value; the handler
 		# ignores repeats, so both firing for one change loads it only once.
 		self.playlist_choices.Bind(wx.EVT_TEXT, self.on_playlist_selected)
+		# Translators: Label of a list or text field, read by screen readers.
+		sizer.Add(wx.StaticText(panel, label=_("Tracks:")), 0, wx.LEFT | wx.TOP, 5)
 		self.playlist_tracks_list = wx.ListBox(panel)
 		sizer.Add(self.playlist_tracks_list, 1, wx.EXPAND | wx.ALL, 5)
 
@@ -1937,11 +1941,12 @@ class ManagementDialog(AccessifyDialog):
 			playlist_name = p.get("name", _("Untitled"))
 
 			if owner_id == self.current_user_id:
-				display_text = f"{playlist_name} ({_('Owned by You')})"
+				owner_label = _("Owned by You")
 			elif owner_id:
-				display_text = f"{playlist_name} ({_('Owned by {name}').format(name=owner_name)})"
+				owner_label = _("Owned by {name}").format(name=owner_name)
 			else:
-				display_text = f"{playlist_name} ({_('Owned by Unknown')})"
+				owner_label = _("Owned by Unknown")
+			display_text = f"{playlist_name} ({owner_label})"
 
 			self.playlist_choices.Append(display_text)
 
@@ -2402,6 +2407,8 @@ class ManagementDialog(AccessifyDialog):
 		self.top_item_type_box.Bind(wx.EVT_COMBOBOX, self._on_top_items_choice)
 		self.time_range_box.Bind(wx.EVT_COMBOBOX, self._on_top_items_choice)
 
+		# Translators: Label of a list or text field, read by screen readers.
+		sizer.Add(wx.StaticText(panel, label=_("Items:")), 0, wx.LEFT | wx.TOP, 5)
 		list_control = wx.ListBox(panel)
 		sizer.Add(list_control, 1, wx.EXPAND | wx.ALL, 5)
 

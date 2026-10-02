@@ -27,7 +27,7 @@ If there are more results, the last item is "Load More". Press `Enter` on it to 
 | `Alt+Q` | Add to queue (songs, albums and playlists; albums and playlists are queued track by track) |
 | `Alt+L` | Copy the Spotify link |
 | `Alt+W` | Show the song's lyrics without playing it |
-| `Alt+F` | Follow the artist |
+| `Alt+F` | Follow or unfollow the artist |
 | `Alt+D` | Open the artist's discography |
 
 ## Context menu
@@ -36,7 +36,7 @@ Press the Applications key or `Shift+F10` on a result for more options. Besides 
 
 * **Song**: Add to Playlist (a submenu of your own playlists), Show Lyrics, Go to Album, Go to Artist.
 * **Album**: Save Album, Add Album to Playlist. Songs already in the playlist are skipped.
-* **Artist**: Follow Artist, View Discography.
+* **Artist**: Follow/Unfollow Artist, View Discography.
 * **Playlist made by someone else**: Follow Playlist or Unfollow Playlist, and Follow/Unfollow Owner, to follow the person who made it.
 * **Podcast**: View Episodes, Save/Unsave Show.
 * **Audiobook**: View Chapters, Save/Unsave Audiobook.
