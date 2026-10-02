@@ -52,6 +52,13 @@ jobs:
           export SKIP=no-commit-to-branch
           pre-commit run --all-files
 
+      # The tests stub out NVDA and wx, so they run on any OS. A failure stops
+      # the build here, before anything can be released.
+      - name: Run tests
+        run: |
+          pip install -r tests/requirements.txt
+          python tests/run_tests.py
+
       - name: Build addon and generate .pot
         run: scons && scons pot
 

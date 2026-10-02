@@ -21,7 +21,6 @@ site_scons/
 dist/
 archives/
 DevGuide.wiki/
-tests/
 
 pybabel.py
 .gemini/
