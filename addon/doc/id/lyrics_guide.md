@@ -9,7 +9,7 @@ Lirik berasal dari [lrclib.net](https://lrclib.net), basis data gratis yang dike
 * `Enter` pada sebuah baris melompatkan lagu ke baris itu (hanya lirik tersinkron).
 * **Jump to Current** (`Alt+J`) pindah ke baris yang sedang dinyanyikan (hanya lirik tersinkron).
 * **Copy Lyrics** (`Alt+L`) menyalin lirik sebagai teks.
-* **Copy with Timestamps** (`Alt+T`) menyalin lirik tersinkron beserta waktunya, dalam format LRC.
+* **Copy with Timestamps** (`Alt+T`, atau `Alt+W` jika Accessify Play berbahasa Indonesia) menyalin lirik tersinkron beserta waktunya, dalam format LRC.
 * **Close** atau `Escape` menutup jendela.
 
 Jendela ini mengikuti musik: saat lagu berikutnya dimulai, jendela menampilkan lirik lagu yang baru. Jika sebuah lagu tidak punya lirik, jendela akan memberitahukannya.

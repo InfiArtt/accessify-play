@@ -125,8 +125,10 @@ class AccessifyDialog(wx.Dialog):
 						return
 					added += 1
 				wx.CallAfter(ui.message, _("Queued {count} tracks from {name}.").format(count=added, name=name))
-			elif item_type in ("artist", "show"):
-				wx.CallAfter(ui.message, _("Spotify does not allow queueing entire {item_type}. Please queue individual items.").format(item_type=item_type))
+			elif item_type == "artist":
+				wx.CallAfter(ui.message, _("Spotify does not allow queueing a whole artist. Please queue individual tracks."))
+			elif item_type == "show":
+				wx.CallAfter(ui.message, _("Spotify does not allow queueing a whole show. Please queue individual episodes."))
 			else:
 				wx.CallAfter(ui.message, _("Cannot add this item to the queue."))
 		finally:
