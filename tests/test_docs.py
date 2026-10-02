@@ -75,4 +75,10 @@ check("minimum NVDA version in the guide matches buildVars",
 sc = open(os.path.join(ROOT, "sconstruct"), encoding="utf-8").read()
 check("the build no longer copies the repository readme over the guide", 'Path("readme.md")' not in sc)
 
+# The package carries no compiled files: CI runs the tests (which import the
+# add-on and could write __pycache__) before building.
+check("compiled files are excluded from the package", '"*.pyc"' in build)
+wf = open(os.path.join(ROOT, ".github", "workflows", "build_addon.yml"), encoding="utf-8").read()
+check("CI runs the tests without writing bytecode", 'PYTHONDONTWRITEBYTECODE: "1"' in wf)
+
 print(); print("FAILURES:", FAILS if FAILS else "none"); sys.exit(1 if FAILS else 0)

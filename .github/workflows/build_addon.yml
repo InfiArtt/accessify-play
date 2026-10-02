@@ -55,6 +55,10 @@ jobs:
       # The tests stub out NVDA and wx, so they run on any OS. A failure stops
       # the build here, before anything can be released.
       - name: Run tests
+        env:
+          # Importing the add-on's modules would otherwise leave __pycache__
+          # folders inside addon/, for the build below to pick up.
+          PYTHONDONTWRITEBYTECODE: "1"
         run: |
           pip install -r tests/requirements.txt
           python tests/run_tests.py
