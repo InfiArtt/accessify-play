@@ -7,8 +7,9 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    # One pull request for every action update, major ones included: major
+    # updates used to arrive one by one and sat unmerged for months.
     groups:
-      actions-minor:
-        update-types:
-          - minor
-          - patch
+      actions:
+        patterns:
+          - "*"
