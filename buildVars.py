@@ -23,10 +23,11 @@ addon_info = AddonInfo(
 	# Translators: Long description to be shown for this add-on on add-on information from add-on store
 	addon_description=_("""Accessify Play provides comprehensive NVDA control for Spotify playback on any Connect-enabled device. A Spotify Premium subscription is required for full functionality."""),
 	# version
-	addon_version="1.12.0",
+	addon_version="1.12.1",
 	# Brief changelog for this version
 	# Translators: what's new content for the add-on version to be shown in the add-on store
 	addon_changelog=_("""
+- 1.12.1: a smaller download; the 1.12.0 package accidentally contained compiled files.
 - Updates now come from the NVDA Add-on Store; the built-in updater has been removed.
 - Settings, Copy Universal Link and Sleep Timer can now be given a shortcut in Input Gestures.
 - Announce track (I) names the track and says it is paused, instead of "Nothing is currently playing".
