@@ -1,5 +1,38 @@
 # Changelog
 
+## Version 1.12.0
+
+### ⚠️ Updates now come from the NVDA Add-on Store
+
+- **The built-in updater has been removed.** Accessify Play is now updated through NVDA's Add-on Store (NVDA menu, Tools, Add-on Store), which tells you when a new version is available, like every other add-on. The Update Channel, "Check for updates automatically" and "Check for Updates" settings are gone. Every release is still published on GitHub Releases. If you are on 1.11.1 or earlier, its own updater offers you this version one last time.
+- **Installing no longer contacts GitHub**, and an installation can no longer hang: if the installation window failed to open, NVDA waited for it forever.
+
+### 🎉 Improvements
+
+- **Every command can have its own shortcut**: Settings, Copy Universal Link and Sleep Timer were missing from NVDA's Input Gestures dialog, so unlike every other command they could only be used through the command layer (`NVDA+Alt+G`). They are now listed under "Accessify Play".
+- **Announce track (`I`) works while paused**: it said "Nothing is currently playing." whenever the music was paused. It now names the track and says it is paused, and so do Next and Previous when used while paused.
+- **Top Items updates as you choose**: changing Show or Time Range in the Library's Top Items tab did nothing until you pressed Refresh, and Alt+R does nothing while you are on one of those boxes. The list now updates on its own.
+- **Set Volume (`V`) starts at your current volume** instead of always at 50.
+- **Alt+F in Search follows or unfollows** an artist, like `F` in the command layer, instead of only following.
+- **The sleep timer tells you when it pauses the music**, and no longer answers with a sarcastic remark when there is no timer to cancel.
+
+### 🛠️ Bug Fixes
+
+- **Help opened a guide from version 1.7.0**: the add-on contained two copies of its English guide, and the outdated one was the one NVDA opened from the Add-on Store and Add-ons Manager. Tables in the guide were also shown as rows of "|" characters.
+- **The lyrics window (`W`) failed the second time**: opening it again for a song whose lyrics had already been loaded, by an earlier `W` or by auto-read (`Y`), said "Could not load lyrics. Please check your internet connection."
+- **Show Lyrics in album and playlist track lists**: the track lists of an album or playlist opened from Search had no Show Lyrics, Go to Album or Go to Artist, although 1.11.0 added Show Lyrics to every track list.
+- **Unlabeled controls**: NVDA announced only "combo box", "edit" or "list" for the search type, the search field and the results in Search, and for the lists of devices, the queue, episodes, chapters, a playlist's tracks, Top Items and the commands in the Command Layer Editor, and for the lyrics text. Each now has a name.
+- **The Command Layer Editor showed internal names** such as "playMyTopTracks" for four commands.
+- **Sign-in messages mentioned a Client ID**: when signing in failed, the add-on told you to check your Client ID and your Spotify app's Redirect URI, which you have not needed since 1.9.0. It now tells you to finish signing in in your browser and check your internet connection.
+
+### 🌐 Translation
+
+- **Accessify Play is fully translated into Indonesian.** 166 messages had never been translated, so with Bahasa Indonesia selected, lyrics, audiobooks, Browse Categories, the Command Layer Editor and many messages were spoken in English. Some announcements, such as "Currently playing" and the volume, were built in a way that kept them out of translation altogether. Existing translations were corrected too, including menu items that showed the wrong shortcut and a mistranslated "Show" in Top Items.
+
+### 📖 Documentation
+
+- **The user guide has been rewritten** for how the add-on works today, in English and Indonesian, with a new page about lyrics. It no longer describes creating a Spotify developer app or entering a Client ID, and lists the command layer keys instead of shortcuts that no longer exist.
+
 ## Version 1.11.1
 
 ### 🛠️ Bug Fixes

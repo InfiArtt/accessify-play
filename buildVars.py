@@ -23,26 +23,20 @@ addon_info = AddonInfo(
 	# Translators: Long description to be shown for this add-on on add-on information from add-on store
 	addon_description=_("""Accessify Play provides comprehensive NVDA control for Spotify playback on any Connect-enabled device. A Spotify Premium subscription is required for full functionality."""),
 	# version
-	addon_version="1.11.1",
+	addon_version="1.12.0",
 	# Brief changelog for this version
 	# Translators: what's new content for the add-on version to be shown in the add-on store
 	addon_changelog=_("""
-- 1.11.1: reach a podcast's full episode list from a saved episode, and "View Episodes" for podcasts in search.
-- Saved Episodes and Saved Audiobooks: save individual podcast episodes and audiobooks, and find them in two new Library tabs.
-- One command to save or unsave episodes, shows and audiobooks, like Like/Unlike does for tracks.
-- Remove Duplicates and Clear Playlist, in the Library's Manage Playlists tab.
-- Show Lyrics for any song in a list without playing it (Alt+W in Search).
-- Follow or unfollow the owner of any playlist, and open audiobook, chapter and user links in Play from URL.
-- Fixed removing a track deleting every copy of it from a playlist; now only the selected copy is removed.
-- Fixed moving a track up or down sometimes moving a different track in playlists containing unavailable songs.
-- Fixed commands failing silently when not logged in to Spotify.
-- Fixed synced lyrics being mistimed, dropped, or read with a timestamp spoken aloud.
-- More reliable updates: downloads time out, and a failed update can be retried.
-- Manage Playlists now always shows the playlist you select, and Refresh keeps your place.
-- The Library (M) opens instantly and loads each tab only when you open it. Features Spotify retires now say so clearly.
-- Saving and following moved to Spotify's current library service, ahead of the old one being switched off.
-- 58% smaller libraries, with no .exe or compiled files, so it works the same on 32-bit and 64-bit NVDA.
-- No longer interferes with other add-ons that use Python's secrets module.
+- Updates now come from the NVDA Add-on Store; the built-in updater has been removed.
+- Settings, Copy Universal Link and Sleep Timer can now be given a shortcut in Input Gestures.
+- Announce track (I) names the track and says it is paused, instead of "Nothing is currently playing".
+- Top Items updates as soon as you change Show or Time Range.
+- Set Volume starts at the current volume; Alt+F in Search follows or unfollows an artist.
+- The sleep timer tells you when it pauses the music.
+- Fixed Help opening an outdated guide, and the lyrics window failing the second time for the same song.
+- Show Lyrics, Go to Album and Go to Artist in album and playlist track lists.
+- Names for unlabeled controls in Search, Devices, Queue, episode, chapter and other lists.
+- Complete and corrected Indonesian translation, and a rewritten user guide.
 	"""),
 	# Author(s)
 	addon_author="Rafli I .<rafli08523717409@gmail.com>, Rexya <rexya2017@gmail.com>",
