@@ -81,4 +81,17 @@ check("compiled files are excluded from the package", '"*.pyc"' in build)
 wf = open(os.path.join(ROOT, ".github", "workflows", "build_addon.yml"), encoding="utf-8").read()
 check("CI runs the tests without writing bytecode", 'PYTHONDONTWRITEBYTECODE: "1"' in wf)
 
+# Every bundled library is credited, with the version actually bundled.
+notices = open(os.path.join(ROOT, "addon", "thirdPartyNotices.md"), encoding="utf-8").read()
+lib = os.path.join(ROOT, "addon", "lib")
+for info in sorted(d for d in os.listdir(lib) if d.endswith(".dist-info")):
+    meta = open(os.path.join(lib, info, "METADATA"), encoding="utf-8").read()
+    name = re.search(r"^Name: (.+)$", meta, re.M).group(1).strip()
+    version = re.search(r"^Version: (.+)$", meta, re.M).group(1).strip()
+    row = next((l for l in notices.splitlines() if l.lower().startswith(f"| {name.lower()} |")), "")
+    check(f"thirdPartyNotices lists {name} {version}", f"| {version} |" in row)
+    check(f"...and {name}'s license text is bundled", bool(os.listdir(os.path.join(lib, info, "licenses"))) if os.path.isdir(os.path.join(lib, info, "licenses")) else False)
+check("thirdPartyNotices credits the copied secrets module", "_secrets_fallback.py" in notices)
+check("the README links to thirdPartyNotices", "addon/thirdPartyNotices.md" in readme)
+
 print(); print("FAILURES:", FAILS if FAILS else "none"); sys.exit(1 if FAILS else 0)

@@ -117,6 +117,8 @@ Your contributions have been instrumental in shaping Accessify Play into what it
 
 This addon is licensed under the [GNU General Public License v2.0](https://www.gnu.org/licenses/gpl-2.0.html).
 
+It bundles a few open-source libraries, such as spotipy (MIT), and one module copied from Python. [thirdPartyNotices.md](addon/thirdPartyNotices.md) lists each of them with its version, license, source and any changes.
+
 ## 💖 Support the Developer
 
 If you find this addon useful, please consider supporting its development. Every little bit helps!
