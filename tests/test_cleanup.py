@@ -89,7 +89,8 @@ check(f"no commented-out code left ({code or 'none'})", not code)
 
 # ------------------------------------------------ sign-in messages describe the current login
 settings = SOURCES[os.path.join(PKG, "dialogs", "settings.py")]
-for stale in ("Client ID", "Redirect URI", "re-enter your credentials", "127.0.0.1:5588"):
+# "Client ID" is back on purpose: the optional own Client ID setting.
+for stale in ("Redirect URI", "re-enter your credentials", "127.0.0.1:5588"):
     check(f"settings panel no longer mentions '{stale}'", stale not in settings)
 check("auth manager is never None, so no dead 'not configured' branches",
       "credentials not configured" not in client_src and "no credentials configured" not in client_src)

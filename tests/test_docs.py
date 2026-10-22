@@ -32,7 +32,8 @@ orphans = [f for f in pages["en"] if f != "readme.md"
 check(f"every page is linked from another ({orphans or 'none orphaned'})", not orphans)
 
 # Nothing describes setups that no longer exist.
-STALE = ["Client ID is correct", "Developer Dashboard", "Callback Port", "8888", "8539", "NVDA+Shift+Alt",
+# "Developer Dashboard" is back on purpose: the optional own Client ID.
+STALE = ["Client ID is correct", "Callback Port", "8888", "8539", "NVDA+Shift+Alt",
          "NVDA+Alt+Shift", "NVDA+G`", "Migrate Old Credentials", "Check for Updates", "Update Channel",
          "related artists", "Related Artists", "auto-update"]
 for (l, f), s in text.items():

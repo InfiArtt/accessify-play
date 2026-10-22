@@ -41,19 +41,22 @@ class ThreadManager:
 
 	def create_poller(self, target, interval_seconds=1, name=None):
 		"""
-		Creates a continuous polling thread. The target function should
-		accept a 'is_running' callable that returns True as long as the poller
-		should keep running.
+		Creates a continuous polling thread that calls target every
+		interval_seconds. target may return a number of seconds to wait
+		before the next call instead, to poll faster or slower as needed.
 		"""
 		def poller_wrapper():
 			while self._is_running:
+				delay = None
 				try:
-					target()
+					delay = target()
 				except Exception as e:
 					log.error(f"Error in poller {name or target.__name__}: {e}", exc_info=True)
-				
+				if delay is None:
+					delay = interval_seconds
+
 				# Sleep in small chunks to allow quick cancellation
-				for _ in range(int(interval_seconds * 10)):
+				for _ in range(int(delay * 10)):
 					if not self._is_running:
 						return
 					time.sleep(0.1)

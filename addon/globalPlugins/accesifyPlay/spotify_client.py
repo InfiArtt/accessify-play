@@ -1,6 +1,8 @@
 # spotify_client.py
 
+import math
 import os
+import re
 import time
 import webbrowser
 from urllib.parse import urlparse
@@ -22,9 +24,56 @@ init_translation()
 # This will be the single, shared instance of the client
 _instance = None
 
+#: The ncspot client ID: extended quota and PKCE, so nobody has to register an app.
+#: Its request limit is shared by everyone using it, which is why users may set their own.
+SHARED_CLIENT_ID = "d420a117a32841c2b3474932e49fb54b"
+#: Also the URI to register on an app of one's own.
+REDIRECT_URI = "http://127.0.0.1:5588/login"
+#: The most results one search may ask for from a Development Mode app, which
+#: is what an own Client ID is, since Spotify's February 2026 changes.
+DEV_MODE_SEARCH_LIMIT = 10
+#: Retry-After is sometimes missing from a 429; wait this long then.
+_DEFAULT_RATE_LIMIT_SECONDS = 5
+
+
+def is_valid_client_id(value):
+	"""Whether value looks like a Spotify client ID: 32 hexadecimal digits."""
+	return bool(re.fullmatch(r"[0-9a-fA-F]{32}", value or ""))
+
+
+def own_client_id():
+	"""The user's own client ID from settings, or "" when they use the shared one.
+
+	Read from ownClientID, not clientID: configurations from before 1.9 still
+	carry a clientID for the old redirect URI, and picking that up again would
+	break their sign-in.
+	"""
+	try:
+		value = (config.conf["spotify"]["ownClientID"] or "").strip()
+	except Exception:
+		return ""
+	return value if is_valid_client_id(value) else ""
+
+
+def search_limit():
+	"""Results per search page: the setting, capped for an own Client ID.
+
+	Asking a Development Mode app's search for more than it allows fails
+	outright with "Invalid limit", so the cap is applied rather than reported.
+	"""
+	limit = config.conf["spotify"]["searchLimit"]
+	return min(limit, DEV_MODE_SEARCH_LIMIT) if own_client_id() else limit
+
 
 def _get_cache_path():
-	"""Returns the path to the Spotify token cache file."""
+	"""Returns the path to the Spotify token cache file.
+
+	A token only works with the client ID that issued it, so an own client ID
+	gets a cache of its own and switching back and forth needs no new sign-in.
+	"""
+	client_id = own_client_id()
+	if client_id:
+		return paths.get_data_path(f"spotifyCache-{client_id.lower()}.json")
 	return paths.get_data_path(paths.CACHE_FILE)
 
 
@@ -75,14 +124,7 @@ def _friendly_error(e):
 	status = getattr(e, "http_status", None)
 
 	if status == 429:
-		retry_after = None
-		if getattr(e, "headers", None):
-			retry_after = _format_retry_delay(e.headers.get("Retry-After"))
-		if retry_after:
-			return _(
-				"Spotify is limiting requests at the moment. Please try again in {delay}."
-			).format(delay=retry_after)
-		return _("Spotify is limiting requests at the moment. Please try again shortly.")
+		return _rate_limit_message(_retry_after(e))
 
 	status_messages = {
 		400: _("Spotify could not handle that request. Please try again."),
@@ -101,6 +143,57 @@ def _friendly_error(e):
 	return _("Spotify could not complete that request. Please try again.")
 
 
+def _retry_after(e):
+	"""The Retry-After of a 429, in seconds, or None when it has none."""
+	headers = getattr(e, "headers", None)
+	if not headers:
+		return None
+	try:
+		return int(headers.get("Retry-After"))
+	except (TypeError, ValueError):
+		return None
+
+
+def _rate_limit_message(seconds):
+	delay = _format_retry_delay(seconds)
+	if delay:
+		return _(
+			"Spotify is limiting requests at the moment. Please try again in {delay}."
+		).format(delay=delay)
+	return _("Spotify is limiting requests at the moment. Please try again shortly.")
+
+
+def _new_spotify(auth_manager):
+	"""A spotipy client that answers a rate limit at once instead of waiting it out.
+
+	spotipy retries 429 responses by default, and urllib3 sleeps for the whole
+	Retry-After before each retry, so a rate-limited command left NVDA silent
+	for seconds or minutes. Only server errors are retried now; a 429 comes
+	straight back and _friendly_error says how long to wait.
+	"""
+	client = spotipy.Spotify(
+		auth_manager=auth_manager,
+		requests_timeout=10,
+		status_forcelist=(500, 502, 503, 504),
+	)
+	# urllib3 also retries any 429 that carries Retry-After, whatever the
+	# status list says; turning that off is what makes the 429 come back.
+	for adapter in client._session.adapters.values():
+		adapter.max_retries = adapter.max_retries.new(respect_retry_after_header=False)
+	return client
+
+
+def _is_rate_limit(e):
+	return getattr(e, "http_status", None) == 429
+
+
+def _is_no_active_device(e):
+	"""Whether a player command failed only because no device is active."""
+	if getattr(e, "reason", None) == "NO_ACTIVE_DEVICE":
+		return True
+	return getattr(e, "http_status", None) == 404 and "no active device" in str(e).lower()
+
+
 def get_client():
 	"""Returns the shared instance of the SpotifyClient."""
 	global _instance
@@ -113,19 +206,17 @@ class SpotifyClient:
 	def __init__(self):
 		self.client = None
 		self.device_id = None
+		#: time.monotonic() until which Spotify asked us to stop sending requests.
+		self._rate_limited_until = 0.0
 
 	def _get_cache_handler(self):
 		"""Creates a CacheFileHandler pointing at the add-on's data folder."""
 		return CacheFileHandler(cache_path=_get_cache_path())
 
 	def _get_auth_manager(self, open_browser=False):
-		# We use the ncspot Client ID which has an extended quota and supports PKCE
-		clientID = "d420a117a32841c2b3474932e49fb54b"
-		redirect_uri = "http://127.0.0.1:5588/login"
-
 		return SpotifyPKCE(
-			client_id=clientID,
-			redirect_uri=redirect_uri,
+			client_id=own_client_id() or SHARED_CLIENT_ID,
+			redirect_uri=REDIRECT_URI,
 			scope="user-read-playback-state user-modify-playback-state user-read-currently-playing user-library-modify user-library-read playlist-read-private playlist-read-collaborative playlist-modify-public playlist-modify-private user-top-read user-read-recently-played user-follow-read user-follow-modify",
 			cache_handler=self._get_cache_handler(),
 			open_browser=webbrowser.open if open_browser else False,
@@ -138,7 +229,7 @@ class SpotifyClient:
 		try:
 			token_info = auth_manager.get_access_token(check_cache=True)
 			if token_info:
-				self.client = spotipy.Spotify(auth_manager=auth_manager, requests_timeout=10)
+				self.client = _new_spotify(auth_manager)
 				log.info("Spotify: client successfully initialized from cache.")
 			else:
 				self.client = None
@@ -160,7 +251,7 @@ class SpotifyClient:
 		try:
 			token_info = auth_manager.get_access_token(check_cache=False)
 			if token_info:
-				self.client = spotipy.Spotify(auth_manager=auth_manager, requests_timeout=10)
+				self.client = _new_spotify(auth_manager)
 				self.client.current_user()  # Test call
 				log.info("Spotify: validation successful.")
 				return True
@@ -181,6 +272,34 @@ class SpotifyClient:
 			log.error(f"Spotify: interactive validation failed: {e}", exc_info=True)
 			return False
 
+	def reset_session(self):
+		"""Forget the sign-in, device and rate limit, after the Client ID changed.
+
+		Each Client ID has its own token and its own request limit, so none of
+		them carry over to the new one.
+		"""
+		self.client = None
+		self.device_id = None
+		self._rate_limited_until = 0.0
+		self._current_user_id = None
+
+	def _note_rate_limit(self, e):
+		"""Hold every request back for as long as the 429 asks.
+
+		The limit is shared by everyone on the same client ID, and requests
+		sent while it lasts only keep it going, so none are sent at all.
+		"""
+		seconds = _retry_after(e) or _DEFAULT_RATE_LIMIT_SECONDS
+		self._rate_limited_until = max(self._rate_limited_until, time.monotonic() + seconds)
+		log.debug(f"Spotify rate limit: holding requests for {seconds} s ({e})")
+
+	def rate_limit_message(self):
+		"""What to say instead of sending a request while a rate limit lasts, or None."""
+		remaining = self._rate_limited_until - time.monotonic()
+		if remaining <= 0:
+			return None
+		return _rate_limit_message(math.ceil(remaining))
+
 	def _resolve_command(self, command):
 		"""Turn a spotipy method name into the bound method.
 
@@ -194,25 +313,47 @@ class SpotifyClient:
 		return getattr(self.client, command) if isinstance(command, str) else command
 
 	def _execute(self, command, *args, **kwargs):
-		"""Wrapper to ensure client and device are ready before executing playback commands."""
+		"""Wrapper to ensure client and device are ready before executing playback commands.
+
+		Looking the device up costs a request of its own, so it is done only
+		when no device is known yet, or when Spotify says none is active.
+		Otherwise the command goes straight to whichever device is active.
+		"""
 		if not self.client:
 			return _("Spotify client not ready. Please validate your credentials.")
 
-		if not self._ensure_device():
-			return _("No active Spotify device found. Please start playback in your Spotify app.")
+		waiting = self.rate_limit_message()
+		if waiting:
+			return waiting
 
+		no_device = _("No active Spotify device found. Please start playback in your Spotify app.")
 		try:
 			command = self._resolve_command(command)
 			if command.__name__ == "current_playback":
 				kwargs["additional_types"] = "episode"
-			if "device_id" in command.__code__.co_varnames:
-				kwargs["device_id"] = self.device_id
+			takes_device = "device_id" in command.__code__.co_varnames
 
-			result = command(*args, **kwargs)
-			return result
+			if self.device_id is not None:
+				try:
+					result = command(*args, **kwargs)
+				except SpotifyException as e:
+					if not _is_no_active_device(e):
+						raise
+				else:
+					# With no active device, current_playback answers 204 rather than an error.
+					if result is not None or command.__name__ != "current_playback":
+						return result
+
+			if not self._ensure_device():
+				return no_device
+			if takes_device:
+				kwargs["device_id"] = self.device_id
+			return command(*args, **kwargs)
 		except SpotifyException as e:
 			message = str(e).lower()
-			if "restriction" not in message:
+			if _is_rate_limit(e):
+				self._note_rate_limit(e)
+			elif "restriction" not in message:
 				log.error(f"Spotify command failed: {e}", exc_info=True)
 			if e.http_status == 401:  # Unauthorized
 				self.initialize()  # Try to refresh the token silently
@@ -239,6 +380,10 @@ class SpotifyClient:
 		if not self.client:
 			return _("Spotify client not ready. Please validate your credentials.")
 
+		waiting = self.rate_limit_message()
+		if waiting:
+			return waiting
+
 		try:
 			command = self._resolve_command(command)
 			if command.__name__ == "current_playback":
@@ -258,6 +403,9 @@ class SpotifyClient:
 				# An outcome the caller already knows how to explain.
 				log.debug(f"Spotify returned {e.http_status} for {command.__name__}: {e}")
 				return status_messages[e.http_status]
+			if _is_rate_limit(e):
+				self._note_rate_limit(e)  # logs it; no traceback for something this expected
+				return _friendly_error(e)
 			log.error(f"Spotify command failed: {e}", exc_info=True)
 			if e.http_status == 401:  # Unauthorized
 				self.initialize()  # Try to refresh the token silently
@@ -284,7 +432,7 @@ class SpotifyClient:
 		Sends a lightweight request to keep the connection active.
 		Using current_user (Get Profile) as it's low impact.
 		"""
-		if not self.client:
+		if not self.client or self.rate_limit_message():
 			return
 		try:
 			self.client.current_user()
@@ -316,6 +464,11 @@ class SpotifyClient:
 				return False
 		except (requests.exceptions.ReadTimeout, requests.exceptions.Timeout, urllib3.exceptions.ReadTimeoutError, TimeoutError) as e:
 			log.debug(f"Spotify ReadTimeout on fetching devices: {e}")
+			return False
+		except SpotifyException as e:
+			if _is_rate_limit(e):
+				raise  # _execute says how long to wait; "no device" would be wrong
+			log.error(f"Spotify: could not fetch devices: {e}", exc_info=True)
 			return False
 		except Exception as e:
 			log.error(f"Spotify: could not fetch devices: {e}", exc_info=True)
@@ -349,6 +502,12 @@ class SpotifyClient:
 			except (requests.exceptions.ReadTimeout, requests.exceptions.Timeout, urllib3.exceptions.ReadTimeoutError, TimeoutError) as e:
 				log.debug(f"Spotify: failed to wake up device (timeout): {e}")
 				self.device_id = None
+			except SpotifyException as e:
+				if _is_rate_limit(e):
+					raise
+				log.error(f"Spotify: failed to wake up device: {e}", exc_info=True)
+				self.device_id = None
+				return False
 			except Exception as e:
 				log.error(f"Spotify: failed to wake up device: {e}", exc_info=True)
 				self.device_id = None
@@ -456,9 +615,8 @@ class SpotifyClient:
 		if not query:
 			return None
 
-		limit = config.conf["spotify"]["searchLimit"]
 		results = self._execute_web_api(
-			"search", q=query, type=search_type, limit=limit, offset=offset
+			"search", q=query, type=search_type, limit=search_limit(), offset=offset
 		)
 		if isinstance(results, str):
 			return results

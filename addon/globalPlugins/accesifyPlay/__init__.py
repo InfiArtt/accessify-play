@@ -29,10 +29,20 @@ confspec = {
 	"seekDuration": "integer(min=1, max=60, default=15)",
 	"language": "string(default='auto')",
 	"announceTrackChanges": "boolean(default=False)",
-	"keepAliveInterval": "integer(min=0, default=30)",
+	"keepAliveInterval": "integer(min=0, default=0)",
+	# Empty: the shared client ID. See spotify_client.own_client_id().
+	"ownClientID": "string(default='')",
 	"volumeStep": "integer(default=5, min=1, max=100)",
 }
 config.conf.spec["spotify"] = confspec
+
+#: How often the track poller asks Spotify what is playing, in seconds.
+POLL_PLAYING_SECONDS = 5
+POLL_PAUSED_SECONDS = 10
+#: Nothing playing on any device, or Spotify unreachable.
+POLL_IDLE_SECONDS = 15
+#: How often the auto-reader's lyric timers are corrected while playing.
+LYRIC_RESYNC_SECONDS = 10
 
 # NVDA 2025's bundled Python leaves out the standard `secrets` module, which
 # spotipy needs to log in. Supply a complete copy only when it is missing, so
@@ -97,6 +107,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		self._lyrics_cache = {}  # track_id → {"plain", "synced", "track_name", "artist_name"}
 		self._auto_reader_synced_lyrics = None  # current synced LRC text used for resync
 		self._last_is_playing = None  # tracks play/pause state for lyric timer management
+		self._last_lyric_resync = 0.0  # time.monotonic() of the last lyric resync
 		self._lyrics_fetching = False  # guard against double-fetch on rapid Y/W presses
 
 		self._queueDialogLoading = False
@@ -107,8 +118,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		# Poll for track changes.
 		self.last_track_id = None
 		self.is_running = True
-		thread_manager.create_poller(self.track_change_poller, interval_seconds=5, name="TrackChangePoller")
-		thread_manager.create_poller(self._lyric_resync_poller, interval_seconds=10, name="LyricResyncPoller")
+		thread_manager.create_poller(self.track_change_poller, interval_seconds=POLL_PLAYING_SECONDS, name="TrackChangePoller")
 		thread_manager.submit_task(self.keep_alive_worker, daemon=True, name="KeepAliveWorker")
 		thread_manager.submit_task(self.client.initialize, daemon=True, name="ClientInit")
 
@@ -188,6 +198,11 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	def track_change_poller(self):
 		"""Single-pass poll for track changes. Called repeatedly by thread_manager.create_poller().
 		Do NOT add a while loop here — create_poller() already handles the polling cycle.
+
+		Returns how long to wait before the next poll: every request counts
+		against a limit shared by everyone on the same client ID, so it polls
+		less often while nothing is playing. The same answer also keeps the
+		auto-reader's lyrics in time, which used to take a poller of its own.
 		"""
 		try:
 			needs_poll = (
@@ -196,9 +211,13 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 				or self.lyricsDialog is not None  # also poll when lyrics window is open
 			)
 			if not (needs_poll and self.client.client):
-				return
+				return None
 
 			playback = self.client._execute_web_api("current_playback")
+			if isinstance(playback, str):
+				# An error message (offline, rate limited...): say nothing and keep
+				# the state, or the track would be announced again once it clears.
+				return POLL_IDLE_SECONDS
 			is_playing = (
 				playback.get("is_playing", False)
 				if playback and isinstance(playback, dict)
@@ -222,10 +241,22 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 							self._auto_reader_synced_lyrics,
 							playback.get("progress_ms", 0),
 						)
+						self._last_lyric_resync = time.monotonic()
+				elif (
+					is_playing
+					and self._auto_reader_synced_lyrics
+					and current_track_id == self.last_track_id
+					and time.monotonic() - self._last_lyric_resync >= LYRIC_RESYNC_SECONDS
+				):
+					# Correct the timers for drift and seeks made elsewhere.
+					self._auto_reader.resync(self._auto_reader_synced_lyrics, playback.get("progress_ms", 0))
+					self._last_lyric_resync = time.monotonic()
 			self._last_is_playing = is_playing
 
 			if self.last_track_id != current_track_id:
 				self.last_track_id = current_track_id
+				# Its lyrics may still be loading; resyncing now would time the old ones.
+				self._last_lyric_resync = time.monotonic()
 				if current_track_id:
 					if utils.conf_get("announceTrackChanges", False):
 						track_string = self.client.get_simple_track_string(playback["item"])
@@ -247,8 +278,13 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 							daemon=True,
 							name="LyricsWindowRefresh",
 						)
+			if is_playing or (playback and self._auto_reader.is_active):
+				# Paused lyrics must pick up promptly once the music resumes.
+				return POLL_PLAYING_SECONDS
+			return POLL_PAUSED_SECONDS if playback else POLL_IDLE_SECONDS
 		except Exception as e:
 			log.error(f"Error in Spotify polling thread: {e}", exc_info=True)
+			return None
 
 	# --- LYRICS SUPPORT METHODS ---
 
@@ -283,23 +319,6 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 				log.error(f"AccessifyPlay jump-to-current error: {e}", exc_info=True)
 
 		_do()
-
-	def _lyric_resync_poller(self):
-		"""Re-syncs lyric timers every 10 s to correct for seek/pause drift.
-		Only does work when auto-reader is active.
-		"""
-		if not (self._auto_reader.is_active and self._auto_reader_synced_lyrics):
-			return
-		try:
-			if not self.client.client:
-				return
-			playback = self.client._execute_web_api("current_playback")
-			if not isinstance(playback, dict) or not playback.get("is_playing"):
-				return  # Don't resync while paused — timers are effectively frozen
-			progress_ms = playback.get("progress_ms", 0)
-			self._auto_reader.resync(self._auto_reader_synced_lyrics, progress_ms)
-		except Exception as e:
-			log.debug(f"AccessifyPlay lyric resync error: {e}")
 
 	def _restart_auto_reader(self, item, progress_ms):
 		"""Fetch lyrics for a new track and restart the auto-reader.
@@ -573,7 +592,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	def keep_alive_worker(self):
 		"""Ping Spotify periodically to keep the connection alive."""
 		while self.is_running:
-			interval = utils.conf_get("keepAliveInterval", 30)
+			interval = utils.conf_get("keepAliveInterval", 0)
 
 			if interval == 0:
 				time.sleep(5)

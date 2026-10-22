@@ -35,7 +35,9 @@ class Player:
     def current_user(self): return {"id": "me"}
 
 c = sc.SpotifyClient()
-c._ensure_device = lambda: True; c.device_id = "DEV1"
+def _found_device():
+    c.device_id = "DEV1"; return True
+c._ensure_device = _found_device
 
 # Logged out: every wrapper returns the message, nothing raises.
 for fn, args in [("_execute", ("next_track",)), ("_execute", ("volume", 50)),
@@ -49,7 +51,8 @@ c._execute("next_track")
 check("resolved name is called", p.calls[-1][0] == "next")
 check("device_id injected on the resolved method", p.calls[-1] == ("next", "DEV1"))
 c._execute("volume", 40)
-check("positional args pass through", p.calls[-1] == ("vol", 40, "DEV1"))
+# Once a device is known the command goes to the active one, so no device_id.
+check("positional args pass through", p.calls[-1] == ("vol", 40, None))
 c._execute_web_api("current_playback")
 check("current_playback gets additional_types=episode", p.calls[-1] == ("playback", "episode"))
 check("web api returns the value", c._execute_web_api("current_user") == {"id": "me"})

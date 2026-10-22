@@ -2,7 +2,6 @@
 
 from ..core.thread_manager import thread_manager
 
-import config
 import ui
 import wx
 
@@ -205,7 +204,8 @@ class SearchDialog(AccessifyDialog):
 
 		if search_results.get("next"):
 			self.can_load_more = True
-			limit = config.conf["spotify"]["searchLimit"]
+			# The page size Spotify actually used, which an own Client ID caps.
+			limit = search_results.get("limit") or len(new_items)
 			self.next_offset = search_results.get("offset", 0) + limit
 		else:
 			self.can_load_more = False

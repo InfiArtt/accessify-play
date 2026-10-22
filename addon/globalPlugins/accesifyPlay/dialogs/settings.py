@@ -1,5 +1,7 @@
 from ..core.thread_manager import thread_manager
 
+import webbrowser
+
 import config
 import gui
 import ui
@@ -14,7 +16,7 @@ from ..language import init_translation  # noqa: E402
 
 init_translation()
 
-
+DEVELOPER_DASHBOARD_URL = "https://developer.spotify.com/dashboard"
 
 
 class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
@@ -48,7 +50,7 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 		keep_alive_label = _("Keep Alive Interval (seconds, 0 = Off, Min = 5)")
 		self.keepAliveCtrl = sHelper.addLabeledControl(keep_alive_label, wx.SpinCtrl)
 		self.keepAliveCtrl.SetRange(0, 300)
-		self.keepAliveCtrl.SetValue(conf_get("keepAliveInterval", 30))
+		self.keepAliveCtrl.SetValue(conf_get("keepAliveInterval", 0))
 		# Translators: Label for a setting to choose the display language for the addon.
 		language_label = _("Language:")
 		self.languageEntries = self._buildLanguageEntries()
@@ -75,6 +77,12 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 		)
 		self.announceTrackChanges.SetValue(conf_get("announceTrackChanges", False))
 
+		# Translators: Label for an optional setting where users can enter the Client ID
+		# of a Spotify developer app of their own, instead of the shared one.
+		own_client_id_label = _("Your own Spotify Client ID (optional, leave blank to use the shared one):")
+		self.ownClientIDCtrl = sHelper.addLabeledControl(own_client_id_label, wx.TextCtrl)
+		self.ownClientIDCtrl.SetValue(conf_get("ownClientID", ""))
+
 		buttonsSizer = wx.BoxSizer(wx.HORIZONTAL)
 
 		self.validateButton = wx.Button(self, label=_("Validate Credentials"))
@@ -84,6 +92,12 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 		self.clearCredentialsButton = wx.Button(self, label=_("Clear Credentials"))
 		self.clearCredentialsButton.Bind(wx.EVT_BUTTON, self.onClearCredentials)
 		buttonsSizer.Add(self.clearCredentialsButton, flag=wx.LEFT, border=5)
+
+		# Translators: A button that opens the Spotify developer website, where users
+		# can create an app of their own to get a Client ID.
+		self.dashboardButton = wx.Button(self, label=_("Spotify Developer Dashboard"))
+		self.dashboardButton.Bind(wx.EVT_BUTTON, lambda evt: webbrowser.open(DEVELOPER_DASHBOARD_URL))
+		buttonsSizer.Add(self.dashboardButton, flag=wx.LEFT, border=5)
 
 		self.donateButton = wx.Button(self, label=_("Donate"))
 		self.donateButton.Bind(wx.EVT_BUTTON, lambda evt: donate.open_donate_link())
@@ -99,7 +113,43 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 			entries.append((code, label))
 		return entries
 
+	def isValid(self):
+		value = self.ownClientIDCtrl.GetValue().strip()
+		if value and not spotify_client.is_valid_client_id(value):
+			messageBox(
+				# Translators: Shown when the Client ID entered in settings has the wrong form.
+				_(
+					"That does not look like a Spotify Client ID. A Client ID is 32 letters "
+					"and digits, shown on your app's page in the Spotify Developer Dashboard. "
+					"Leave the field blank to use the shared one."
+				),
+				# Translators: Title of the message shown for a malformed Client ID.
+				_("Invalid Client ID"),
+				wx.OK | wx.ICON_ERROR,
+			)
+			self.ownClientIDCtrl.SetFocus()
+			return False
+		return super().isValid()
+
 	def onSave(self):
+		if self._saveValues():
+			self.client.reset_session()
+			thread_manager.submit_task(self._signInAfterClientIDChange, name="DialogTask", daemon=True)
+
+	def _signInAfterClientIDChange(self):
+		"""Use the token saved for the new Client ID, if it was signed in before."""
+		self.client.initialize()
+		if self.client.client:
+			# Translators: Announced after changing the Client ID in settings, when
+			# the add-on was already signed in with that Client ID before.
+			wx.CallAfter(ui.message, _("Client ID changed. You are signed in."))
+		else:
+			# Translators: Announced after changing the Client ID in settings, when
+			# the user still needs to sign in with it.
+			wx.CallAfter(ui.message, _("Client ID changed. Choose Validate Credentials to sign in."))
+
+	def _saveValues(self):
+		"""Store the panel's values. Returns whether the Client ID changed."""
 		config.conf["spotify"]["searchLimit"] = self.limitCtrl.GetValue()
 		config.conf["spotify"]["seekDuration"] = self.seekDurationCtrl.GetValue()
 		config.conf["spotify"]["volumeStep"] = self.volumeStepCtrl.GetValue()
@@ -119,8 +169,19 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 		config.conf["spotify"]["keepAliveInterval"] = ka_val
 		config.conf["spotify"]["announceTrackChanges"] = self.announceTrackChanges.IsChecked()
 
+		own_client_id = self.ownClientIDCtrl.GetValue().strip()
+		if not spotify_client.is_valid_client_id(own_client_id):
+			own_client_id = ""
+		changed = own_client_id != conf_get("ownClientID", "")
+		config.conf["spotify"]["ownClientID"] = own_client_id
+		return changed
+
 	def onValidate(self, evt):
-		self.onSave()  # Save current UI values to config.conf before validating
+		if not self.isValid():
+			return
+		# Save current UI values to config.conf before validating
+		if self._saveValues():
+			self.client.reset_session()
 		ui.message(_("Validating credentials with Spotify..."))
 		thread_manager.submit_task(self.run_validation, name='DialogTask', daemon=True)
 

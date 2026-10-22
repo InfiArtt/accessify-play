@@ -43,49 +43,19 @@ msgstr ""
 #: buildVars.py:29
 msgid ""
 "\n"
-"- 1.12.1: a smaller download; the 1.12.0 package accidentally contained "
-"compiled files.\n"
-"- Updates now come from the NVDA Add-on Store; the built-in updater has been"
-" removed.\n"
-"- Settings, Copy Universal Link and Sleep Timer can now be given a shortcut "
-"in Input Gestures.\n"
-"- Announce track (I) names the track and says it is paused, instead of "
-"\"Nothing is currently playing\".\n"
-"- Top Items updates as soon as you change Show or Time Range.\n"
-"- Set Volume starts at the current volume; Alt+F in Search follows or "
-"unfollows an artist.\n"
-"- The sleep timer tells you when it pauses the music.\n"
-"- Fixed Help opening an outdated guide, and the lyrics window failing the "
-"second time for the same song.\n"
-"- Show Lyrics, Go to Album and Go to Artist in album and playlist track "
-"lists.\n"
-"- Names for unlabeled controls in Search, Devices, Queue, episode, chapter "
-"and other lists.\n"
-"- Complete and corrected Indonesian translation, and a rewritten user guide."
-"\n"
+"- Far fewer \"Spotify is limiting requests\" errors: Accessify Play now sends much fewer requests to Spotify.\n"
+"- When Spotify does ask it to wait, it says how long at once instead of going silent.\n"
+"- Keep Alive Interval is now off by default.\n"
+"- Optional: sign in with a Spotify Client ID of your own, with a Spotify Developer Dashboard button in settings.\n"
+"- Track changes are no longer announced again after a connection or rate-limit error.\n"
 "\t"
 msgstr ""
 "\n"
-"- 1.12.1: unduhan lebih kecil; paket 1.12.0 tidak sengaja berisi file "
-"terkompilasi.\n"
-"- Pembaruan kini datang dari Add-on Store NVDA; pembaru bawaan telah "
-"dihapus.\n"
-"- Settings, Copy Universal Link, dan Sleep Timer kini bisa diberi pintasan "
-"di Input Gestures.\n"
-"- Umumkan trek (I) menyebut nama trek dan memberi tahu jika sedang dijeda, "
-"bukan \"Tidak ada yang sedang diputar\".\n"
-"- Top Items langsung diperbarui saat Show atau Time Range diubah.\n"
-"- Atur Volume dimulai dari volume saat ini; Alt+F di Pencarian mengikuti "
-"atau berhenti mengikuti artis.\n"
-"- Pengatur waktu tidur memberi tahu saat menjeda musik.\n"
-"- Memperbaiki Bantuan yang membuka panduan lama, dan jendela lirik yang "
-"gagal saat dibuka kedua kali untuk lagu yang sama.\n"
-"- Tampilkan Lirik, Buka Album, dan Buka Artis di daftar trek album dan "
-"daftar putar.\n"
-"- Nama untuk kontrol tanpa label di Pencarian, Perangkat, Antrean, daftar "
-"episode, bab, dan lainnya.\n"
-"- Terjemahan bahasa Indonesia yang lengkap dan diperbaiki, serta panduan "
-"pengguna yang ditulis ulang.\n"
+"- Jauh lebih jarang muncul \"Spotify sedang membatasi permintaan\": Accessify Play kini mengirim jauh lebih sedikit permintaan ke Spotify.\n"
+"- Saat Spotify meminta menunggu, langsung disebutkan berapa lama, tidak lagi diam.\n"
+"- Keep Alive Interval kini nonaktif secara bawaan.\n"
+"- Opsional: masuk dengan Client ID Spotify milik sendiri, dengan tombol Spotify Developer Dashboard di pengaturan.\n"
+"- Pergantian trek tidak lagi diumumkan ulang setelah gangguan koneksi atau pembatasan permintaan.\n"
 "\t"
 
 #: addon/installTasks.py:32
@@ -2136,6 +2106,48 @@ msgstr "Bahasa:"
 #: addon/globalPlugins/accesifyPlay/dialogs/settings.py:74
 msgid "Announce track changes automatically:"
 msgstr "Umumkan perubahan trek secara otomatis:"
+
+#. Translators: Label for an optional setting where users can enter the Client ID
+#. of a Spotify developer app of their own, instead of the shared one.
+#: addon/globalPlugins/accesifyPlay/dialogs/settings.py
+msgid "Your own Spotify Client ID (optional, leave blank to use the shared one):"
+msgstr ""
+"Client ID Spotify milik sendiri (opsional, kosongkan untuk memakai yang "
+"bersama):"
+
+#. Translators: A button that opens the Spotify developer website, where users
+#. can create an app of their own to get a Client ID.
+#: addon/globalPlugins/accesifyPlay/dialogs/settings.py
+msgid "Spotify Developer Dashboard"
+msgstr "Spotify Developer Dashboard"
+
+#. Translators: Shown when the Client ID entered in settings has the wrong form.
+#: addon/globalPlugins/accesifyPlay/dialogs/settings.py
+msgid ""
+"That does not look like a Spotify Client ID. A Client ID is 32 letters and "
+"digits, shown on your app's page in the Spotify Developer Dashboard. Leave "
+"the field blank to use the shared one."
+msgstr ""
+"Itu sepertinya bukan Client ID Spotify. Client ID terdiri dari 32 huruf dan "
+"angka, dan tertera di halaman aplikasi Anda di Spotify Developer Dashboard. "
+"Kosongkan kolomnya untuk memakai yang bersama."
+
+#. Translators: Title of the message shown for a malformed Client ID.
+#: addon/globalPlugins/accesifyPlay/dialogs/settings.py
+msgid "Invalid Client ID"
+msgstr "Client ID Tidak Valid"
+
+#. Translators: Announced after changing the Client ID in settings, when
+#. the add-on was already signed in with that Client ID before.
+#: addon/globalPlugins/accesifyPlay/dialogs/settings.py
+msgid "Client ID changed. You are signed in."
+msgstr "Client ID diganti. Anda sudah masuk."
+
+#. Translators: Announced after changing the Client ID in settings, when
+#. the user still needs to sign in with it.
+#: addon/globalPlugins/accesifyPlay/dialogs/settings.py
+msgid "Client ID changed. Choose Validate Credentials to sign in."
+msgstr "Client ID diganti. Pilih Validasi Kredensial untuk masuk."
 
 #: addon/globalPlugins/accesifyPlay/dialogs/settings.py:80
 msgid "Validate Credentials"

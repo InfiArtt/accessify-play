@@ -96,7 +96,8 @@ check("check failure is spoken plainly, nothing changed",
       and not c.client.calls)
 
 # ------------------------------------------------ new link types
-c.client = Remote()
+# A fresh client: the one above is still holding requests for that 429's Retry-After.
+c = sc.SpotifyClient(); c.client = Remote()
 u = c.get_link_details("https://open.spotify.com/user/curator")
 check("user link: recognised", u.get("type") == "user")
 check("user link: not playable", u.get("playable") is False)

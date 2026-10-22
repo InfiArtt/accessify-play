@@ -25,7 +25,7 @@ spec_node = next(n for n in ast.walk(ast.parse(src)) if isinstance(n, ast.Assign
 keys = {k.value for k in spec_node.value.keys}
 check("config spec has no update keys", not keys & {"updateChannel", "isAutomaticallyCheckForUpdates", "lastUpdateCheck"})
 check("config spec keeps every other setting",
-      keys == {"searchLimit", "seekDuration", "language", "announceTrackChanges", "keepAliveInterval", "volumeStep"})
+      keys == {"searchLimit", "seekDuration", "language", "announceTrackChanges", "keepAliveInterval", "volumeStep", "ownClientID"})
 
 settings = open(os.path.join(PKG, "dialogs", "settings.py"), encoding="utf-8").read()
 for gone in ("Update Channel", "Check for updates automatically", "Check for Updates", "lastCheckLabel"):

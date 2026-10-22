@@ -59,7 +59,7 @@ utils = load("acc.utils", "utils.py")
 
 # The three keys that were missing, with the panel's defaults.
 check("missing volumeStep -> default", utils.conf_get("volumeStep", 5) == 5)
-check("missing keepAliveInterval -> default", utils.conf_get("keepAliveInterval", 30) == 30)
+check("missing keepAliveInterval -> default", utils.conf_get("keepAliveInterval", 0) == 0)
 check("missing announceTrackChanges-style boolean -> default",
       utils.conf_get("someMissingFlag", True) is True)
 check("no default given -> None, still no raise", utils.conf_get("volumeStep") is None)
@@ -85,7 +85,7 @@ check("config that raises -> default", utils.conf_get("volumeStep", 5) == 5)
 # Every read makeSettings performs must survive the user's real section.
 sys.modules["config"].conf = _ConfMgr(REAL_SECTION)
 panel_reads = [("searchLimit", 20), ("seekDuration", 15), ("volumeStep", 5),
-               ("keepAliveInterval", 30), ("language", "auto"),
+               ("keepAliveInterval", 0), ("language", "auto"),
                ("announceTrackChanges", False)]
 try:
     values = [utils.conf_get(k, d) for k, d in panel_reads]

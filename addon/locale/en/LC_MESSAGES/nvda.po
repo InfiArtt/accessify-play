@@ -41,26 +41,11 @@ msgstr ""
 #: buildVars.py:29
 msgid ""
 "\n"
-"- 1.12.1: a smaller download; the 1.12.0 package accidentally contained "
-"compiled files.\n"
-"- Updates now come from the NVDA Add-on Store; the built-in updater has been"
-" removed.\n"
-"- Settings, Copy Universal Link and Sleep Timer can now be given a shortcut "
-"in Input Gestures.\n"
-"- Announce track (I) names the track and says it is paused, instead of "
-"\"Nothing is currently playing\".\n"
-"- Top Items updates as soon as you change Show or Time Range.\n"
-"- Set Volume starts at the current volume; Alt+F in Search follows or "
-"unfollows an artist.\n"
-"- The sleep timer tells you when it pauses the music.\n"
-"- Fixed Help opening an outdated guide, and the lyrics window failing the "
-"second time for the same song.\n"
-"- Show Lyrics, Go to Album and Go to Artist in album and playlist track "
-"lists.\n"
-"- Names for unlabeled controls in Search, Devices, Queue, episode, chapter "
-"and other lists.\n"
-"- Complete and corrected Indonesian translation, and a rewritten user guide."
-"\n"
+"- Far fewer \"Spotify is limiting requests\" errors: Accessify Play now sends much fewer requests to Spotify.\n"
+"- When Spotify does ask it to wait, it says how long at once instead of going silent.\n"
+"- Keep Alive Interval is now off by default.\n"
+"- Optional: sign in with a Spotify Client ID of your own, with a Spotify Developer Dashboard button in settings.\n"
+"- Track changes are no longer announced again after a connection or rate-limit error.\n"
 "\t"
 msgstr ""
 
@@ -2091,6 +2076,43 @@ msgstr ""
 
 #: addon/globalPlugins/accesifyPlay/dialogs/settings.py:74
 msgid "Announce track changes automatically:"
+msgstr ""
+
+#. Translators: Label for an optional setting where users can enter the Client ID
+#. of a Spotify developer app of their own, instead of the shared one.
+#: addon/globalPlugins/accesifyPlay/dialogs/settings.py
+msgid "Your own Spotify Client ID (optional, leave blank to use the shared one):"
+msgstr ""
+
+#. Translators: A button that opens the Spotify developer website, where users
+#. can create an app of their own to get a Client ID.
+#: addon/globalPlugins/accesifyPlay/dialogs/settings.py
+msgid "Spotify Developer Dashboard"
+msgstr ""
+
+#. Translators: Shown when the Client ID entered in settings has the wrong form.
+#: addon/globalPlugins/accesifyPlay/dialogs/settings.py
+msgid ""
+"That does not look like a Spotify Client ID. A Client ID is 32 letters and "
+"digits, shown on your app's page in the Spotify Developer Dashboard. Leave "
+"the field blank to use the shared one."
+msgstr ""
+
+#. Translators: Title of the message shown for a malformed Client ID.
+#: addon/globalPlugins/accesifyPlay/dialogs/settings.py
+msgid "Invalid Client ID"
+msgstr ""
+
+#. Translators: Announced after changing the Client ID in settings, when
+#. the add-on was already signed in with that Client ID before.
+#: addon/globalPlugins/accesifyPlay/dialogs/settings.py
+msgid "Client ID changed. You are signed in."
+msgstr ""
+
+#. Translators: Announced after changing the Client ID in settings, when
+#. the user still needs to sign in with it.
+#: addon/globalPlugins/accesifyPlay/dialogs/settings.py
+msgid "Client ID changed. Choose Validate Credentials to sign in."
 msgstr ""
 
 #: addon/globalPlugins/accesifyPlay/dialogs/settings.py:80
