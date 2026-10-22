@@ -1,5 +1,20 @@
 # Changelog
 
+## Version 1.12.2
+
+### 🛠️ Fewer "Spotify is limiting requests" errors
+
+Everyone signs in through the same shared Spotify Client ID, and Spotify limits how many requests one Client ID may send. Lately that limit was reached often, and commands failed with "Spotify is limiting requests at the moment".
+
+- **Accessify Play sends far fewer requests.** It checks what is playing less often while the music is paused or nothing is playing, the lyrics auto-reader no longer asks Spotify separately, and playback commands no longer look up your device before every command.
+- **Keep Alive Interval is now off by default**, since every check counts against the shared limit. You can still turn it on in settings.
+- **No more silence while rate limited**: a rate-limited command used to leave NVDA silent for seconds or minutes while it waited. It now says at once how long to wait, and sends nothing to Spotify until then.
+- **Track changes are no longer announced twice** after a connection error or a rate limit.
+
+### 🎉 New: your own Client ID (optional)
+
+- If the shared Client ID is busy or ever stops working, you can sign in with a Client ID of your own: create an app in the Spotify Developer Dashboard (there is now a button for it in settings) and paste its Client ID into **Your own Spotify Client ID**. Leave it blank to keep using the shared one. Accessify Play keeps a separate sign-in for each, so switching back and forth does not make you sign in again. The user guide explains the steps.
+
 ## Version 1.12.1
 
 ### ⚠️ This is the last update from the built-in updater
