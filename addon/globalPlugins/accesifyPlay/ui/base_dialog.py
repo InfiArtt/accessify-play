@@ -1,15 +1,18 @@
-# accesifyPlay/ui/base_dialog.py
+# Accessify Play, an NVDA add-on for Spotify
+# Copyright (C) 2025-2026 Accessify Play contributors
+# This file is covered by the GNU General Public License, version 2.
+# See the file LICENSE for more details.
 
-import wx
 import ui
-from ..core.thread_manager import thread_manager
+import wx
 from logHandler import log
 
+from ..core.thread_manager import thread_manager
+from ..language import init_translation
 from ..utils import safe_text
 
-from ..language import init_translation  # noqa: E402
-
 init_translation()
+
 
 class AccessifyDialog(wx.Dialog):
 	"""
@@ -20,14 +23,14 @@ class AccessifyDialog(wx.Dialog):
 	def __init__(self, *args, **kwargs):
 		parent = args[0] if args else kwargs.get("parent")
 		# Dialogs pass the client either as a keyword...
-		self.client = kwargs.pop("client", None) 
+		self.client = kwargs.pop("client", None)
 		if not self.client and len(args) > 1:
 			# ...or as the second positional argument.
-			self.client = args[1] 
+			self.client = args[1]
 
 		super().__init__(*args, **kwargs)
 		self._parentDialog = parent if isinstance(parent, wx.Dialog) else None
-		
+
 		self.Bind(wx.EVT_CHAR_HOOK, self._on_char_hook)
 		self.Bind(wx.EVT_CLOSE, self._on_dialog_close, self)
 
@@ -45,7 +48,7 @@ class AccessifyDialog(wx.Dialog):
 	def _on_dialog_close(self, evt):
 		"""Destroy the dialog on close, unbinding first to avoid a reference cycle."""
 		evt.Skip()
-		
+
 		# Unbind event prior to destroy
 		self.Unbind(wx.EVT_CLOSE)
 		self.Unbind(wx.EVT_CHAR_HOOK)
@@ -103,10 +106,12 @@ class AccessifyDialog(wx.Dialog):
 		if not self.client or not uri:
 			ui.message(_("Unable to add {name} to queue.").format(name=name))
 			return
-		
+
 		self._is_queuing = True
 		ui.message(_("Adding to queue..."))
-		thread_manager.submit_task(self._queue_add_context_thread, uri, item_type, name, name="QueueContextTask")
+		thread_manager.submit_task(
+			self._queue_add_context_thread, uri, item_type, name, name="QueueContextTask"
+		)
 
 	def _queue_add_context_thread(self, uri, item_type, name):
 		try:
@@ -125,11 +130,19 @@ class AccessifyDialog(wx.Dialog):
 						wx.CallAfter(ui.message, result)
 						return
 					added += 1
-				wx.CallAfter(ui.message, _("Queued {count} tracks from {name}.").format(count=added, name=name))
+				wx.CallAfter(
+					ui.message, _("Queued {count} tracks from {name}.").format(count=added, name=name)
+				)
 			elif item_type == "artist":
-				wx.CallAfter(ui.message, _("Spotify does not allow queueing a whole artist. Please queue individual tracks."))
+				wx.CallAfter(
+					ui.message,
+					_("Spotify does not allow queueing a whole artist. Please queue individual tracks."),
+				)
 			elif item_type == "show":
-				wx.CallAfter(ui.message, _("Spotify does not allow queueing a whole show. Please queue individual episodes."))
+				wx.CallAfter(
+					ui.message,
+					_("Spotify does not allow queueing a whole show. Please queue individual episodes."),
+				)
 			else:
 				wx.CallAfter(ui.message, _("Cannot add this item to the queue."))
 		finally:
@@ -147,7 +160,9 @@ class AccessifyDialog(wx.Dialog):
 		if isinstance(result, str):
 			wx.CallAfter(ui.message, result)
 		else:
-			wx.CallAfter(ui.message, _("Album '{album_name}' saved successfully.").format(album_name=album.get("name")))
+			wx.CallAfter(
+				ui.message, _("Album '{album_name}' saved successfully.").format(album_name=album.get("name"))
+			)
 
 	def _toggle_saved(self, kind, item):
 		"""Save the item if it is not in the library, otherwise remove it; say which.
@@ -185,11 +200,13 @@ class AccessifyDialog(wx.Dialog):
 
 	def _bind_list_activation(self, control, activate_callback):
 		control.Bind(wx.EVT_LISTBOX_DCLICK, lambda evt: activate_callback())
+
 		def on_char(evt):
 			if evt.GetKeyCode() in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER):
 				activate_callback()
 			else:
 				evt.Skip()
+
 		control.Bind(wx.EVT_CHAR_HOOK, on_char)
 
 	def _owner_of(self, playlist):
@@ -295,15 +312,19 @@ class AccessifyDialog(wx.Dialog):
 		self.Bind(wx.EVT_MENU, lambda evt, t=track_item: self._show_lyrics_for_track(t), lyrics_item)
 		album = track_item.get("album")
 		if album and album.get("uri"):
-			go_to_album_item = menu.Append(wx.ID_ANY, _("Go to Album: {album_name}").format(album_name=album.get("name")))
+			go_to_album_item = menu.Append(
+				wx.ID_ANY, _("Go to Album: {album_name}").format(album_name=album.get("name"))
+			)
 			self.Bind(wx.EVT_MENU, lambda evt, a=album: self._handle_go_to_album(evt, a), go_to_album_item)
-		
+
 		artists = track_item.get("artists")
 		if not artists:
 			return
 		if len(artists) == 1:
 			artist = artists[0]
-			go_to_artist_item = menu.Append(wx.ID_ANY, _("Go to Artist: {artist_name}").format(artist_name=artist.get("name")))
+			go_to_artist_item = menu.Append(
+				wx.ID_ANY, _("Go to Artist: {artist_name}").format(artist_name=artist.get("name"))
+			)
 			self.Bind(wx.EVT_MENU, lambda evt, a=artist: self._handle_go_to_artist(evt, a), go_to_artist_item)
 		else:
 			artist_submenu = wx.Menu()
@@ -315,11 +336,15 @@ class AccessifyDialog(wx.Dialog):
 	def _handle_go_to_album(self, event, album):
 		user_playlists = getattr(self, "_user_playlists", []) or getattr(self, "user_playlists", [])
 		from ..dialogs.album import AlbumTracksDialog
+
 		dialog = AlbumTracksDialog(self, self.client, album, user_playlists)
 		dialog.Show()
 
 	def _handle_go_to_artist(self, event, artist):
 		user_playlists = getattr(self, "_user_playlists", []) or getattr(self, "user_playlists", [])
 		from ..dialogs.artist import ArtistDiscographyDialog
-		dialog = ArtistDiscographyDialog(self, self.client, artist.get("id"), artist.get("name"), user_playlists)
+
+		dialog = ArtistDiscographyDialog(
+			self, self.client, artist.get("id"), artist.get("name"), user_playlists
+		)
 		dialog.Show()

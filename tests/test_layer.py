@@ -1,6 +1,6 @@
 """Stub harness: exercise CommandLayerManager without NVDA.
 
-Fakes the NVDA modules commandLayers.py touches, then drives the capture
+Fakes the NVDA modules command_layers.py touches, then drives the capture
 function the way inputCore.executeGesture would.
 """
 import os, sys
@@ -94,7 +94,7 @@ load("acc.paths", os.path.join(ADDON, "paths.py"))
 sys.modules["acc.paths"]._legacy_dir = lambda: WORK  # %USERPROFILE% only expands on Windows
 load("acc.language", os.path.join(ADDON, "language.py"))
 load("acc.layer_config", os.path.join(ADDON, "layer_config.py"))
-cl = load("acc.commandLayers", os.path.join(ADDON, "commandLayers.py"))
+cl = load("acc.command_layers", os.path.join(ADDON, "command_layers.py"))
 
 # ---- fake gesture + plugin --------------------------------------------
 class Gesture:

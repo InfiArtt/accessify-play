@@ -1,9 +1,13 @@
+# Accessify Play, an NVDA add-on for Spotify
+# Copyright (C) 2025-2026 Accessify Play contributors
+# This file is covered by the GNU General Public License, version 2.
+# See the file LICENSE for more details.
+
 import core
 import wx
 
+from ..language import init_translation
 from ..ui.base_dialog import AccessifyDialog
-
-from ..language import init_translation  # noqa: E402
 
 init_translation()
 
@@ -24,8 +28,7 @@ class EditCommandDialog(AccessifyDialog):
 		sizer.Add(lbl_gesture, 0, wx.ALL, 5)
 
 		initial_val = self.result_gestures[0] if self.result_gestures else ""
-		if initial_val.startswith("kb:"):
-			initial_val = initial_val[3:]
+		initial_val = initial_val.removeprefix("kb:")
 		self.txt_gesture = wx.TextCtrl(self, value=initial_val)
 		sizer.Add(self.txt_gesture, 0, wx.ALL | wx.EXPAND, 5)
 
@@ -43,7 +46,7 @@ class EditCommandDialog(AccessifyDialog):
 
 		self.SetSizerAndFit(sizer)
 		self.Bind(wx.EVT_BUTTON, self.on_ok, id=wx.ID_OK)
-		
+
 	def _on_close_button(self, evt):
 		self.EndModal(wx.ID_CANCEL)
 

@@ -5,3 +5,9 @@ repos:
       - id: check-ast
       - id: check-case-conflict
       - id: check-yaml
+  # Same version as the configuration in pyproject.toml was written for.
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.9
+    hooks:
+      - id: ruff-check
+      - id: ruff-format

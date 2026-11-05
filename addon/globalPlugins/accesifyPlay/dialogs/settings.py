@@ -1,4 +1,7 @@
-from ..core.thread_manager import thread_manager
+# Accessify Play, an NVDA add-on for Spotify
+# Copyright (C) 2025-2026 Accessify Play contributors
+# This file is covered by the GNU General Public License, version 2.
+# See the file LICENSE for more details.
 
 import webbrowser
 
@@ -9,10 +12,14 @@ import wx
 from gui import guiHelper, messageBox, settingsDialogs
 
 from .. import donate, spotify_client
+from ..core.thread_manager import thread_manager
+from ..language import (
+	AVAILABLE_LANGUAGE_CODES,
+	LANGUAGE_AUTO,
+	LANGUAGE_DISPLAY_OVERRIDES,
+	init_translation,
+)
 from ..utils import conf_get
-from ..language import AVAILABLE_LANGUAGE_CODES, LANGUAGE_AUTO, LANGUAGE_DISPLAY_OVERRIDES
-
-from ..language import init_translation  # noqa: E402
 
 init_translation()
 
@@ -56,7 +63,7 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 		self.languageEntries = self._buildLanguageEntries()
 		language_choices = [label for _, label in self.languageEntries]
 		self.languageCodeByLabel = {label: code for code, label in self.languageEntries}
-		self.languageLabelByCode = {code: label for code, label in self.languageEntries}
+		self.languageLabelByCode = dict(self.languageEntries)
 		self.languageCtrl = sHelper.addLabeledControl(
 			language_label,
 			wx.ComboBox,
@@ -183,7 +190,7 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 		if self._saveValues():
 			self.client.reset_session()
 		ui.message(_("Validating credentials with Spotify..."))
-		thread_manager.submit_task(self.run_validation, name='DialogTask', daemon=True)
+		thread_manager.submit_task(self.run_validation, name="DialogTask", daemon=True)
 
 	def run_validation(self):
 		success = self.client.validate()  # Validate without explicit parameters
@@ -202,7 +209,7 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 
 		if result == wx.YES:
 			ui.message(_("Clearing credentials and cache..."))
-			thread_manager.submit_task(self._clear_credentials_thread, name='DialogTask', daemon=True)
+			thread_manager.submit_task(self._clear_credentials_thread, name="DialogTask", daemon=True)
 
 	def _clear_credentials_thread(self):
 		message = self.client.clear_credentials_and_cache()

@@ -1,5 +1,7 @@
 [tool.ruff]
 line-length = 110
+# NVDA 2025.1, the oldest version the add-on supports, runs Python 3.11.
+target-version = "py311"
 
 builtins = [
 	# translation lookup
@@ -17,27 +19,94 @@ include = [
 	"sconstruct",
 ]
 
-exclude = [
-	".git",
-	"__pycache__",
+extend-exclude = [
+	# Third-party packages (spotipy and its dependencies), kept exactly as released.
+	"addon/lib",
+	# Build tooling from the NVDA add-on template, maintained by NV Access.
+	"site_scons",
+	"sconstruct",
+	# Mostly a verbatim copy of CPython's Lib/secrets.py, kept identical to it.
+	"addon/globalPlugins/accesifyPlay/_secrets_fallback.py",
+	# Not yet: the tests are linted once they move to pytest.
+	"tests",
 ]
 
 [tool.ruff.format]
 indent-style = "tab"
 
-[tool.ruff.lint.mccabe]
-max-complexity = 15
-
 [tool.ruff.lint]
+select = ["ALL"]
 ignore = [
-	# indentation contains tabs
+	# The code is indented with tabs, like NVDA itself.
 	"W191",
+	"D206",
+	# Conflicts with the formatter, which adds the trailing commas it needs.
+	"COM812",
+	# Each pair is mutually exclusive; D211 and D212 are the ones kept.
+	"D203",
+	"D213",
+	# NVDA imports the add-on as globalPlugins.accesifyPlay, the tests import it
+	# under another name; relative imports work in both.
+	"TID252",
+
+	# Not done yet. Each family below is fixed and removed in its own commit.
+	"ANN",
+	"D",
+	"ARG",
+	"N802",
+	"N803",
+	"N806",
+	"N815",
+	"N816",
+	"SLF001",
+	"BLE001",
+	"E501",
+	"FBT",
+	"B008",
+	"PLC0415",
+	"PLR",
+	"PTH",
+	"C901",
+	"PLW0603",
+	"S110",
+	"S310",
+	"RUF012",
+	"PERF203",
+	"PERF401",
+	"SIM105",
+	"TRY",
+	"EM",
+	"ERA001",
+	"B905",
 ]
 
 [tool.ruff.lint.per-file-ignores]
-# sconstruct contains many inbuilt functions not recognised by the lint,
-# so ignore F821.
-"sconstruct" = ["F821"]
+# The package name is the add-on's identity: NVDA stores custom gestures under
+# globalPlugins.accesifyPlay, so renaming it would silently drop them.
+"addon/globalPlugins/accesifyPlay/**" = ["N999"]
+# NVDA runs installTasks.py from the add-on's root folder, which is not a package.
+"addon/installTasks.py" = ["INP001"]
+
+[tool.ruff.lint.flake8-copyright]
+# Empty package markers hold nothing to license.
+min-file-size = 1
+
+[tool.ruff.lint.pep8-naming]
+# Names NVDA calls by convention.
+extend-ignore-names = [
+	"script_*",
+	"event_*",
+	"makeSettings",
+	"onSave",
+	"onDiscard",
+	"postSave",
+	"isValid",
+	"onInstall",
+	"onUninstall",
+]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 15
 
 [tool.pyright]
 pythonPlatform = "Windows"

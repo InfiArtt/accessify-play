@@ -1,11 +1,15 @@
-# donate.py
+# Accessify Play, an NVDA add-on for Spotify
+# Copyright (C) 2025-2026 Accessify Play contributors
+# This file is covered by the GNU General Public License, version 2.
+# See the file LICENSE for more details.
+
 import webbrowser
 
 import wx
 from gui import messageBox
 from logHandler import log
 
-from .language import init_translation  # noqa: E402
+from .language import init_translation
 
 init_translation()
 

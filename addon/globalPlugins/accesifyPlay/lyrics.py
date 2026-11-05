@@ -1,4 +1,8 @@
-# accesifyPlay/lyrics.py
+# Accessify Play, an NVDA add-on for Spotify
+# Copyright (C) 2025-2026 Accessify Play contributors
+# This file is covered by the GNU General Public License, version 2.
+# See the file LICENSE for more details.
+
 # Lyrics fetching, LRC parsing, and auto-read timer management.
 
 import json
@@ -17,6 +21,7 @@ LRCLIB_BASE = "https://lrclib.net/api"
 # ---------------------------------------------------------------------------
 # Public fetch API
 # ---------------------------------------------------------------------------
+
 
 def fetch_lyrics(track_name, artist_name, album_name, duration_ms):
 	"""
@@ -39,12 +44,14 @@ def fetch_lyrics(track_name, artist_name, album_name, duration_ms):
 
 
 def _fetch_exact(track_name, artist_name, album_name, duration_s):
-	params = url_parse.urlencode({
-		"track_name": track_name,
-		"artist_name": artist_name,
-		"album_name": album_name,
-		"duration": duration_s,
-	})
+	params = url_parse.urlencode(
+		{
+			"track_name": track_name,
+			"artist_name": artist_name,
+			"album_name": album_name,
+			"duration": duration_s,
+		}
+	)
 	return _make_request(f"{LRCLIB_BASE}/get?{params}")
 
 
@@ -122,27 +129,26 @@ def parse_lrc(lrc_text):
 	if not lrc_text:
 		return []
 	lines = []
-	for raw in lrc_text.splitlines():
-		raw = raw.strip()
+	for raw_line in lrc_text.splitlines():
+		line = raw_line.strip()
 		stamps = []
 		pos = 0
 		while True:
-			m = _LRC_TIMESTAMP.match(raw, pos)
+			m = _LRC_TIMESTAMP.match(line, pos)
 			if not m:
 				break
 			stamps.append(_timestamp_ms(*m.groups()))
 			pos = m.end()
-		text = raw[pos:].strip()
-		if not stamps or not text:
-			continue
-		for ms in stamps:
-			lines.append((ms, text))
+		text = line[pos:].strip()
+		if stamps and text:
+			lines.extend((ms, text) for ms in stamps)
 	return sorted(lines, key=lambda x: x[0])
 
 
 # ---------------------------------------------------------------------------
 # Auto-reader
 # ---------------------------------------------------------------------------
+
 
 class LyricsAutoReader:
 	"""
@@ -233,6 +239,7 @@ class LyricsAutoReader:
 	def _speak(self, text, ms=None):
 		if self._active:
 			import ui as nvda_ui
+
 			wx.CallAfter(nvda_ui.message, text)
 			if ms is not None and self._line_callback:
 				wx.CallAfter(self._line_callback, ms)

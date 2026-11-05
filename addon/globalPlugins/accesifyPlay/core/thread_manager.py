@@ -1,8 +1,13 @@
-# accesifyPlay/core/thread_manager.py
+# Accessify Play, an NVDA add-on for Spotify
+# Copyright (C) 2025-2026 Accessify Play contributors
+# This file is covered by the GNU General Public License, version 2.
+# See the file LICENSE for more details.
 
 import threading
 import time
+
 from logHandler import log
+
 
 class ThreadManager:
 	"""
@@ -45,6 +50,7 @@ class ThreadManager:
 		interval_seconds. target may return a number of seconds to wait
 		before the next call instead, to poll faster or slower as needed.
 		"""
+
 		def poller_wrapper():
 			while self._is_running:
 				delay = None
@@ -76,6 +82,7 @@ class ThreadManager:
 					except Exception as e:
 						log.debug(f"Failed to join thread {thread.name}: {e}")
 			self._threads.clear()
+
 
 # Global instance for easy import across modules
 thread_manager = ThreadManager()

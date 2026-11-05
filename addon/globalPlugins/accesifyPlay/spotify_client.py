@@ -1,4 +1,7 @@
-# spotify_client.py
+# Accessify Play, an NVDA add-on for Spotify
+# Copyright (C) 2025-2026 Accessify Play contributors
+# This file is covered by the GNU General Public License, version 2.
+# See the file LICENSE for more details.
 
 import math
 import os
@@ -16,8 +19,7 @@ from spotipy.exceptions import SpotifyException
 from spotipy.oauth2 import CacheFileHandler, SpotifyPKCE
 
 from . import paths
-
-from .language import init_translation  # noqa: E402
+from .language import init_translation
 
 init_translation()
 
@@ -121,9 +123,7 @@ def _friendly_error(e):
 		"ENDLESS_CONTEXT": _("This cannot be done while a radio station is playing."),
 		"CONTEXT_DISALLOW": _("Spotify does not allow that for what is playing now."),
 		"VOLUME_CONTROL_DISALLOW": _("This device does not let Spotify change its volume."),
-		"NO_ACTIVE_DEVICE": _(
-			"No active Spotify device. Start playing something in the Spotify app first."
-		),
+		"NO_ACTIVE_DEVICE": _("No active Spotify device. Start playing something in the Spotify app first."),
 		"PREMIUM_REQUIRED": _("This feature requires Spotify Premium."),
 		"DEVICE_NOT_CONTROLLABLE": _("Spotify cannot control this device."),
 	}
@@ -139,7 +139,9 @@ def _friendly_error(e):
 	status_messages = {
 		400: _("Spotify could not handle that request. Please try again."),
 		403: _("Spotify would not allow that. Some actions require Spotify Premium."),
-		404: _("Spotify could not find that. It may no longer exist, or it may not be available in your country."),
+		404: _(
+			"Spotify could not find that. It may no longer exist, or it may not be available in your country."
+		),
 		405: _("Spotify does not support that action."),
 		502: _("Spotify is having trouble right now. Please try again in a moment."),
 		503: _("Spotify is having trouble right now. Please try again in a moment."),
@@ -167,9 +169,9 @@ def _retry_after(e):
 def _rate_limit_message(seconds):
 	delay = _format_retry_delay(seconds)
 	if delay:
-		return _(
-			"Spotify is limiting requests at the moment. Please try again in {delay}."
-		).format(delay=delay)
+		return _("Spotify is limiting requests at the moment. Please try again in {delay}.").format(
+			delay=delay
+		)
 	return _("Spotify is limiting requests at the moment. Please try again shortly.")
 
 
@@ -265,10 +267,9 @@ class SpotifyClient:
 				self.client.current_user()  # Test call
 				log.info("Spotify: validation successful.")
 				return True
-			else:
-				self.client = None
-				log.warning("Spotify: could not get a token, even with interactive login.")
-				return False
+			self.client = None
+			log.warning("Spotify: could not get a token, even with interactive login.")
+			return False
 		except _TIMEOUT_ERRORS as e:
 			self.client = None
 			log.debug(f"Spotify interactive validation timeout: {e}")
@@ -503,7 +504,7 @@ class SpotifyClient:
 				message = _("Paused: {track} by {artists}")
 			return message.format(track=track_name, artists=artists)
 
-		elif item_type == "episode":
+		if item_type == "episode":
 			episode_name = item.get("name")
 			show_info = item.get("show", {})
 			show_name = show_info.get("name")
@@ -513,11 +514,10 @@ class SpotifyClient:
 				message = _("Paused episode: {episode_name} from the show {show_name}")
 			return message.format(episode_name=episode_name, show_name=show_name)
 
-		else:
-			name = item.get("name", _("Unknown Item"))
-			if playing:
-				return _("Currently playing: {name}").format(name=name)
-			return _("Paused: {name}").format(name=name)
+		name = item.get("name", _("Unknown Item"))
+		if playing:
+			return _("Currently playing: {name}").format(name=name)
+		return _("Paused: {name}").format(name=name)
 
 	def get_simple_track_string(self, item):
 		"""Returns a simple 'Title - Artist/Show' string from a playback item."""
@@ -531,13 +531,12 @@ class SpotifyClient:
 			artists = ", ".join([a["name"] for a in item.get("artists", [])])
 			return f"{track} - {artists}"
 
-		elif item_type == "episode":
+		if item_type == "episode":
 			episode_name = item.get("name")
 			show_name = item.get("show", {}).get("name")
 			return f"{episode_name} - {show_name}"
 
-		else:
-			return item.get("name", "")
+		return item.get("name", "")
 
 	def _playing_now(self):
 		"""(playback, None) when a track or episode is loaded, else (None, the message to say)."""
@@ -580,38 +579,40 @@ class SpotifyClient:
 		if not query:
 			return None
 
-		return self._execute_web_api(
-			"search", q=query, type=search_type, limit=search_limit(), offset=offset
-		)
+		return self._execute_web_api("search", q=query, type=search_type, limit=search_limit(), offset=offset)
 
 	def play_my_top_tracks(self):
 		top_tracks = self._execute_web_api("current_user_top_tracks", limit=50, time_range="short_term")
 		if isinstance(top_tracks, str):
 			return top_tracks
-		
+
 		if not top_tracks or not top_tracks.get("items"):
 			return _("No top tracks found.")
-			
+
 		uris = [track["uri"] for track in top_tracks["items"] if track.get("uri")]
 		if not uris:
 			return _("No playable tracks found.")
-			
+
 		result = self._execute("start_playback", uris=uris)
 		if isinstance(result, str):
 			return result
-		
+
 		return _("Playing your top tracks.")
 
 	def play_recently_played(self):
 		recent_tracks = self._execute_web_api("current_user_recently_played", limit=50)
 		if isinstance(recent_tracks, str):
 			return recent_tracks
-		
+
 		if not recent_tracks or not recent_tracks.get("items"):
 			return _("No recently played tracks found.")
-			
-		uris = [item["track"]["uri"] for item in recent_tracks["items"] if item.get("track") and item["track"].get("uri")]
-		
+
+		uris = [
+			item["track"]["uri"]
+			for item in recent_tracks["items"]
+			if item.get("track") and item["track"].get("uri")
+		]
+
 		# Deduplicate URIs while preserving order for recently played
 		seen = set()
 		unique_uris = []
@@ -619,14 +620,14 @@ class SpotifyClient:
 			if uri not in seen:
 				seen.add(uri)
 				unique_uris.append(uri)
-				
+
 		if not unique_uris:
 			return _("No playable tracks found in history.")
-			
+
 		result = self._execute("start_playback", uris=unique_uris)
 		if isinstance(result, str):
 			return result
-			
+
 		return _("Playing your recently played tracks.")
 
 	def play_item(self, uris):
@@ -868,13 +869,16 @@ class SpotifyClient:
 
 	def toggle_shuffle(self):
 		"""Toggles shuffle mode on or off."""
+
 		def pick(playback):
 			on = not playback.get("shuffle_state")
 			return on, _("Shuffle On") if on else _("Shuffle Off")
+
 		return self._change_mode("shuffle", pick)
 
 	def cycle_repeat(self):
 		"""Cycles repeat mode: off -> context (album/playlist) -> track -> off."""
+
 		def pick(playback):
 			current = playback.get("repeat_state")
 			if current == "off":
@@ -882,6 +886,7 @@ class SpotifyClient:
 			if current == "context":
 				return "track", _("Repeat: One Track")
 			return "off", _("Repeat: Off")
+
 		return self._change_mode("repeat", pick)
 
 	def get_user_playlists(self):
@@ -915,11 +920,8 @@ class SpotifyClient:
 		if not uris_to_add:
 			if len(uris) == 1:
 				return _("This track is already in the playlist.")
-			else:
-				return _("All these tracks are already in the playlist.")
-		result = self._execute_web_api(
-			"playlist_add_items", playlist_id=playlist_id, items=uris_to_add
-		)
+			return _("All these tracks are already in the playlist.")
+		result = self._execute_web_api("playlist_add_items", playlist_id=playlist_id, items=uris_to_add)
 		if isinstance(result, str):
 			return result
 		skipped_count = len(uris) - len(uris_to_add)
@@ -950,7 +952,7 @@ class SpotifyClient:
 		"""Creates a new playlist for the current user."""
 		if not self.client:
 			return _("Spotify client not ready. Please validate your credentials.")
-		
+
 		return self._execute_web_api(
 			"current_user_playlist_create",
 			name=name,
@@ -1046,7 +1048,7 @@ class SpotifyClient:
 		"""
 		by_position = sorted(occurrences, key=lambda o: o[1], reverse=True)
 		for start in range(0, len(by_position), 100):
-			chunk = by_position[start:start + 100]
+			chunk = by_position[start : start + 100]
 			items = [{"uri": uri, "positions": [pos]} for uri, pos in chunk]
 			result = self._execute_web_api(
 				"playlist_remove_specific_occurrences_of_items",
@@ -1151,9 +1153,7 @@ class SpotifyClient:
 		after = None
 		limit = 50  # Max limit per request
 		while True:
-			results = self._execute_web_api(
-				"current_user_followed_artists", limit=limit, after=after
-			)
+			results = self._execute_web_api("current_user_followed_artists", limit=limit, after=after)
 			if isinstance(results, str):
 				return results  # Error message
 
@@ -1169,13 +1169,9 @@ class SpotifyClient:
 		"""Fetches the user's top tracks or artists."""
 		limit = 50
 		if item_type == "tracks":
-			return self._execute_web_api(
-				"current_user_top_tracks", limit=limit, time_range=time_range
-			)
-		elif item_type == "artists":
-			return self._execute_web_api(
-				"current_user_top_artists", limit=limit, time_range=time_range
-			)
+			return self._execute_web_api("current_user_top_tracks", limit=limit, time_range=time_range)
+		if item_type == "artists":
+			return self._execute_web_api("current_user_top_artists", limit=limit, time_range=time_range)
 		return None
 
 	def get_saved_shows(self):
@@ -1201,7 +1197,7 @@ class SpotifyClient:
 		"""Send uris in batches; returns the results in order, or the first error message."""
 		results = []
 		for start in range(0, len(uris), self.LIBRARY_BATCH):
-			chunk = uris[start:start + self.LIBRARY_BATCH]
+			chunk = uris[start : start + self.LIBRARY_BATCH]
 			result = self._execute_web_api(verb, path, uris=",".join(chunk))
 			if isinstance(result, str):
 				return result
@@ -1601,7 +1597,9 @@ class SpotifyClient:
 			lines.append(_("Audiobook: {name}").format(name=audiobook["name"]))
 		if data.get("chapter_number") is not None:
 			lines.append(_("Chapter {number}").format(number=data["chapter_number"]))
-		lines.append(_("Duration: {duration}").format(duration=self._format_duration(data.get("duration_ms", 0))))
+		lines.append(
+			_("Duration: {duration}").format(duration=self._format_duration(data.get("duration_ms", 0)))
+		)
 		# A chapter's own uri is a spotify:episode: URI, which plays as a single item.
 		return {"uri": data.get("uri"), "lines": lines, "metadata": {"name": data.get("name")}}
 

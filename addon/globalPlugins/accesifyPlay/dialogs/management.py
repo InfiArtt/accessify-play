@@ -1,19 +1,25 @@
+# Accessify Play, an NVDA add-on for Spotify
+# Copyright (C) 2025-2026 Accessify Play contributors
+# This file is covered by the GNU General Public License, version 2.
+# See the file LICENSE for more details.
+
 """The library and playlist manager (M in the command layer)."""
+
 import threading
-from ..core.thread_manager import thread_manager
+
 import gui
 import ui
 import wx
 from gui import guiHelper
+
+from ..core.thread_manager import thread_manager
+from ..language import init_translation
 from ..ui.base_dialog import AccessifyDialog
 from ..utils import duplicate_occurrences, playlist_rows, positions_after_move, safe_text
 from .album import AlbumTracksDialog
 from .artist import ArtistDiscographyDialog
-from .playlist_forms import CreatePlaylistDialog
-from .playlist_forms import PlaylistDetailsDialog
+from .playlist_forms import CreatePlaylistDialog, PlaylistDetailsDialog
 from .podcasts import PodcastEpisodesDialog
-
-from ..language import init_translation  # noqa: E402
 
 init_translation()
 
@@ -110,7 +116,13 @@ class ManagementDialog(AccessifyDialog):
 				track_uri = item.get("uri")
 				if context_uri and track_uri:
 					ui.message(_("Playing."))
-					thread_manager.submit_task(self.client.play_context_with_offset, context_uri, track_uri, name='DialogTask', daemon=True)
+					thread_manager.submit_task(
+						self.client.play_context_with_offset,
+						context_uri,
+						track_uri,
+						name="DialogTask",
+						daemon=True,
+					)
 					return
 		uri = item.get("uri")
 		self._play_uri(uri)
@@ -160,7 +172,7 @@ class ManagementDialog(AccessifyDialog):
 			else:
 				wx.CallAfter(ui.message, _("Track added successfully."))
 
-		thread_manager.submit_task(_add_thread, name='DialogTask', daemon=True)
+		thread_manager.submit_task(_add_thread, name="DialogTask", daemon=True)
 
 	def _handle_refresh(self, evt=None):
 		focused_control = self.FindFocus()
@@ -170,15 +182,18 @@ class ManagementDialog(AccessifyDialog):
 				return
 			# Default to the first control on the page (usually a sizer or panel, but let's try to get a meaningful child)
 			children = current_page.GetChildren()
-			if hasattr(self, 'playlist_choices') and current_page == self.playlist_choices.GetParent():
+			if hasattr(self, "playlist_choices") and current_page == self.playlist_choices.GetParent():
 				focused_control = self.playlist_choices
 			else:
 				focused_control = children[0]
 
-		if hasattr(self, 'playlist_choices') and hasattr(self, 'playlist_tracks_list'):
-			if focused_control in (self.playlist_choices, self.playlist_tracks_list):
-				self.on_refresh_playlists()
-				return
+		if (
+			hasattr(self, "playlist_choices")
+			and hasattr(self, "playlist_tracks_list")
+			and focused_control in (self.playlist_choices, self.playlist_tracks_list)
+		):
+			self.on_refresh_playlists()
+			return
 
 		for tab_cfg in self.tabs_config.values():
 			if tab_cfg["control"] == focused_control:
@@ -386,9 +401,7 @@ class ManagementDialog(AccessifyDialog):
 			self._populate_generic_list("saved_audiobooks", initial_data)
 		else:
 			threading.Thread(
-				target=lambda: self._load_data_thread(
-					"saved_audiobooks", self.client.get_saved_audiobooks
-				)
+				target=lambda: self._load_data_thread("saved_audiobooks", self.client.get_saved_audiobooks)
 			).start()
 
 	def _format_saved_episode(self, episode):
@@ -400,9 +413,7 @@ class ManagementDialog(AccessifyDialog):
 
 	def _format_saved_audiobook(self, audiobook):
 		name = safe_text(audiobook.get("name"), _("Unknown Audiobook"))
-		authors = ", ".join(
-			a.get("name") for a in (audiobook.get("authors") or []) if a.get("name")
-		)
+		authors = ", ".join(a.get("name") for a in (audiobook.get("authors") or []) if a.get("name"))
 		byline = authors or safe_text(audiobook.get("publisher"), "")
 		return f"{name} - {byline}" if byline else name
 
@@ -412,6 +423,7 @@ class ManagementDialog(AccessifyDialog):
 		if not audiobook or not audiobook.get("id"):
 			return
 		from .audiobooks import AudiobookChaptersDialog
+
 		dialog = AudiobookChaptersDialog(
 			self, self.client, audiobook["id"], safe_text(audiobook.get("name"), _("Audiobook"))
 		)
@@ -543,7 +555,7 @@ class ManagementDialog(AccessifyDialog):
 		if initial_data:
 			self._populate_playlists_combobox(initial_data)
 		else:
-			thread_manager.submit_task(self._load_playlists_thread, name='DialogTask', daemon=True)
+			thread_manager.submit_task(self._load_playlists_thread, name="DialogTask", daemon=True)
 
 	def _load_playlists_thread(self):
 		if not self.current_user_id:
@@ -663,7 +675,7 @@ class ManagementDialog(AccessifyDialog):
 			tracks_data = self.client.get_playlist_tracks(playlist_id)
 			wx.CallAfter(self._finish_playlist_tracks, tracks_data, token, keep_row)
 
-		thread_manager.submit_task(_load, name='DialogTask', daemon=True)
+		thread_manager.submit_task(_load, name="DialogTask", daemon=True)
 
 	def _finish_playlist_tracks(self, tracks_data, token, keep_row):
 		if not self:
@@ -764,7 +776,7 @@ class ManagementDialog(AccessifyDialog):
 			else:
 				wx.CallAfter(ui.message, str(result))
 
-		thread_manager.submit_task(_process, name='DialogTask', daemon=True)
+		thread_manager.submit_task(_process, name="DialogTask", daemon=True)
 
 	def _on_playlist_details_dialog_close(self, evt):
 		if self._playlistDetailsDialog:
@@ -798,7 +810,7 @@ class ManagementDialog(AccessifyDialog):
 					)
 					wx.CallAfter(self.load_playlists)
 
-			thread_manager.submit_task(_delete, name='DialogTask', daemon=True)
+			thread_manager.submit_task(_delete, name="DialogTask", daemon=True)
 
 	def on_unfollow_playlist(self, evt):
 		selection_index = self.playlist_choices.GetSelection()
@@ -823,7 +835,7 @@ class ManagementDialog(AccessifyDialog):
 					)
 					wx.CallAfter(self.load_playlists)
 
-			thread_manager.submit_task(_unfollow, name='DialogTask', daemon=True)
+			thread_manager.submit_task(_unfollow, name="DialogTask", daemon=True)
 
 	def on_remove_track_from_playlist(self, evt=None):
 		track_selection = self.playlist_tracks_list.GetSelection()
@@ -865,13 +877,11 @@ class ManagementDialog(AccessifyDialog):
 				else:
 					wx.CallAfter(
 						ui.message,
-						_("Track '{track_name}' removed from playlist.").format(
-							track_name=track_name
-						),
+						_("Track '{track_name}' removed from playlist.").format(track_name=track_name),
 					)
 					wx.CallAfter(self.refresh_current_playlist)
 
-			thread_manager.submit_task(_remove, name='DialogTask', daemon=True)
+			thread_manager.submit_task(_remove, name="DialogTask", daemon=True)
 
 	def _selected_owned_playlist(self):
 		"""The selected playlist, or None (with a message) if it can't be edited."""
@@ -994,8 +1004,12 @@ class ManagementDialog(AccessifyDialog):
 		# 3. Call the API in the background
 		playlist_id = self.user_playlists[playlist_selection]["id"]
 		thread_manager.submit_task(
-			self._finish_reorder_track, playlist_id, from_position, to_position,
-			name='DialogTask', daemon=True,
+			self._finish_reorder_track,
+			playlist_id,
+			from_position,
+			to_position,
+			name="DialogTask",
+			daemon=True,
 		)
 
 	def _finish_reorder_track(self, playlist_id, from_index, to_index):
@@ -1182,7 +1196,9 @@ class ManagementDialog(AccessifyDialog):
 				if self.user_playlists:
 					for playlist in self.user_playlists:
 						if playlist.get("owner", {}).get("id") == self.current_user_id:
-							menu_item = playlist_submenu.Append(wx.ID_ANY, safe_text(playlist.get("name"), _("Unknown")))
+							menu_item = playlist_submenu.Append(
+								wx.ID_ANY, safe_text(playlist.get("name"), _("Unknown"))
+							)
 							self.Bind(
 								wx.EVT_MENU,
 								lambda event, p_id=playlist.get("id"), p_name=playlist.get("name"): (
@@ -1217,7 +1233,9 @@ class ManagementDialog(AccessifyDialog):
 			playlist_submenu = wx.Menu()
 			if self.user_playlists:
 				for playlist in self.user_playlists:
-					menu_item = playlist_submenu.Append(wx.ID_ANY, safe_text(playlist.get("name"), _("Unknown Playlist")))
+					menu_item = playlist_submenu.Append(
+						wx.ID_ANY, safe_text(playlist.get("name"), _("Unknown Playlist"))
+					)
 					self.Bind(
 						wx.EVT_MENU,
 						lambda event, p_id=playlist.get("id"), p_name=playlist.get("name"): (
@@ -1280,7 +1298,9 @@ class ManagementDialog(AccessifyDialog):
 	def on_remove_from_library(self, evt=None):
 		self._remove_selected(
 			"track",
-			lambda n: _("Are you sure you want to remove '{track_name}' from your library?").format(track_name=n),
+			lambda n: _("Are you sure you want to remove '{track_name}' from your library?").format(
+				track_name=n
+			),
 			_("Confirm Remove Track"),
 			lambda n: _("Track '{track_name}' removed from your library.").format(track_name=n),
 			self.load_saved_tracks,
@@ -1311,7 +1331,9 @@ class ManagementDialog(AccessifyDialog):
 	def on_remove_audiobook_from_library(self, evt=None):
 		self._remove_selected(
 			"audiobook",
-			lambda n: _("Are you sure you want to remove '{name}' from your saved audiobooks?").format(name=n),
+			lambda n: _("Are you sure you want to remove '{name}' from your saved audiobooks?").format(
+				name=n
+			),
 			_("Confirm Remove Audiobook"),
 			lambda n: _("Audiobook '{name}' removed from your library.").format(name=n),
 			self.load_saved_audiobooks,
@@ -1321,7 +1343,9 @@ class ManagementDialog(AccessifyDialog):
 	def on_remove_album_from_library(self, evt=None):
 		self._remove_selected(
 			"album",
-			lambda n: _("Are you sure you want to remove '{album_name}' from your library?").format(album_name=n),
+			lambda n: _("Are you sure you want to remove '{album_name}' from your library?").format(
+				album_name=n
+			),
 			_("Confirm Remove Album"),
 			lambda n: _("Album '{album_name}' removed from your library.").format(album_name=n),
 			self.load_saved_albums,
@@ -1330,7 +1354,9 @@ class ManagementDialog(AccessifyDialog):
 	def on_remove_show_from_library(self, evt=None):
 		self._remove_selected(
 			"show",
-			lambda n: _("Are you sure you want to remove '{show_name}' from your library?").format(show_name=n),
+			lambda n: _("Are you sure you want to remove '{show_name}' from your library?").format(
+				show_name=n
+			),
 			_("Confirm Remove Show"),
 			lambda n: _("Show '{show_name}' removed from your library.").format(show_name=n),
 			self.load_saved_shows,

@@ -1,11 +1,17 @@
+# Accessify Play, an NVDA add-on for Spotify
+# Copyright (C) 2025-2026 Accessify Play contributors
+# This file is covered by the GNU General Public License, version 2.
+# See the file LICENSE for more details.
+
 """Small playlist forms: create a playlist, edit its details, add to one."""
-from ..core.thread_manager import thread_manager
+
 import ui
 import wx
 from gui import guiHelper
-from ..ui.base_dialog import AccessifyDialog
 
-from ..language import init_translation  # noqa: E402
+from ..core.thread_manager import thread_manager
+from ..language import init_translation
+from ..ui.base_dialog import AccessifyDialog
 
 init_translation()
 
@@ -58,7 +64,9 @@ class CreatePlaylistDialog(AccessifyDialog):
 			return
 		self._creating = True
 		self.createButton.Disable()
-		thread_manager.submit_task(self._create_thread, name, description, public, collaborative, name='DialogTask', daemon=True)
+		thread_manager.submit_task(
+			self._create_thread, name, description, public, collaborative, name="DialogTask", daemon=True
+		)
 
 	def _create_thread(self, name, description, public, collaborative):
 		result = self.client.create_playlist(name, public, collaborative, description)
@@ -133,7 +141,9 @@ class PlaylistDetailsDialog(AccessifyDialog):
 			return
 		self._saving = True
 		self.saveButton.Disable()
-		thread_manager.submit_task(self._save_thread, name, description, public, collaborative, name='DialogTask', daemon=True)
+		thread_manager.submit_task(
+			self._save_thread, name, description, public, collaborative, name="DialogTask", daemon=True
+		)
 
 	def _save_thread(self, name, description, public, collaborative):
 		result = self.client.update_playlist_details(
@@ -238,6 +248,6 @@ class AddToPlaylistDialog(AccessifyDialog):
 			wx.CallAfter(self.Close)
 
 		ui.message(_("Adding to playlist..."))
-		thread_manager.submit_task(_add, name='DialogTask', daemon=True)
+		thread_manager.submit_task(_add, name="DialogTask", daemon=True)
 		# Prevent adding twice.
 		self.add_button.Disable()

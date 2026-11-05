@@ -1,3 +1,8 @@
+# Accessify Play, an NVDA add-on for Spotify
+# Copyright (C) 2025-2026 Accessify Play contributors
+# This file is covered by the GNU General Public License, version 2.
+# See the file LICENSE for more details.
+
 import os
 import threading
 
@@ -98,7 +103,7 @@ def _defensive_cleanup_nvda_import_tracker(addon_name: str):
 	"""
 	Intercepts NVDA's addonImportTrackers to forcefully detach any built-in/compiled module
 	(like `_overlapped`) dragged in by asynchronous deps (e.g., urllib, asyncio).
-	
+
 	NVDA's `_cleanupAddonImports` naively calls `__file__` without a `hasattr` check, crashing
 	when inspecting built-in modules without file paths (especially isolated in Python 3.13).
 	"""
@@ -115,13 +120,13 @@ def _defensive_cleanup_nvda_import_tracker(addon_name: str):
 		if not hasattr(mod, "__file__"):
 			to_remove.append(mod)
 			continue
-			
+
 		# Built-in modules, in case one does carry a __file__.
 		spec = getattr(mod, "__spec__", None)
 		if spec and getattr(spec, "origin", None) == "built-in":
 			to_remove.append(mod)
 			continue
-			
+
 		# Anything else that does not live in the add-on directory.
 		try:
 			file_path = getattr(mod, "__file__", "")
@@ -129,11 +134,13 @@ def _defensive_cleanup_nvda_import_tracker(addon_name: str):
 				to_remove.append(mod)
 		except Exception:
 			to_remove.append(mod)
-			
+
 	for invalid_mod in to_remove:
 		try:
 			tracker_set.remove(invalid_mod)
-			log.debug(f"AccessifyPlay installTasks: Scrubber removed incompatible '{getattr(invalid_mod, '__name__', 'unknown')}' from tracker")
+			log.debug(
+				f"AccessifyPlay installTasks: Scrubber removed incompatible '{getattr(invalid_mod, '__name__', 'unknown')}' from tracker"
+			)
 		except KeyError:
 			pass
 

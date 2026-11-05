@@ -1,11 +1,17 @@
+# Accessify Play, an NVDA add-on for Spotify
+# Copyright (C) 2025-2026 Accessify Play contributors
+# This file is covered by the GNU General Public License, version 2.
+# See the file LICENSE for more details.
+
 """An album's tracks."""
-from ..core.thread_manager import thread_manager
+
 import ui
 import wx
+
+from ..core.thread_manager import thread_manager
+from ..language import init_translation
 from ..ui.base_dialog import AccessifyDialog
 from ..utils import safe_text
-
-from ..language import init_translation  # noqa: E402
 
 init_translation()
 
@@ -82,7 +88,7 @@ class AlbumTracksDialog(AccessifyDialog):
 		self._loading = True
 		self.tracks_list.Clear()
 		self.tracks_list.Append(_("Loading..."))
-		thread_manager.submit_task(self._load_tracks_thread, name='DialogTask', daemon=True)
+		thread_manager.submit_task(self._load_tracks_thread, name="DialogTask", daemon=True)
 
 	def _load_tracks_thread(self):
 		album_id = self.album.get("id")
@@ -141,7 +147,9 @@ class AlbumTracksDialog(AccessifyDialog):
 		playlist_submenu = wx.Menu()
 		if self.user_playlists:
 			for playlist in self.user_playlists:
-				menu_item = playlist_submenu.Append(wx.ID_ANY, safe_text(playlist.get("name"), _("Unknown Playlist")))
+				menu_item = playlist_submenu.Append(
+					wx.ID_ANY, safe_text(playlist.get("name"), _("Unknown Playlist"))
+				)
 				self.Bind(
 					wx.EVT_MENU,
 					lambda event, p_id=playlist.get("id"), p_name=playlist.get("name"): (
@@ -169,7 +177,9 @@ class AlbumTracksDialog(AccessifyDialog):
 
 		if album_uri and track_uri:
 			ui.message(_("Playing from album..."))
-			thread_manager.submit_task(self.client.play_context_with_offset, album_uri, track_uri, name='DialogTask', daemon=True)
+			thread_manager.submit_task(
+				self.client.play_context_with_offset, album_uri, track_uri, name="DialogTask", daemon=True
+			)
 		else:
 			self._play_uri(track_uri)
 
@@ -207,4 +217,4 @@ class AlbumTracksDialog(AccessifyDialog):
 			else:
 				wx.CallAfter(ui.message, _("Track added successfully."))
 
-		thread_manager.submit_task(_add_thread, name='DialogTask', daemon=True)
+		thread_manager.submit_task(_add_thread, name="DialogTask", daemon=True)

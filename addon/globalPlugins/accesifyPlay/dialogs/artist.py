@@ -1,13 +1,19 @@
+# Accessify Play, an NVDA add-on for Spotify
+# Copyright (C) 2025-2026 Accessify Play contributors
+# This file is covered by the GNU General Public License, version 2.
+# See the file LICENSE for more details.
+
 """An artist's discography: popular songs, albums, playlists, all tracks, info."""
-from ..core.thread_manager import thread_manager
+
 import ui
 import wx
+
+from ..core.thread_manager import thread_manager
+from ..language import init_translation
 from ..ui.base_dialog import AccessifyDialog
 from ..utils import conf_get, safe_text
 from .album import AlbumTracksDialog
 from .playlist import PlaylistTracksDialog
-
-from ..language import init_translation  # noqa: E402
 
 init_translation()
 
@@ -101,7 +107,12 @@ class ArtistDiscographyDialog(AccessifyDialog):
 		self._bind_list_activation(self.albums_list, self._on_album_activate)
 		self._bind_list_activation(self.playlists_list, self._on_playlist_activate)
 		self._bind_list_activation(self.all_tracks_list, self._on_all_tracks_activate)
-		for list_control in [self.top_tracks_list, self.albums_list, self.playlists_list, self.all_tracks_list]:
+		for list_control in [
+			self.top_tracks_list,
+			self.albums_list,
+			self.playlists_list,
+			self.all_tracks_list,
+		]:
 			list_control.Bind(wx.EVT_CONTEXT_MENU, self.on_context_menu)
 
 		buttons_sizer = wx.StdDialogButtonSizer()
@@ -131,8 +142,16 @@ class ArtistDiscographyDialog(AccessifyDialog):
 			(wx.ACCEL_CTRL | wx.ACCEL_SHIFT, wx.WXK_TAB, self.MENU_PREV_PAGE.GetId()),
 			(wx.ACCEL_CTRL, wx.WXK_PAGEUP, self.MENU_PREV_PAGE.GetId()),
 		]
-		self.Bind(wx.EVT_MENU, lambda evt: self.show_page(self._current_position() + 1), id=self.MENU_NEXT_PAGE.GetId())
-		self.Bind(wx.EVT_MENU, lambda evt: self.show_page(self._current_position() - 1), id=self.MENU_PREV_PAGE.GetId())
+		self.Bind(
+			wx.EVT_MENU,
+			lambda evt: self.show_page(self._current_position() + 1),
+			id=self.MENU_NEXT_PAGE.GetId(),
+		)
+		self.Bind(
+			wx.EVT_MENU,
+			lambda evt: self.show_page(self._current_position() - 1),
+			id=self.MENU_PREV_PAGE.GetId(),
+		)
 		self.SetAcceleratorTable(wx.AcceleratorTable(accel_entries))
 		self.Bind(wx.EVT_MENU, self.on_play_selected, id=self.MENU_PLAY.GetId())
 		self.Bind(wx.EVT_MENU, self.on_add_to_queue, id=self.MENU_ADD_QUEUE.GetId())
@@ -161,7 +180,9 @@ class ArtistDiscographyDialog(AccessifyDialog):
 				return
 			focus = wx.Window.FindFocus()
 			# Focus in another window, or on one of this window's buttons: leave it.
-			if focus is not None and (wx.GetTopLevelParent(focus) is not self or isinstance(focus, wx.Button)):
+			if focus is not None and (
+				wx.GetTopLevelParent(focus) is not self or isinstance(focus, wx.Button)
+			):
 				return
 			self.show_page(0)
 		except RuntimeError:
@@ -169,7 +190,7 @@ class ArtistDiscographyDialog(AccessifyDialog):
 			pass
 
 	def load_data(self):
-		thread_manager.submit_task(self._load_data_thread, name='DialogTask', daemon=True)
+		thread_manager.submit_task(self._load_data_thread, name="DialogTask", daemon=True)
 
 	def _load_data_thread(self):
 		# Popular songs first: the dialog opens on them.
@@ -262,7 +283,7 @@ class ArtistDiscographyDialog(AccessifyDialog):
 		if self._all_tracks_loading or not self._all_tracks_can_load_more:
 			return
 		self._all_tracks_loading = True
-		thread_manager.submit_task(self._load_more_all_tracks_thread, name='DialogTask', daemon=True)
+		thread_manager.submit_task(self._load_more_all_tracks_thread, name="DialogTask", daemon=True)
 
 	def _load_more_all_tracks_thread(self):
 		batch = []
@@ -472,7 +493,9 @@ class ArtistDiscographyDialog(AccessifyDialog):
 			playlist_submenu = wx.Menu()
 			if self._user_playlists:
 				for playlist in self._user_playlists:
-					menu_item = playlist_submenu.Append(wx.ID_ANY, safe_text(playlist.get("name"), _("Unknown")))
+					menu_item = playlist_submenu.Append(
+						wx.ID_ANY, safe_text(playlist.get("name"), _("Unknown"))
+					)
 					self.Bind(
 						wx.EVT_MENU,
 						lambda event, p_id=playlist.get("id"), p_name=playlist.get("name"), a_id=item.get("id"), a_name=item.get("name"): (
@@ -488,7 +511,9 @@ class ArtistDiscographyDialog(AccessifyDialog):
 			playlist_submenu = wx.Menu()
 			if self._user_playlists:
 				for playlist in self._user_playlists:
-					menu_item = playlist_submenu.Append(wx.ID_ANY, safe_text(playlist.get("name"), _("Unknown Playlist")))
+					menu_item = playlist_submenu.Append(
+						wx.ID_ANY, safe_text(playlist.get("name"), _("Unknown Playlist"))
+					)
 					self.Bind(
 						wx.EVT_MENU,
 						lambda event, p_id=playlist.get("id"), p_name=playlist.get("name"): (
@@ -555,7 +580,7 @@ class ArtistDiscographyDialog(AccessifyDialog):
 			else:
 				wx.CallAfter(ui.message, _("Track added successfully."))
 
-		thread_manager.submit_task(_add_thread, name='DialogTask', daemon=True)
+		thread_manager.submit_task(_add_thread, name="DialogTask", daemon=True)
 
 	def _on_add_album_to_playlist_action(self, playlist_id, playlist_name, album_id, album_name):
 		ui.message(
@@ -571,4 +596,4 @@ class ArtistDiscographyDialog(AccessifyDialog):
 			else:
 				wx.CallAfter(ui.message, str(result))
 
-		thread_manager.submit_task(_thread, name='DialogTask', daemon=True)
+		thread_manager.submit_task(_thread, name="DialogTask", daemon=True)

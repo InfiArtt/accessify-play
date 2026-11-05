@@ -1,10 +1,12 @@
-# accesifyPlay/dialogs/lyrics_window.py
+# Accessify Play, an NVDA add-on for Spotify
+# Copyright (C) 2025-2026 Accessify Play contributors
+# This file is covered by the GNU General Public License, version 2.
+# See the file LICENSE for more details.
 
 import wx
 
+from ..language import init_translation
 from ..ui.base_dialog import AccessifyDialog
-
-from ..language import init_translation  # noqa: E402
 
 init_translation()
 
@@ -14,15 +16,15 @@ class LyricsDialog(AccessifyDialog):
 	Popup window that displays lyrics for the current track.
 
 	If synced lyrics are available:
-	  - Lines are shown without timestamps (clean reading experience).
-	  - Each line maps to a timestamp internally.
-	  - Pressing Enter seeks Spotify to that line's position.
-	  - Auto-scroll: when Y (auto-read) is active the cursor follows the current line.
-	  - "Jump to Current" button moves cursor to the line currently playing.
-	  - "Copy with Timestamps" button exports in LRC format.
+	- Lines are shown without timestamps (clean reading experience).
+	- Each line maps to a timestamp internally.
+	- Pressing Enter seeks Spotify to that line's position.
+	- Auto-scroll: when Y (auto-read) is active the cursor follows the current line.
+	- "Jump to Current" button moves cursor to the line currently playing.
+	- "Copy with Timestamps" button exports in LRC format.
 
 	If only plain lyrics are available:
-	  - Enter does nothing, auto-scroll is disabled, no timestamp buttons shown.
+	- Enter does nothing, auto-scroll is disabled, no timestamp buttons shown.
 	"""
 
 	def __init__(
@@ -44,9 +46,9 @@ class LyricsDialog(AccessifyDialog):
 			title=title,
 			style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER,
 		)
-		self._line_timestamps = {}   # display_line_index \u2192 timestamp_ms
-		self._ms_to_line = {}        # timestamp_ms \u2192 display_line_index (reverse map)
-		self._display_lines = []     # [(ms, text)] in display order
+		self._line_timestamps = {}  # display_line_index \u2192 timestamp_ms
+		self._ms_to_line = {}  # timestamp_ms \u2192 display_line_index (reverse map)
+		self._display_lines = []  # [(ms, text)] in display order
 		self._seek_callback = seek_callback
 		self._jump_callback = jump_callback
 		self._build_ui(plain_lyrics, track_name, synced_lines)

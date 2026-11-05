@@ -1,4 +1,7 @@
-# AccessifyPlay/__init__.py
+# Accessify Play, an NVDA add-on for Spotify
+# Copyright (C) 2025-2026 Accessify Play contributors
+# This file is covered by the GNU General Public License, version 2.
+# See the file LICENSE for more details.
 
 import json
 import os
@@ -52,14 +55,15 @@ from ._secrets_fallback import install_if_missing as _install_secrets  # noqa: E
 _install_secrets()
 
 # Local addon modules
-from .core.thread_manager import thread_manager  # noqa: E402
 from . import (  # noqa: E402
 	paths,
 	spotify_client,
 	utils,
 )
-from .commandLayers import CommandLayerManager  # noqa: E402
+from .command_layers import CommandLayerManager  # noqa: E402
+from .core.thread_manager import thread_manager  # noqa: E402
 from .dialogs.devices import DevicesDialog  # noqa: E402
+from .dialogs.lyrics_window import LyricsDialog  # noqa: E402
 from .dialogs.management import ManagementDialog  # noqa: E402
 from .dialogs.play_from_link import PlayFromLinkDialog  # noqa: E402
 from .dialogs.playlist_forms import AddToPlaylistDialog  # noqa: E402
@@ -69,10 +73,8 @@ from .dialogs.seek import SeekDialog  # noqa: E402
 from .dialogs.settings import SpotifySettingsPanel  # noqa: E402
 from .dialogs.sleeptimer import SleepTimerDialog  # noqa: E402
 from .dialogs.volume import SetVolumeDialog  # noqa: E402
-from .dialogs.lyrics_window import LyricsDialog  # noqa: E402
-from .lyrics import LyricsAutoReader, fetch_lyrics, parse_lrc  # noqa: E402
-
 from .language import init_translation  # noqa: E402
+from .lyrics import LyricsAutoReader, fetch_lyrics, parse_lrc  # noqa: E402
 
 init_translation()
 
@@ -117,7 +119,9 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		# Poll for track changes.
 		self.last_track_id = None
 		self.is_running = True
-		thread_manager.create_poller(self.track_change_poller, interval_seconds=POLL_PLAYING_SECONDS, name="TrackChangePoller")
+		thread_manager.create_poller(
+			self.track_change_poller, interval_seconds=POLL_PLAYING_SECONDS, name="TrackChangePoller"
+		)
 		thread_manager.create_poller(self.keep_alive_poller, interval_seconds=5, name="KeepAlivePoller")
 		thread_manager.submit_task(self.client.initialize, daemon=True, name="ClientInit")
 
@@ -218,15 +222,11 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 				# the state, or the track would be announced again once it clears.
 				return POLL_IDLE_SECONDS
 			is_playing = (
-				playback.get("is_playing", False)
-				if playback and isinstance(playback, dict)
-				else False
+				playback.get("is_playing", False) if playback and isinstance(playback, dict) else False
 			)
 			# "item" is null during ads and between items, so not just missing.
 			current_track_id = (
-				(playback.get("item") or {}).get("id")
-				if playback and isinstance(playback, dict)
-				else None
+				(playback.get("item") or {}).get("id") if playback and isinstance(playback, dict) else None
 			)
 
 			# Detect play/pause transitions and manage lyric timers accordingly
@@ -294,6 +294,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		Uses _execute(client.seek_track) directly to perform an ABSOLUTE seek,
 		bypassing the seek_track() wrapper which does a relative offset seek.
 		"""
+
 		@utils.run_in_thread
 		def _do_seek():
 			try:
@@ -307,6 +308,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		"""Fetch the current Spotify playback position and scroll the lyrics
 		window cursor to the matching line. Called by the 'Jump to Current' button.
 		"""
+
 		@utils.run_in_thread
 		def _do():
 			try:
@@ -351,7 +353,9 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			synced_lines = parse_lrc(synced) if synced else None
 			wx.CallAfter(
 				self.lyricsDialog.update_content,
-				track_name, artist_name, plain,
+				track_name,
+				artist_name,
+				plain,
 				synced_lines=synced_lines,
 				seek_callback=self._seek_to_position,
 				jump_callback=self._jump_lyrics_to_current,
@@ -402,7 +406,9 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			synced_lines = parse_lrc(synced) if synced else None
 			wx.CallAfter(
 				self.lyricsDialog.update_content,
-				track_name, artist_name, plain,
+				track_name,
+				artist_name,
+				plain,
 				synced_lines=synced_lines,
 				seek_callback=self._seek_to_position,
 				jump_callback=self._jump_lyrics_to_current,
@@ -457,7 +463,13 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 						"track_name": track_name,
 						"artist_name": artist_name,
 					}
-				wx.CallAfter(self._open_lyrics_dialog, track_name, artist_name, plain, synced_lines=parse_lrc(synced) if synced else None)
+				wx.CallAfter(
+					self._open_lyrics_dialog,
+					track_name,
+					artist_name,
+					plain,
+					synced_lines=parse_lrc(synced) if synced else None,
+				)
 			except Exception as e:
 				log.error(f"AccessifyPlay lyrics window fetch error: {e}", exc_info=True)
 				wx.CallAfter(
@@ -472,7 +484,10 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			self.lyricsDialog.Raise()
 			return
 		dialog = LyricsDialog(
-			gui.mainFrame, track_name, artist_name, plain_lyrics,
+			gui.mainFrame,
+			track_name,
+			artist_name,
+			plain_lyrics,
 			synced_lines=synced_lines,
 			seek_callback=self._seek_to_position,
 			jump_callback=self._jump_lyrics_to_current,
@@ -490,9 +505,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
 		# If auto-reader is already running, wire up the auto-scroll callback
 		if self._auto_reader.is_active:
-			self._auto_reader.set_line_callback(
-				lambda ms: wx.CallAfter(dialog.set_current_ms, ms)
-			)
+			self._auto_reader.set_line_callback(lambda ms: wx.CallAfter(dialog.set_current_ms, ms))
 
 	# --- SCRIPT: AUTO-READ LYRICS ---
 
@@ -907,7 +920,9 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			device = playback.get("device") if isinstance(playback, dict) else None
 			volume = device.get("volume_percent") if isinstance(device, dict) else None
 			wx.CallAfter(
-				self._open_dialog, SetVolumeDialog, "setVolumeDialog",
+				self._open_dialog,
+				SetVolumeDialog,
+				"setVolumeDialog",
 				initial_volume=volume if isinstance(volume, int) else None,
 			)
 

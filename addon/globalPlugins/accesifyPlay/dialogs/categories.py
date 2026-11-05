@@ -1,14 +1,20 @@
-import wx
+# Accessify Play, an NVDA add-on for Spotify
+# Copyright (C) 2025-2026 Accessify Play contributors
+# This file is covered by the GNU General Public License, version 2.
+# See the file LICENSE for more details.
+
 import ui
+import wx
 from logHandler import log
+
 from ..core.thread_manager import thread_manager
+from ..language import init_translation
 from ..ui.base_dialog import AccessifyDialog
 from ..utils import safe_text
 from .playlist import PlaylistTracksDialog
 
-from ..language import init_translation  # noqa: E402
-
 init_translation()
+
 
 class CategoriesDialog(AccessifyDialog):
 	"""Dialog for browsing Spotify categories."""
@@ -23,7 +29,7 @@ class CategoriesDialog(AccessifyDialog):
 
 		self._init_ui()
 		self._create_accelerators()
-		
+
 		# Load initial categories
 		self._load_categories()
 
@@ -32,7 +38,7 @@ class CategoriesDialog(AccessifyDialog):
 
 		self.categoriesList = wx.ListView(self, style=wx.LC_REPORT | wx.LC_SINGLE_SEL | wx.LC_HRULES)
 		self.categoriesList.InsertColumn(0, _("Category"), width=wx.LIST_AUTOSIZE_USEHEADER)
-		
+
 		self.categoriesList.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.on_category_activated)
 		self.categoriesList.Bind(wx.EVT_LIST_KEY_DOWN, self.on_list_key_down)
 
@@ -44,26 +50,25 @@ class CategoriesDialog(AccessifyDialog):
 		closeBtn.Bind(wx.EVT_BUTTON, self._on_close_button)
 		btnSizer.AddButton(closeBtn)
 		btnSizer.Realize()
-		
+
 		mainSizer.Add(btnSizer, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
 
 		self.SetSizer(mainSizer)
 		self.categoriesList.SetFocus()
 
 	def _create_accelerators(self):
-		accel_tbl = wx.AcceleratorTable([
-			(wx.ACCEL_NORMAL, wx.WXK_ESCAPE, wx.ID_CLOSE),
-			(wx.ACCEL_NORMAL, wx.WXK_RETURN, wx.ID_OK)
-		])
+		accel_tbl = wx.AcceleratorTable(
+			[(wx.ACCEL_NORMAL, wx.WXK_ESCAPE, wx.ID_CLOSE), (wx.ACCEL_NORMAL, wx.WXK_RETURN, wx.ID_OK)]
+		)
 		self.SetAcceleratorTable(accel_tbl)
 
 	def _load_categories(self):
 		if self._loading or not self._has_more:
 			return
-		
+
 		self._loading = True
 		self.categoriesList.Append([_("Loading...")])
-		thread_manager.submit_task(self._fetch_categories_thread, name='FetchCategories', daemon=True)
+		thread_manager.submit_task(self._fetch_categories_thread, name="FetchCategories", daemon=True)
 
 	def _fetch_categories_thread(self):
 		try:
@@ -75,9 +80,11 @@ class CategoriesDialog(AccessifyDialog):
 
 	def _on_categories_loaded(self, result):
 		self._loading = False
-		
+
 		# Remove the "Loading..." item if present
-		if self.categoriesList.GetItemCount() > 0 and self.categoriesList.GetItemText(self.categoriesList.GetItemCount() - 1) == _("Loading..."):
+		if self.categoriesList.GetItemCount() > 0 and self.categoriesList.GetItemText(
+			self.categoriesList.GetItemCount() - 1
+		) == _("Loading..."):
 			self.categoriesList.DeleteItem(self.categoriesList.GetItemCount() - 1)
 
 		if isinstance(result, str):
@@ -89,7 +96,7 @@ class CategoriesDialog(AccessifyDialog):
 
 		categories_page = result.get("categories", {})
 		items = categories_page.get("items", [])
-		
+
 		for cat in items:
 			if cat:
 				self.categories.append(cat)
@@ -97,15 +104,15 @@ class CategoriesDialog(AccessifyDialog):
 					self.categoriesList.GetItemCount(), safe_text(cat.get("name"), _("Unknown"))
 				)
 				self.categoriesList.SetItemData(idx, len(self.categories) - 1)
-				
+
 		self.categoriesList.SetColumnWidth(0, wx.LIST_AUTOSIZE)
 
 		self._offset += len(items)
 		self._has_more = categories_page.get("next") is not None
-		
+
 		if not self.categories:
 			self.categoriesList.Append([_("No categories found.")])
-			
+
 		# Focus first item if available
 		if self.categoriesList.GetItemCount() > 0 and self.categoriesList.GetFirstSelected() == -1:
 			self.categoriesList.Select(0)
@@ -113,7 +120,9 @@ class CategoriesDialog(AccessifyDialog):
 
 	def _on_error(self):
 		self._loading = False
-		if self.categoriesList.GetItemCount() > 0 and self.categoriesList.GetItemText(self.categoriesList.GetItemCount() - 1) == _("Loading..."):
+		if self.categoriesList.GetItemCount() > 0 and self.categoriesList.GetItemText(
+			self.categoriesList.GetItemCount() - 1
+		) == _("Loading..."):
 			self.categoriesList.DeleteItem(self.categoriesList.GetItemCount() - 1)
 		ui.message(_("Could not load this list. Please try again."))
 
@@ -121,13 +130,13 @@ class CategoriesDialog(AccessifyDialog):
 		idx = evt.GetIndex()
 		if idx < 0:
 			return
-			
+
 		data_idx = self.categoriesList.GetItemData(idx)
 		if data_idx >= len(self.categories) or data_idx < 0:
 			return
-			
+
 		category = self.categories[data_idx]
-		
+
 		# Open category playlists dialog
 		dlg = CategoryPlaylistsDialog(self, self.client, category)
 		dlg.ShowModal()
@@ -207,10 +216,9 @@ class PlaylistBrowserDialog(AccessifyDialog):
 		self.playlistsList.SetFocus()
 
 	def _create_accelerators(self):
-		accel_tbl = wx.AcceleratorTable([
-			(wx.ACCEL_NORMAL, wx.WXK_ESCAPE, wx.ID_CLOSE),
-			(wx.ACCEL_NORMAL, wx.WXK_RETURN, wx.ID_OK)
-		])
+		accel_tbl = wx.AcceleratorTable(
+			[(wx.ACCEL_NORMAL, wx.WXK_ESCAPE, wx.ID_CLOSE), (wx.ACCEL_NORMAL, wx.WXK_RETURN, wx.ID_OK)]
+		)
 		self.SetAcceleratorTable(accel_tbl)
 
 	def _load_playlists(self):

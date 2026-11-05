@@ -1,3 +1,8 @@
+# Accessify Play, an NVDA add-on for Spotify
+# Copyright (C) 2025-2026 Accessify Play contributors
+# This file is covered by the GNU General Public License, version 2.
+# See the file LICENSE for more details.
+
 # Build customizations
 # Change this file instead of sconstruct or manifest files, whenever possible.
 
@@ -10,7 +15,6 @@ from site_scons.site_tools.NVDATool.typings import AddonInfo, BrailleTables, Sym
 # which returns whatever is given to it as an argument.
 from site_scons.site_tools.NVDATool.utils import _
 
-
 # Add-on information variables
 addon_info = AddonInfo(
 	# add-on Name/identifier, internal for NVDA
@@ -21,7 +25,9 @@ addon_info = AddonInfo(
 	addon_summary=_("Accessify Play"),
 	# Add-on description
 	# Translators: Long description to be shown for this add-on on add-on information from add-on store
-	addon_description=_("""Accessify Play provides comprehensive NVDA control for Spotify playback on any Connect-enabled device. A Spotify Premium subscription is required for full functionality."""),
+	addon_description=_(
+		"""Accessify Play provides comprehensive NVDA control for Spotify playback on any Connect-enabled device. A Spotify Premium subscription is required for full functionality."""
+	),
 	# version
 	addon_version="1.12.2",
 	# Brief changelog for this version
@@ -59,13 +65,10 @@ addon_info = AddonInfo(
 # You can either list every file (using ""/") as a path separator,
 # or use glob expressions.
 # This expression includes all .py files in the accesifyPlay folder and its subdirectories.
-pythonSources: list[str] = [
-    "addon/globalPlugins/accesifyPlay/**/*.py",
-    "addon/installTasks.py"
-]
+pythonSources: list[str] = ["addon/globalPlugins/accesifyPlay/**/*.py", "addon/installTasks.py"]
 
 # Files that contain strings for translation. Usually your python sources
-i18nSources: list[str] = pythonSources + ["buildVars.py"]
+i18nSources: list[str] = [*pythonSources, "buildVars.py"]
 
 # Files that will be ignored when building the nvda-addon file
 # Paths are relative to the addon directory, not to the root directory of your addon sources.

@@ -1,12 +1,15 @@
-from ..core.thread_manager import thread_manager
+# Accessify Play, an NVDA add-on for Spotify
+# Copyright (C) 2025-2026 Accessify Play contributors
+# This file is covered by the GNU General Public License, version 2.
+# See the file LICENSE for more details.
 
 import ui
 import wx
 from gui import guiHelper
 
+from ..core.thread_manager import thread_manager
+from ..language import init_translation
 from ..ui.base_dialog import AccessifyDialog
-
-from ..language import init_translation  # noqa: E402
 
 init_translation()
 
@@ -44,7 +47,7 @@ class SetVolumeDialog(AccessifyDialog):
 	def onSet(self, evt):
 		volume = self.volumeCtrl.GetValue()
 		ui.message(_("Setting volume to {volume}%...").format(volume=volume))
-		thread_manager.submit_task(self._set_volume_thread, volume, name='DialogTask', daemon=True)
+		thread_manager.submit_task(self._set_volume_thread, volume, name="DialogTask", daemon=True)
 		self.Close()
 
 	def _set_volume_thread(self, volume):

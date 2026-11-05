@@ -1,13 +1,16 @@
-# accesifyPlay/utils.py
+# Accessify Play, an NVDA add-on for Spotify
+# Copyright (C) 2025-2026 Accessify Play contributors
+# This file is covered by the GNU General Public License, version 2.
+# See the file LICENSE for more details.
 
 from functools import wraps
-from .core.thread_manager import thread_manager
 
 import ui
 import wx
 from logHandler import log
 
-from .language import init_translation  # noqa: E402
+from .core.thread_manager import thread_manager
+from .language import init_translation
 
 init_translation()
 
@@ -91,6 +94,7 @@ def conf_get(key, default=None):
 	control instead.
 	"""
 	import config
+
 	try:
 		value = config.conf["spotify"][key]
 	except Exception:

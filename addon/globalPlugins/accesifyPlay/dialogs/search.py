@@ -1,17 +1,18 @@
-# accesifyPlay/dialogs/search.py
-
-from ..core.thread_manager import thread_manager
+# Accessify Play, an NVDA add-on for Spotify
+# Copyright (C) 2025-2026 Accessify Play contributors
+# This file is covered by the GNU General Public License, version 2.
+# See the file LICENSE for more details.
 
 import ui
 import wx
 
+from ..core.thread_manager import thread_manager
+from ..language import init_translation
 from ..ui.base_dialog import AccessifyDialog
 from .album import AlbumTracksDialog
 from .artist import ArtistDiscographyDialog
 from .playlist import PlaylistTracksDialog
 from .podcasts import PodcastEpisodesDialog
-
-from ..language import init_translation  # noqa: E402
 
 init_translation()
 
@@ -61,7 +62,7 @@ class SearchDialog(AccessifyDialog):
 		self.queryText.SetFocus()
 
 		# Load the user's playlists for "Add to Playlist" in the background.
-		thread_manager.submit_task(self._load_user_playlists, name='DialogTask', daemon=True)
+		thread_manager.submit_task(self._load_user_playlists, name="DialogTask", daemon=True)
 
 	def _init_ui(self):
 		"""Builds the user interface of the dialog."""
@@ -95,7 +96,7 @@ class SearchDialog(AccessifyDialog):
 		self.searchButton = wx.Button(self, label=_("&Search"))
 		self.searchButton.Bind(wx.EVT_BUTTON, self.onSearch)
 		controlsSizer.Add(self.searchButton, flag=wx.LEFT, border=5)
-		
+
 		self.categoriesButton = wx.Button(self, label=_("&Browse Categories"))
 		self.categoriesButton.Bind(wx.EVT_BUTTON, self.onBrowseCategories)
 		controlsSizer.Add(self.categoriesButton, flag=wx.LEFT, border=5)
@@ -144,8 +145,16 @@ class SearchDialog(AccessifyDialog):
 		for index, type_id in enumerate(self.MENU_TYPE_IDS):
 			accel_entries.append((wx.ACCEL_CTRL, ord(str(index + 1)), type_id.GetId()))
 			self.Bind(wx.EVT_MENU, lambda evt, i=index: self.select_type(i), id=type_id.GetId())
-		self.Bind(wx.EVT_MENU, lambda evt: self.select_type(self.typeBox.GetSelection() + 1), id=self.MENU_NEXT_TYPE.GetId())
-		self.Bind(wx.EVT_MENU, lambda evt: self.select_type(self.typeBox.GetSelection() - 1), id=self.MENU_PREV_TYPE.GetId())
+		self.Bind(
+			wx.EVT_MENU,
+			lambda evt: self.select_type(self.typeBox.GetSelection() + 1),
+			id=self.MENU_NEXT_TYPE.GetId(),
+		)
+		self.Bind(
+			wx.EVT_MENU,
+			lambda evt: self.select_type(self.typeBox.GetSelection() - 1),
+			id=self.MENU_PREV_TYPE.GetId(),
+		)
 		self.Bind(wx.EVT_MENU, lambda evt: self.focus_query(), id=self.MENU_FOCUS_QUERY.GetId())
 		self.SetAcceleratorTable(wx.AcceleratorTable(accel_entries))
 		self.Bind(wx.EVT_MENU, self.onPlay, id=self.MENU_PLAY.GetId())
@@ -157,11 +166,13 @@ class SearchDialog(AccessifyDialog):
 
 	def onBrowseCategories(self, evt):
 		from .categories import CategoriesDialog
+
 		dlg = CategoriesDialog(self, self.client)
 		dlg.ShowModal()
 
 	def onFeaturedPlaylists(self, evt):
 		from .categories import FeaturedPlaylistsDialog
+
 		dlg = FeaturedPlaylistsDialog(self, self.client)
 		dlg.ShowModal()
 
@@ -230,7 +241,9 @@ class SearchDialog(AccessifyDialog):
 
 		index_to_focus = len(self._rendered_items)
 		generation = getattr(self, "_search_generation", 0)
-		thread_manager.submit_task(self._search_thread, index_to_focus, generation, name='DialogTask', daemon=True)
+		thread_manager.submit_task(
+			self._search_thread, index_to_focus, generation, name="DialogTask", daemon=True
+		)
 
 	def _search_thread(self, index_to_focus, generation=None):
 		"""Fetches data from the Spotify client in a background thread."""
@@ -320,7 +333,13 @@ class SearchDialog(AccessifyDialog):
 			context_uri = album_info.get("uri")
 			if context_uri and track_uri:
 				ui.message(_("Playing."))
-				thread_manager.submit_task(self.client.play_context_with_offset, context_uri, track_uri, name='DialogTask', daemon=True)
+				thread_manager.submit_task(
+					self.client.play_context_with_offset,
+					context_uri,
+					track_uri,
+					name="DialogTask",
+					daemon=True,
+				)
 			else:
 				self._play_uri(track_uri)
 			return
@@ -359,6 +378,7 @@ class SearchDialog(AccessifyDialog):
 
 	def _open_audiobook_chapters(self, audiobook):
 		from .audiobooks import AudiobookChaptersDialog
+
 		dialog = AudiobookChaptersDialog(self, self.client, audiobook["id"], audiobook.get("name"))
 		dialog.Show()
 
@@ -439,17 +459,13 @@ class SearchDialog(AccessifyDialog):
 				menu.AppendSeparator()
 				# Enter already opens the episodes; the menu should say so too.
 				episodes_item = menu.Append(wx.ID_ANY, _("View Episodes"))
-				self.Bind(
-					wx.EVT_MENU, lambda e, s=item: self._open_podcast_episodes(s), episodes_item
-				)
+				self.Bind(wx.EVT_MENU, lambda e, s=item: self._open_podcast_episodes(s), episodes_item)
 				save_item = menu.Append(wx.ID_ANY, _("Save/Unsave Show"))
 				self.Bind(wx.EVT_MENU, self.on_save_show, save_item)
 			elif item_type == "audiobook":
 				menu.AppendSeparator()
 				chapters_item = menu.Append(wx.ID_ANY, _("View Chapters"))
-				self.Bind(
-					wx.EVT_MENU, lambda e, a=item: self._open_audiobook_chapters(a), chapters_item
-				)
+				self.Bind(wx.EVT_MENU, lambda e, a=item: self._open_audiobook_chapters(a), chapters_item)
 				save_book_item = menu.Append(wx.ID_ANY, _("Save/Unsave Audiobook"))
 				self.Bind(wx.EVT_MENU, lambda e, a=item: self._save_audiobook(a), save_book_item)
 			elif item_type == "playlist":
@@ -511,7 +527,7 @@ class SearchDialog(AccessifyDialog):
 				is_followed_status = result[0] if isinstance(result, list) and result else False
 				wx.CallAfter(show_menu, is_followed_status)
 
-			thread_manager.submit_task(_check_and_show, name='DialogTask', daemon=True)
+			thread_manager.submit_task(_check_and_show, name="DialogTask", daemon=True)
 		else:
 			show_menu()
 
@@ -540,7 +556,7 @@ class SearchDialog(AccessifyDialog):
 			else:
 				wx.CallAfter(ui.message, _("Track added successfully."))
 
-		thread_manager.submit_task(_add_thread, name='DialogTask', daemon=True)
+		thread_manager.submit_task(_add_thread, name="DialogTask", daemon=True)
 
 	def on_save_album(self, evt=None):
 		item = self._get_item_at_index(self.resultsList.GetSelection())
@@ -566,7 +582,7 @@ class SearchDialog(AccessifyDialog):
 			else:
 				wx.CallAfter(ui.message, str(result))
 
-		thread_manager.submit_task(_process, name='DialogTask', daemon=True)
+		thread_manager.submit_task(_process, name="DialogTask", daemon=True)
 
 	def on_save_show(self, evt=None):
 		item = self._get_item_at_index(self.resultsList.GetSelection())
@@ -607,7 +623,7 @@ class SearchDialog(AccessifyDialog):
 			else:
 				wx.CallAfter(ui.message, _("Unfollowed artist: {artist_name}.").format(artist_name=name))
 
-		thread_manager.submit_task(_follow, name='DialogTask', daemon=True)
+		thread_manager.submit_task(_follow, name="DialogTask", daemon=True)
 
 	def on_view_discography(self, evt=None):
 		item = self._get_item_at_index(self.resultsList.GetSelection())
@@ -642,7 +658,7 @@ class SearchDialog(AccessifyDialog):
 			else:
 				wx.CallAfter(ui.message, message)
 
-		thread_manager.submit_task(_thread_action, name='DialogTask', daemon=True)
+		thread_manager.submit_task(_thread_action, name="DialogTask", daemon=True)
 
 	def _get_item_at_index(self, index):
 		"""

@@ -1,11 +1,17 @@
+# Accessify Play, an NVDA add-on for Spotify
+# Copyright (C) 2025-2026 Accessify Play contributors
+# This file is covered by the GNU General Public License, version 2.
+# See the file LICENSE for more details.
+
 """A playlist's tracks."""
-from ..core.thread_manager import thread_manager
+
 import ui
 import wx
+
+from ..core.thread_manager import thread_manager
+from ..language import init_translation
 from ..ui.base_dialog import AccessifyDialog
 from ..utils import conf_get
-
-from ..language import init_translation  # noqa: E402
 
 init_translation()
 
@@ -93,7 +99,7 @@ class PlaylistTracksDialog(AccessifyDialog):
 		if not self.tracks:
 			self.tracks_list.Clear()
 			self.tracks_list.Append(_("Loading..."))
-		thread_manager.submit_task(self._load_more_tracks_thread, name='DialogTask', daemon=True)
+		thread_manager.submit_task(self._load_more_tracks_thread, name="DialogTask", daemon=True)
 
 	def _load_more_tracks_thread(self):
 		playlist_id = self.playlist.get("id")
@@ -240,7 +246,9 @@ class PlaylistTracksDialog(AccessifyDialog):
 
 		if playlist_uri and track_uri:
 			ui.message(_("Playing from playlist..."))
-			thread_manager.submit_task(self.client.play_context_with_offset, playlist_uri, track_uri, name='DialogTask', daemon=True)
+			thread_manager.submit_task(
+				self.client.play_context_with_offset, playlist_uri, track_uri, name="DialogTask", daemon=True
+			)
 		else:
 			self._play_uri(track_uri)
 
