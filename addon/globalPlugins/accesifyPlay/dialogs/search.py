@@ -66,9 +66,9 @@ class SearchDialog(AccessifyDialog):
 
 	def _init_ui(self):
 		"""Builds the user interface of the dialog."""
-		mainSizer = wx.BoxSizer(wx.VERTICAL)
+		main_sizer = wx.BoxSizer(wx.VERTICAL)
 
-		controlsSizer = wx.BoxSizer(wx.HORIZONTAL)
+		controls_sizer = wx.BoxSizer(wx.HORIZONTAL)
 		self.search_types = {
 			_("Song"): "track",
 			_("Album"): "album",
@@ -80,50 +80,50 @@ class SearchDialog(AccessifyDialog):
 		# Each label is created right before its control, so screen readers
 		# announce it as the control's name.
 		# Translators: Label of the search type list (Song, Album, Artist, ...) in the Search dialog.
-		typeLabel = wx.StaticText(self, label=_("Type:"))
-		controlsSizer.Add(typeLabel, flag=wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, border=5)
+		type_label = wx.StaticText(self, label=_("Type:"))
+		controls_sizer.Add(type_label, flag=wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, border=5)
 		self.typeBox = wx.ComboBox(self, choices=list(self.search_types.keys()), style=wx.CB_READONLY)
 		self.typeBox.SetValue(_("Song"))
-		controlsSizer.Add(self.typeBox, flag=wx.ALIGN_CENTER_VERTICAL)
+		controls_sizer.Add(self.typeBox, flag=wx.ALIGN_CENTER_VERTICAL)
 
 		# Translators: Label of the text field where the search words are typed in the Search dialog.
-		queryLabel = wx.StaticText(self, label=_("Search for:"))
-		controlsSizer.Add(queryLabel, flag=wx.ALIGN_CENTER_VERTICAL | wx.LEFT, border=10)
+		query_label = wx.StaticText(self, label=_("Search for:"))
+		controls_sizer.Add(query_label, flag=wx.ALIGN_CENTER_VERTICAL | wx.LEFT, border=10)
 		self.queryText = wx.TextCtrl(self, style=wx.TE_PROCESS_ENTER)
-		self.queryText.Bind(wx.EVT_TEXT_ENTER, self.onSearch)
-		controlsSizer.Add(self.queryText, proportion=1, flag=wx.EXPAND | wx.LEFT, border=5)
+		self.queryText.Bind(wx.EVT_TEXT_ENTER, self.on_search)
+		controls_sizer.Add(self.queryText, proportion=1, flag=wx.EXPAND | wx.LEFT, border=5)
 
 		self.searchButton = wx.Button(self, label=_("&Search"))
-		self.searchButton.Bind(wx.EVT_BUTTON, self.onSearch)
-		controlsSizer.Add(self.searchButton, flag=wx.LEFT, border=5)
+		self.searchButton.Bind(wx.EVT_BUTTON, self.on_search)
+		controls_sizer.Add(self.searchButton, flag=wx.LEFT, border=5)
 
 		self.categoriesButton = wx.Button(self, label=_("&Browse Categories"))
-		self.categoriesButton.Bind(wx.EVT_BUTTON, self.onBrowseCategories)
-		controlsSizer.Add(self.categoriesButton, flag=wx.LEFT, border=5)
+		self.categoriesButton.Bind(wx.EVT_BUTTON, self.on_browse_categories)
+		controls_sizer.Add(self.categoriesButton, flag=wx.LEFT, border=5)
 
 		# Mnemonic is T, not F: Alt+F is already the Follow Artist accelerator.
 		self.featuredButton = wx.Button(self, label=_("Fea&tured Playlists"))
-		self.featuredButton.Bind(wx.EVT_BUTTON, self.onFeaturedPlaylists)
-		controlsSizer.Add(self.featuredButton, flag=wx.LEFT, border=5)
+		self.featuredButton.Bind(wx.EVT_BUTTON, self.on_featured_playlists)
+		controls_sizer.Add(self.featuredButton, flag=wx.LEFT, border=5)
 
-		mainSizer.Add(controlsSizer, flag=wx.EXPAND | wx.ALL, border=5)
+		main_sizer.Add(controls_sizer, flag=wx.EXPAND | wx.ALL, border=5)
 
 		# Translators: Label of the list of search results in the Search dialog.
-		resultsLabel = wx.StaticText(self, label=_("Results:"))
-		mainSizer.Add(resultsLabel, flag=wx.LEFT | wx.TOP, border=5)
+		results_label = wx.StaticText(self, label=_("Results:"))
+		main_sizer.Add(results_label, flag=wx.LEFT | wx.TOP, border=5)
 		self.resultsList = wx.ListBox(self)
 		self._bind_list_activation(self.resultsList, self._on_item_activated)
 		self.resultsList.Bind(wx.EVT_CONTEXT_MENU, self.on_results_context_menu)
-		mainSizer.Add(self.resultsList, proportion=1, flag=wx.EXPAND | wx.ALL, border=5)
+		main_sizer.Add(self.resultsList, proportion=1, flag=wx.EXPAND | wx.ALL, border=5)
 
-		buttonsSizer = wx.StdDialogButtonSizer()
-		cancelButton = wx.Button(self, wx.ID_CANCEL, label=_("&Close"))
-		self.bind_close_button(cancelButton)
-		buttonsSizer.AddButton(cancelButton)
-		buttonsSizer.Realize()
-		mainSizer.Add(buttonsSizer, flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
+		buttons_sizer = wx.StdDialogButtonSizer()
+		cancel_button = wx.Button(self, wx.ID_CANCEL, label=_("&Close"))
+		self.bind_close_button(cancel_button)
+		buttons_sizer.AddButton(cancel_button)
+		buttons_sizer.Realize()
+		main_sizer.Add(buttons_sizer, flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
 
-		self.SetSizer(mainSizer)
+		self.SetSizer(main_sizer)
 		self.Fit()
 
 	def _create_accelerators(self):
@@ -144,33 +144,33 @@ class SearchDialog(AccessifyDialog):
 		]
 		for index, type_id in enumerate(self.MENU_TYPE_IDS):
 			accel_entries.append((wx.ACCEL_CTRL, ord(str(index + 1)), type_id.GetId()))
-			self.Bind(wx.EVT_MENU, lambda evt, i=index: self.select_type(i), id=type_id.GetId())
+			self.Bind(wx.EVT_MENU, lambda _evt, i=index: self.select_type(i), id=type_id.GetId())
 		self.Bind(
 			wx.EVT_MENU,
-			lambda evt: self.select_type(self.typeBox.GetSelection() + 1),
+			lambda _evt: self.select_type(self.typeBox.GetSelection() + 1),
 			id=self.MENU_NEXT_TYPE.GetId(),
 		)
 		self.Bind(
 			wx.EVT_MENU,
-			lambda evt: self.select_type(self.typeBox.GetSelection() - 1),
+			lambda _evt: self.select_type(self.typeBox.GetSelection() - 1),
 			id=self.MENU_PREV_TYPE.GetId(),
 		)
-		self.Bind(wx.EVT_MENU, lambda evt: self.focus_query(), id=self.MENU_FOCUS_QUERY.GetId())
+		self.Bind(wx.EVT_MENU, lambda _evt: self.focus_query(), id=self.MENU_FOCUS_QUERY.GetId())
 		self.SetAcceleratorTable(wx.AcceleratorTable(accel_entries))
-		self.Bind(wx.EVT_MENU, self.onPlay, id=self.MENU_PLAY.GetId())
-		self.Bind(wx.EVT_MENU, self.onAddToQueue, id=self.MENU_ADD_QUEUE.GetId())
+		self.Bind(wx.EVT_MENU, self.on_play, id=self.MENU_PLAY.GetId())
+		self.Bind(wx.EVT_MENU, self.on_add_to_queue, id=self.MENU_ADD_QUEUE.GetId())
 		self.Bind(wx.EVT_MENU, self.on_follow_artist, id=self.MENU_FOLLOW.GetId())
 		self.Bind(wx.EVT_MENU, self.on_view_discography, id=self.MENU_DISCO.GetId())
 		self.Bind(wx.EVT_MENU, self.copy_selected_link, id=self.MENU_COPY_LINK.GetId())
 		self.Bind(wx.EVT_MENU, self.on_show_lyrics, id=self.MENU_SHOW_LYRICS.GetId())
 
-	def onBrowseCategories(self, evt):
+	def on_browse_categories(self, _evt):
 		from .categories import CategoriesDialog
 
 		dlg = CategoriesDialog(self, self.client)
 		dlg.ShowModal()
 
-	def onFeaturedPlaylists(self, evt):
+	def on_featured_playlists(self, _evt):
 		from .categories import FeaturedPlaylistsDialog
 
 		dlg = FeaturedPlaylistsDialog(self, self.client)
@@ -189,7 +189,7 @@ class SearchDialog(AccessifyDialog):
 		if self.queryText.GetValue().strip():
 			# Translators: Spoken when the search type is switched with a shortcut
 			# and the search runs again, e.g. "Artist, searching...".
-			self.onSearch(announce=_("{type}, searching...").format(type=label))
+			self.on_search(announce=_("{type}, searching...").format(type=label))
 		else:
 			ui.message(label)
 
@@ -198,7 +198,7 @@ class SearchDialog(AccessifyDialog):
 		self.queryText.SetFocus()
 		self.queryText.SelectAll()
 
-	def onSearch(self, evt=None, announce=None):
+	def on_search(self, _evt=None, announce=None):
 		"""Initiates a new search, clearing previous results."""
 		query = self.queryText.GetValue().strip()
 		if not query:
@@ -228,7 +228,7 @@ class SearchDialog(AccessifyDialog):
 
 		self._activate_item(item)
 
-	def onPlay(self, evt=None):
+	def on_play(self, _evt=None):
 		"""Handles the 'Play' action (Alt+P or context menu)."""
 		item = self._get_item_at_index(self.resultsList.GetSelection())
 		if item and item.get("uri"):
@@ -459,15 +459,15 @@ class SearchDialog(AccessifyDialog):
 				menu.AppendSeparator()
 				# Enter already opens the episodes; the menu should say so too.
 				episodes_item = menu.Append(wx.ID_ANY, _("View Episodes"))
-				self.Bind(wx.EVT_MENU, lambda e, s=item: self._open_podcast_episodes(s), episodes_item)
+				self.Bind(wx.EVT_MENU, lambda _e, s=item: self._open_podcast_episodes(s), episodes_item)
 				save_item = menu.Append(wx.ID_ANY, _("Save/Unsave Show"))
 				self.Bind(wx.EVT_MENU, self.on_save_show, save_item)
 			elif item_type == "audiobook":
 				menu.AppendSeparator()
 				chapters_item = menu.Append(wx.ID_ANY, _("View Chapters"))
-				self.Bind(wx.EVT_MENU, lambda e, a=item: self._open_audiobook_chapters(a), chapters_item)
+				self.Bind(wx.EVT_MENU, lambda _e, a=item: self._open_audiobook_chapters(a), chapters_item)
 				save_book_item = menu.Append(wx.ID_ANY, _("Save/Unsave Audiobook"))
-				self.Bind(wx.EVT_MENU, lambda e, a=item: self._save_audiobook(a), save_book_item)
+				self.Bind(wx.EVT_MENU, lambda _e, a=item: self._save_audiobook(a), save_book_item)
 			elif item_type == "playlist":
 				is_owned = item.get("owner", {}).get("id") == self._current_user_id
 				if not is_owned:
@@ -476,18 +476,18 @@ class SearchDialog(AccessifyDialog):
 						owner_item = menu.Append(wx.ID_ANY, self._follow_owner_label(item))
 						self.Bind(
 							wx.EVT_MENU,
-							lambda e, u=self._owner_of(item): self._toggle_follow_user(u),
+							lambda _e, u=self._owner_of(item): self._toggle_follow_user(u),
 							owner_item,
 						)
 					if is_followed is True:
 						unfollow_item = menu.Append(wx.ID_ANY, _("Unfollow Playlist"))
 						self.Bind(
-							wx.EVT_MENU, lambda e: self.on_toggle_follow_playlist(item, True), unfollow_item
+							wx.EVT_MENU, lambda _e: self.on_toggle_follow_playlist(item, True), unfollow_item
 						)
 					elif is_followed is False:
 						follow_item = menu.Append(wx.ID_ANY, _("Follow Playlist"))
 						self.Bind(
-							wx.EVT_MENU, lambda e: self.on_toggle_follow_playlist(item, False), follow_item
+							wx.EVT_MENU, lambda _e: self.on_toggle_follow_playlist(item, False), follow_item
 						)
 
 			elif item_type == "track":
@@ -531,7 +531,7 @@ class SearchDialog(AccessifyDialog):
 		else:
 			show_menu()
 
-	def _on_add_to_playlist_selected(self, event, playlist_id, playlist_name):
+	def _on_add_to_playlist_selected(self, _event, playlist_id, playlist_name):
 		"""Handles when a playlist is selected from the submenu."""
 		track = self._get_item_at_index(self.resultsList.GetSelection())
 		if not track or track.get("type") != "track":
@@ -558,12 +558,12 @@ class SearchDialog(AccessifyDialog):
 
 		thread_manager.submit_task(_add_thread, name="DialogTask", daemon=True)
 
-	def on_save_album(self, evt=None):
+	def on_save_album(self, _evt=None):
 		item = self._get_item_at_index(self.resultsList.GetSelection())
 		if item:
 			self._save_album_to_library(item)
 
-	def _on_add_album_to_playlist_selected(self, event, playlist_id, playlist_name):
+	def _on_add_album_to_playlist_selected(self, _event, playlist_id, playlist_name):
 		album = self._get_item_at_index(self.resultsList.GetSelection())
 		if not album or album.get("type") != "album":
 			return
@@ -584,12 +584,12 @@ class SearchDialog(AccessifyDialog):
 
 		thread_manager.submit_task(_process, name="DialogTask", daemon=True)
 
-	def on_save_show(self, evt=None):
+	def on_save_show(self, _evt=None):
 		item = self._get_item_at_index(self.resultsList.GetSelection())
 		if item:
 			self._toggle_saved("show", item)
 
-	def onAddToQueue(self, evt=None):
+	def on_add_to_queue(self, _evt=None):
 		item = self._get_item_at_index(self.resultsList.GetSelection())
 		if not item:
 			ui.message(_("No item selected."))
@@ -606,7 +606,7 @@ class SearchDialog(AccessifyDialog):
 		else:
 			ui.message(_("This item type cannot be added to the queue."))
 
-	def on_follow_artist(self, evt=None):
+	def on_follow_artist(self, _evt=None):
 		item = self._get_item_at_index(self.resultsList.GetSelection())
 		if not item or item.get("type") != "artist":
 			return
@@ -625,19 +625,19 @@ class SearchDialog(AccessifyDialog):
 
 		thread_manager.submit_task(_follow, name="DialogTask", daemon=True)
 
-	def on_view_discography(self, evt=None):
+	def on_view_discography(self, _evt=None):
 		item = self._get_item_at_index(self.resultsList.GetSelection())
 		if item and item.get("type") == "artist":
 			self._open_artist_discography(item)
 
-	def on_show_lyrics(self, evt=None):
+	def on_show_lyrics(self, _evt=None):
 		item = self._get_item_at_index(self.resultsList.GetSelection())
 		if not item or item.get("type") != "track":
 			ui.message(_("Lyrics are only available for songs."))
 			return
 		self._show_lyrics_for_track(item)
 
-	def copy_selected_link(self, evt=None):
+	def copy_selected_link(self, _evt=None):
 		item = self._get_item_at_index(self.resultsList.GetSelection())
 		if item:
 			self.copy_link(item.get("external_urls", {}).get("spotify"))

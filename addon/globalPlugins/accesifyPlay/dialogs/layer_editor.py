@@ -47,7 +47,7 @@ class EditCommandDialog(AccessifyDialog):
 		self.SetSizerAndFit(sizer)
 		self.Bind(wx.EVT_BUTTON, self.on_ok, id=wx.ID_OK)
 
-	def _on_close_button(self, evt):
+	def _on_close_button(self, _evt):
 		self.EndModal(wx.ID_CANCEL)
 
 	def _on_char_hook(self, evt):
@@ -182,13 +182,13 @@ class LayerEditorDialog(AccessifyDialog):
 			self.list_ctrl.SetItemData(idx, i)
 			self.item_data_map[i] = script_id
 
-	def on_selection(self, evt):
+	def on_selection(self, _evt):
 		self.btn_edit.Enable(True)
 
-	def on_deselection(self, evt):
+	def on_deselection(self, _evt):
 		self.btn_edit.Enable(False)
 
-	def on_edit(self, evt):
+	def on_edit(self, _evt):
 		idx = self.list_ctrl.GetFirstSelected()
 		if idx == -1:
 			return
@@ -221,7 +221,7 @@ class LayerEditorDialog(AccessifyDialog):
 
 		dlg.Destroy()
 
-	def on_reset(self, evt):
+	def on_reset(self, _evt):
 		if (
 			wx.MessageBox(
 				_("Are you sure you want to reset all shortcuts to default?"),

@@ -196,7 +196,7 @@ class LyricsDialog(AccessifyDialog):
 		else:
 			evt.Skip()
 
-	def _on_copy_lyrics(self, evt):
+	def _on_copy_lyrics(self, _evt):
 		"""Copy plain lyrics (no timestamps) to clipboard."""
 		if self._display_lines:
 			text = "\n".join(t for _, t in self._display_lines)
@@ -204,12 +204,12 @@ class LyricsDialog(AccessifyDialog):
 			text = self.lyrics_ctrl.GetValue()
 		self._copy_to_clipboard(text)
 
-	def _on_copy_with_timestamps(self, evt):
+	def _on_copy_with_timestamps(self, _evt):
 		"""Copy lyrics in LRC [mm:ss.cs] format to clipboard."""
 		lines = [f"{self._ms_to_lrc(ms)} {text}" for ms, text in self._display_lines]
 		self._copy_to_clipboard("\n".join(lines))
 
-	def _on_jump_to_current(self, evt):
+	def _on_jump_to_current(self, _evt):
 		"""Ask __init__.py for the current Spotify position, then scroll there."""
 		if self._jump_callback:
 			self._jump_callback()

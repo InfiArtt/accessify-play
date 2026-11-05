@@ -19,46 +19,46 @@ class PlayFromLinkDialog(AccessifyDialog):
 		self.client = client
 		self.link_info = None
 
-		mainSizer = wx.BoxSizer(wx.VERTICAL)
+		main_sizer = wx.BoxSizer(wx.VERTICAL)
 
 		label = wx.StaticText(self, label=_("Spotify URL:"))
-		mainSizer.Add(label, flag=wx.LEFT | wx.TOP, border=5)
-		urlSizer = wx.BoxSizer(wx.HORIZONTAL)
+		main_sizer.Add(label, flag=wx.LEFT | wx.TOP, border=5)
+		url_sizer = wx.BoxSizer(wx.HORIZONTAL)
 		self.urlText = wx.TextCtrl(self)
-		urlSizer.Add(self.urlText, proportion=1, flag=wx.EXPAND)
+		url_sizer.Add(self.urlText, proportion=1, flag=wx.EXPAND)
 		self.checkButton = wx.Button(self, label=_("&Check"))
-		self.checkButton.Bind(wx.EVT_BUTTON, self.onCheck)
-		urlSizer.Add(self.checkButton, flag=wx.LEFT, border=5)
-		mainSizer.Add(urlSizer, flag=wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, border=5)
+		self.checkButton.Bind(wx.EVT_BUTTON, self.on_check)
+		url_sizer.Add(self.checkButton, flag=wx.LEFT, border=5)
+		main_sizer.Add(url_sizer, flag=wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, border=5)
 
-		detailsLabel = wx.StaticText(self, label=_("Link Details:"))
-		mainSizer.Add(detailsLabel, flag=wx.LEFT, border=5)
+		details_label = wx.StaticText(self, label=_("Link Details:"))
+		main_sizer.Add(details_label, flag=wx.LEFT, border=5)
 		self.detailsText = wx.TextCtrl(self, style=wx.TE_MULTILINE | wx.TE_READONLY)
 		self.detailsText.SetMinSize((300, 120))
-		mainSizer.Add(self.detailsText, proportion=1, flag=wx.EXPAND | wx.ALL, border=5)
+		main_sizer.Add(self.detailsText, proportion=1, flag=wx.EXPAND | wx.ALL, border=5)
 
 		# Only shown for user links, which have nothing to play.
 		self.followButton = wx.Button(self, label=_("&Follow/Unfollow"))
-		self.followButton.Bind(wx.EVT_BUTTON, self.onFollow)
+		self.followButton.Bind(wx.EVT_BUTTON, self.on_follow)
 		self.followButton.Hide()
-		mainSizer.Add(self.followButton, flag=wx.LEFT | wx.BOTTOM, border=5)
+		main_sizer.Add(self.followButton, flag=wx.LEFT | wx.BOTTOM, border=5)
 
-		buttonsSizer = wx.StdDialogButtonSizer()
+		buttons_sizer = wx.StdDialogButtonSizer()
 		self.playButton = wx.Button(self, wx.ID_OK, label=_("&Play"))
 		self.playButton.Disable()
-		self.playButton.Bind(wx.EVT_BUTTON, self.onPlay)
-		buttonsSizer.AddButton(self.playButton)
+		self.playButton.Bind(wx.EVT_BUTTON, self.on_play)
+		buttons_sizer.AddButton(self.playButton)
 
-		cancelButton = wx.Button(self, wx.ID_CANCEL, label=_("&Close"))
-		self.bind_close_button(cancelButton)
-		buttonsSizer.AddButton(cancelButton)
-		buttonsSizer.Realize()
-		mainSizer.Add(buttonsSizer, flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
+		cancel_button = wx.Button(self, wx.ID_CANCEL, label=_("&Close"))
+		self.bind_close_button(cancel_button)
+		buttons_sizer.AddButton(cancel_button)
+		buttons_sizer.Realize()
+		main_sizer.Add(buttons_sizer, flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
 
-		self.SetSizerAndFit(mainSizer)
+		self.SetSizerAndFit(main_sizer)
 		self.urlText.SetFocus()
 
-	def onCheck(self, evt):
+	def on_check(self, _evt):
 		url = self.urlText.GetValue().strip()
 		if not url:
 			return
@@ -90,11 +90,11 @@ class PlayFromLinkDialog(AccessifyDialog):
 				self.followButton.SetDefault()
 		self.Layout()
 
-	def onFollow(self, evt=None):
+	def on_follow(self, _evt=None):
 		if self.link_info and self.link_info.get("user"):
 			self._toggle_follow_user(self.link_info["user"])
 
-	def onPlay(self, evt):
+	def on_play(self, _evt):
 		if not self.link_info:
 			ui.message(_("Please check a Spotify link first."))
 			return

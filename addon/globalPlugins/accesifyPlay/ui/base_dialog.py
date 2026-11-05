@@ -37,7 +37,7 @@ class AccessifyDialog(wx.Dialog):
 		self._is_queuing = False
 
 	def bind_close_button(self, button):
-		button.Bind(wx.EVT_BUTTON, lambda e: self.Close())
+		button.Bind(wx.EVT_BUTTON, lambda _e: self.Close())
 
 	def _on_char_hook(self, evt):
 		if evt.GetKeyCode() == wx.WXK_ESCAPE:
@@ -199,7 +199,7 @@ class AccessifyDialog(wx.Dialog):
 			ui.message(_("Clipboard error"))
 
 	def _bind_list_activation(self, control, activate_callback):
-		control.Bind(wx.EVT_LISTBOX_DCLICK, lambda evt: activate_callback())
+		control.Bind(wx.EVT_LISTBOX_DCLICK, lambda _evt: activate_callback())
 
 		def on_char(evt):
 			if evt.GetKeyCode() in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER):
@@ -309,7 +309,7 @@ class AccessifyDialog(wx.Dialog):
 		# Every track list builds its menu through here, so Show Lyrics is
 		# available wherever a track is: search, albums, playlists, library.
 		lyrics_item = menu.Append(wx.ID_ANY, _("Show Lyrics"))
-		self.Bind(wx.EVT_MENU, lambda evt, t=track_item: self._show_lyrics_for_track(t), lyrics_item)
+		self.Bind(wx.EVT_MENU, lambda _evt, t=track_item: self._show_lyrics_for_track(t), lyrics_item)
 		album = track_item.get("album")
 		if album and album.get("uri"):
 			go_to_album_item = menu.Append(
@@ -333,14 +333,14 @@ class AccessifyDialog(wx.Dialog):
 				self.Bind(wx.EVT_MENU, lambda evt, a=artist: self._handle_go_to_artist(evt, a), artist_item)
 			menu.AppendSubMenu(artist_submenu, _("Go to Artist"))
 
-	def _handle_go_to_album(self, event, album):
+	def _handle_go_to_album(self, _event, album):
 		user_playlists = getattr(self, "_user_playlists", []) or getattr(self, "user_playlists", [])
 		from ..dialogs.album import AlbumTracksDialog
 
 		dialog = AlbumTracksDialog(self, self.client, album, user_playlists)
 		dialog.Show()
 
-	def _handle_go_to_artist(self, event, artist):
+	def _handle_go_to_artist(self, _event, artist):
 		user_playlists = getattr(self, "_user_playlists", []) or getattr(self, "user_playlists", [])
 		from ..dialogs.artist import ArtistDiscographyDialog
 

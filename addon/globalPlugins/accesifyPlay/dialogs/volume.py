@@ -18,33 +18,33 @@ class SetVolumeDialog(AccessifyDialog):
 	def __init__(self, parent, client, initial_volume=None):
 		super().__init__(parent, title=_("Set Spotify Volume"))
 		self.client = client
-		mainSizer = wx.BoxSizer(wx.VERTICAL)
-		sHelper = guiHelper.BoxSizerHelper(self, sizer=mainSizer)
+		main_sizer = wx.BoxSizer(wx.VERTICAL)
+		s_helper = guiHelper.BoxSizerHelper(self, sizer=main_sizer)
 
 		# Volume input
 		label = _("Volume (0-100):")
-		self.volumeCtrl = sHelper.addLabeledControl(label, wx.SpinCtrl)
+		self.volumeCtrl = s_helper.addLabeledControl(label, wx.SpinCtrl)
 		self.volumeCtrl.SetRange(0, 100)
 		# The device's current volume, so the field starts where the user is.
 		self.volumeCtrl.SetValue(50 if initial_volume is None else initial_volume)
 
 		# Action buttons
-		buttonsSizer = wx.StdDialogButtonSizer()
-		okButton = wx.Button(self, wx.ID_OK, label=_("&Set"))
-		okButton.SetDefault()
-		okButton.Bind(wx.EVT_BUTTON, self.onSet)
-		buttonsSizer.AddButton(okButton)
+		buttons_sizer = wx.StdDialogButtonSizer()
+		ok_button = wx.Button(self, wx.ID_OK, label=_("&Set"))
+		ok_button.SetDefault()
+		ok_button.Bind(wx.EVT_BUTTON, self.on_set)
+		buttons_sizer.AddButton(ok_button)
 
-		cancelButton = wx.Button(self, wx.ID_CANCEL, label=_("&Cancel"))
-		self.bind_close_button(cancelButton)
-		buttonsSizer.AddButton(cancelButton)
-		buttonsSizer.Realize()
-		mainSizer.Add(buttonsSizer, flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
+		cancel_button = wx.Button(self, wx.ID_CANCEL, label=_("&Cancel"))
+		self.bind_close_button(cancel_button)
+		buttons_sizer.AddButton(cancel_button)
+		buttons_sizer.Realize()
+		main_sizer.Add(buttons_sizer, flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
 
-		self.SetSizerAndFit(mainSizer)
+		self.SetSizerAndFit(main_sizer)
 		self.volumeCtrl.SetFocus()
 
-	def onSet(self, evt):
+	def on_set(self, _evt):
 		volume = self.volumeCtrl.GetValue()
 		ui.message(_("Setting volume to {volume}%...").format(volume=volume))
 		thread_manager.submit_task(self._set_volume_thread, volume, name="DialogTask", daemon=True)

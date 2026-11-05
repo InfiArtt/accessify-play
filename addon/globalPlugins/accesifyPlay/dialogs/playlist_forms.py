@@ -22,34 +22,34 @@ class CreatePlaylistDialog(AccessifyDialog):
 		self.client = client
 		self._creating = False
 
-		mainSizer = wx.BoxSizer(wx.VERTICAL)
-		self.SetSizer(mainSizer)
-		sHelper = guiHelper.BoxSizerHelper(self, sizer=mainSizer)
+		main_sizer = wx.BoxSizer(wx.VERTICAL)
+		self.SetSizer(main_sizer)
+		s_helper = guiHelper.BoxSizerHelper(self, sizer=main_sizer)
 
-		self.nameCtrl = sHelper.addLabeledControl(_("Playlist Name:"), wx.TextCtrl)
-		self.descriptionCtrl = sHelper.addLabeledControl(
+		self.nameCtrl = s_helper.addLabeledControl(_("Playlist Name:"), wx.TextCtrl)
+		self.descriptionCtrl = s_helper.addLabeledControl(
 			_("Description:"), wx.TextCtrl, style=wx.TE_MULTILINE
 		)
 		self.descriptionCtrl.SetMinSize((-1, 80))
-		self.publicCheck = sHelper.addItem(wx.CheckBox(self, label=_("Public playlist")))
+		self.publicCheck = s_helper.addItem(wx.CheckBox(self, label=_("Public playlist")))
 		self.publicCheck.SetValue(True)
-		self.collabCheck = sHelper.addItem(wx.CheckBox(self, label=_("Collaborative (requires public off)")))
+		self.collabCheck = s_helper.addItem(wx.CheckBox(self, label=_("Collaborative (requires public off)")))
 
-		buttonsSizer = wx.StdDialogButtonSizer()
+		buttons_sizer = wx.StdDialogButtonSizer()
 		self.createButton = wx.Button(self, wx.ID_OK, label=_("Cre&ate"))
-		self.createButton.Bind(wx.EVT_BUTTON, self.onCreate)
-		buttonsSizer.AddButton(self.createButton)
+		self.createButton.Bind(wx.EVT_BUTTON, self.on_create)
+		buttons_sizer.AddButton(self.createButton)
 
-		cancelButton = wx.Button(self, wx.ID_CANCEL, label=_("&Cancel"))
-		self.bind_close_button(cancelButton)
-		buttonsSizer.AddButton(cancelButton)
-		buttonsSizer.Realize()
-		mainSizer.Add(buttonsSizer, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
+		cancel_button = wx.Button(self, wx.ID_CANCEL, label=_("&Cancel"))
+		self.bind_close_button(cancel_button)
+		buttons_sizer.AddButton(cancel_button)
+		buttons_sizer.Realize()
+		main_sizer.Add(buttons_sizer, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
 
-		self.SetSizerAndFit(mainSizer)
+		self.SetSizerAndFit(main_sizer)
 		self.nameCtrl.SetFocus()
 
-	def onCreate(self, evt):
+	def on_create(self, _evt):
 		if self._creating:
 			return
 		name = self.nameCtrl.GetValue().strip()
@@ -92,36 +92,36 @@ class PlaylistDetailsDialog(AccessifyDialog):
 		self.playlist_data = playlist_data
 		self._saving = False
 
-		mainSizer = wx.BoxSizer(wx.VERTICAL)
-		self.SetSizer(mainSizer)
-		sHelper = guiHelper.BoxSizerHelper(self, sizer=mainSizer)
+		main_sizer = wx.BoxSizer(wx.VERTICAL)
+		self.SetSizer(main_sizer)
+		s_helper = guiHelper.BoxSizerHelper(self, sizer=main_sizer)
 
-		self.nameCtrl = sHelper.addLabeledControl(_("Name:"), wx.TextCtrl)
+		self.nameCtrl = s_helper.addLabeledControl(_("Name:"), wx.TextCtrl)
 		self.nameCtrl.SetValue(playlist_data.get("name", ""))
-		self.descriptionCtrl = sHelper.addLabeledControl(
+		self.descriptionCtrl = s_helper.addLabeledControl(
 			_("Description:"), wx.TextCtrl, style=wx.TE_MULTILINE
 		)
 		self.descriptionCtrl.SetMinSize((-1, 80))
 		self.descriptionCtrl.SetValue(playlist_data.get("description", "") or "")
-		self.publicCheck = sHelper.addItem(wx.CheckBox(self, label=_("Public playlist")))
+		self.publicCheck = s_helper.addItem(wx.CheckBox(self, label=_("Public playlist")))
 		self.publicCheck.SetValue(bool(playlist_data.get("public")))
-		self.collabCheck = sHelper.addItem(wx.CheckBox(self, label=_("Collaborative")))
+		self.collabCheck = s_helper.addItem(wx.CheckBox(self, label=_("Collaborative")))
 		self.collabCheck.SetValue(bool(playlist_data.get("collaborative")))
 
-		buttonsSizer = wx.StdDialogButtonSizer()
+		buttons_sizer = wx.StdDialogButtonSizer()
 		self.saveButton = wx.Button(self, wx.ID_OK, label=_("&Save"))
-		self.saveButton.Bind(wx.EVT_BUTTON, self.onSave)
-		buttonsSizer.AddButton(self.saveButton)
-		cancelButton = wx.Button(self, wx.ID_CANCEL, label=_("&Cancel"))
-		self.bind_close_button(cancelButton)
-		buttonsSizer.AddButton(cancelButton)
-		buttonsSizer.Realize()
-		mainSizer.Add(buttonsSizer, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
+		self.saveButton.Bind(wx.EVT_BUTTON, self.on_save)
+		buttons_sizer.AddButton(self.saveButton)
+		cancel_button = wx.Button(self, wx.ID_CANCEL, label=_("&Cancel"))
+		self.bind_close_button(cancel_button)
+		buttons_sizer.AddButton(cancel_button)
+		buttons_sizer.Realize()
+		main_sizer.Add(buttons_sizer, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
 
-		self.SetSizerAndFit(mainSizer)
+		self.SetSizerAndFit(main_sizer)
 		self.nameCtrl.SetFocus()
 
-	def onSave(self, evt):
+	def on_save(self, _evt):
 		if self._saving:
 			return
 		name = self.nameCtrl.GetValue().strip()
@@ -223,12 +223,12 @@ class AddToPlaylistDialog(AccessifyDialog):
 		sizer.Fit(self)
 		self.playlist_combobox.SetFocus()
 
-	def on_playlist_selected(self, evt):
+	def on_playlist_selected(self, _evt):
 		selection_index = self.playlist_combobox.GetSelection()
 		if selection_index != wx.NOT_FOUND:
 			self.selected_playlist_id = self.playlists[selection_index]["id"]
 
-	def on_add_to_playlist(self, evt):
+	def on_add_to_playlist(self, _evt):
 		if not self.current_track_uri or not self.selected_playlist_id:
 			ui.message(_("Please select a playlist and ensure a track is playing."))
 			return

@@ -33,38 +33,38 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 		super().__init__(parent)
 		self.client = spotify_client.get_client()
 
-	def makeSettings(self, settingsSizer):
-		sHelper = guiHelper.BoxSizerHelper(self, sizer=settingsSizer)
+	def makeSettings(self, settings_sizer):
+		s_helper = guiHelper.BoxSizerHelper(self, sizer=settings_sizer)
 
 		# Translators: Label for a setting to choose how many search results to load at a time.
 		limit_label = _("Search Results Limit (1 to 50)")
-		self.limitCtrl = sHelper.addLabeledControl(limit_label, wx.SpinCtrl)
+		self.limitCtrl = s_helper.addLabeledControl(limit_label, wx.SpinCtrl)
 		self.limitCtrl.SetRange(1, 50)
 		self.limitCtrl.SetValue(conf_get("searchLimit", 20))
 
 		# Translators: Label for a setting to choose the duration for seek forward/backward actions.
 		seek_duration_label = _("Seek Duration (seconds, 1 to 60)")
-		self.seekDurationCtrl = sHelper.addLabeledControl(seek_duration_label, wx.SpinCtrl)
+		self.seekDurationCtrl = s_helper.addLabeledControl(seek_duration_label, wx.SpinCtrl)
 		self.seekDurationCtrl.SetRange(1, 60)
 		self.seekDurationCtrl.SetValue(conf_get("seekDuration", 15))
 
 		# Translators: Label for a setting to choose the volume step percentage.
 		volume_step_label = _("Volume Step (1 to 100)")
-		self.volumeStepCtrl = sHelper.addLabeledControl(volume_step_label, wx.SpinCtrl)
+		self.volumeStepCtrl = s_helper.addLabeledControl(volume_step_label, wx.SpinCtrl)
 		self.volumeStepCtrl.SetRange(1, 100)
 		self.volumeStepCtrl.SetValue(conf_get("volumeStep", 5))
 
 		keep_alive_label = _("Keep Alive Interval (seconds, 0 = Off, Min = 5)")
-		self.keepAliveCtrl = sHelper.addLabeledControl(keep_alive_label, wx.SpinCtrl)
+		self.keepAliveCtrl = s_helper.addLabeledControl(keep_alive_label, wx.SpinCtrl)
 		self.keepAliveCtrl.SetRange(0, 300)
 		self.keepAliveCtrl.SetValue(conf_get("keepAliveInterval", 0))
 		# Translators: Label for a setting to choose the display language for the addon.
 		language_label = _("Language:")
-		self.languageEntries = self._buildLanguageEntries()
+		self.languageEntries = self._build_language_entries()
 		language_choices = [label for _, label in self.languageEntries]
 		self.languageCodeByLabel = {label: code for code, label in self.languageEntries}
 		self.languageLabelByCode = dict(self.languageEntries)
-		self.languageCtrl = sHelper.addLabeledControl(
+		self.languageCtrl = s_helper.addLabeledControl(
 			language_label,
 			wx.ComboBox,
 			choices=language_choices,
@@ -79,7 +79,7 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 		self._originalLanguage = current_lang_code
 
 		# Announce track changes checkbox (Fixed for accessibility)
-		self.announceTrackChanges = sHelper.addItem(
+		self.announceTrackChanges = s_helper.addItem(
 			wx.CheckBox(self, label=_("Announce track changes automatically:"))
 		)
 		self.announceTrackChanges.SetValue(conf_get("announceTrackChanges", False))
@@ -87,33 +87,33 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 		# Translators: Label for an optional setting where users can enter the Client ID
 		# of a Spotify developer app of their own, instead of the shared one.
 		own_client_id_label = _("Your own Spotify Client ID (optional, leave blank to use the shared one):")
-		self.ownClientIDCtrl = sHelper.addLabeledControl(own_client_id_label, wx.TextCtrl)
+		self.ownClientIDCtrl = s_helper.addLabeledControl(own_client_id_label, wx.TextCtrl)
 		self.ownClientIDCtrl.SetValue(conf_get("ownClientID", ""))
 
-		buttonsSizer = wx.BoxSizer(wx.HORIZONTAL)
+		buttons_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
 		self.validateButton = wx.Button(self, label=_("Validate Credentials"))
-		self.validateButton.Bind(wx.EVT_BUTTON, self.onValidate)
-		buttonsSizer.Add(self.validateButton)
+		self.validateButton.Bind(wx.EVT_BUTTON, self.on_validate)
+		buttons_sizer.Add(self.validateButton)
 
 		self.clearCredentialsButton = wx.Button(self, label=_("Clear Credentials"))
-		self.clearCredentialsButton.Bind(wx.EVT_BUTTON, self.onClearCredentials)
-		buttonsSizer.Add(self.clearCredentialsButton, flag=wx.LEFT, border=5)
+		self.clearCredentialsButton.Bind(wx.EVT_BUTTON, self.on_clear_credentials)
+		buttons_sizer.Add(self.clearCredentialsButton, flag=wx.LEFT, border=5)
 
 		# Translators: A button that opens the Spotify developer website, where users
 		# can create an app of their own to get a Client ID.
 		self.dashboardButton = wx.Button(self, label=_("Spotify Developer Dashboard"))
-		self.dashboardButton.Bind(wx.EVT_BUTTON, lambda evt: webbrowser.open(DEVELOPER_DASHBOARD_URL))
-		buttonsSizer.Add(self.dashboardButton, flag=wx.LEFT, border=5)
+		self.dashboardButton.Bind(wx.EVT_BUTTON, lambda _evt: webbrowser.open(DEVELOPER_DASHBOARD_URL))
+		buttons_sizer.Add(self.dashboardButton, flag=wx.LEFT, border=5)
 
 		self.donateButton = wx.Button(self, label=_("Donate"))
-		self.donateButton.Bind(wx.EVT_BUTTON, lambda evt: donate.open_donate_link())
-		buttonsSizer.Add(self.donateButton, flag=wx.LEFT, border=5)
+		self.donateButton.Bind(wx.EVT_BUTTON, lambda _evt: donate.open_donate_link())
+		buttons_sizer.Add(self.donateButton, flag=wx.LEFT, border=5)
 
-		sHelper.addItem(buttonsSizer)
+		s_helper.addItem(buttons_sizer)
 		self.Layout()  # Ensure all elements are properly laid out
 
-	def _buildLanguageEntries(self):
+	def _build_language_entries(self):
 		entries = [(LANGUAGE_AUTO, _("Follow NVDA language (default)"))]
 		for code in AVAILABLE_LANGUAGE_CODES:
 			label = LANGUAGE_DISPLAY_OVERRIDES.get(code, code)
@@ -139,11 +139,11 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 		return super().isValid()
 
 	def onSave(self):
-		if self._saveValues():
+		if self._save_values():
 			self.client.reset_session()
-			thread_manager.submit_task(self._signInAfterClientIDChange, name="DialogTask", daemon=True)
+			thread_manager.submit_task(self._sign_in_after_client_id_change, name="DialogTask", daemon=True)
 
-	def _signInAfterClientIDChange(self):
+	def _sign_in_after_client_id_change(self):
 		"""Use the token saved for the new Client ID, if it was signed in before."""
 		self.client.initialize()
 		if self.client.client:
@@ -155,7 +155,7 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 			# the user still needs to sign in with it.
 			wx.CallAfter(ui.message, _("Client ID changed. Choose Validate Credentials to sign in."))
 
-	def _saveValues(self):
+	def _save_values(self):
 		"""Store the panel's values. Returns whether the Client ID changed."""
 		config.conf["spotify"]["searchLimit"] = self.limitCtrl.GetValue()
 		config.conf["spotify"]["seekDuration"] = self.seekDurationCtrl.GetValue()
@@ -183,20 +183,20 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 		config.conf["spotify"]["ownClientID"] = own_client_id
 		return changed
 
-	def onValidate(self, evt):
+	def on_validate(self, _evt):
 		if not self.isValid():
 			return
 		# Save current UI values to config.conf before validating
-		if self._saveValues():
+		if self._save_values():
 			self.client.reset_session()
 		ui.message(_("Validating credentials with Spotify..."))
 		thread_manager.submit_task(self.run_validation, name="DialogTask", daemon=True)
 
 	def run_validation(self):
 		success = self.client.validate()  # Validate without explicit parameters
-		wx.CallAfter(self.showValidationResult, success)
+		wx.CallAfter(self.show_validation_result, success)
 
-	def onClearCredentials(self, evt):
+	def on_clear_credentials(self, _evt):
 		# Translators: Confirmation message before clearing Spotify credentials and cache.
 		confirmation_msg = _(
 			"Are you sure you want to delete your stored Spotify access token? "
@@ -218,7 +218,7 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 	def _update_ui_after_clear(self, message):
 		ui.message(message)
 
-	def showValidationResult(self, success):
+	def show_validation_result(self, success):
 		if success:
 			messageBox(_("Validation successful!"), _("Success"), wx.OK | wx.ICON_INFORMATION)
 		else:

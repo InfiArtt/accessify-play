@@ -19,12 +19,12 @@ class DevicesDialog(AccessifyDialog):
 		self.client = client
 		self.devices = devices_info
 
-		mainSizer = wx.BoxSizer(wx.VERTICAL)
+		main_sizer = wx.BoxSizer(wx.VERTICAL)
 
 		# Translators: Label of a list or text field, read by screen readers.
-		mainSizer.Add(wx.StaticText(self, label=_("Devices:")), 0, wx.LEFT | wx.TOP, 10)
+		main_sizer.Add(wx.StaticText(self, label=_("Devices:")), 0, wx.LEFT | wx.TOP, 10)
 		self.devicesList = wx.ListBox(self)
-		mainSizer.Add(self.devicesList, 1, wx.EXPAND | wx.ALL, 10)
+		main_sizer.Add(self.devicesList, 1, wx.EXPAND | wx.ALL, 10)
 
 		active_index = -1
 		for i, device in enumerate(self.devices):
@@ -41,23 +41,23 @@ class DevicesDialog(AccessifyDialog):
 
 		self._bind_list_activation(self.devicesList, self.on_change_device)
 
-		buttonsSizer = wx.StdDialogButtonSizer()
+		buttons_sizer = wx.StdDialogButtonSizer()
 
-		switchButton = wx.Button(self, wx.ID_OK, label=_("&Switch Device"))
-		switchButton.Bind(wx.EVT_BUTTON, self.on_change_device)
-		buttonsSizer.AddButton(switchButton)
+		switch_button = wx.Button(self, wx.ID_OK, label=_("&Switch Device"))
+		switch_button.Bind(wx.EVT_BUTTON, self.on_change_device)
+		buttons_sizer.AddButton(switch_button)
 
-		closeButton = wx.Button(self, wx.ID_CANCEL, label=_("&Close"))
-		self.bind_close_button(closeButton)
-		buttonsSizer.AddButton(closeButton)
+		close_button = wx.Button(self, wx.ID_CANCEL, label=_("&Close"))
+		self.bind_close_button(close_button)
+		buttons_sizer.AddButton(close_button)
 
-		buttonsSizer.Realize()
-		mainSizer.Add(buttonsSizer, 0, wx.ALIGN_CENTER | wx.BOTTOM | wx.LEFT | wx.RIGHT, 10)
+		buttons_sizer.Realize()
+		main_sizer.Add(buttons_sizer, 0, wx.ALIGN_CENTER | wx.BOTTOM | wx.LEFT | wx.RIGHT, 10)
 
-		self.SetSizerAndFit(mainSizer)
+		self.SetSizerAndFit(main_sizer)
 		self.devicesList.SetFocus()
 
-	def on_change_device(self, evt=None):
+	def on_change_device(self, _evt=None):
 		selection = self.devicesList.GetSelection()
 		if selection == wx.NOT_FOUND:
 			ui.message(_("Please select a device."))

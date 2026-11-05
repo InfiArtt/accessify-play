@@ -34,7 +34,7 @@ class CategoriesDialog(AccessifyDialog):
 		self._load_categories()
 
 	def _init_ui(self):
-		mainSizer = wx.BoxSizer(wx.VERTICAL)
+		main_sizer = wx.BoxSizer(wx.VERTICAL)
 
 		self.categoriesList = wx.ListView(self, style=wx.LC_REPORT | wx.LC_SINGLE_SEL | wx.LC_HRULES)
 		self.categoriesList.InsertColumn(0, _("Category"), width=wx.LIST_AUTOSIZE_USEHEADER)
@@ -42,18 +42,18 @@ class CategoriesDialog(AccessifyDialog):
 		self.categoriesList.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.on_category_activated)
 		self.categoriesList.Bind(wx.EVT_LIST_KEY_DOWN, self.on_list_key_down)
 
-		mainSizer.Add(self.categoriesList, 1, wx.EXPAND | wx.ALL, 10)
+		main_sizer.Add(self.categoriesList, 1, wx.EXPAND | wx.ALL, 10)
 
 		# Buttons
-		btnSizer = wx.StdDialogButtonSizer()
-		closeBtn = wx.Button(self, wx.ID_CLOSE, label=_("&Close"))
-		closeBtn.Bind(wx.EVT_BUTTON, self._on_close_button)
-		btnSizer.AddButton(closeBtn)
-		btnSizer.Realize()
+		btn_sizer = wx.StdDialogButtonSizer()
+		close_btn = wx.Button(self, wx.ID_CLOSE, label=_("&Close"))
+		close_btn.Bind(wx.EVT_BUTTON, self._on_close_button)
+		btn_sizer.AddButton(close_btn)
+		btn_sizer.Realize()
 
-		mainSizer.Add(btnSizer, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
+		main_sizer.Add(btn_sizer, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
 
-		self.SetSizer(mainSizer)
+		self.SetSizer(main_sizer)
 		self.categoriesList.SetFocus()
 
 	def _create_accelerators(self):
@@ -151,7 +151,7 @@ class CategoriesDialog(AccessifyDialog):
 				self._load_categories()
 		evt.Skip()
 
-	def _on_close_button(self, evt):
+	def _on_close_button(self, _evt):
 		self.EndModal(wx.ID_CLOSE)
 
 
@@ -186,13 +186,13 @@ class PlaylistBrowserDialog(AccessifyDialog):
 		self._load_playlists()
 
 	def _init_ui(self):
-		mainSizer = wx.BoxSizer(wx.VERTICAL)
+		main_sizer = wx.BoxSizer(wx.VERTICAL)
 
 		# Spotify sends its own greeting with Featured Playlists ("Good morning!",
 		# "Have a great weekend!"). It belongs above the list, not in the title
 		# bar, so the window keeps a predictable name.
 		self.greetingLabel = wx.StaticText(self, label="")
-		mainSizer.Add(self.greetingLabel, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 10)
+		main_sizer.Add(self.greetingLabel, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 10)
 
 		self.playlistsList = wx.ListView(self, style=wx.LC_REPORT | wx.LC_SINGLE_SEL | wx.LC_HRULES)
 		self.playlistsList.InsertColumn(0, _("Playlist"), width=wx.LIST_AUTOSIZE_USEHEADER)
@@ -202,17 +202,17 @@ class PlaylistBrowserDialog(AccessifyDialog):
 		self.playlistsList.Bind(wx.EVT_LIST_KEY_DOWN, self.on_list_key_down)
 		self.playlistsList.Bind(wx.EVT_CONTEXT_MENU, self.on_context_menu)
 
-		mainSizer.Add(self.playlistsList, 1, wx.EXPAND | wx.ALL, 10)
+		main_sizer.Add(self.playlistsList, 1, wx.EXPAND | wx.ALL, 10)
 
-		btnSizer = wx.StdDialogButtonSizer()
-		closeBtn = wx.Button(self, wx.ID_CLOSE, label=_("&Close"))
-		closeBtn.Bind(wx.EVT_BUTTON, self._on_close_button)
-		btnSizer.AddButton(closeBtn)
-		btnSizer.Realize()
+		btn_sizer = wx.StdDialogButtonSizer()
+		close_btn = wx.Button(self, wx.ID_CLOSE, label=_("&Close"))
+		close_btn.Bind(wx.EVT_BUTTON, self._on_close_button)
+		btn_sizer.AddButton(close_btn)
+		btn_sizer.Realize()
 
-		mainSizer.Add(btnSizer, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
+		main_sizer.Add(btn_sizer, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
 
-		self.SetSizer(mainSizer)
+		self.SetSizer(main_sizer)
 		self.playlistsList.SetFocus()
 
 	def _create_accelerators(self):
@@ -303,7 +303,7 @@ class PlaylistBrowserDialog(AccessifyDialog):
 		self._remove_loading_row()
 		ui.message(_("Could not load this list. Please try again."))
 
-	def on_playlist_activated(self, evt):
+	def on_playlist_activated(self, _evt):
 		self._view_tracks()
 
 	def _menu_playlist(self):
@@ -325,7 +325,7 @@ class PlaylistBrowserDialog(AccessifyDialog):
 				self._load_playlists()
 		evt.Skip()
 
-	def on_context_menu(self, evt):
+	def on_context_menu(self, _evt):
 		playlist = self._menu_playlist()
 		if not playlist:
 			return
@@ -372,7 +372,7 @@ class PlaylistBrowserDialog(AccessifyDialog):
 		if isinstance(result, str):
 			wx.CallAfter(ui.message, result)
 
-	def _on_close_button(self, evt):
+	def _on_close_button(self, _evt):
 		self.EndModal(wx.ID_CLOSE)
 
 

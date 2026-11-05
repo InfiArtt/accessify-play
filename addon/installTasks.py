@@ -73,7 +73,7 @@ class InstallInfoDialog(wx.Dialog):
 		self.SetSizerAndFit(main_sizer)
 		self.Bind(wx.EVT_CLOSE, self._on_close)
 
-	def _on_donate(self, evt):
+	def _on_donate(self, _evt):
 		if not self._donate_callback:
 			wx.MessageBox(
 				_("Unable to open the donation link right now."),
@@ -91,10 +91,10 @@ class InstallInfoDialog(wx.Dialog):
 				wx.OK | wx.ICON_WARNING,
 			)
 
-	def _on_continue(self, evt):
+	def _on_continue(self, _evt):
 		self.EndModal(wx.ID_OK)
 
-	def _on_close(self, evt):
+	def _on_close(self, _evt):
 		# Treat closing the window like continuing the installation.
 		self.EndModal(wx.ID_OK)
 

@@ -21,31 +21,31 @@ class QueueListDialog(AccessifyDialog):
 		self._announce_refresh_result = False
 		self._refresh_in_progress = False
 
-		mainSizer = wx.BoxSizer(wx.VERTICAL)
+		main_sizer = wx.BoxSizer(wx.VERTICAL)
 		# Translators: Label of a list or text field, read by screen readers.
-		mainSizer.Add(wx.StaticText(self, label=_("Queue:")), 0, wx.LEFT | wx.TOP, 5)
+		main_sizer.Add(wx.StaticText(self, label=_("Queue:")), 0, wx.LEFT | wx.TOP, 5)
 		self.queueList = wx.ListBox(self)
 		self._bind_list_activation(self.queueList, self.play_selected_queue_item)
 
 		self.queueList.Bind(wx.EVT_CONTEXT_MENU, self.on_queue_context_menu)
-		mainSizer.Add(self.queueList, proportion=1, flag=wx.EXPAND | wx.ALL, border=5)
+		main_sizer.Add(self.queueList, proportion=1, flag=wx.EXPAND | wx.ALL, border=5)
 
 		self.noticeLabel = wx.StaticText(
 			self, label=_("Upcoming tracks may change automatically. Use Refresh to update.")
 		)
-		mainSizer.Add(self.noticeLabel, flag=wx.LEFT | wx.RIGHT | wx.BOTTOM, border=5)
+		main_sizer.Add(self.noticeLabel, flag=wx.LEFT | wx.RIGHT | wx.BOTTOM, border=5)
 
-		buttonsSizer = wx.StdDialogButtonSizer()
-		refreshButton = wx.Button(self, label=_("&Refresh"))
-		refreshButton.Bind(wx.EVT_BUTTON, lambda evt: self.refresh_queue_data())
-		buttonsSizer.AddButton(refreshButton)
-		cancelButton = wx.Button(self, wx.ID_CANCEL, label=_("&Close"))
-		self.bind_close_button(cancelButton)
-		buttonsSizer.AddButton(cancelButton)
-		buttonsSizer.Realize()
-		mainSizer.Add(buttonsSizer, flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
+		buttons_sizer = wx.StdDialogButtonSizer()
+		refresh_button = wx.Button(self, label=_("&Refresh"))
+		refresh_button.Bind(wx.EVT_BUTTON, lambda _evt: self.refresh_queue_data())
+		buttons_sizer.AddButton(refresh_button)
+		cancel_button = wx.Button(self, wx.ID_CANCEL, label=_("&Close"))
+		self.bind_close_button(cancel_button)
+		buttons_sizer.AddButton(cancel_button)
+		buttons_sizer.Realize()
+		main_sizer.Add(buttons_sizer, flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
 
-		self.SetSizerAndFit(mainSizer)
+		self.SetSizerAndFit(main_sizer)
 		self.update_queue_list(queue_data)
 		self._init_shortcuts()
 
@@ -63,7 +63,7 @@ class QueueListDialog(AccessifyDialog):
 		self.SetAcceleratorTable(accel)
 		self.Bind(wx.EVT_MENU, self.play_selected_queue_item, id=self._queuePlayId.GetId())
 		self.Bind(wx.EVT_MENU, self.copy_selected_queue_link, id=self._queueCopyId.GetId())
-		self.Bind(wx.EVT_MENU, lambda evt: self.refresh_queue_data(), id=self._queueRefreshId.GetId())
+		self.Bind(wx.EVT_MENU, lambda _evt: self.refresh_queue_data(), id=self._queueRefreshId.GetId())
 
 	def update_queue_list(self, queue_data):
 		self.queueList.Clear()
@@ -88,7 +88,7 @@ class QueueListDialog(AccessifyDialog):
 			return None
 		return self.queue_items[selection]
 
-	def on_queue_context_menu(self, evt):
+	def on_queue_context_menu(self, _evt):
 		item = self._get_queue_selection()
 		if not item:
 			return
@@ -103,7 +103,7 @@ class QueueListDialog(AccessifyDialog):
 		self.PopupMenu(menu)
 		menu.Destroy()
 
-	def play_selected_queue_item(self, evt=None):
+	def play_selected_queue_item(self, _evt=None):
 		selection = self.queueList.GetSelection()
 		item = self._get_queue_selection()
 		if selection == wx.NOT_FOUND or not item:
@@ -125,7 +125,7 @@ class QueueListDialog(AccessifyDialog):
 		finally:
 			pass
 
-	def copy_selected_queue_link(self, evt=None):
+	def copy_selected_queue_link(self, _evt=None):
 		item = self._get_queue_selection()
 		if item:
 			self.copy_link(item.get("link"))

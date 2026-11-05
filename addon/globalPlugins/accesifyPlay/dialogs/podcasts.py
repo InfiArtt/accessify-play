@@ -187,7 +187,7 @@ class PodcastEpisodesDialog(AccessifyDialog):
 			return None
 		return self.episodes[selection]
 
-	def on_context_menu(self, evt):
+	def on_context_menu(self, _evt):
 		item = self._get_selected_episode()
 		if not item:
 			return
@@ -201,7 +201,7 @@ class PodcastEpisodesDialog(AccessifyDialog):
 		self.PopupMenu(menu)
 		menu.Destroy()
 
-	def on_play_episode(self, evt=None):
+	def on_play_episode(self, _evt=None):
 		episode = self._get_selected_episode()
 		if not episode:
 			return
@@ -216,16 +216,16 @@ class PodcastEpisodesDialog(AccessifyDialog):
 		else:
 			self._play_uri(episode_uri)
 
-	def on_add_to_queue(self, evt=None):
+	def on_add_to_queue(self, _evt=None):
 		episode = self._get_selected_episode()
 		if episode:
 			self._queue_add_track(episode.get("uri"), episode.get("name"))
 
-	def on_copy_link(self, evt=None):
+	def on_copy_link(self, _evt=None):
 		episode = self._get_selected_episode()
 		if episode:
 			link = episode.get("external_urls", {}).get("spotify")
 			self.copy_link(link)
 
-	def on_save_episode(self, evt=None):
+	def on_save_episode(self, _evt=None):
 		self._toggle_saved("episode", self._get_selected_episode())

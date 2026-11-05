@@ -19,34 +19,34 @@ class SeekDialog(AccessifyDialog):
 		super().__init__(parent, title=_("Seek / Jump"))
 		self.client = client
 
-		mainSizer = wx.BoxSizer(wx.VERTICAL)
-		sHelper = guiHelper.BoxSizerHelper(self, sizer=mainSizer)
+		main_sizer = wx.BoxSizer(wx.VERTICAL)
+		s_helper = guiHelper.BoxSizerHelper(self, sizer=main_sizer)
 
 		info_label = wx.StaticText(
 			self, label=_("Enter 'mm:ss' to go to time, or just seconds to jump forward.")
 		)
-		mainSizer.Add(info_label, flag=wx.ALL, border=5)
+		main_sizer.Add(info_label, flag=wx.ALL, border=5)
 
 		label = _("Time or Seconds:")
-		self.timeCtrl = sHelper.addLabeledControl(label, wx.TextCtrl)
+		self.timeCtrl = s_helper.addLabeledControl(label, wx.TextCtrl)
 
 		# Action buttons
-		buttonsSizer = wx.StdDialogButtonSizer()
-		okButton = wx.Button(self, wx.ID_OK, label=_("&Go"))
-		okButton.SetDefault()
-		okButton.Bind(wx.EVT_BUTTON, self.onSeek)
-		buttonsSizer.AddButton(okButton)
+		buttons_sizer = wx.StdDialogButtonSizer()
+		ok_button = wx.Button(self, wx.ID_OK, label=_("&Go"))
+		ok_button.SetDefault()
+		ok_button.Bind(wx.EVT_BUTTON, self.on_seek)
+		buttons_sizer.AddButton(ok_button)
 
-		cancelButton = wx.Button(self, wx.ID_CANCEL, label=_("&Cancel"))
-		self.bind_close_button(cancelButton)
-		buttonsSizer.AddButton(cancelButton)
-		buttonsSizer.Realize()
-		mainSizer.Add(buttonsSizer, flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
+		cancel_button = wx.Button(self, wx.ID_CANCEL, label=_("&Cancel"))
+		self.bind_close_button(cancel_button)
+		buttons_sizer.AddButton(cancel_button)
+		buttons_sizer.Realize()
+		main_sizer.Add(buttons_sizer, flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
 
-		self.SetSizerAndFit(mainSizer)
+		self.SetSizerAndFit(main_sizer)
 		self.timeCtrl.SetFocus()
 
-	def onSeek(self, evt):
+	def on_seek(self, _evt):
 		time_str = self.timeCtrl.GetValue().strip()
 		if not time_str:
 			return

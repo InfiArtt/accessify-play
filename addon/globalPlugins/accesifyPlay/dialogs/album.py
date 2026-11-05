@@ -133,7 +133,7 @@ class AlbumTracksDialog(AccessifyDialog):
 			return None
 		return self.tracks[selection]
 
-	def on_context_menu(self, evt):
+	def on_context_menu(self, _evt):
 		track = self._get_selected_track()
 		if not track:
 			return
@@ -167,7 +167,7 @@ class AlbumTracksDialog(AccessifyDialog):
 		self.PopupMenu(menu)
 		menu.Destroy()
 
-	def on_play_selected(self, evt=None):
+	def on_play_selected(self, _evt=None):
 		track = self._get_selected_track()
 		if not track:
 			return
@@ -183,18 +183,18 @@ class AlbumTracksDialog(AccessifyDialog):
 		else:
 			self._play_uri(track_uri)
 
-	def on_add_to_queue(self, evt=None):
+	def on_add_to_queue(self, _evt=None):
 		track = self._get_selected_track()
 		if track:
 			self._queue_add_track(track.get("uri"), track.get("name"))
 
-	def on_copy_link(self, evt=None):
+	def on_copy_link(self, _evt=None):
 		track = self._get_selected_track()
 		if track:
 			link = track.get("external_urls", {}).get("spotify")
 			self.copy_link(link)
 
-	def _on_add_to_playlist_selected(self, event, playlist_id, playlist_name):
+	def _on_add_to_playlist_selected(self, _event, playlist_id, playlist_name):
 		track = self._get_selected_track()
 		if not track:
 			return

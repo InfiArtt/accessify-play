@@ -190,7 +190,7 @@ class AudiobookChaptersDialog(AccessifyDialog):
 			return None
 		return self.chapters[selection]
 
-	def on_context_menu(self, evt):
+	def on_context_menu(self, _evt):
 		if not self._get_selected_chapter():
 			return
 
@@ -202,7 +202,7 @@ class AudiobookChaptersDialog(AccessifyDialog):
 		self.PopupMenu(menu)
 		menu.Destroy()
 
-	def on_play_chapter(self, evt=None):
+	def on_play_chapter(self, _evt=None):
 		chapter = self._get_selected_chapter()
 		if not chapter:
 			return
@@ -222,12 +222,12 @@ class AudiobookChaptersDialog(AccessifyDialog):
 		else:
 			self._play_uri(chapter_uri)
 
-	def on_add_to_queue(self, evt=None):
+	def on_add_to_queue(self, _evt=None):
 		chapter = self._get_selected_chapter()
 		if chapter:
 			self._queue_add_track(chapter.get("uri"), chapter.get("name"))
 
-	def on_copy_link(self, evt=None):
+	def on_copy_link(self, _evt=None):
 		chapter = self._get_selected_chapter()
 		if chapter:
 			self.copy_link(chapter.get("external_urls", {}).get("spotify"))

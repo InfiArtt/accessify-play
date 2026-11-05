@@ -135,7 +135,7 @@ class ArtistDiscographyDialog(AccessifyDialog):
 		]
 		for position, page_id in enumerate(self.MENU_PAGE_IDS):
 			accel_entries.append((wx.ACCEL_CTRL, ord(str(position + 1)), page_id.GetId()))
-			self.Bind(wx.EVT_MENU, lambda evt, p=position: self.show_page(p), id=page_id.GetId())
+			self.Bind(wx.EVT_MENU, lambda _evt, p=position: self.show_page(p), id=page_id.GetId())
 		accel_entries += [
 			(wx.ACCEL_CTRL, wx.WXK_TAB, self.MENU_NEXT_PAGE.GetId()),
 			(wx.ACCEL_CTRL, wx.WXK_PAGEDOWN, self.MENU_NEXT_PAGE.GetId()),
@@ -144,12 +144,12 @@ class ArtistDiscographyDialog(AccessifyDialog):
 		]
 		self.Bind(
 			wx.EVT_MENU,
-			lambda evt: self.show_page(self._current_position() + 1),
+			lambda _evt: self.show_page(self._current_position() + 1),
 			id=self.MENU_NEXT_PAGE.GetId(),
 		)
 		self.Bind(
 			wx.EVT_MENU,
-			lambda evt: self.show_page(self._current_position() - 1),
+			lambda _evt: self.show_page(self._current_position() - 1),
 			id=self.MENU_PREV_PAGE.GetId(),
 		)
 		self.SetAcceleratorTable(wx.AcceleratorTable(accel_entries))
@@ -466,7 +466,7 @@ class ArtistDiscographyDialog(AccessifyDialog):
 		dialog = AlbumTracksDialog(self, self.client, album, self._user_playlists)
 		dialog.Show()
 
-	def on_context_menu(self, evt):
+	def on_context_menu(self, _evt):
 		item = self._get_selected_item()
 		if not item:
 			return
@@ -485,11 +485,11 @@ class ArtistDiscographyDialog(AccessifyDialog):
 		if item_type == "playlist":
 			menu.AppendSeparator()
 			tracks_item = menu.Append(wx.ID_ANY, _("View Tracks in Playlist"))
-			self.Bind(wx.EVT_MENU, lambda evt: self._on_playlist_activate(), tracks_item)
+			self.Bind(wx.EVT_MENU, lambda _evt: self._on_playlist_activate(), tracks_item)
 		elif item_type == "album":
 			menu.AppendSeparator()
 			save_album_item = menu.Append(wx.ID_ANY, _("Save Album to Library"))
-			self.Bind(wx.EVT_MENU, lambda evt, alb=item: self._save_album_to_library(alb), save_album_item)
+			self.Bind(wx.EVT_MENU, lambda _evt, alb=item: self._save_album_to_library(alb), save_album_item)
 			playlist_submenu = wx.Menu()
 			if self._user_playlists:
 				for playlist in self._user_playlists:
@@ -498,7 +498,7 @@ class ArtistDiscographyDialog(AccessifyDialog):
 					)
 					self.Bind(
 						wx.EVT_MENU,
-						lambda event, p_id=playlist.get("id"), p_name=playlist.get("name"), a_id=item.get("id"), a_name=item.get("name"): (
+						lambda _event, p_id=playlist.get("id"), p_name=playlist.get("name"), a_id=item.get("id"), a_name=item.get("name"): (
 							self._on_add_album_to_playlist_action(p_id, p_name, a_id, a_name)
 						),
 						menu_item,
@@ -532,12 +532,12 @@ class ArtistDiscographyDialog(AccessifyDialog):
 			self.PopupMenu(menu)
 			menu.Destroy()
 
-	def on_play_selected(self, evt=None):
+	def on_play_selected(self, _evt=None):
 		item = self._get_selected_item()
 		if item:
 			self._play_uri(item.get("uri"))
 
-	def on_add_to_queue(self, evt=None):
+	def on_add_to_queue(self, _evt=None):
 		item = self._get_selected_item()
 		if not item:
 			return
@@ -551,13 +551,13 @@ class ArtistDiscographyDialog(AccessifyDialog):
 		elif item_type in ("album", "playlist"):
 			self._queue_add_context(uri, item_type, name)
 
-	def on_copy_link(self, evt=None):
+	def on_copy_link(self, _evt=None):
 		item = self._get_selected_item()
 		if item:
 			link = item.get("external_urls", {}).get("spotify")
 			self.copy_link(link)
 
-	def _on_add_to_playlist_selected(self, event, playlist_id, playlist_name):
+	def _on_add_to_playlist_selected(self, _event, playlist_id, playlist_name):
 		track = self._get_selected_item()
 		if not track or track.get("type") != "track":
 			return

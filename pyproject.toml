@@ -52,12 +52,6 @@ ignore = [
 	# Not done yet. Each family below is fixed and removed in its own commit.
 	"ANN",
 	"D",
-	"ARG",
-	"N802",
-	"N803",
-	"N806",
-	"N815",
-	"N816",
 	"SLF001",
 	"BLE001",
 	"E501",
@@ -84,6 +78,8 @@ ignore = [
 # The package name is the add-on's identity: NVDA stores custom gestures under
 # globalPlugins.accesifyPlay, so renaming it would silently drop them.
 "addon/globalPlugins/accesifyPlay/**" = ["N999"]
+# sconstruct, from the NVDA add-on template, reads these names.
+"buildVars.py" = ["N816"]
 # NVDA runs installTasks.py from the add-on's root folder, which is not a package.
 "addon/installTasks.py" = ["INP001"]
 
@@ -103,6 +99,8 @@ extend-ignore-names = [
 	"isValid",
 	"onInstall",
 	"onUninstall",
+	"scriptCategory",
+	"N_",
 ]
 
 [tool.ruff.lint.mccabe]
