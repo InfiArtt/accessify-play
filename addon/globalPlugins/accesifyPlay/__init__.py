@@ -60,11 +60,9 @@ from . import (  # noqa: E402
 )
 from .commandLayers import CommandLayerManager  # noqa: E402
 from .dialogs.devices import DevicesDialog  # noqa: E402
-from .dialogs.management import (  # noqa: E402
-	AddToPlaylistDialog,
-	ManagementDialog,
-)
+from .dialogs.management import ManagementDialog  # noqa: E402
 from .dialogs.play_from_link import PlayFromLinkDialog  # noqa: E402
+from .dialogs.playlist_forms import AddToPlaylistDialog  # noqa: E402
 from .dialogs.queue_list import QueueListDialog  # noqa: E402
 from .dialogs.search import SearchDialog  # noqa: E402
 from .dialogs.seek import SeekDialog  # noqa: E402
@@ -821,16 +819,12 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		if not item.get("id") or not uri:
 			return _("This item cannot be saved.")  # a local file
 
-		check = self.client.library_contains([uri])
-		if isinstance(check, str):
-			return check
-		is_saved = bool(check and check[0])
-		result = (self.client.library_remove if is_saved else self.client.library_save)([uri])
-		if isinstance(result, str):
-			return result
+		now = self.client.library_toggle(uri)
+		if isinstance(now, str):
+			return now
 		if item.get("type") == "episode":
-			return _("Removed from Your Episodes.") if is_saved else _("Added to Your Episodes.")
-		return _("Removed from Liked Songs.") if is_saved else _("Added to Liked Songs.")
+			return _("Added to Your Episodes.") if now else _("Removed from Your Episodes.")
+		return _("Added to Liked Songs.") if now else _("Removed from Liked Songs.")
 
 	@scriptHandler.script(
 		description=_("Follow or unfollow the artist of the currently playing track."),
@@ -857,22 +851,12 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		if not artist_id or not artist_name:
 			return _("Could not identify the artist.")
 
-		is_followed_list = self.client.check_if_artists_followed([artist_id])
-		if isinstance(is_followed_list, str):
-			return is_followed_list
-
-		is_currently_followed = is_followed_list[0]
-
-		if is_currently_followed:
-			result = self.client.unfollow_artists([artist_id])
-			if isinstance(result, str):
-				return result
-			return _("Unfollowed artist: {artist_name}.").format(artist_name=artist_name)
-		else:
-			result = self.client.follow_artists([artist_id])
-			if isinstance(result, str):
-				return result
+		now = self.client.library_toggle(artist_id, "artist")
+		if isinstance(now, str):
+			return now
+		if now:
 			return _("Now following artist: {artist_name}.").format(artist_name=artist_name)
+		return _("Unfollowed artist: {artist_name}.").format(artist_name=artist_name)
 
 	def _open_dialog(self, dialog_class, dialog_attr, *args, **kwargs):
 		"""Open a dialog, or bring it to the front if it is already open."""

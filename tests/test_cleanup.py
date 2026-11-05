@@ -49,12 +49,19 @@ else:
 # ------------------------------------------------ dead code is gone, and nothing still calls it
 GONE = ["get_track_details_from_url", "rebuild_queue", "remove_tracks_from_playlist", "get_related_artists",
         "get_audiobook_details", "check_if_albums_saved", "RelatedArtistsDialog", "_save_show_to_library",
-        "_save_show_thread"]
+        "_save_show_thread",
+        # Replaced by library_contains/save/remove/toggle, which take a kind:
+        "remove_tracks_from_library", "follow_artists", "unfollow_artists", "save_episodes_to_library",
+        "remove_episodes_from_library", "check_if_episodes_saved", "check_if_shows_saved",
+        "save_audiobooks_to_library", "remove_audiobooks_from_library", "check_if_audiobooks_saved",
+        "follow_users", "unfollow_users", "check_if_users_followed", "save_albums_to_library",
+        "remove_albums_from_library", "save_shows_to_library", "remove_shows_from_library",
+        "check_if_artists_followed", "follow_playlist", "unfollow_playlist", "check_if_playlist_is_followed",
+        "_SAVABLE", "check_if_saved_tracks", "save_tracks_to_library", "_get_search_limit"]
 for name in GONE:
     check(f"'{name}' removed and unreferenced", not re.search(rf"\b{name}\b", ALL))
-for kept in ("remove_track_occurrences", "save_albums_to_library", "check_if_episodes_saved",
-             "check_if_shows_saved", "check_if_audiobooks_saved", "save_audiobooks_to_library",
-             "get_audiobook_chapters", "_toggle_saved"):
+for kept in ("remove_track_occurrences", "library_contains", "library_save", "library_remove",
+             "library_toggle", "get_audiobook_chapters", "_toggle_saved"):
     check(f"'{kept}' still there", re.search(rf"def {kept}\b", ALL) is not None)
 
 # Every client method a dialog calls by name still exists.

@@ -109,8 +109,10 @@ ALBUM_TRACK = {"type": "track", "name": "Song", "uri": "spotify:track:1",
 PLAYLIST_TRACK = dict(ALBUM_TRACK, album={"name": "Album", "uri": "spotify:album:1"})
 EPISODE = {"type": "episode", "name": "Ep", "uri": "spotify:episode:1"}
 
-src = open(os.path.join(ROOT, mgmt_rel), encoding="utf-8").read()
-items = build_menu(src, "AlbumTracksDialog", [ALBUM_TRACK], 0)
+dialogs_dir = os.path.join(PKG, "dialogs")
+album_src = open(os.path.join(dialogs_dir, "album.py"), encoding="utf-8").read()
+src = open(os.path.join(dialogs_dir, "playlist.py"), encoding="utf-8").read()
+items = build_menu(album_src, "AlbumTracksDialog", [ALBUM_TRACK], 0)
 check(f"album tracks: menu has Show Lyrics and Go to Artist ({items})",
       "Show Lyrics" in items and "Go to Artist: Artist" in items)
 check("...and keeps Add to Playlist", "Add to Playlist >" in items)

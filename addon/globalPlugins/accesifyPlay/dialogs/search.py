@@ -6,12 +6,10 @@ import ui
 import wx
 
 from ..ui.base_dialog import AccessifyDialog
-from .management import (
-	AlbumTracksDialog,
-	ArtistDiscographyDialog,
-	PlaylistTracksDialog,
-	PodcastEpisodesDialog,
-)
+from .album import AlbumTracksDialog
+from .artist import ArtistDiscographyDialog
+from .playlist import PlaylistTracksDialog
+from .podcasts import PodcastEpisodesDialog
 
 from ..language import init_translation  # noqa: E402
 
@@ -509,7 +507,7 @@ class SearchDialog(AccessifyDialog):
 		if item.get("type") == "playlist" and item.get("owner", {}).get("id") != self._current_user_id:
 
 			def _check_and_show():
-				result = self.client.check_if_playlist_is_followed(item.get("id"))
+				result = self.client.library_contains([item.get("id")], "playlist")
 				is_followed_status = result[0] if isinstance(result, list) and result else False
 				wx.CallAfter(show_menu, is_followed_status)
 
@@ -601,21 +599,13 @@ class SearchDialog(AccessifyDialog):
 		# followed, then do the opposite and say which it was.
 		def _follow():
 			name = item.get("name") or _("Unknown")
-			state = self.client.check_if_artists_followed([item["id"]])
-			if isinstance(state, str):
-				wx.CallAfter(ui.message, state)
-				return
-			following = bool(state and state[0])
-			if following:
-				result = self.client.unfollow_artists([item["id"]])
-				done = _("Unfollowed artist: {artist_name}.")
+			now = self.client.library_toggle(item["id"], "artist")
+			if isinstance(now, str):
+				wx.CallAfter(ui.message, now)
+			elif now:
+				wx.CallAfter(ui.message, _("Now following artist: {artist_name}.").format(artist_name=name))
 			else:
-				result = self.client.follow_artists([item["id"]])
-				done = _("Now following artist: {artist_name}.")
-			if isinstance(result, str):
-				wx.CallAfter(ui.message, result)
-			else:
-				wx.CallAfter(ui.message, done.format(artist_name=name))
+				wx.CallAfter(ui.message, _("Unfollowed artist: {artist_name}.").format(artist_name=name))
 
 		thread_manager.submit_task(_follow, name='DialogTask', daemon=True)
 
@@ -642,10 +632,10 @@ class SearchDialog(AccessifyDialog):
 
 		def _thread_action():
 			if is_currently_followed:
-				result = self.client.unfollow_playlist(playlist_id)
+				result = self.client.library_remove([playlist_id], "playlist")
 				message = _("Unfollowed '{name}'.").format(name=playlist_name)
 			else:
-				result = self.client.follow_playlist(playlist_id)
+				result = self.client.library_save([playlist_id], "playlist")
 				message = _("Now following '{name}'.").format(name=playlist_name)
 			if isinstance(result, str):
 				wx.CallAfter(ui.message, result)

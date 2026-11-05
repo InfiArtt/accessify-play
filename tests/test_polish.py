@@ -80,16 +80,16 @@ ns = {"_": lambda s: s, "ui": types.SimpleNamespace(message=SPOKEN.append),
 follow = lift(source("dialogs", "search.py"), "SearchDialog", "on_follow_artist", ns)
 class Client:
     def __init__(self, following): self.following = following
-    def check_if_artists_followed(self, ids): return [self.following]
-    def follow_artists(self, ids): CALLS.append("follow")
-    def unfollow_artists(self, ids): CALLS.append("unfollow")
+    def library_toggle(self, item, kind=None):
+        CALLS.append(("unfollow" if self.following else "follow", item, kind))
+        return not self.following
 def dialog(following):
     return types.SimpleNamespace(client=Client(following), resultsList=types.SimpleNamespace(GetSelection=lambda: 0),
                                  _get_item_at_index=lambda i: {"type": "artist", "id": "a1", "name": "Queen"})
 follow(dialog(False))
-check("Alt+F on an artist you don't follow follows them", CALLS[-1] == "follow" and SPOKEN[-1] == "Now following artist: Queen.")
+check("Alt+F on an artist you don't follow follows them", CALLS[-1] == ("follow", "a1", "artist") and SPOKEN[-1] == "Now following artist: Queen.")
 follow(dialog(True))
-check("Alt+F on an artist you follow unfollows them", CALLS[-1] == "unfollow" and SPOKEN[-1] == "Unfollowed artist: Queen.")
+check("Alt+F on an artist you follow unfollows them", CALLS[-1] == ("unfollow", "a1", "artist") and SPOKEN[-1] == "Unfollowed artist: Queen.")
 check("the menu item says Follow/Unfollow", "Follow/Unfollow Artist\\tAlt+F" in source("dialogs", "search.py"))
 
 # ------------------------------------------------ 5. Sleep timer
@@ -112,7 +112,7 @@ check("...but not when pausing failed", SPOKEN == [])
 # ------------------------------------------------ 6. Lists and fields have names
 for parts, text in ((("dialogs", "audiobooks.py"), "Chapters:"), (("dialogs", "devices.py"), "Devices:"),
                     (("dialogs", "layer_editor.py"), "Commands:"), (("dialogs", "lyrics_window.py"), "Lyrics:"),
-                    (("dialogs", "management.py"), "Episodes:"), (("dialogs", "management.py"), "Tracks:"),
+                    (("dialogs", "podcasts.py"), "Episodes:"), (("dialogs", "management.py"), "Tracks:"),
                     (("dialogs", "management.py"), "Items:"), (("dialogs", "queue_list.py"), "Queue:")):
     src = source(*parts)
     i = src.find(f'label=_("{text}")')

@@ -80,11 +80,18 @@ check("ids become URIs; URIs pass through",
       sc.SpotifyClient._uris("playlist", ["abc", "spotify:playlist:def"]) == ["spotify:playlist:abc", "spotify:playlist:def"])
 
 c.client = Lib(saved={"spotify:playlist:pl1"})
-check("playlist follow check via /me/library/contains", c.check_if_playlist_is_followed("pl1") == [True])
-c.unfollow_playlist("pl1")
+check("playlist follow check via /me/library/contains", c.library_contains(["pl1"], "playlist") == [True])
+c.library_remove(["pl1"], "playlist")
 check("unfollow playlist -> DELETE /me/library", c.client.calls[-1] == ("DELETE", "me/library", "spotify:playlist:pl1"))
 c.delete_playlist("pl2")
 check("delete playlist -> DELETE /me/library", c.client.calls[-1] == ("DELETE", "me/library", "spotify:playlist:pl2"))
+
+# library_toggle: one action that flips the state and says which way it went.
+c.client = Lib()
+check("toggle: not saved -> saves it, returns True", c.library_toggle("t1", "track") is True
+      and c.client.calls[-1] == ("PUT", "me/library", "spotify:track:t1"))
+check("toggle: saved -> removes it, returns False", c.library_toggle("spotify:track:t1") is False
+      and c.client.calls[-1] == ("DELETE", "me/library", "spotify:track:t1"))
 
 class Failing(Lib):
     def _put(self, url, **kw):
@@ -93,9 +100,13 @@ c.client = Failing()
 r = c.library_save(uris[:90])
 check("a failed batch stops the rest and returns the message",
       c.client.calls == ["PUT"] and r == "Spotify is having trouble right now. Please try again in a moment.")
+c.client = Failing()
+check("toggle: a failed save is returned as the message, not True",
+      c.library_toggle("t2", "track") == "Spotify is having trouble right now. Please try again in a moment.")
 
 c.client = None
-for fn, a in (("library_contains", (uris,)), ("library_save", (uris,)), ("library_remove", (uris,))):
+for fn, a in (("library_contains", (uris,)), ("library_save", (uris,)), ("library_remove", (uris,)),
+              ("library_toggle", ("t1", "track"))):
     r = getattr(c, fn)(*a)
     check(f"logged out: {fn} returns a message", isinstance(r, str) and "not ready" in r)
 

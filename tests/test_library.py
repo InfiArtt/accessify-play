@@ -47,37 +47,35 @@ sc = load("acc.spotify_client", "spotify_client.py")
 
 # ---------------------------------------------------------------- toggle
 class LibraryClient:
+    """The client's own library_toggle, over a library kept in memory."""
+    library_toggle = sc.SpotifyClient.library_toggle
     def __init__(self, saved): self.saved = set(saved); self.calls = []
-    def _check(self, ids): return [i in self.saved for i in ids]
-    def _add(self, ids): self.calls.append(("add", ids)); self.saved |= set(ids)
-    def _del(self, ids): self.calls.append(("del", ids)); self.saved -= set(ids)
-    check_if_episodes_saved = check_if_shows_saved = check_if_audiobooks_saved = _check
-    save_episodes_to_library = save_shows_to_library = save_audiobooks_to_library = _add
-    remove_episodes_from_library = remove_shows_from_library = remove_audiobooks_from_library = _del
+    def library_contains(self, ids, kind=None): return [i in self.saved for i in ids]
+    def library_save(self, ids, kind=None): self.calls.append(("add", ids, kind)); self.saved |= set(ids)
+    def library_remove(self, ids, kind=None): self.calls.append(("del", ids, kind)); self.saved -= set(ids)
 
 class FakeSelf:
-    _SAVABLE = bd.AccessifyDialog._SAVABLE
     def __init__(self, client): self.client = client
 toggle = bd.AccessifyDialog._toggle_saved
 
 for kind in ("episode", "show", "audiobook"):
     c = LibraryClient(saved=[]); SPOKEN.clear()
     toggle(FakeSelf(c), kind, {"id": "x1", "name": "Thing"})
-    check(f"{kind}: unsaved -> saved", c.calls == [("add", ["x1"])] and "x1" in c.saved)
+    check(f"{kind}: unsaved -> saved, as a {kind}", c.calls == [("add", ["x1"], kind)] and "x1" in c.saved)
     check(f"{kind}: says it was saved", SPOKEN == ["'Thing' saved to your library."])
     SPOKEN.clear()
     toggle(FakeSelf(c), kind, {"id": "x1", "name": "Thing"})
-    check(f"{kind}: saved -> removed", c.calls[-1] == ("del", ["x1"]) and "x1" not in c.saved)
+    check(f"{kind}: saved -> removed", c.calls[-1] == ("del", ["x1"], kind) and "x1" not in c.saved)
     check(f"{kind}: says it was removed", SPOKEN == ["'Thing' removed from your library."])
 
 class FailingCheck(LibraryClient):
-    def check_if_shows_saved(self, ids): return "Spotify is having trouble right now."
+    def library_contains(self, ids, kind=None): return "Spotify is having trouble right now."
 c = FailingCheck(saved=[]); SPOKEN.clear()
 toggle(FakeSelf(c), "show", {"id": "s", "name": "Pod"})
 check("check error is spoken, nothing changed", SPOKEN == ["Spotify is having trouble right now."] and not c.calls)
 
 class FailingSave(LibraryClient):
-    def save_audiobooks_to_library(self, ids): return "This feature requires Spotify Premium."
+    def library_save(self, ids, kind=None): return "This feature requires Spotify Premium."
 c = FailingSave(saved=[]); SPOKEN.clear()
 toggle(FakeSelf(c), "audiobook", {"id": "a", "name": "Book"})
 check("action error is spoken, no success claimed", SPOKEN == ["This feature requires Spotify Premium."])

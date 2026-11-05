@@ -690,10 +690,6 @@ msgstr "Putar Seluruh Daftar Putar"
 msgid "Copy Playlist Link"
 msgstr "Salin Tautan Daftar Putar"
 
-#: addon/globalPlugins/accesifyPlay/dialogs/categories.py:329
-msgid "Link copied to clipboard."
-msgstr "Tautan disalin ke papan klip."
-
 #: addon/globalPlugins/accesifyPlay/dialogs/categories.py:345
 #: addon/globalPlugins/accesifyPlay/dialogs/categories.py:566
 msgid "Playing playlist..."
@@ -2922,3 +2918,5 @@ msgstr "Daftar Putar"
 #, python-brace-format
 msgid "{type}, searching..."
 msgstr "{type}, mencari..."
+
+

@@ -143,50 +143,29 @@ class AccessifyDialog(wx.Dialog):
 		thread_manager.submit_task(self._save_album_thread, album, name="SaveAlbumTask")
 
 	def _save_album_thread(self, album):
-		result = self.client.save_albums_to_library([album.get("id")])
+		result = self.client.library_save([album.get("id")], "album")
 		if isinstance(result, str):
 			wx.CallAfter(ui.message, result)
 		else:
 			wx.CallAfter(ui.message, _("Album '{album_name}' saved successfully.").format(album_name=album.get("name")))
 
-	#: Client methods for each kind of item that can be saved to the library:
-	#: (check, save, remove). Each takes a list of ids.
-	_SAVABLE = {
-		"episode": ("check_if_episodes_saved", "save_episodes_to_library", "remove_episodes_from_library"),
-		"show": ("check_if_shows_saved", "save_shows_to_library", "remove_shows_from_library"),
-		"audiobook": (
-			"check_if_audiobooks_saved",
-			"save_audiobooks_to_library",
-			"remove_audiobooks_from_library",
-		),
-	}
-
 	def _toggle_saved(self, kind, item):
-		"""Save the item if it is not in the library, otherwise remove it.
+		"""Save the item if it is not in the library, otherwise remove it; say which.
 
-		Same model as Like/Unlike (L) for tracks: one action that asks Spotify
-		for the current state, flips it, and says which way it went, so the
-		user never has to know the state beforehand.
+		kind is the Spotify type: "episode", "show", "audiobook", ...
 		"""
 		if not self.client or not item or not item.get("id"):
 			return
-		check, save, remove = self._SAVABLE[kind]
 		name = safe_text(item.get("name"), _("This item"))
-		item_id = item["id"]
 
 		def _run():
-			state = getattr(self.client, check)([item_id])
-			if isinstance(state, str):
-				wx.CallAfter(ui.message, state)
-				return
-			is_saved = bool(state and state[0])
-			result = getattr(self.client, remove if is_saved else save)([item_id])
-			if isinstance(result, str):
-				wx.CallAfter(ui.message, result)
-			elif is_saved:
-				wx.CallAfter(ui.message, _("'{name}' removed from your library.").format(name=name))
-			else:
+			now = self.client.library_toggle(item["id"], kind)
+			if isinstance(now, str):
+				wx.CallAfter(ui.message, now)
+			elif now:
 				wx.CallAfter(ui.message, _("'{name}' saved to your library.").format(name=name))
+			else:
+				wx.CallAfter(ui.message, _("'{name}' removed from your library.").format(name=name))
 
 		thread_manager.submit_task(_run, name="ToggleSavedTask")
 
@@ -238,19 +217,13 @@ class AccessifyDialog(wx.Dialog):
 			if user_id == self.client.get_current_user_id():
 				wx.CallAfter(ui.message, _("That is your own profile."))
 				return
-			state = self.client.check_if_users_followed([user_id])
-			if isinstance(state, str):
-				wx.CallAfter(ui.message, state)
-				return
-			is_following = bool(state and state[0])
-			action = self.client.unfollow_users if is_following else self.client.follow_users
-			result = action([user_id])
-			if isinstance(result, str):
-				wx.CallAfter(ui.message, result)
-			elif is_following:
-				wx.CallAfter(ui.message, _("Unfollowed {name}.").format(name=name))
-			else:
+			now = self.client.library_toggle(user_id, "user")
+			if isinstance(now, str):
+				wx.CallAfter(ui.message, now)
+			elif now:
 				wx.CallAfter(ui.message, _("Now following {name}.").format(name=name))
+			else:
+				wx.CallAfter(ui.message, _("Unfollowed {name}.").format(name=name))
 
 		thread_manager.submit_task(_run, name="ToggleFollowUserTask")
 
@@ -341,12 +314,12 @@ class AccessifyDialog(wx.Dialog):
 
 	def _handle_go_to_album(self, event, album):
 		user_playlists = getattr(self, "_user_playlists", []) or getattr(self, "user_playlists", [])
-		from ..dialogs.management import AlbumTracksDialog
+		from ..dialogs.album import AlbumTracksDialog
 		dialog = AlbumTracksDialog(self, self.client, album, user_playlists)
 		dialog.Show()
 
 	def _handle_go_to_artist(self, event, artist):
 		user_playlists = getattr(self, "_user_playlists", []) or getattr(self, "user_playlists", [])
-		from ..dialogs.management import ArtistDiscographyDialog
+		from ..dialogs.artist import ArtistDiscographyDialog
 		dialog = ArtistDiscographyDialog(self, self.client, artist.get("id"), artist.get("name"), user_playlists)
 		dialog.Show()

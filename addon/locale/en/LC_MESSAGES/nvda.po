@@ -675,10 +675,6 @@ msgstr ""
 msgid "Copy Playlist Link"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/categories.py:329
-msgid "Link copied to clipboard."
-msgstr ""
-
 #: addon/globalPlugins/accesifyPlay/dialogs/categories.py:345
 #: addon/globalPlugins/accesifyPlay/dialogs/categories.py:566
 msgid "Playing playlist..."
@@ -2866,3 +2862,5 @@ msgstr ""
 #, python-brace-format
 msgid "{type}, searching..."
 msgstr ""
+
+

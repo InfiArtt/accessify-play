@@ -1,5 +1,45 @@
 # Changelog
 
+## Unreleased
+
+Changes since 1.12.2.
+
+### 🎉 Search: switch the type without leaving the results
+
+- **`Ctrl+1` to `Ctrl+6` choose Song, Album, Artist, Playlist, Podcast or Audiobook**, and `Ctrl+Tab` / `Ctrl+PageDown` and `Ctrl+Shift+Tab` / `Ctrl+PageUp` go to the next or previous type. With text in the search field the search runs again at once, and the focus moves to the results.
+- **`Ctrl+F` goes back to the search field** with its text selected, ready to type over.
+- **Opening Search while it is already open** puts the focus in the search field.
+- **"No results found." is spoken**: the focus stays where it is in that case, so NVDA said nothing.
+- A quick switch can no longer show the results of the type you switched away from.
+
+### 🎉 Artist window: popular songs first, and playlists
+
+- **It opens on Top Tracks**, with the focus on the first song once it has loaded.
+- **New Playlists tab**: playlists found by searching for the artist's name. `Enter` opens one, and `Alt+P`, `Alt+Q` and `Alt+L` play, queue and copy it.
+- **The tabs switch like the types in Search**: `Ctrl+1` to `Ctrl+5` go to a tab with the focus in its list, and `Ctrl+Tab` / `Ctrl+PageDown` and `Ctrl+Shift+Tab` / `Ctrl+PageUp` go to the next or previous tab. The order is now Top Tracks, Albums and Singles, Playlists, All Tracks, Artist Info.
+- **Every list is named after its tab**, so NVDA says where you are.
+- **Top Tracks names the artists only when someone else is on the song**, instead of repeating the artist on every line.
+
+### 🛠️ Bug fixes
+
+- **Play/Pause, volume, shuffle and repeat said they worked when Spotify refused**: "Paused", "Volume 55%" and so on were spoken even when the command failed. They now say why it failed.
+- **Play/Pause with no active device did nothing**. It now wakes your device and plays.
+- **Like/Unlike (`L`) on a podcast episode** looked the episode up as a song. It now saves it to Your Episodes.
+- **Volume on a device that does not report its volume** raised an error instead of saying so.
+- **Two quick presses of a playback command** could both get through, sending the command twice.
+- **An error every 5 seconds in the NVDA log** while Spotify reported nothing playing, such as between items.
+- **A timeout on a playback command was logged as an unexpected error**, with a full traceback.
+
+### 🧹 Under the hood
+
+- **One way to save, remove, follow and unfollow**: Spotify's single /me/library endpoint (February 2026) replaces 21 separate per-type functions, and one "flip the state and say which way" helper replaces six copies of that logic.
+- **The playback commands share their code**: one guard instead of nine, and one helper each for next/previous, volume up/down and seek forward/back.
+- **One request handler**: the two request wrappers share their error handling and readiness check, and six copies of the same pagination loop became one.
+- **management.py is split up**: it held eight dialogs in 2,900 lines. The library manager stays there; the album, playlist, artist, podcast and playlist-form dialogs have their own modules.
+- **Featured Playlists and category playlists share one dialog** instead of two near-identical copies.
+- **The popular songs of an artist take one request fewer** when the artist's name is known.
+- About 600 lines less code, and dead code removed, such as error branches that could never run. The tests cover the new behaviour, 691 checks in all.
+
 ## Version 1.12.2
 
 ### 🛠️ Fewer "Spotify is limiting requests" errors

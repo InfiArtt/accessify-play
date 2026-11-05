@@ -1,26 +1,15 @@
 # accesifyPlay/dialogs/audiobooks.py
 
-import config
 import ui
 import wx
 
 from ..core.thread_manager import thread_manager
 from ..ui.base_dialog import AccessifyDialog
+from ..utils import conf_get
 
 from ..language import init_translation  # noqa: E402
 
 init_translation()
-
-
-def _get_search_limit(default_value):
-	try:
-		spotify_conf = config.conf["spotify"]
-	except Exception:
-		return default_value
-	try:
-		return spotify_conf.get("searchLimit", default_value)
-	except Exception:
-		return default_value
 
 
 class AudiobookChaptersDialog(AccessifyDialog):
@@ -42,7 +31,7 @@ class AudiobookChaptersDialog(AccessifyDialog):
 		self._chapters_loading = False
 		self._chapters_has_more = True
 		self._chapters_load_more_label = "--- {} ---".format(_("Load More"))
-		self._chapters_page_size = _get_search_limit(self.DEFAULT_CHAPTERS_PAGE_SIZE)
+		self._chapters_page_size = conf_get("searchLimit", self.DEFAULT_CHAPTERS_PAGE_SIZE)
 		self.init_ui()
 		self.load_chapters()
 		self._create_accelerators()

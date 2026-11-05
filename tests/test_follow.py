@@ -42,24 +42,30 @@ sc = load("acc.spotify_client", "spotify_client.py")
 class Remote:
     def __init__(self, following=()): self.following = set(following); self.calls = []
     def current_user(self): return {"id": "me"}
-    def current_user_following_users(self, ids=None): return [i in self.following for i in ids]
-    def user_follow_users(self, ids=[]): self.calls.append(("follow", ids)); self.following |= set(ids)
-    def user_unfollow_users(self, ids=[]): self.calls.append(("unfollow", ids)); self.following -= set(ids)
     def user(self, user): return {"id": user, "display_name": "Curator", "uri": f"spotify:user:{user}",
                                   "followers": {"total": 12345}}
     def get_audiobook(self, id, market=None):
         return {"uri": f"spotify:audiobook:{id}", "name": "Dune", "authors": [{"name": "Frank Herbert"}],
                 "narrators": [{"name": "Scott Brick"}], "publisher": "Macmillan", "total_chapters": 48}
+    @staticmethod
+    def _ids(uris): return [u.split(":")[-1] for u in uris.split(",")]
+    def _put(self, url, args=None, payload=None, **kw):
+        assert url == "me/library", url; self.calls.append(("follow", kw["uris"])); self.following |= set(self._ids(kw["uris"]))
+    def _delete(self, url, args=None, payload=None, **kw):
+        assert url == "me/library", url; self.calls.append(("unfollow", kw["uris"])); self.following -= set(self._ids(kw["uris"]))
     def _get(self, url, args=None, payload=None, **kw):
+        if url == "me/library/contains":
+            return [i in self.following for i in self._ids(kw["uris"])]
         assert url.startswith("chapters/"), url
         return {"uri": "spotify:episode:ch1", "name": "Prologue", "chapter_number": 1,
                 "duration_ms": 125000, "audiobook": {"name": "Dune"}}
 
 c = sc.SpotifyClient(); c.client = Remote()
 check("current user id fetched and cached", c.get_current_user_id() == "me" and c._current_user_id == "me")
-check("follow check returns booleans", c.check_if_users_followed(["a", "b"]) == [False, False])
-c.follow_users(["a"]); c.unfollow_users(["a"])
-check("follow/unfollow call the right endpoints", c.client.calls == [("follow", ["a"]), ("unfollow", ["a"])])
+check("follow check returns booleans", c.library_contains(["a", "b"], "user") == [False, False])
+c.library_save(["a"], "user"); c.library_remove(["a"], "user")
+check("follow/unfollow send the user URI to /me/library",
+      c.client.calls == [("follow", "spotify:user:a"), ("unfollow", "spotify:user:a")])
 
 # ------------------------------------------------ toggle from a playlist menu
 class Host:
@@ -86,7 +92,7 @@ h._toggle_follow_user({"id": "me", "display_name": "Me"})
 check("cannot follow yourself: explains, calls nothing", SPOKEN == ["That is your own profile."] and not c.client.calls)
 
 class FailingCheck(Remote):
-    def current_user_following_users(self, ids=None):
+    def _get(self, url, args=None, payload=None, **kw):
         from spotipy.exceptions import SpotifyException
         raise SpotifyException(429, -1, "rate", headers={"Retry-After": "90"})
 c.client = FailingCheck(); SPOKEN.clear()

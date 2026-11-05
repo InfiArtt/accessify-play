@@ -41,14 +41,6 @@ class FakeSpotipy:
     def current_user_saved_episodes(self, limit=20, offset=0, market=None):
         self.calls.append(("saved_episodes", limit, offset))
         return self._page("episode", limit, offset)
-    def current_user_saved_episodes_add(self, episodes=None):
-        self.calls.append(("ep_add", episodes)); return None
-    def current_user_saved_episodes_delete(self, episodes=None):
-        self.calls.append(("ep_del", episodes)); return None
-    def current_user_saved_episodes_contains(self, episodes=None):
-        self.calls.append(("ep_has", episodes)); return [True] * len(episodes)
-    def current_user_saved_shows_contains(self, shows=None):
-        self.calls.append(("show_has", shows)); return [False] * len(shows)
     SAVED = {"spotify:audiobook:x", "spotify:episode:a", "spotify:episode:b"}
     def _get(self, url, args=None, payload=None, **kw):
         self.calls.append(("GET", url, kw))
@@ -72,14 +64,14 @@ pages = [x for x in fake.calls if x[0] == "saved_episodes"]
 check("saved episodes: 3 pages of 50", [p[2] for p in pages] == [0, 50, 100])
 
 fake.calls.clear()
-c.save_episodes_to_library(["e1"]); c.remove_episodes_from_library(["e1"])
-check("episode save/remove call the right endpoints",
-      fake.calls == [("ep_add", ["e1"]), ("ep_del", ["e1"])])
+c.library_save(["e1"], "episode"); c.library_remove(["e1"], "episode")
+check("episode save/remove: PUT and DELETE /me/library with the episode URI",
+      fake.calls == [("PUT", "me/library", "spotify:episode:e1"), ("DELETE", "me/library", "spotify:episode:e1")])
 fake.calls.clear()
-check("episode contains returns booleans", c.check_if_episodes_saved(["a", "c"]) == [True, False])
+check("episode contains returns booleans", c.library_contains(["a", "c"], "episode") == [True, False])
 check("episode contains uses /me/library/contains, not /me/episodes/contains",
       fake.calls == [("GET", "me/library/contains", {"uris": "spotify:episode:a,spotify:episode:c"})])
-check("show contains returns booleans", c.check_if_shows_saved(["s"]) == [False])
+check("show contains returns booleans", c.library_contains(["s"], "show") == [False])
 
 fake.calls.clear()
 books = c.get_saved_audiobooks()
@@ -89,13 +81,13 @@ check("saved audiobooks: GET me/audiobooks paginated",
       [(g[1], g[2]["offset"]) for g in gets] == [("me/audiobooks", 0), ("me/audiobooks", 50)])
 
 fake.calls.clear()
-c.save_audiobooks_to_library(["x", "y"]); c.remove_audiobooks_from_library(["x"])
+c.library_save(["x", "y"], "audiobook"); c.library_remove(["x"], "audiobook")
 check("audiobook save is PUT /me/library with audiobook URIs",
       fake.calls[0] == ("PUT", "me/library", "spotify:audiobook:x,spotify:audiobook:y"))
 check("audiobook remove is DELETE /me/library",
       fake.calls[1] == ("DELETE", "me/library", "spotify:audiobook:x"))
 check("audiobook contains goes through /me/library/contains",
-      c.check_if_audiobooks_saved(["x", "y"]) == [True, False])
+      c.library_contains(["x", "y"], "audiobook") == [True, False])
 
 # Errors surface as the friendly message, not an exception.
 from spotipy.exceptions import SpotifyException
@@ -112,10 +104,8 @@ check("parser: wrapped shape", parser({"added_at": "t", "audiobook": {"id": "a"}
 
 c.client = None
 for fn, args in [("get_saved_episodes", ()), ("get_saved_audiobooks", ()),
-                 ("save_episodes_to_library", (["e"],)), ("remove_episodes_from_library", (["e"],)),
-                 ("check_if_episodes_saved", (["e"],)), ("check_if_shows_saved", (["s"],)),
-                 ("save_audiobooks_to_library", (["a"],)), ("remove_audiobooks_from_library", (["a"],)),
-                 ("check_if_audiobooks_saved", (["a"],))]:
+                 ("library_save", (["e"], "episode")), ("library_remove", (["e"], "episode")),
+                 ("library_contains", (["s"], "show")), ("library_toggle", ("a", "audiobook"))]:
     try:
         r = getattr(c, fn)(*args); ok = isinstance(r, str) and "not ready" in r
     except Exception as e:
