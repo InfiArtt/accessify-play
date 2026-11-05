@@ -30,6 +30,12 @@ class SearchDialog(AccessifyDialog):
 	MENU_DISCO = wx.NewIdRef()
 	MENU_COPY_LINK = wx.NewIdRef()
 	MENU_SHOW_LYRICS = wx.NewIdRef()
+	# Ctrl+1 to Ctrl+6 pick a search type, Ctrl+PageDown/PageUp cycle through
+	# them, and Ctrl+F jumps back to the search field.
+	MENU_TYPE_IDS = [wx.NewIdRef() for _i in range(6)]
+	MENU_NEXT_TYPE = wx.NewIdRef()
+	MENU_PREV_TYPE = wx.NewIdRef()
+	MENU_FOCUS_QUERY = wx.NewIdRef()
 
 	def __init__(self, parent, client):
 		super().__init__(parent, title=_("Search Spotify"))
@@ -43,6 +49,9 @@ class SearchDialog(AccessifyDialog):
 		self.current_type = "track"
 		self.next_offset = 0
 		self.can_load_more = False
+		# Bumped on every new search, so results of an older search that
+		# arrive late (after a quick type switch) are thrown away.
+		self._search_generation = 0
 
 		self._user_playlists = None
 		self._playlists_loading = False
@@ -127,7 +136,16 @@ class SearchDialog(AccessifyDialog):
 			(wx.ACCEL_ALT, ord("L"), self.MENU_COPY_LINK.GetId()),
 			# W, as in the command layer's lyrics window.
 			(wx.ACCEL_ALT, ord("W"), self.MENU_SHOW_LYRICS.GetId()),
+			(wx.ACCEL_CTRL, wx.WXK_PAGEDOWN, self.MENU_NEXT_TYPE.GetId()),
+			(wx.ACCEL_CTRL, wx.WXK_PAGEUP, self.MENU_PREV_TYPE.GetId()),
+			(wx.ACCEL_CTRL, ord("F"), self.MENU_FOCUS_QUERY.GetId()),
 		]
+		for index, type_id in enumerate(self.MENU_TYPE_IDS):
+			accel_entries.append((wx.ACCEL_CTRL, ord(str(index + 1)), type_id.GetId()))
+			self.Bind(wx.EVT_MENU, lambda evt, i=index: self.select_type(i), id=type_id.GetId())
+		self.Bind(wx.EVT_MENU, lambda evt: self.select_type(self.typeBox.GetSelection() + 1), id=self.MENU_NEXT_TYPE.GetId())
+		self.Bind(wx.EVT_MENU, lambda evt: self.select_type(self.typeBox.GetSelection() - 1), id=self.MENU_PREV_TYPE.GetId())
+		self.Bind(wx.EVT_MENU, lambda evt: self.focus_query(), id=self.MENU_FOCUS_QUERY.GetId())
 		self.SetAcceleratorTable(wx.AcceleratorTable(accel_entries))
 		self.Bind(wx.EVT_MENU, self.onPlay, id=self.MENU_PLAY.GetId())
 		self.Bind(wx.EVT_MENU, self.onAddToQueue, id=self.MENU_ADD_QUEUE.GetId())
@@ -146,7 +164,28 @@ class SearchDialog(AccessifyDialog):
 		dlg = FeaturedPlaylistsDialog(self, self.client)
 		dlg.ShowModal()
 
-	def onSearch(self, evt=None):
+	def select_type(self, index):
+		"""Switch the search type, and search again right away if there is a query.
+
+		Bound to Ctrl+1 to Ctrl+6 and to Ctrl+PageDown/PageUp, which wrap around.
+		"""
+		labels = list(self.search_types.keys())
+		index %= len(labels)
+		label = labels[index]
+		self.typeBox.SetSelection(index)
+		if self.queryText.GetValue().strip():
+			# Translators: Spoken when the search type is switched with a shortcut
+			# and the search runs again, e.g. "Artist, searching...".
+			self.onSearch(announce=_("{type}, searching...").format(type=label))
+		else:
+			ui.message(label)
+
+	def focus_query(self):
+		"""Put the focus in the search field with its text selected, ready to type over."""
+		self.queryText.SetFocus()
+		self.queryText.SelectAll()
+
+	def onSearch(self, evt=None, announce=None):
 		"""Initiates a new search, clearing previous results."""
 		query = self.queryText.GetValue().strip()
 		if not query:
@@ -155,11 +194,13 @@ class SearchDialog(AccessifyDialog):
 		self.current_query = query
 		self.current_type = self.search_types[self.typeBox.GetValue()]
 		self.next_offset = 0
+		self.can_load_more = False
+		self._search_generation = getattr(self, "_search_generation", 0) + 1
 		self._raw_results.clear()
 		self._rendered_items.clear()
 		self.resultsList.Clear()
 
-		ui.message(_("Searching..."))
+		ui.message(announce or _("Searching..."))
 		self.perform_search()
 
 	def _on_item_activated(self):
@@ -186,17 +227,23 @@ class SearchDialog(AccessifyDialog):
 			return
 
 		index_to_focus = len(self._rendered_items)
-		thread_manager.submit_task(self._search_thread, index_to_focus, name='DialogTask', daemon=True)
+		generation = getattr(self, "_search_generation", 0)
+		thread_manager.submit_task(self._search_thread, index_to_focus, generation, name='DialogTask', daemon=True)
 
-	def _search_thread(self, index_to_focus):
+	def _search_thread(self, index_to_focus, generation=None):
 		"""Fetches data from the Spotify client in a background thread."""
-		result_data = self.client.search(self.current_query, self.current_type, offset=self.next_offset)
+		search_type = self.current_type
+		result_data = self.client.search(self.current_query, search_type, offset=self.next_offset)
+
+		# A newer search started while this one was waiting for Spotify.
+		if generation is not None and generation != getattr(self, "_search_generation", 0):
+			return
 
 		if isinstance(result_data, str):
 			wx.CallAfter(ui.message, result_data)
 			return
 
-		key = self.current_type + "s"
+		key = search_type + "s"
 		search_results = result_data.get(key, {})
 		new_items = search_results.get("items", [])
 
@@ -227,6 +274,8 @@ class SearchDialog(AccessifyDialog):
 
 		if not self._rendered_items:
 			self.resultsList.Append(_("No results found."))
+			# The focus stays where it is, so say it as well.
+			ui.message(_("No results found."))
 			return
 
 		if self.can_load_more:

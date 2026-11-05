@@ -10,6 +10,18 @@ Open Search with `NVDA+Alt+G` then `S`.
 
 If there are more results, the last item is "Load More". Press `Enter` on it to add the next page. The page size is the Search Results Limit setting.
 
+The search field has the focus when Search opens, and again when you open Search while it is already open.
+
+## Switching the type
+
+These work anywhere in the Search window. If there is text in the search field, the search runs again right away with the new type, and the focus moves to the results.
+
+| Shortcut | Action |
+| :------- | :----- |
+| `Ctrl+1` to `Ctrl+6` | Song, Album, Artist, Playlist, Podcast, Audiobook |
+| `Ctrl+PageDown` / `Ctrl+PageUp` | Next or previous type |
+| `Ctrl+F` | Back to the search field, with its text selected |
+
 ## What Enter does
 
 * **Song**: plays it, continuing with the rest of its album.

@@ -965,7 +965,11 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		description=_("Search for an item on Spotify."),
 	)
 	def script_showSearchDialog(self, gesture):
+		already_open = getattr(self, "searchDialog", None)
 		self._open_dialog(SearchDialog, "searchDialog")
+		if already_open:
+			# Raised again: land in the search field, ready for a new search.
+			already_open.focus_query()
 
 	@scriptHandler.script(
 		description=_("Play an item from a Spotify URL."),
