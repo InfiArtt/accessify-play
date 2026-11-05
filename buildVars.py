@@ -8,6 +8,8 @@
 # Build customizations
 # Change this file instead of sconstruct or manifest files, whenever possible.
 
+from __future__ import annotations
+
 from site_scons.site_tools.NVDATool.typings import AddonInfo, BrailleTables, SymbolDictionaries
 
 # Since some strings in `addon_info` are translatable,

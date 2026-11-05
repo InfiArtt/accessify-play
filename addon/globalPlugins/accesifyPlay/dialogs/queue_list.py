@@ -5,6 +5,10 @@
 
 """The playback queue."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import ui
 import wx
 
@@ -13,13 +17,19 @@ from ..language import init_translation
 from ..ui.base_dialog import AccessifyDialog
 from ..utils import copy_link
 
+if TYPE_CHECKING:
+	from collections.abc import Callable
+
+	from ..spotify_client import SpotifyClient
+	from ..spotify_types import Item
+
 init_translation()
 
 
 class QueueListDialog(AccessifyDialog):
 	"""What plays now and next."""
 
-	def __init__(self, parent, client, queue_data):
+	def __init__(self, parent: wx.Window, client: SpotifyClient, queue_data: list[Item]) -> None:
 		super().__init__(parent, title=_("Spotify Queue"))
 		self.client = client
 		self.queue_items = []
@@ -53,7 +63,7 @@ class QueueListDialog(AccessifyDialog):
 		self.update_queue_list(queue_data)
 		self._init_shortcuts()
 
-	def _init_shortcuts(self):
+	def _init_shortcuts(self) -> None:
 		self._queuePlayId = wx.NewIdRef()
 		self._queueCopyId = wx.NewIdRef()
 		self._queueRefreshId = wx.NewIdRef()
@@ -69,7 +79,7 @@ class QueueListDialog(AccessifyDialog):
 		self.Bind(wx.EVT_MENU, self.copy_selected_queue_link, id=self._queueCopyId.GetId())
 		self.Bind(wx.EVT_MENU, lambda _evt: self.refresh_queue_data(), id=self._queueRefreshId.GetId())
 
-	def update_queue_list(self, queue_data):
+	def update_queue_list(self, queue_data: list[Item] | str) -> None:
 		"""Show a fresh copy of the queue."""
 		self.queueList.Clear()
 		self.queue_items = []
@@ -87,20 +97,20 @@ class QueueListDialog(AccessifyDialog):
 		if self.queue_items:
 			self.queueList.SetSelection(0)
 
-	def _get_queue_selection(self):
+	def _get_queue_selection(self) -> Item | None:
 		selection = self.queueList.GetSelection()
 		if selection == wx.NOT_FOUND or not self.queue_items or selection >= len(self.queue_items):
 			return None
 		return self.queue_items[selection]
 
-	def on_queue_context_menu(self, _evt):
+	def on_queue_context_menu(self, _evt: wx.Event) -> None:
 		"""Show the actions for the selected queue item."""
 		item = self._get_queue_selection()
 		if not item:
 			return
 		menu = wx.Menu()
 
-		def _append_menu_item(label, handler):
+		def _append_menu_item(label: str, handler: Callable[[wx.Event], object]) -> None:
 			menu_item = menu.Append(wx.ID_ANY, label)
 			menu.Bind(wx.EVT_MENU, handler, menu_item)
 
@@ -109,7 +119,7 @@ class QueueListDialog(AccessifyDialog):
 		self.PopupMenu(menu)
 		menu.Destroy()
 
-	def play_selected_queue_item(self, _evt=None):
+	def play_selected_queue_item(self, _evt: wx.Event | None = None) -> None:
 		"""Skip ahead to the selected queue item."""
 		selection = self.queueList.GetSelection()
 		item = self._get_queue_selection()
@@ -124,7 +134,7 @@ class QueueListDialog(AccessifyDialog):
 		ui.message(_("Skipping to selected queue item..."))
 		thread_manager.submit_task(self._skip_to_queue_item, selection, name="DialogTask", daemon=True)
 
-	def _skip_to_queue_item(self, selection_index):
+	def _skip_to_queue_item(self, selection_index: int) -> None:
 		try:
 			message = self.client.skip_to_queue_index(selection_index)
 			if message:
@@ -132,13 +142,13 @@ class QueueListDialog(AccessifyDialog):
 		finally:
 			pass
 
-	def copy_selected_queue_link(self, _evt=None):
+	def copy_selected_queue_link(self, _evt: wx.Event | None = None) -> None:
 		"""Copy the selected queue item's Spotify link."""
 		item = self._get_queue_selection()
 		if item:
 			copy_link(item.get("link"))
 
-	def refresh_queue_data(self):
+	def refresh_queue_data(self) -> None:
 		"""Fetch the queue again in the background."""
 		if self._refresh_in_progress:
 			ui.message(_("Queue is already refreshing."))
@@ -147,14 +157,14 @@ class QueueListDialog(AccessifyDialog):
 		ui.message(_("Refreshing queue..."))
 		thread_manager.submit_task(self._refresh_thread, name="DialogTask", daemon=True)
 
-	def _refresh_thread(self):
+	def _refresh_thread(self) -> None:
 		try:
 			queue_data = self.client.get_full_queue()
 			wx.CallAfter(self._finish_refresh, queue_data)
 		finally:
 			self._refresh_in_progress = False
 
-	def _finish_refresh(self, queue_data):
+	def _finish_refresh(self, queue_data: list[Item] | str) -> None:
 		if isinstance(queue_data, str):
 			ui.message(queue_data)
 			return

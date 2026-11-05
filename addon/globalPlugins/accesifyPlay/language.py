@@ -5,6 +5,8 @@
 
 """Translations, in the language the user chose for the add-on."""
 
+from __future__ import annotations
+
 import functools
 import gettext
 import inspect
@@ -23,7 +25,7 @@ LANGUAGE_DISPLAY_OVERRIDES = {
 }
 
 
-def _discover_language_codes():
+def _discover_language_codes() -> list[str]:
 	"""Return the languages the add-on has a catalogue for."""
 	if not locale_path.is_dir():
 		return []
@@ -37,7 +39,7 @@ def _discover_language_codes():
 AVAILABLE_LANGUAGE_CODES = _discover_language_codes()
 
 
-def _normalize_language_setting(lang_code):
+def _normalize_language_setting(lang_code: str) -> str:
 	if not lang_code or lang_code == LANGUAGE_AUTO:
 		return LANGUAGE_AUTO
 	if lang_code in AVAILABLE_LANGUAGE_CODES:
@@ -45,7 +47,7 @@ def _normalize_language_setting(lang_code):
 	return LANGUAGE_AUTO
 
 
-def get_language_setting():
+def get_language_setting() -> str:
 	"""Return the configured add-on language, or LANGUAGE_AUTO if it is unusable.
 
 	Strictly read-only, and never creates the config section: this runs on the
@@ -63,7 +65,7 @@ def get_language_setting():
 
 
 @functools.cache
-def _get_translation():
+def _get_translation() -> gettext.NullTranslations:
 	"""Return the catalogue, built once per session.
 
 	The settings panel already tells the user that a language change takes
@@ -79,23 +81,23 @@ def _get_translation():
 # The catalogue is resolved on the first translated string rather than at
 # import time: modules are imported before the plugin registers its config
 # spec, so the language setting cannot be read yet when init_translation runs.
-def _gettext(message):
+def _gettext(message: str) -> str:
 	return _get_translation().gettext(message)
 
 
-def _ngettext(singular, plural, n):
+def _ngettext(singular: str, plural: str, n: int) -> str:
 	return _get_translation().ngettext(singular, plural, n)
 
 
-def _pgettext(context, message):
+def _pgettext(context: str, message: str) -> str:
 	return _get_translation().pgettext(context, message)
 
 
-def _npgettext(context, singular, plural, n):
+def _npgettext(context: str, singular: str, plural: str, n: int) -> str:
 	return _get_translation().npgettext(context, singular, plural, n)
 
 
-def init_translation():
+def init_translation() -> None:
 	"""Point `_` at this add-on's catalogue for the calling module.
 
 	Call this once at the top of every module with translatable strings, before

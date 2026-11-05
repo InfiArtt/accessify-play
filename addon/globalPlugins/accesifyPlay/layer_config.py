@@ -5,6 +5,8 @@
 
 """The command layer's keys, as the user configured them."""
 
+from __future__ import annotations
+
 import json
 
 from logHandler import log
@@ -57,12 +59,12 @@ class LayerConfigManager:
 		("toggleAutoReadLyrics", "kb:y", _("Toggle automatic lyric reading as the song plays."), "Y", False),
 	)
 
-	def __init__(self):
+	def __init__(self) -> None:
 		self.config_file = paths.get_data_path(paths.LAYER_CONFIG_FILE)
 		self.config = {}
 		self.load()
 
-	def load(self):
+	def load(self) -> None:
 		"""Load configuration from file, then injects any missing defaults."""
 		try:
 			if self.config_file.exists():
@@ -75,7 +77,7 @@ class LayerConfigManager:
 			log.exception("Error loading layer config")
 			self.reset_to_defaults()
 
-	def _inject_missing_defaults(self):
+	def _inject_missing_defaults(self) -> None:
 		"""Add the default commands missing from the loaded config.
 
 		Existing user customizations are left completely untouched. Saves
@@ -95,14 +97,14 @@ class LayerConfigManager:
 		if injected:
 			self.save()
 
-	def save(self):
+	def save(self) -> None:
 		"""Save current configuration to file."""
 		try:
 			self.config_file.write_text(json.dumps(self.config, indent=4), encoding="utf-8")
 		except Exception:
 			log.exception("Error saving layer config")
 
-	def reset_to_defaults(self):
+	def reset_to_defaults(self) -> None:
 		"""Reset configuration to hardcoded defaults."""
 		self.config = {}
 		for script, gesture, desc, label, keep_open in self._default_specs:
@@ -114,18 +116,18 @@ class LayerConfigManager:
 			}
 		self.save()
 
-	def get_script_config(self, script_name):
+	def get_script_config(self, script_name: str) -> dict[str, object] | None:
 		"""Return a command's keys and settings, or None."""
 		return self.config.get(script_name)
 
-	def set_script_config(self, script_name, gestures, keep_open):
+	def set_script_config(self, script_name: str, gestures: list[str], *, keep_open: bool) -> None:
 		"""Change a command's keys and whether the layer stays open after it."""
 		if script_name in self.config:
 			self.config[script_name]["gestures"] = gestures
 			self.config[script_name]["keep_open"] = keep_open
 			self.save()
 
-	def get_all_configs(self):
+	def get_all_configs(self) -> list[tuple[str, dict[str, object]]]:
 		"""Return a list of tuples for UI or processing."""
 		# Ensure order matches default specs for consistency
 		result = []
@@ -135,7 +137,7 @@ class LayerConfigManager:
 				result.append((script, data))
 		return result
 
-	def get_gesture_map(self):
+	def get_gesture_map(self) -> dict[str, str]:
 		"""Return a dict of gesture -> script_name for binding."""
 		gesture_map = {}
 		for script, data in self.config.items():
@@ -143,6 +145,6 @@ class LayerConfigManager:
 				gesture_map[gesture] = script
 		return gesture_map
 
-	def should_keep_open(self, script_name):
+	def should_keep_open(self, script_name: str) -> bool:
 		"""Return whether the layer stays open after this command."""
 		return self.config.get(script_name, {}).get("keep_open", False)

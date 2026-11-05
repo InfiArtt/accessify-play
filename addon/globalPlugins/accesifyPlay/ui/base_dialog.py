@@ -5,7 +5,10 @@
 
 """The base class of the add-on's windows."""
 
+from __future__ import annotations
+
 import contextlib
+from typing import TYPE_CHECKING
 
 import ui
 import wx
@@ -16,6 +19,11 @@ from ..language import init_translation
 from ..lyrics import Lyrics, fetch_lyrics, parse_lrc
 from ..utils import safe_text
 
+if TYPE_CHECKING:
+	from collections.abc import Callable
+
+	from ..spotify_types import Item, TimedLines
+
 init_translation()
 
 
@@ -25,7 +33,7 @@ class AccessifyDialog(wx.Dialog):
 	Ensures Destroy() is always called on exit and background acts are managed.
 	"""
 
-	def __init__(self, *args, **kwargs):
+	def __init__(self, *args: object, **kwargs: object) -> None:
 		parent = args[0] if args else kwargs.get("parent")
 		# Dialogs pass the client either as a keyword...
 		self.client = kwargs.pop("client", None)
@@ -41,17 +49,17 @@ class AccessifyDialog(wx.Dialog):
 
 		self._is_queuing = False
 
-	def bind_close_button(self, button):
+	def bind_close_button(self, button: wx.Button) -> None:
 		"""Make button close the dialog."""
 		button.Bind(wx.EVT_BUTTON, lambda _e: self.Close())
 
-	def _on_char_hook(self, evt):
+	def _on_char_hook(self, evt: wx.KeyEvent) -> None:
 		if evt.GetKeyCode() == wx.WXK_ESCAPE:
 			self.Close()
 		else:
 			evt.Skip()
 
-	def _on_dialog_close(self, evt):
+	def _on_dialog_close(self, evt: wx.Event) -> None:
 		"""Destroy the dialog on close, unbinding first to avoid a reference cycle."""
 		evt.Skip()
 
@@ -62,7 +70,7 @@ class AccessifyDialog(wx.Dialog):
 		wx.CallAfter(self._raise_parent_dialog)
 		wx.CallAfter(self.Destroy)
 
-	def _raise_parent_dialog(self):
+	def _raise_parent_dialog(self) -> None:
 		if self._parentDialog:
 			# The parent may have been closed in the meantime.
 			with contextlib.suppress(RuntimeError):
@@ -70,7 +78,7 @@ class AccessifyDialog(wx.Dialog):
 
 	# --- Spotify actions (run through the thread manager) ---
 
-	def _play_uri(self, uri):
+	def _play_uri(self, uri: str) -> None:
 		if not self.client:
 			return
 		if not uri:
@@ -79,7 +87,7 @@ class AccessifyDialog(wx.Dialog):
 		ui.message(_("Playing..."))
 		thread_manager.submit_task(self.client.play_item, uri, name="PlayItemTask")
 
-	def _queue_add_track(self, uri, name):
+	def _queue_add_track(self, uri: str, name: str) -> None:
 		if self._is_queuing:
 			ui.message(_("Please wait, another item is being added to the queue."))
 			return
@@ -91,7 +99,7 @@ class AccessifyDialog(wx.Dialog):
 		ui.message(_("Adding to queue..."))
 		thread_manager.submit_task(self._queue_add_track_thread, uri, name, name="QueueTrackTask")
 
-	def _queue_add_track_thread(self, uri, name):
+	def _queue_add_track_thread(self, uri: str, name: str) -> None:
 		try:
 			result = self.client.add_to_queue(uri)
 			if isinstance(result, str):
@@ -101,7 +109,7 @@ class AccessifyDialog(wx.Dialog):
 		finally:
 			self._is_queuing = False
 
-	def _queue_add_context(self, uri, item_type, name):
+	def _queue_add_context(self, uri: str, item_type: str, name: str) -> None:
 		if self._is_queuing:
 			ui.message(_("Please wait..."))
 			return
@@ -115,7 +123,7 @@ class AccessifyDialog(wx.Dialog):
 			self._queue_add_context_thread, uri, item_type, name, name="QueueContextTask"
 		)
 
-	def _queue_add_context_thread(self, uri, item_type, name):
+	def _queue_add_context_thread(self, uri: str, item_type: str, name: str) -> None:
 		try:
 			if item_type in ("album", "playlist"):
 				track_uris = self.client.get_context_track_uris(uri, item_type)
@@ -150,14 +158,14 @@ class AccessifyDialog(wx.Dialog):
 		finally:
 			self._is_queuing = False
 
-	def _save_album_to_library(self, album):
+	def _save_album_to_library(self, album: Item) -> None:
 		if not self.client or not album or album.get("type") != "album" or not album.get("id"):
 			wx.CallAfter(ui.message, _("Could not save. Invalid album data provided."))
 			return
 		ui.message(_("Saving '{album_name}' to your library...").format(album_name=album.get("name")))
 		thread_manager.submit_task(self._save_album_thread, album, name="SaveAlbumTask")
 
-	def _save_album_thread(self, album):
+	def _save_album_thread(self, album: Item) -> None:
 		result = self.client.library_save([album.get("id")], "album")
 		if isinstance(result, str):
 			wx.CallAfter(ui.message, result)
@@ -166,7 +174,7 @@ class AccessifyDialog(wx.Dialog):
 				ui.message, _("Album '{album_name}' saved successfully.").format(album_name=album.get("name"))
 			)
 
-	def _toggle_saved(self, kind, item):
+	def _toggle_saved(self, kind: str, item: Item) -> None:
 		"""Save the item if it is not in the library, otherwise remove it; say which.
 
 		kind is the Spotify type: "episode", "show", "audiobook", ...
@@ -175,7 +183,7 @@ class AccessifyDialog(wx.Dialog):
 			return
 		name = safe_text(item.get("name"), _("This item"))
 
-		def _run():
+		def _run() -> None:
 			now = self.client.library_toggle(item["id"], kind)
 			if isinstance(now, str):
 				wx.CallAfter(ui.message, now)
@@ -186,10 +194,10 @@ class AccessifyDialog(wx.Dialog):
 
 		thread_manager.submit_task(_run, name="ToggleSavedTask")
 
-	def _bind_list_activation(self, control, activate_callback):
+	def _bind_list_activation(self, control: wx.ListBox, activate_callback: Callable[[], object]) -> None:
 		control.Bind(wx.EVT_LISTBOX_DCLICK, lambda _evt: activate_callback())
 
-		def on_char(evt):
+		def on_char(evt: wx.KeyEvent) -> None:
 			if evt.GetKeyCode() in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER):
 				activate_callback()
 			else:
@@ -197,17 +205,17 @@ class AccessifyDialog(wx.Dialog):
 
 		control.Bind(wx.EVT_CHAR_HOOK, on_char)
 
-	def _owner_of(self, playlist):
+	def _owner_of(self, playlist: Item) -> Item | None:
 		"""Return a playlist's owner as {"id", "display_name"}, or None."""
 		owner = (playlist or {}).get("owner") or {}
 		return owner if owner.get("id") else None
 
-	def _follow_owner_label(self, playlist):
+	def _follow_owner_label(self, playlist: Item) -> str:
 		owner = self._owner_of(playlist)
 		name = safe_text((owner or {}).get("display_name"), (owner or {}).get("id") or _("owner"))
 		return _("Follow/Unfollow Owner: {name}").format(name=name)
 
-	def _toggle_follow_user(self, user):
+	def _toggle_follow_user(self, user: Item) -> None:
 		"""Follow the user if not already following them, otherwise unfollow.
 
 		Same model as Save/Unsave: ask Spotify for the current state, flip it,
@@ -218,7 +226,7 @@ class AccessifyDialog(wx.Dialog):
 		user_id = user["id"]
 		name = safe_text(user.get("display_name"), user_id)
 
-		def _run():
+		def _run() -> None:
 			if user_id == self.client.get_current_user_id():
 				wx.CallAfter(ui.message, _("That is your own profile."))
 				return
@@ -232,7 +240,7 @@ class AccessifyDialog(wx.Dialog):
 
 		thread_manager.submit_task(_run, name="ToggleFollowUserTask")
 
-	def _show_lyrics_for_track(self, track):
+	def _show_lyrics_for_track(self, track: Item) -> None:
 		"""Open the lyrics window for a track that need not be playing.
 
 		The window opens as a preview: Enter-to-seek and Jump to Current both
@@ -255,7 +263,7 @@ class AccessifyDialog(wx.Dialog):
 		self._lyrics_loading = True
 		ui.message(_("Loading lyrics..."))
 
-		def _fetch():
+		def _fetch() -> None:
 			try:
 				result = fetch_lyrics(track_name, artist_name, album_name, duration_ms)
 			except Exception:
@@ -281,19 +289,23 @@ class AccessifyDialog(wx.Dialog):
 
 		thread_manager.submit_task(_fetch, name="LyricsPreviewTask")
 
-	def _open_lyrics_preview(self, track_name, artist_name, plain, synced_lines):
+	def _open_lyrics_preview(
+		self, track_name: str, artist_name: str, plain: str | None, synced_lines: TimedLines | None
+	) -> None:
 		from ..dialogs.lyrics_window import LyricsDialog  # noqa: PLC0415 - circular import
 
 		dialog = LyricsDialog(self, Lyrics(track_name, artist_name, plain, synced_lines))
 		dialog.Show()
 		ui.message(_("Lyrics for {track} opened.").format(track=track_name))
 
-	def _append_menu_item(self, menu, label, handler):
+	def _append_menu_item(self, menu: wx.Menu, label: str, handler: Callable[[wx.Event], object]) -> None:
 		"""Add an item to a popup menu; choosing it calls handler(event)."""
 		item = menu.Append(wx.ID_ANY, label)
 		menu.Bind(wx.EVT_MENU, handler, item)
 
-	def _playlist_submenu(self, playlists, on_pick, empty_label):
+	def _playlist_submenu(
+		self, playlists: list[Item], on_pick: Callable[[Item], object], empty_label: str
+	) -> wx.Menu:
 		"""Return a submenu of playlists; choosing one calls on_pick(playlist).
 
 		playlists is None while they are still loading.
@@ -308,7 +320,7 @@ class AccessifyDialog(wx.Dialog):
 			self.Bind(wx.EVT_MENU, lambda _evt, playlist=playlist: on_pick(playlist), menu_item)
 		return submenu
 
-	def _append_add_to_playlist(self, menu, item, playlists):
+	def _append_add_to_playlist(self, menu: wx.Menu, item: Item, playlists: list[Item]) -> None:
 		"""Add the "Add to Playlist" submenu for a track, or "Add Album to Playlist"."""
 		if item.get("type") == "album":
 			submenu = self._playlist_submenu(
@@ -325,7 +337,7 @@ class AccessifyDialog(wx.Dialog):
 			)
 			menu.AppendSubMenu(submenu, _("Add to Playlist"))
 
-	def _add_track_to_playlist(self, track, playlist):
+	def _add_track_to_playlist(self, track: Item, playlist: Item) -> None:
 		"""Add a track to a playlist in the background, saying how it went."""
 		playlist_id = playlist.get("id")
 		track_uri = track.get("uri")
@@ -338,13 +350,13 @@ class AccessifyDialog(wx.Dialog):
 			)
 		)
 
-		def _add():
+		def _add() -> None:
 			result = self.client.add_items_to_playlist(playlist_id, track_uri)
 			wx.CallAfter(ui.message, result if isinstance(result, str) else _("Track added successfully."))
 
 		thread_manager.submit_task(_add, name="AddTrackToPlaylist", daemon=True)
 
-	def _add_album_to_playlist(self, album, playlist):
+	def _add_album_to_playlist(self, album: Item, playlist: Item) -> None:
 		"""Add all of an album's tracks to a playlist in the background."""
 		ui.message(
 			_("Adding all tracks from '{album}' to '{playlist}'...").format(
@@ -352,7 +364,7 @@ class AccessifyDialog(wx.Dialog):
 			)
 		)
 
-		def _add():
+		def _add() -> None:
 			result = self.client.add_album_to_playlist(playlist.get("id"), album.get("id"))
 			wx.CallAfter(
 				ui.message, _("Album added to playlist successfully.") if result is True else str(result)
@@ -360,7 +372,7 @@ class AccessifyDialog(wx.Dialog):
 
 		thread_manager.submit_task(_add, name="AddAlbumToPlaylist", daemon=True)
 
-	def _append_go_to_options_for_track(self, menu, track_item):
+	def _append_go_to_options_for_track(self, menu: wx.Menu, track_item: Item) -> None:
 		if not track_item or track_item.get("type") != "track":
 			return
 		menu.AppendSeparator()
@@ -391,14 +403,14 @@ class AccessifyDialog(wx.Dialog):
 				self.Bind(wx.EVT_MENU, lambda evt, a=artist: self._handle_go_to_artist(evt, a), artist_item)
 			menu.AppendSubMenu(artist_submenu, _("Go to Artist"))
 
-	def _handle_go_to_album(self, _event, album):
+	def _handle_go_to_album(self, _event: wx.Event, album: Item) -> None:
 		user_playlists = getattr(self, "_user_playlists", []) or getattr(self, "user_playlists", [])
 		from ..dialogs.album import AlbumTracksDialog  # noqa: PLC0415 - circular import
 
 		dialog = AlbumTracksDialog(self, self.client, album, user_playlists)
 		dialog.Show()
 
-	def _handle_go_to_artist(self, _event, artist):
+	def _handle_go_to_artist(self, _event: wx.Event, artist: Item) -> None:
 		user_playlists = getattr(self, "_user_playlists", []) or getattr(self, "user_playlists", [])
 		from ..dialogs.artist import ArtistDiscographyDialog  # noqa: PLC0415 - circular import
 

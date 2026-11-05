@@ -5,8 +5,10 @@
 
 """How numbers from Spotify are written out for the user."""
 
+from __future__ import annotations
 
-def format_duration(duration_ms):
+
+def format_duration(duration_ms: int | None) -> str:
 	"""Write a length in milliseconds as minutes and seconds, such as 3:07."""
 	if not duration_ms:
 		return "0:00"
@@ -14,7 +16,7 @@ def format_duration(duration_ms):
 	return f"{minutes}:{seconds:02d}"
 
 
-def format_followers(total):
+def format_followers(total: int | None) -> str:
 	"""Write a follower count with thousands separators, or nothing if unknown."""
 	if total is None:
 		return ""

@@ -5,7 +5,9 @@ Methods are lifted out of the real source with ast and run against stand-ins."""
 import os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from _support import REPO  # noqa: E402
+import __future__
 import ast, io, re, tokenize, types
+LAZY_ANNOTATIONS = __future__.annotations.compiler_flag  # as in the add-on's modules
 
 PKG = os.path.join(REPO, "addon", "globalPlugins", "accesifyPlay")
 FAILS = []
@@ -21,7 +23,7 @@ def lift(src, cls, name, ns):
     klass = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == cls)
     fn = next(n for n in klass.body if isinstance(n, ast.FunctionDef) and n.name == name)
     fn.decorator_list = []
-    exec(compile(ast.fix_missing_locations(ast.Module(body=[fn], type_ignores=[])), name, "exec"), ns)
+    exec(compile(ast.fix_missing_locations(ast.Module(body=[fn], type_ignores=[])), name, "exec", flags=LAZY_ANNOTATIONS), ns)
     return ns[name]
 
 # ------------------------------------------------ 1. no _() inside an f-string
@@ -41,7 +43,7 @@ check(f"no translatable text is hidden inside an f-string ({hidden or 'none'})",
 client_src = source("spotify_client.py")
 info_ns = {"_": lambda s: s}
 describe = next(n for n in ast.parse(client_src).body if isinstance(n, ast.FunctionDef) and n.name == "_describe_playing")
-exec(compile(ast.fix_missing_locations(ast.Module(body=[describe], type_ignores=[])), "describe", "exec"), info_ns)
+exec(compile(ast.fix_missing_locations(ast.Module(body=[describe], type_ignores=[])), "describe", "exec", flags=LAZY_ANNOTATIONS), info_ns)
 info = lift(client_src, "SpotifyClient", "get_current_track_info", info_ns)
 host = types.SimpleNamespace(run_on_device=None)
 track = {"name": "Song", "artists": [{"name": "A"}, {"name": "B"}], "album": {"name": "LP"}}
@@ -74,7 +76,7 @@ set_volume(plugin("Spotify client not ready."), None)
 check("...and with the default when it can't be read", OPENED[-1] == {"initial_volume": None})
 vol_src = source("dialogs", "volume.py")
 check("the dialog uses initial_volume, falling back to 50",
-      "initial_volume=None" in vol_src and "50 if initial_volume is None else initial_volume" in vol_src)
+      "initial_volume: int | None = None" in vol_src and "50 if initial_volume is None else initial_volume" in vol_src)
 
 # ------------------------------------------------ 4. Alt+F in Search follows or unfollows
 SPOKEN, CALLS = [], []

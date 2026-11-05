@@ -265,13 +265,15 @@ del conf["ownClientID"], conf["clientID"]
 
 # --- 7. The poller paces itself and keeps the lyrics in time ----------------
 
+import __future__
 import ast
+LAZY_ANNOTATIONS = __future__.annotations.compiler_flag  # as in the add-on's modules
 import functools
 init_tree = ast.parse(init_src)
 pns = {}
 for node in init_tree.body:   # the POLL_* constants, from the source itself
     if isinstance(node, ast.Assign) and any(getattr(t, "id", "").startswith(("POLL_", "LYRIC_")) for t in node.targets):
-        exec(compile(ast.Module(body=[node], type_ignores=[]), "consts", "exec"), pns)
+        exec(compile(ast.Module(body=[node], type_ignores=[]), "consts", "exec", flags=LAZY_ANNOTATIONS), pns)
 klass = next(n for n in init_tree.body if isinstance(n, ast.ClassDef) and n.name == "GlobalPlugin")
 POLL_PARTS = ("_poll_once", "_keep_lyrics_in_time", "_on_track_changed")
 fns = [n for n in klass.body if isinstance(n, ast.FunctionDef) and n.name in POLL_PARTS]
@@ -284,7 +286,7 @@ pns.update(
     nvda_ui=types.SimpleNamespace(message=SAID.append),
     thread_manager=types.SimpleNamespace(submit_task=lambda f, *a, **k: TASKS.append(f)),
 )
-exec(compile(ast.fix_missing_locations(ast.Module(body=fns, type_ignores=[])), "poller", "exec"), pns)
+exec(compile(ast.fix_missing_locations(ast.Module(body=fns, type_ignores=[])), "poller", "exec", flags=LAZY_ANNOTATIONS), pns)
 poll = pns["_poll_once"]
 check("no separate lyric resync poller any more", "_lyric_resync_poller" not in init_src)
 

@@ -6,7 +6,9 @@ Each method is lifted out of the real source with ast and run against stand-ins.
 import os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from _support import REPO, git_show  # noqa: E402
+import __future__
 import ast, os, re, subprocess, sys, textwrap, types
+LAZY_ANNOTATIONS = __future__.annotations.compiler_flag  # as in the add-on's modules
 
 ROOT = REPO
 PKG = os.path.join(ROOT, "addon", "globalPlugins", "accesifyPlay")
@@ -22,7 +24,7 @@ def lift(source, cls, name, ns):
     fn = next(n for n in klass.body if isinstance(n, ast.FunctionDef) and n.name == name)
     fn.decorator_list = []
     mod = ast.Module(body=[fn], type_ignores=[])
-    exec(compile(ast.fix_missing_locations(mod), f"<{cls}.{name}>", "exec"), ns)
+    exec(compile(ast.fix_missing_locations(mod), f"<{cls}.{name}>", "exec", flags=LAZY_ANNOTATIONS), ns)
     return ns[name]
 
 # ------------------------------------------------ 1. W twice on the same track

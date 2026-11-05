@@ -5,11 +5,21 @@
 
 """The lyrics window."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import api
 import wx
 
 from ..language import init_translation
 from ..ui.base_dialog import AccessifyDialog
+
+if TYPE_CHECKING:
+	from collections.abc import Callable
+
+	from ..lyrics import Lyrics
+	from ..spotify_types import TimedLines
 
 init_translation()
 
@@ -29,7 +39,14 @@ class LyricsDialog(AccessifyDialog):
 	- Enter does nothing, auto-scroll is disabled, no timestamp buttons shown.
 	"""
 
-	def __init__(self, parent, lyrics, *, seek_callback=None, jump_callback=None):
+	def __init__(
+		self,
+		parent: wx.Window,
+		lyrics: Lyrics,
+		*,
+		seek_callback: Callable[[int], object] | None = None,
+		jump_callback: Callable[[], object] | None = None,
+	) -> None:
 		title = _("Lyrics: {track} \u2014 {artist}").format(track=lyrics.track, artist=lyrics.artist)
 		super().__init__(
 			parent,
@@ -47,7 +64,7 @@ class LyricsDialog(AccessifyDialog):
 	# UI construction
 	# ------------------------------------------------------------------
 
-	def _build_ui(self, lyrics, track_name, synced_lines=None):
+	def _build_ui(self, lyrics: str | None, track_name: str, synced_lines: TimedLines | None = None) -> None:
 		sizer = wx.BoxSizer(wx.VERTICAL)
 
 		display_text = self._prepare_display(lyrics, track_name, synced_lines)
@@ -106,7 +123,7 @@ class LyricsDialog(AccessifyDialog):
 	# Data helpers
 	# ------------------------------------------------------------------
 
-	def _prepare_display(self, plain_lyrics, track_name, synced_lines):
+	def _prepare_display(self, plain_lyrics: str, track_name: str, synced_lines: TimedLines) -> str:
 		"""Build display text and populate all internal lookup maps."""
 		self._line_timestamps = {}
 		self._ms_to_line = {}
@@ -128,7 +145,7 @@ class LyricsDialog(AccessifyDialog):
 		return _("No lyrics found for {track}.").format(track=track_name)
 
 	@staticmethod
-	def _ms_to_lrc(ms):
+	def _ms_to_lrc(ms: int) -> str:
 		"""Convert milliseconds to LRC timestamp string [mm:ss.cs]."""
 		total_cs = ms // 10
 		cs = total_cs % 100
@@ -141,7 +158,7 @@ class LyricsDialog(AccessifyDialog):
 	# Public: auto-scroll called by line_callback from LyricsAutoReader
 	# ------------------------------------------------------------------
 
-	def set_current_ms(self, playback_ms):
+	def set_current_ms(self, playback_ms: int) -> None:
 		"""Move the cursor to the lyric line that best matches playback_ms.
 
 		Called automatically from the auto-reader's line_callback as each
@@ -166,7 +183,7 @@ class LyricsDialog(AccessifyDialog):
 	# Event handlers
 	# ------------------------------------------------------------------
 
-	def _on_key_down(self, evt):
+	def _on_key_down(self, evt: wx.KeyEvent) -> None:
 		"""Enter: seek Spotify to the timestamp of the focused line."""
 		if evt.GetKeyCode() in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER):
 			pos = self.lyrics_ctrl.GetInsertionPoint()
@@ -181,7 +198,7 @@ class LyricsDialog(AccessifyDialog):
 		else:
 			evt.Skip()
 
-	def _on_copy_lyrics(self, _evt):
+	def _on_copy_lyrics(self, _evt: wx.Event) -> None:
 		"""Copy plain lyrics (no timestamps) to clipboard."""
 		if self._display_lines:
 			text = "\n".join(t for _, t in self._display_lines)
@@ -189,12 +206,12 @@ class LyricsDialog(AccessifyDialog):
 			text = self.lyrics_ctrl.GetValue()
 		api.copyToClip(text, notify=True)
 
-	def _on_copy_with_timestamps(self, _evt):
+	def _on_copy_with_timestamps(self, _evt: wx.Event) -> None:
 		"""Copy lyrics in LRC [mm:ss.cs] format to clipboard."""
 		lines = [f"{self._ms_to_lrc(ms)} {text}" for ms, text in self._display_lines]
 		api.copyToClip("\n".join(lines), notify=True)
 
-	def _on_jump_to_current(self, _evt):
+	def _on_jump_to_current(self, _evt: wx.Event) -> None:
 		"""Ask __init__.py for the current Spotify position, then scroll there."""
 		if self._jump_callback:
 			self._jump_callback()
@@ -203,7 +220,7 @@ class LyricsDialog(AccessifyDialog):
 	# In-place update when song changes
 	# ------------------------------------------------------------------
 
-	def update_content(self, lyrics):
+	def update_content(self, lyrics: Lyrics) -> None:
 		"""Refresh title, lyrics, seek map, and buttons for a new track in-place."""
 		self.SetTitle(_("Lyrics: {track} \u2014 {artist}").format(track=lyrics.track, artist=lyrics.artist))
 		display_text = self._prepare_display(lyrics.plain, lyrics.track, lyrics.synced)

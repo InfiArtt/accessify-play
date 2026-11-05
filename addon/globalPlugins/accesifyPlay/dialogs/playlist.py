@@ -5,6 +5,10 @@
 
 """A playlist's tracks."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import ui
 import wx
 
@@ -13,6 +17,10 @@ from ..formatting import format_duration
 from ..language import init_translation
 from ..ui.base_dialog import AccessifyDialog
 from ..utils import conf_get, copy_link
+
+if TYPE_CHECKING:
+	from ..spotify_client import SpotifyClient
+	from ..spotify_types import Item
 
 init_translation()
 
@@ -25,7 +33,7 @@ class PlaylistTracksDialog(AccessifyDialog):
 	MENU_COPY_LINK = wx.NewIdRef()
 	DEFAULT_PLAYLIST_PAGE_SIZE = 40
 
-	def __init__(self, parent, client, playlist):
+	def __init__(self, parent: wx.Window, client: SpotifyClient, playlist: Item) -> None:
 		playlist_name = playlist.get("name", _("Unknown"))
 		title = _("Tracks in Playlist {name}").format(name=playlist_name)
 		super().__init__(parent, title=title, size=(520, 420))
@@ -42,7 +50,7 @@ class PlaylistTracksDialog(AccessifyDialog):
 		self._create_accelerators()
 		self._load_tracks()
 
-	def _init_ui(self):
+	def _init_ui(self) -> None:
 		panel = wx.Panel(self)
 		main_sizer = wx.BoxSizer(wx.VERTICAL)
 
@@ -77,7 +85,7 @@ class PlaylistTracksDialog(AccessifyDialog):
 
 		panel.SetSizer(main_sizer)
 
-	def _create_accelerators(self):
+	def _create_accelerators(self) -> None:
 		accel_entries = [
 			(wx.ACCEL_ALT, ord("P"), self.MENU_PLAY.GetId()),
 			(wx.ACCEL_ALT, ord("Q"), self.MENU_ADD_QUEUE.GetId()),
@@ -88,14 +96,14 @@ class PlaylistTracksDialog(AccessifyDialog):
 		self.Bind(wx.EVT_MENU, self.on_add_to_queue, id=self.MENU_ADD_QUEUE.GetId())
 		self.Bind(wx.EVT_MENU, self.on_copy_link, id=self.MENU_COPY_LINK.GetId())
 
-	def _load_tracks(self):
+	def _load_tracks(self) -> None:
 		self.tracks = []
 		self._tracks_offset = 0
 		self._tracks_has_more = True
 		self.tracks_list.Clear()
 		self._load_more_tracks()
 
-	def _load_more_tracks(self):
+	def _load_more_tracks(self) -> None:
 		if self._tracks_loading or not self._tracks_has_more:
 			return
 		self._tracks_loading = True
@@ -104,7 +112,7 @@ class PlaylistTracksDialog(AccessifyDialog):
 			self.tracks_list.Append(_("Loading..."))
 		thread_manager.submit_task(self._load_more_tracks_thread, name="DialogTask", daemon=True)
 
-	def _load_more_tracks_thread(self):
+	def _load_more_tracks_thread(self) -> None:
 		playlist_id = self.playlist.get("id")
 		if not playlist_id:
 			wx.CallAfter(self._handle_error, _("Playlist information incomplete."))
@@ -114,13 +122,13 @@ class PlaylistTracksDialog(AccessifyDialog):
 		)
 		wx.CallAfter(self._finish_load_tracks, results)
 
-	def _handle_error(self, message):
+	def _handle_error(self, message: str) -> None:
 		self._tracks_loading = False
 		self.tracks_list.Clear()
 		self.tracks_list.Append(message)
 		ui.message(message)
 
-	def _finish_load_tracks(self, results):
+	def _finish_load_tracks(self, results: Item | str | None) -> None:
 		self._tracks_loading = False
 		if isinstance(results, str):
 			if not self.tracks:
@@ -162,7 +170,7 @@ class PlaylistTracksDialog(AccessifyDialog):
 
 		self._append_tracks_to_list(parsed, start_index)
 
-	def _append_tracks_to_list(self, new_tracks, start_index):
+	def _append_tracks_to_list(self, new_tracks: list[Item], start_index: int) -> None:
 		if self._has_tracks_placeholder():
 			self.tracks_list.Delete(self.tracks_list.GetCount() - 1)
 
@@ -172,19 +180,19 @@ class PlaylistTracksDialog(AccessifyDialog):
 
 		self._refresh_tracks_placeholder()
 
-	def _refresh_tracks_placeholder(self):
+	def _refresh_tracks_placeholder(self) -> None:
 		if self._has_tracks_placeholder():
 			self.tracks_list.Delete(self.tracks_list.GetCount() - 1)
 		if self._tracks_has_more:
 			self.tracks_list.Append(self._tracks_load_more_label)
 
-	def _has_tracks_placeholder(self):
+	def _has_tracks_placeholder(self) -> bool:
 		count = self.tracks_list.GetCount()
 		if count == 0:
 			return False
 		return self.tracks_list.GetString(count - 1) == self._tracks_load_more_label
 
-	def _format_track_display(self, index, track):
+	def _format_track_display(self, index: int, track: Item) -> str:
 		name = track.get("name", _("Unknown"))
 		artists = ", ".join([a.get("name", _("Unknown")) for a in track.get("artists", [])])
 		duration = format_duration(track.get("duration_ms"))
@@ -195,7 +203,7 @@ class PlaylistTracksDialog(AccessifyDialog):
 			display = f"{display} ({duration})"
 		return display
 
-	def _get_selected_track(self):
+	def _get_selected_track(self) -> Item | None:
 		selection = self.tracks_list.GetSelection()
 		if selection == wx.NOT_FOUND:
 			ui.message(_("Please select a track first."))
@@ -208,7 +216,7 @@ class PlaylistTracksDialog(AccessifyDialog):
 			return None
 		return self.tracks[selection]
 
-	def _is_tracks_load_more(self, selection):
+	def _is_tracks_load_more(self, selection: int) -> bool:
 		if selection == wx.NOT_FOUND:
 			return False
 		return (
@@ -217,14 +225,14 @@ class PlaylistTracksDialog(AccessifyDialog):
 			and selection == self.tracks_list.GetCount() - 1
 		)
 
-	def _on_tracks_activate(self):
+	def _on_tracks_activate(self) -> None:
 		selection = self.tracks_list.GetSelection()
 		if self._is_tracks_load_more(selection):
 			self._load_more_tracks()
 			return
 		self.on_play_selected()
 
-	def on_context_menu(self, _evt):
+	def on_context_menu(self, _evt: wx.Event) -> None:
 		"""Show the actions for the selected track."""
 		if not self.tracks:
 			return
@@ -240,7 +248,7 @@ class PlaylistTracksDialog(AccessifyDialog):
 		self.PopupMenu(menu)
 		menu.Destroy()
 
-	def on_play_selected(self, _evt=None):
+	def on_play_selected(self, _evt: wx.Event | None = None) -> None:
 		"""Play the playlist from the selected track."""
 		track = self._get_selected_track()
 		if not track:
@@ -257,13 +265,13 @@ class PlaylistTracksDialog(AccessifyDialog):
 		else:
 			self._play_uri(track_uri)
 
-	def on_add_to_queue(self, _evt=None):
+	def on_add_to_queue(self, _evt: wx.Event | None = None) -> None:
 		"""Add the selected track to the queue."""
 		track = self._get_selected_track()
 		if track:
 			self._queue_add_track(track.get("uri"), track.get("name"))
 
-	def on_copy_link(self, _evt=None):
+	def on_copy_link(self, _evt: wx.Event | None = None) -> None:
 		"""Copy the selected track's Spotify link."""
 		track = self._get_selected_track()
 		if track:

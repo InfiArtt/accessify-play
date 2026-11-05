@@ -5,11 +5,18 @@
 
 """Stop playback after a number of minutes."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import wx
 from gui import guiHelper
 
 from ..language import init_translation
 from ..ui.base_dialog import AccessifyDialog
+
+if TYPE_CHECKING:
+	from collections.abc import Callable
 
 init_translation()
 
@@ -17,7 +24,7 @@ init_translation()
 class SleepTimerDialog(AccessifyDialog):
 	"""Ask how many minutes until playback stops."""
 
-	def __init__(self, parent, callback):
+	def __init__(self, parent: wx.Window, callback: Callable[..., object]) -> None:
 		super().__init__(parent, title=_("Set Sleep Timer"))
 		self.callback = callback
 
@@ -44,7 +51,7 @@ class SleepTimerDialog(AccessifyDialog):
 		self.SetSizerAndFit(main_sizer)
 		self.minutesCtrl.SetFocus()
 
-	def on_ok(self, _evt):
+	def on_ok(self, _evt: wx.Event) -> None:
 		"""Start the timer and close."""
 		minutes = self.minutesCtrl.GetValue()
 		self.callback(minutes)

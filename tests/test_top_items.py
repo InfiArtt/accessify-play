@@ -2,7 +2,9 @@
 import os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from _support import REPO, git_show  # noqa: E402
+import __future__
 import ast, os, sys, types
+LAZY_ANNOTATIONS = __future__.annotations.compiler_flag  # as in the add-on's modules
 
 PKG = os.path.join(REPO, "addon", "globalPlugins", "accesifyPlay")
 FAILS = []
@@ -25,7 +27,7 @@ class Timer:
 wx = types.SimpleNamespace(CallLater=Timer, CallAfter=lambda f, *a: PENDING.append((f, a)))
 ns = {"wx": wx, "_": lambda s: s, "ui": types.SimpleNamespace(message=SPOKEN.append),
       "thread_manager": types.SimpleNamespace(submit_task=lambda fn, *a, **k: fn())}
-exec(compile(ast.fix_missing_locations(ast.Module(body=[delay] + fns, type_ignores=[])), "m", "exec"), ns)
+exec(compile(ast.fix_missing_locations(ast.Module(body=[delay] + fns, type_ignores=[])), "m", "exec", flags=LAZY_ANNOTATIONS), ns)
 
 class Box:
     def __init__(self, v): self.v = v

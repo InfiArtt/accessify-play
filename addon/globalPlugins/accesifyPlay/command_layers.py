@@ -5,7 +5,10 @@
 
 """The command layer: NVDA+Alt+G, then one key for a Spotify command."""
 
+from __future__ import annotations
+
 import time
+from typing import TYPE_CHECKING
 
 import gui
 import inputCore
@@ -21,10 +24,16 @@ from .language import init_translation
 from .layer_config import LayerConfigManager
 from .ui.base_dialog import AccessifyDialog
 
+if TYPE_CHECKING:
+	from collections.abc import Callable
+
+	from . import GlobalPlugin
+	from .spotify_types import Item
+
 init_translation()
 
 
-def _capture_func():
+def _capture_func() -> Callable[[inputCore.InputGesture], bool] | None:
 	"""Return the function NVDA hands every gesture to first, if any.
 
 	NVDA offers no public way to read or set it; input help uses the same
@@ -33,14 +42,14 @@ def _capture_func():
 	return inputCore.manager._captureFunc  # noqa: SLF001
 
 
-def _set_capture_func(func):
+def _set_capture_func(func: Callable[..., object]) -> None:
 	inputCore.manager._captureFunc = func  # noqa: SLF001
 
 
 class LayerHelpDialog(AccessifyDialog):
 	"""Simple read-only dialog to list available layered commands."""
 
-	def __init__(self, parent, entries):
+	def __init__(self, parent: wx.Window, entries: list[Item]) -> None:
 		super().__init__(
 			parent,
 			title=_("Accessify Play command layer"),
@@ -49,7 +58,7 @@ class LayerHelpDialog(AccessifyDialog):
 		self.entries = entries
 		self._build_ui()
 
-	def _build_ui(self):
+	def _build_ui(self) -> None:
 		sizer = wx.BoxSizer(wx.VERTICAL)
 		info = wx.StaticText(
 			self,
@@ -94,7 +103,7 @@ class CommandLayerManager:
 	#: layer and then walked away.
 	TIMEOUT = 30.0
 
-	def __init__(self, plugin):
+	def __init__(self, plugin: GlobalPlugin) -> None:
 		self.plugin = plugin
 		self.config_manager = LayerConfigManager()
 		self._help_dialog = None
@@ -105,11 +114,11 @@ class CommandLayerManager:
 		self._captor = self._capture
 		self._refresh_bindings()
 
-	def _refresh_bindings(self):
+	def _refresh_bindings(self) -> None:
 		self._layer_gestures = self._build_layer_gestures()
 		self._help_entries = self._build_help_entries()
 
-	def _build_layer_gestures(self):
+	def _build_layer_gestures(self) -> dict[str, str]:
 		gestures = dict(self.config_manager.get_gesture_map())
 		# System commands
 		gestures["kb:f1"] = "commandLayerHelp"
@@ -127,7 +136,7 @@ class CommandLayerManager:
 				log.exception("AccessifyPlay: ignoring malformed layer gesture %r", identifier)
 		return normalized
 
-	def _build_help_entries(self):
+	def _build_help_entries(self) -> list[tuple[str, str]]:
 		configs = self.config_manager.get_all_configs()
 		entries = []
 		for _script, data in configs:
@@ -146,11 +155,11 @@ class CommandLayerManager:
 	# --- Layer state ---
 
 	@property
-	def is_active(self):
+	def is_active(self) -> bool:
 		"""Return whether the layer is waiting for a key."""
 		return _capture_func() is self._captor
 
-	def activate(self):
+	def activate(self) -> None:
 		"""Start waiting for a layer key, unless something else captures input."""
 		if self.is_active:
 			self._error_beep()
@@ -164,7 +173,7 @@ class CommandLayerManager:
 		_set_capture_func(self._captor)
 		self._entry_beep()
 
-	def finish(self, *, announce=False):
+	def finish(self, *, announce: bool = False) -> None:
 		"""Stop waiting for a layer key; announce it when asked."""
 		self._deadline = None
 		# Only clear the capture function if it is still ours; something else
@@ -174,13 +183,13 @@ class CommandLayerManager:
 		if announce:
 			self._queue(ui.message, _("Command layer closed"))
 
-	def terminate(self):
+	def terminate(self) -> None:
 		"""Release the capture function when the plugin is unloaded."""
 		self.finish()
 
 	# --- Gesture capture ---
 
-	def _capture(self, gesture):
+	def _capture(self, gesture: inputCore.InputGesture) -> bool:
 		"""Handle one gesture while the layer is open.
 
 		Called by C{inputCore.manager.executeGesture} on NVDA's keyboard hook
@@ -221,14 +230,14 @@ class CommandLayerManager:
 		scriptHandler.queueScript(script, gesture)
 		return False
 
-	def _lookup(self, gesture):
+	def _lookup(self, gesture: inputCore.InputGesture) -> str | None:
 		for identifier in gesture.normalizedIdentifiers:
 			script_name = self._layer_gestures.get(identifier)
 			if script_name:
 				return script_name
 		return None
 
-	def _queue(self, func, *args):
+	def _queue(self, func: Callable[..., object], *args: object) -> None:
 		"""Run func on the main thread.
 
 		The capture function runs on the keyboard hook thread, so anything that
@@ -239,17 +248,17 @@ class CommandLayerManager:
 
 	# --- Dialogs ---
 
-	def show_help(self):
+	def show_help(self) -> None:
 		"""Show the list of layer keys."""
 
-		def _show():
+		def _show() -> None:
 			if self._help_dialog:
 				self._help_dialog.Raise()
 				return
 			parent = gui.mainFrame
 			self._help_dialog = LayerHelpDialog(parent, self._help_entries)
 
-			def _on_close(evt):
+			def _on_close(evt: wx.Event) -> None:
 				try:
 					evt.Skip()
 				finally:
@@ -263,10 +272,10 @@ class CommandLayerManager:
 
 		wx.CallAfter(_show)
 
-	def show_editor(self):
+	def show_editor(self) -> None:
 		"""Open the command layer editor."""
 
-		def _show():
+		def _show() -> None:
 			if self._editor_dialog:
 				self._editor_dialog.Raise()
 				return
@@ -274,7 +283,7 @@ class CommandLayerManager:
 			parent = gui.mainFrame
 			self._editor_dialog = LayerEditorDialog(parent, self.config_manager)
 
-			def _on_close(evt):
+			def _on_close(evt: wx.Event) -> None:
 				try:
 					evt.Skip()
 				finally:
@@ -287,8 +296,8 @@ class CommandLayerManager:
 
 		wx.CallAfter(_show)
 
-	def _entry_beep(self):
+	def _entry_beep(self) -> None:
 		self._queue(tones.beep, 440, 30)
 
-	def _error_beep(self):
+	def _error_beep(self) -> None:
 		self._queue(tones.beep, 120, 120)

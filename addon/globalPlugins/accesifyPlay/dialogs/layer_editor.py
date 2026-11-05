@@ -5,11 +5,18 @@
 
 """Change the keys of the command layer."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import core
 import wx
 
 from ..language import init_translation
 from ..ui.base_dialog import AccessifyDialog
+
+if TYPE_CHECKING:
+	from ..layer_config import LayerConfigManager
 
 init_translation()
 
@@ -17,14 +24,22 @@ init_translation()
 class EditCommandDialog(AccessifyDialog):
 	"""Change the key of one layer command, and whether the layer stays open after it."""
 
-	def __init__(self, parent, script_name, display_label, current_gestures, keep_open):
+	def __init__(
+		self,
+		parent: wx.Window,
+		script_name: str,
+		display_label: str,
+		current_gestures: list[str],
+		*,
+		keep_open: bool,
+	) -> None:
 		super().__init__(parent, title=_("Edit Command: {name}").format(name=display_label))
 		self.script_name = script_name
 		self.result_gestures = current_gestures
 		self.result_keep_open = keep_open
 		self._build_ui()
 
-	def _build_ui(self):
+	def _build_ui(self) -> None:
 		sizer = wx.BoxSizer(wx.VERTICAL)
 
 		# Shortcut input
@@ -51,16 +66,16 @@ class EditCommandDialog(AccessifyDialog):
 		self.SetSizerAndFit(sizer)
 		self.Bind(wx.EVT_BUTTON, self.on_ok, id=wx.ID_OK)
 
-	def _on_close_button(self, _evt):
+	def _on_close_button(self, _evt: wx.Event) -> None:
 		self.EndModal(wx.ID_CANCEL)
 
-	def _on_char_hook(self, evt):
+	def _on_char_hook(self, evt: wx.KeyEvent) -> None:
 		if evt.GetKeyCode() == wx.WXK_ESCAPE:
 			self.EndModal(wx.ID_CANCEL)
 		else:
 			evt.Skip()
 
-	def on_ok(self, evt):
+	def on_ok(self, evt: wx.Event) -> None:
 		"""Store the key that was typed, adding the kb: prefix if needed."""
 		val = self.txt_gesture.GetValue().strip()
 		if val:
@@ -77,7 +92,7 @@ class EditCommandDialog(AccessifyDialog):
 class LayerEditorDialog(AccessifyDialog):
 	"""All layer commands and their keys."""
 
-	def __init__(self, parent, config_manager):
+	def __init__(self, parent: wx.Window, config_manager: LayerConfigManager) -> None:
 		super().__init__(parent, title=_("Command Layer Editor"), size=(600, 400))
 		self.config_manager = config_manager
 		self.is_dirty = False
@@ -88,7 +103,7 @@ class LayerEditorDialog(AccessifyDialog):
 		self._build_ui()
 		self._populate_list()
 
-	def _get_script_labels(self):
+	def _get_script_labels(self) -> dict[str, str]:
 		"""Return translatable display names for each script id."""
 		return {
 			"playMyTopTracks": _("Play My Top Tracks"),
@@ -123,7 +138,7 @@ class LayerEditorDialog(AccessifyDialog):
 			"toggleAutoReadLyrics": _("Auto-Read Lyrics"),
 		}
 
-	def _build_ui(self):
+	def _build_ui(self) -> None:
 		sizer = wx.BoxSizer(wx.VERTICAL)
 
 		# Translators: Label of a list or text field, read by screen readers.
@@ -162,7 +177,7 @@ class LayerEditorDialog(AccessifyDialog):
 		self.bind_close_button(btn_close)
 		self.Bind(wx.EVT_CLOSE, self.on_close)
 
-	def _populate_list(self):
+	def _populate_list(self) -> None:
 		self.list_ctrl.DeleteAllItems()
 		self.item_data_map.clear()
 
@@ -189,15 +204,15 @@ class LayerEditorDialog(AccessifyDialog):
 			self.list_ctrl.SetItemData(idx, i)
 			self.item_data_map[i] = script_id
 
-	def on_selection(self, _evt):
+	def on_selection(self, _evt: wx.Event) -> None:
 		"""Allow editing once a command is selected."""
 		self.btn_edit.Enable(enable=True)
 
-	def on_deselection(self, _evt):
+	def on_deselection(self, _evt: wx.Event) -> None:
 		"""Disallow editing while no command is selected."""
 		self.btn_edit.Enable(enable=False)
 
-	def on_edit(self, _evt):
+	def on_edit(self, _evt: wx.Event) -> None:
 		"""Edit the selected command."""
 		idx = self.list_ctrl.GetFirstSelected()
 		if idx == -1:
@@ -215,9 +230,13 @@ class LayerEditorDialog(AccessifyDialog):
 		if not config:
 			return
 
-		dlg = EditCommandDialog(self, script_name, display_label, config["gestures"], config["keep_open"])
+		dlg = EditCommandDialog(
+			self, script_name, display_label, config["gestures"], keep_open=config["keep_open"]
+		)
 		if dlg.ShowModal() == wx.ID_OK:
-			self.config_manager.set_script_config(script_name, dlg.result_gestures, dlg.result_keep_open)
+			self.config_manager.set_script_config(
+				script_name, dlg.result_gestures, keep_open=dlg.result_keep_open
+			)
 			self.is_dirty = True
 			self._populate_list()
 
@@ -231,7 +250,7 @@ class LayerEditorDialog(AccessifyDialog):
 
 		dlg.Destroy()
 
-	def on_reset(self, _evt):
+	def on_reset(self, _evt: wx.Event) -> None:
 		"""Put every key back to its default, after asking."""
 		if (
 			wx.MessageBox(
@@ -245,7 +264,7 @@ class LayerEditorDialog(AccessifyDialog):
 			self.is_dirty = True
 			self._populate_list()
 
-	def on_close(self, evt):
+	def on_close(self, evt: wx.Event) -> None:
 		"""Offer to restart NVDA when keys were changed."""
 		if self.is_dirty:
 			self.is_dirty = False

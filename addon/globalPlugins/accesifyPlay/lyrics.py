@@ -5,16 +5,23 @@
 
 """Lyrics from lrclib.net: fetching, LRC parsing, and reading them along with the song."""
 
+from __future__ import annotations
+
 import functools
 import re
 import threading
-from typing import NamedTuple
+from typing import TYPE_CHECKING, NamedTuple
 
 import addonHandler
 import requests
 import ui as nvda_ui
 import wx
 from logHandler import log
+
+if TYPE_CHECKING:
+	from collections.abc import Callable
+
+	from .spotify_types import Item, Reply, TimedLines
 
 LRCLIB_BASE = "https://lrclib.net/api"
 
@@ -38,7 +45,7 @@ LATE_LINE_TOLERANCE_MS = 200
 # ---------------------------------------------------------------------------
 
 
-def fetch_lyrics(track_name, artist_name, album_name, duration_ms):
+def fetch_lyrics(track_name: str, artist_name: str, album_name: str, duration_ms: int) -> Item | None:
 	"""Fetch lyrics from lrclib.net for a given track.
 
 	Tries an exact match first (artist + track + album + duration).
@@ -50,14 +57,14 @@ def fetch_lyrics(track_name, artist_name, album_name, duration_ms):
 	duration_s = max(1, int(duration_ms / 1000))
 
 	result = _fetch_exact(track_name, artist_name, album_name, duration_s)
-	if result and (result.get("plainLyrics") or result.get("syncedLyrics")):
+	if isinstance(result, dict) and (result.get("plainLyrics") or result.get("syncedLyrics")):
 		return result
 
 	# Fuzzy search fallback
 	return _fetch_search(track_name, artist_name)
 
 
-def _fetch_exact(track_name, artist_name, album_name, duration_s):
+def _fetch_exact(track_name: str, artist_name: str, album_name: str, duration_s: int) -> Reply:
 	return _make_request(
 		"get",
 		{
@@ -69,7 +76,7 @@ def _fetch_exact(track_name, artist_name, album_name, duration_s):
 	)
 
 
-def _fetch_search(track_name, artist_name):
+def _fetch_search(track_name: str, artist_name: str) -> Item | None:
 	"""Fuzzy search: returns the first result or None."""
 	result = _make_request("search", {"q": f"{artist_name} {track_name}"})
 	if isinstance(result, list) and result:
@@ -78,7 +85,7 @@ def _fetch_search(track_name, artist_name):
 
 
 @functools.cache
-def _get_user_agent():
+def _get_user_agent() -> str:
 	"""Identify ourselves to lrclib with the add-on's real version.
 
 	lrclib asks clients for a name, version and homepage. This used to be a
@@ -91,7 +98,7 @@ def _get_user_agent():
 	return f"AccessifyPlay-NVDA-Addon/{version} (+https://github.com/InfiArtt/accessify-play)"
 
 
-def _make_request(endpoint, params):
+def _make_request(endpoint: str, params: dict[str, str | int]) -> Reply:
 	"""Return the JSON answer of one lrclib endpoint, or None if there is none."""
 	try:
 		response = requests.get(
@@ -116,7 +123,7 @@ def _make_request(endpoint, params):
 _LRC_TIMESTAMP = re.compile(r"\[(\d+):(\d{1,2})(?:[.:](\d{1,3}))?\]")
 
 
-def _timestamp_ms(minutes, seconds, fraction):
+def _timestamp_ms(minutes: int, seconds: int, fraction: float) -> int:
 	ms = (int(minutes) * 60 + int(seconds)) * 1000
 	if fraction:
 		# A decimal fraction of a second: ".5" is 500 ms, ".45" is 450 ms and
@@ -126,7 +133,7 @@ def _timestamp_ms(minutes, seconds, fraction):
 	return ms
 
 
-def parse_lrc(lrc_text):
+def parse_lrc(lrc_text: str) -> TimedLines:
 	"""Parse an LRC-format string into a sorted list of (timestamp_ms, line_text) tuples.
 
 	Handles timestamps with no fraction ([01:23]) and with one to three
@@ -169,18 +176,18 @@ class LyricsAutoReader:
 	- stop() cancels everything immediately.
 	"""
 
-	def __init__(self):
+	def __init__(self) -> None:
 		self._timers = []
 		self._lock = threading.Lock()
 		self._active = False
 		self._line_callback = None  # callable(ms) — called each time a line is spoken
 
 	@property
-	def is_active(self):
+	def is_active(self) -> bool:
 		"""Return whether lyrics are being read along with the song."""
 		return self._active
 
-	def start(self, synced_lyrics, progress_ms):
+	def start(self, synced_lyrics: TimedLines, progress_ms: int) -> bool:
 		"""Cancel any existing timers and schedule all upcoming lyric lines.
 
 		Returns True if at least one line was scheduled, False otherwise
@@ -208,12 +215,12 @@ class LyricsAutoReader:
 
 		return scheduled > 0
 
-	def stop(self):
+	def stop(self) -> None:
 		"""Cancel all pending timers and mark the reader as inactive."""
 		self._active = False
 		self._cancel_timers()
 
-	def pause_timers(self):
+	def pause_timers(self) -> None:
 		"""Cancel all pending timers WITHOUT marking the reader as inactive.
 
 		Call resync() when playback resumes to re-schedule from the new position.
@@ -221,7 +228,7 @@ class LyricsAutoReader:
 		"""
 		self._cancel_timers()
 
-	def resync(self, synced_lyrics, progress_ms):
+	def resync(self, synced_lyrics: TimedLines, progress_ms: int) -> None:
 		"""Re-schedule timers from a new playback position.
 
 		Call this after a seek or pause/resume to correct drift.
@@ -231,7 +238,7 @@ class LyricsAutoReader:
 			return
 		self.start(synced_lyrics, progress_ms)
 
-	def set_line_callback(self, callback):
+	def set_line_callback(self, callback: Callable[..., object]) -> None:
 		"""Set a callable to call with the timestamp (ms) of each line as it is spoken.
 
 		Pass None to disable. Used by the lyrics window for auto-scroll.
@@ -239,13 +246,13 @@ class LyricsAutoReader:
 		self._line_callback = callback
 
 	# ------------------------------------------------------------------
-	def _cancel_timers(self):
+	def _cancel_timers(self) -> None:
 		with self._lock:
 			for t in self._timers:
 				t.cancel()
 			self._timers.clear()
 
-	def _speak(self, text, ms=None):
+	def _speak(self, text: str, ms: int | None = None) -> None:
 		if self._active:
 			wx.CallAfter(nvda_ui.message, text)
 			if ms is not None and self._line_callback:

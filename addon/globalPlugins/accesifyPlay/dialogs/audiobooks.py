@@ -5,6 +5,10 @@
 
 """An audiobook's chapters."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import ui
 import wx
 
@@ -13,6 +17,10 @@ from ..formatting import format_duration
 from ..language import init_translation
 from ..ui.base_dialog import AccessifyDialog
 from ..utils import conf_get, copy_link
+
+if TYPE_CHECKING:
+	from ..spotify_client import SpotifyClient
+	from ..spotify_types import Item
 
 init_translation()
 
@@ -25,7 +33,9 @@ class AudiobookChaptersDialog(AccessifyDialog):
 	MENU_COPY_LINK = wx.NewIdRef()
 	DEFAULT_CHAPTERS_PAGE_SIZE = 30
 
-	def __init__(self, parent, client, audiobook_id, audiobook_name):
+	def __init__(
+		self, parent: wx.Window, client: SpotifyClient, audiobook_id: str, audiobook_name: str
+	) -> None:
 		title = _("Chapters for {audiobook_name}").format(audiobook_name=audiobook_name)
 		super().__init__(parent, title=title, size=(500, 400))
 		self.client = client
@@ -41,7 +51,7 @@ class AudiobookChaptersDialog(AccessifyDialog):
 		self.load_chapters()
 		self._create_accelerators()
 
-	def init_ui(self):
+	def init_ui(self) -> None:
 		"""Build the chapter list and buttons."""
 		panel = wx.Panel(self)
 		sizer = wx.BoxSizer(wx.VERTICAL)
@@ -67,7 +77,7 @@ class AudiobookChaptersDialog(AccessifyDialog):
 		sizer.Add(buttons_sizer, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
 		panel.SetSizer(sizer)
 
-	def _create_accelerators(self):
+	def _create_accelerators(self) -> None:
 		accel_entries = [
 			(wx.ACCEL_ALT, ord("P"), self.MENU_PLAY_CHAPTER.GetId()),
 			(wx.ACCEL_ALT, ord("Q"), self.MENU_ADD_QUEUE.GetId()),
@@ -79,7 +89,7 @@ class AudiobookChaptersDialog(AccessifyDialog):
 		self.Bind(wx.EVT_MENU, self.on_add_to_queue, id=self.MENU_ADD_QUEUE.GetId())
 		self.Bind(wx.EVT_MENU, self.on_copy_link, id=self.MENU_COPY_LINK.GetId())
 
-	def load_chapters(self):
+	def load_chapters(self) -> None:
 		"""Load the chapters from the start."""
 		self.chapters = []
 		self._chapters_offset = 0
@@ -87,7 +97,7 @@ class AudiobookChaptersDialog(AccessifyDialog):
 		self.chapters_list.Clear()
 		self._load_more_chapters()
 
-	def _load_more_chapters(self):
+	def _load_more_chapters(self) -> None:
 		if self._chapters_loading or not self._chapters_has_more:
 			return
 		self._chapters_loading = True
@@ -96,13 +106,13 @@ class AudiobookChaptersDialog(AccessifyDialog):
 			self.chapters_list.Append(_("Loading..."))
 		thread_manager.submit_task(self._load_more_chapters_thread, name="DialogTask", daemon=True)
 
-	def _load_more_chapters_thread(self):
+	def _load_more_chapters_thread(self) -> None:
 		results = self.client.get_audiobook_chapters(
 			self.audiobook_id, limit=self._chapters_page_size, offset=self._chapters_offset
 		)
 		wx.CallAfter(self._finish_load_chapters, results)
 
-	def _finish_load_chapters(self, results):
+	def _finish_load_chapters(self, results: Item | str) -> None:
 		self._chapters_loading = False
 		if isinstance(results, str):
 			if not self.chapters:
@@ -137,7 +147,7 @@ class AudiobookChaptersDialog(AccessifyDialog):
 
 		self._append_chapters_to_list(items)
 
-	def _append_chapters_to_list(self, new_items):
+	def _append_chapters_to_list(self, new_items: list[Item]) -> None:
 		if self._has_chapters_placeholder():
 			self.chapters_list.Delete(self.chapters_list.GetCount() - 1)
 
@@ -146,7 +156,7 @@ class AudiobookChaptersDialog(AccessifyDialog):
 
 		self._refresh_chapters_placeholder()
 
-	def _format_chapter(self, chapter):
+	def _format_chapter(self, chapter: Item) -> str:
 		display = chapter.get("name", _("Unknown Chapter"))
 		number = chapter.get("chapter_number")
 		if number:
@@ -156,19 +166,19 @@ class AudiobookChaptersDialog(AccessifyDialog):
 			display = f"{display} ({format_duration(duration)})"
 		return display
 
-	def _refresh_chapters_placeholder(self):
+	def _refresh_chapters_placeholder(self) -> None:
 		if self._has_chapters_placeholder():
 			self.chapters_list.Delete(self.chapters_list.GetCount() - 1)
 		if self._chapters_has_more:
 			self.chapters_list.Append(self._chapters_load_more_label)
 
-	def _has_chapters_placeholder(self):
+	def _has_chapters_placeholder(self) -> bool:
 		count = self.chapters_list.GetCount()
 		if count == 0:
 			return False
 		return self.chapters_list.GetString(count - 1) == self._chapters_load_more_label
 
-	def _is_chapter_load_more(self, selection):
+	def _is_chapter_load_more(self, selection: int) -> bool:
 		if selection == wx.NOT_FOUND:
 			return False
 		return (
@@ -177,14 +187,14 @@ class AudiobookChaptersDialog(AccessifyDialog):
 			and selection == self.chapters_list.GetCount() - 1
 		)
 
-	def _on_chapter_activate(self):
+	def _on_chapter_activate(self) -> None:
 		selection = self.chapters_list.GetSelection()
 		if self._is_chapter_load_more(selection):
 			self._load_more_chapters()
 			return
 		self.on_play_chapter()
 
-	def _get_selected_chapter(self):
+	def _get_selected_chapter(self) -> Item | None:
 		selection = self.chapters_list.GetSelection()
 		if (
 			selection == wx.NOT_FOUND
@@ -195,7 +205,7 @@ class AudiobookChaptersDialog(AccessifyDialog):
 			return None
 		return self.chapters[selection]
 
-	def on_context_menu(self, _evt):
+	def on_context_menu(self, _evt: wx.Event) -> None:
 		"""Show the actions for the selected chapter."""
 		if not self._get_selected_chapter():
 			return
@@ -208,7 +218,7 @@ class AudiobookChaptersDialog(AccessifyDialog):
 		self.PopupMenu(menu)
 		menu.Destroy()
 
-	def on_play_chapter(self, _evt=None):
+	def on_play_chapter(self, _evt: wx.Event | None = None) -> None:
 		"""Play the selected chapter."""
 		chapter = self._get_selected_chapter()
 		if not chapter:
@@ -229,13 +239,13 @@ class AudiobookChaptersDialog(AccessifyDialog):
 		else:
 			self._play_uri(chapter_uri)
 
-	def on_add_to_queue(self, _evt=None):
+	def on_add_to_queue(self, _evt: wx.Event | None = None) -> None:
 		"""Add the selected chapter to the queue."""
 		chapter = self._get_selected_chapter()
 		if chapter:
 			self._queue_add_track(chapter.get("uri"), chapter.get("name"))
 
-	def on_copy_link(self, _evt=None):
+	def on_copy_link(self, _evt: wx.Event | None = None) -> None:
 		"""Copy the selected chapter's Spotify link."""
 		chapter = self._get_selected_chapter()
 		if chapter:

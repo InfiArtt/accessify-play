@@ -5,6 +5,10 @@
 
 """Search Spotify."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import ui
 import wx
 
@@ -18,6 +22,10 @@ from .audiobooks import AudiobookChaptersDialog
 from .categories import CategoriesDialog, FeaturedPlaylistsDialog
 from .playlist import PlaylistTracksDialog
 from .podcasts import PodcastEpisodesDialog
+
+if TYPE_CHECKING:
+	from ..spotify_client import SpotifyClient
+	from ..spotify_types import Item
 
 init_translation()
 
@@ -42,7 +50,7 @@ class SearchDialog(AccessifyDialog):
 	MENU_PREV_TYPE = wx.NewIdRef()
 	MENU_FOCUS_QUERY = wx.NewIdRef()
 
-	def __init__(self, parent, client):
+	def __init__(self, parent: wx.Window, client: SpotifyClient) -> None:
 		super().__init__(parent, title=_("Search Spotify"))
 		self.client = client
 
@@ -69,7 +77,7 @@ class SearchDialog(AccessifyDialog):
 		# Load the user's playlists for "Add to Playlist" in the background.
 		thread_manager.submit_task(self._load_user_playlists, name="DialogTask", daemon=True)
 
-	def _init_ui(self):
+	def _init_ui(self) -> None:
 		"""Build the user interface of the dialog."""
 		main_sizer = wx.BoxSizer(wx.VERTICAL)
 
@@ -131,7 +139,7 @@ class SearchDialog(AccessifyDialog):
 		self.SetSizer(main_sizer)
 		self.Fit()
 
-	def _create_accelerators(self):
+	def _create_accelerators(self) -> None:
 		"""Binds keyboard shortcuts to their respective actions."""
 		accel_entries = [
 			(wx.ACCEL_ALT, ord("P"), self.MENU_PLAY.GetId()),
@@ -169,17 +177,17 @@ class SearchDialog(AccessifyDialog):
 		self.Bind(wx.EVT_MENU, self.copy_selected_link, id=self.MENU_COPY_LINK.GetId())
 		self.Bind(wx.EVT_MENU, self.on_show_lyrics, id=self.MENU_SHOW_LYRICS.GetId())
 
-	def on_browse_categories(self, _evt):
+	def on_browse_categories(self, _evt: wx.Event) -> None:
 		"""Open Spotify's browse categories."""
 		dlg = CategoriesDialog(self, self.client)
 		dlg.ShowModal()
 
-	def on_featured_playlists(self, _evt):
+	def on_featured_playlists(self, _evt: wx.Event) -> None:
 		"""Open Spotify's featured playlists."""
 		dlg = FeaturedPlaylistsDialog(self, self.client)
 		dlg.ShowModal()
 
-	def select_type(self, index):
+	def select_type(self, index: int) -> None:
 		"""Switch the search type, and search again right away if there is a query.
 
 		Bound to Ctrl+1 to Ctrl+6, and to Ctrl+Tab/Ctrl+PageDown and
@@ -196,12 +204,12 @@ class SearchDialog(AccessifyDialog):
 		else:
 			ui.message(label)
 
-	def focus_query(self):
+	def focus_query(self) -> None:
 		"""Put the focus in the search field with its text selected, ready to type over."""
 		self.queryText.SetFocus()
 		self.queryText.SelectAll()
 
-	def on_search(self, _evt=None, announce=None):
+	def on_search(self, _evt: wx.Event | None = None, announce: str | None = None) -> None:
 		"""Start a new search, clearing previous results."""
 		query = self.queryText.GetValue().strip()
 		if not query:
@@ -219,7 +227,7 @@ class SearchDialog(AccessifyDialog):
 		ui.message(announce or _("Searching..."))
 		self.perform_search()
 
-	def _on_item_activated(self):
+	def _on_item_activated(self) -> None:
 		"""Handle Enter key press or double-click on a list item."""
 		selection = self.resultsList.GetSelection()
 
@@ -231,13 +239,13 @@ class SearchDialog(AccessifyDialog):
 
 		self._activate_item(item)
 
-	def on_play(self, _evt=None):
+	def on_play(self, _evt: wx.Event | None = None) -> None:
 		"""Handle the 'Play' action (Alt+P or context menu)."""
 		item = self._get_item_at_index(self.resultsList.GetSelection())
 		if item and item.get("uri"):
 			self._play_uri(item.get("uri"))
 
-	def perform_search(self):
+	def perform_search(self) -> None:
 		"""Start the background thread to fetch search results."""
 		if not self.can_load_more and self.next_offset > 0:
 			return
@@ -248,7 +256,7 @@ class SearchDialog(AccessifyDialog):
 			self._search_thread, index_to_focus, generation, name="DialogTask", daemon=True
 		)
 
-	def _search_thread(self, index_to_focus, generation=None):
+	def _search_thread(self, index_to_focus: int, generation: int | None = None) -> None:
 		"""Fetch data from the Spotify client in a background thread."""
 		search_type = self.current_type
 		result_data = self.client.search(self.current_query, search_type, offset=self.next_offset)
@@ -277,7 +285,7 @@ class SearchDialog(AccessifyDialog):
 
 		wx.CallAfter(self._update_results_list, index_to_focus)
 
-	def _update_results_list(self, focus_index):
+	def _update_results_list(self, focus_index: int) -> None:
 		if not self.resultsList:
 			return
 		"""Updates the ListBox with the latest results."""
@@ -304,7 +312,7 @@ class SearchDialog(AccessifyDialog):
 			self.resultsList.EnsureVisible(focus_index)
 			self.resultsList.SetFocus()
 
-	def _format_item_for_display(self, item):
+	def _format_item_for_display(self, item: Item) -> str:
 		"""Create a readable string for an item to be shown in the ListBox."""
 		display = item.get("name", "Unknown")
 		item_type = item.get("type")
@@ -326,7 +334,7 @@ class SearchDialog(AccessifyDialog):
 
 		return display
 
-	def _activate_item(self, item):
+	def _activate_item(self, item: Item) -> None:
 		"""Perform the default 'Enter' action based on the item type."""
 		item_type = item.get("type")
 
@@ -358,33 +366,33 @@ class SearchDialog(AccessifyDialog):
 		action = action_map.get(item_type, lambda: self._play_uri(item.get("uri")))
 		action()
 
-	def _open_artist_discography(self, artist):
+	def _open_artist_discography(self, artist: Item) -> None:
 		dialog = ArtistDiscographyDialog(
 			self, self.client, artist["id"], artist.get("name"), self._user_playlists
 		)
 		dialog.Show()
 
-	def _open_album_tracks(self, album):
+	def _open_album_tracks(self, album: Item) -> None:
 		dialog = AlbumTracksDialog(self, self.client, album, self._user_playlists)
 		dialog.Show()
 
-	def _open_podcast_episodes(self, show):
+	def _open_podcast_episodes(self, show: Item) -> None:
 		dialog = PodcastEpisodesDialog(self, self.client, show["id"], show.get("name"))
 		dialog.Show()
 
-	def _open_playlist_tracks(self, playlist):
+	def _open_playlist_tracks(self, playlist: Item) -> None:
 		dialog = PlaylistTracksDialog(self, self.client, playlist)
 		dialog.Show()
 
-	def _save_audiobook(self, audiobook):
+	def _save_audiobook(self, audiobook: Item) -> None:
 		self._toggle_saved("audiobook", audiobook)
 
-	def _open_audiobook_chapters(self, audiobook):
+	def _open_audiobook_chapters(self, audiobook: Item) -> None:
 
 		dialog = AudiobookChaptersDialog(self, self.client, audiobook["id"], audiobook.get("name"))
 		dialog.Show()
 
-	def _load_user_playlists(self):
+	def _load_user_playlists(self) -> None:
 		"""Fetch user's playlists in the background and caches them."""
 		if self._playlists_loading or self._user_playlists is not None:
 			return
@@ -410,7 +418,7 @@ class SearchDialog(AccessifyDialog):
 
 		self._playlists_loading = False
 
-	def on_results_context_menu(self, evt):
+	def on_results_context_menu(self, evt: wx.ContextMenuEvent) -> None:
 		"""Show the actions for the result under the cursor."""
 		selection = self.resultsList.HitTest(evt.GetPosition())
 		if selection == wx.NOT_FOUND:
@@ -423,16 +431,16 @@ class SearchDialog(AccessifyDialog):
 		self.resultsList.SetSelection(selection)
 		if item.get("type") == "playlist" and not self._is_own_playlist(item):
 
-			def _check_and_show():
+			def _check_and_show() -> None:
 				result = self.client.library_contains([item.get("id")], "playlist")
 				is_followed = result[0] if isinstance(result, list) and result else False
-				wx.CallAfter(self._show_results_menu, item, is_followed)
+				wx.CallAfter(self._show_results_menu, item, is_followed=is_followed)
 
 			thread_manager.submit_task(_check_and_show, name="DialogTask", daemon=True)
 		else:
 			self._show_results_menu(item)
 
-	def _show_results_menu(self, item, is_followed=None):
+	def _show_results_menu(self, item: Item, *, is_followed: bool | None = None) -> None:
 		"""Return the context menu for a result. is_followed matters only for others' playlists."""
 		menu = wx.Menu()
 		item_type = item.get("type")
@@ -448,7 +456,7 @@ class SearchDialog(AccessifyDialog):
 			"album": self._append_album_items,
 			"show": self._append_show_items,
 			"audiobook": self._append_audiobook_items,
-			"playlist": lambda menu, item: self._append_playlist_items(menu, item, is_followed),
+			"playlist": lambda menu, item: self._append_playlist_items(menu, item, is_followed=is_followed),
 			"track": self._append_track_items,
 		}.get(item_type)
 		if append_type_items:
@@ -457,28 +465,28 @@ class SearchDialog(AccessifyDialog):
 			self.PopupMenu(menu)
 		menu.Destroy()
 
-	def _append_artist_items(self, menu, _item):
+	def _append_artist_items(self, menu: wx.Menu, _item: Item) -> None:
 		menu.AppendSeparator()
 		menu.Append(self.MENU_FOLLOW.GetId(), _("Follow/Unfollow Artist\tAlt+F"))
 		menu.Append(self.MENU_DISCO.GetId(), _("View Discography\tAlt+D"))
 
-	def _append_album_items(self, menu, item):
+	def _append_album_items(self, menu: wx.Menu, item: Item) -> None:
 		menu.AppendSeparator()
 		self._append_menu_item(menu, _("Save Album"), self.on_save_album)
 		self._append_add_to_playlist(menu, item, self._user_playlists or [])
 
-	def _append_show_items(self, menu, item):
+	def _append_show_items(self, menu: wx.Menu, item: Item) -> None:
 		menu.AppendSeparator()
 		# Enter already opens the episodes; the menu should say so too.
 		self._append_menu_item(menu, _("View Episodes"), lambda _evt: self._open_podcast_episodes(item))
 		self._append_menu_item(menu, _("Save/Unsave Show"), self.on_save_show)
 
-	def _append_audiobook_items(self, menu, item):
+	def _append_audiobook_items(self, menu: wx.Menu, item: Item) -> None:
 		menu.AppendSeparator()
 		self._append_menu_item(menu, _("View Chapters"), lambda _evt: self._open_audiobook_chapters(item))
 		self._append_menu_item(menu, _("Save/Unsave Audiobook"), lambda _evt: self._save_audiobook(item))
 
-	def _append_playlist_items(self, menu, item, is_followed):
+	def _append_playlist_items(self, menu: wx.Menu, item: Item, *, is_followed: bool | None) -> None:
 		if self._is_own_playlist(item):
 			return
 		menu.AppendSeparator()
@@ -496,28 +504,28 @@ class SearchDialog(AccessifyDialog):
 				lambda _evt: self.on_toggle_follow_playlist(item, is_currently_followed=is_followed),
 			)
 
-	def _append_track_items(self, menu, item):
+	def _append_track_items(self, menu: wx.Menu, item: Item) -> None:
 		menu.AppendSeparator()
 		# None while the playlists are still loading.
 		self._append_add_to_playlist(menu, item, self._user_playlists)
 		self._append_go_to_options_for_track(menu, item)
 
-	def _is_own_playlist(self, playlist):
+	def _is_own_playlist(self, playlist: Item) -> bool:
 		return playlist.get("owner", {}).get("id") == self._current_user_id
 
-	def on_save_album(self, _evt=None):
+	def on_save_album(self, _evt: wx.Event | None = None) -> None:
 		"""Save the selected album to the library."""
 		item = self._get_item_at_index(self.resultsList.GetSelection())
 		if item:
 			self._save_album_to_library(item)
 
-	def on_save_show(self, _evt=None):
+	def on_save_show(self, _evt: wx.Event | None = None) -> None:
 		"""Save the selected show, or remove it when saved."""
 		item = self._get_item_at_index(self.resultsList.GetSelection())
 		if item:
 			self._toggle_saved("show", item)
 
-	def on_add_to_queue(self, _evt=None):
+	def on_add_to_queue(self, _evt: wx.Event | None = None) -> None:
 		"""Add the selected result to the queue."""
 		item = self._get_item_at_index(self.resultsList.GetSelection())
 		if not item:
@@ -535,7 +543,7 @@ class SearchDialog(AccessifyDialog):
 		else:
 			ui.message(_("This item type cannot be added to the queue."))
 
-	def on_follow_artist(self, _evt=None):
+	def on_follow_artist(self, _evt: wx.Event | None = None) -> None:
 		"""Follow or unfollow the selected artist."""
 		item = self._get_item_at_index(self.resultsList.GetSelection())
 		if not item or item.get("type") != "artist":
@@ -543,7 +551,7 @@ class SearchDialog(AccessifyDialog):
 
 		# Like F in the command layer: ask Spotify whether the artist is
 		# followed, then do the opposite and say which it was.
-		def _follow():
+		def _follow() -> None:
 			name = item.get("name") or _("Unknown")
 			now = self.client.library_toggle(item["id"], "artist")
 			if isinstance(now, str):
@@ -555,13 +563,13 @@ class SearchDialog(AccessifyDialog):
 
 		thread_manager.submit_task(_follow, name="DialogTask", daemon=True)
 
-	def on_view_discography(self, _evt=None):
+	def on_view_discography(self, _evt: wx.Event | None = None) -> None:
 		"""Open the selected artist's window."""
 		item = self._get_item_at_index(self.resultsList.GetSelection())
 		if item and item.get("type") == "artist":
 			self._open_artist_discography(item)
 
-	def on_show_lyrics(self, _evt=None):
+	def on_show_lyrics(self, _evt: wx.Event | None = None) -> None:
 		"""Show the lyrics of the selected song."""
 		item = self._get_item_at_index(self.resultsList.GetSelection())
 		if not item or item.get("type") != "track":
@@ -569,18 +577,18 @@ class SearchDialog(AccessifyDialog):
 			return
 		self._show_lyrics_for_track(item)
 
-	def copy_selected_link(self, _evt=None):
+	def copy_selected_link(self, _evt: wx.Event | None = None) -> None:
 		"""Copy the selected result's Spotify link."""
 		item = self._get_item_at_index(self.resultsList.GetSelection())
 		if item:
 			copy_link(item.get("external_urls", {}).get("spotify"))
 
-	def on_toggle_follow_playlist(self, playlist_item, *, is_currently_followed):
+	def on_toggle_follow_playlist(self, playlist_item: Item, *, is_currently_followed: bool) -> None:
 		"""Follow the playlist, or unfollow it when followed."""
 		playlist_id = playlist_item.get("id")
 		playlist_name = playlist_item.get("name")
 
-		def _thread_action():
+		def _thread_action() -> None:
 			if is_currently_followed:
 				result = self.client.library_remove([playlist_id], "playlist")
 				message = _("Unfollowed '{name}'.").format(name=playlist_name)
@@ -594,7 +602,7 @@ class SearchDialog(AccessifyDialog):
 
 		thread_manager.submit_task(_thread_action, name="DialogTask", daemon=True)
 
-	def _get_item_at_index(self, index):
+	def _get_item_at_index(self, index: int) -> Item | None:
 		"""Return the result shown at index, or None for an empty or stale row."""
 		if index is None or index == wx.NOT_FOUND or index >= len(self._rendered_items):
 			return None

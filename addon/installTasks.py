@@ -5,20 +5,27 @@
 
 """What NVDA runs when the add-on is installed."""
 
+from __future__ import annotations
+
 import threading
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import addonHandler
 import gui
 import wx
 from logHandler import log
 
+if TYPE_CHECKING:
+	from collections.abc import Callable
+	from types import ModuleType
+
 addonHandler.initTranslation()
 
 _ADDON_DIR = str(Path(__file__).parent)
 
 
-def _load_donate_module():
+def _load_donate_module() -> ModuleType | None:
 	try:
 		addon = addonHandler.getCodeAddon()
 		if addon:
@@ -33,11 +40,11 @@ class InstallInfoDialog(wx.Dialog):
 
 	def __init__(
 		self,
-		parent,
+		parent: wx.Window,
 		addon_name: str,
 		addon_version: str,
-		donate_callback,
-	):
+		donate_callback: Callable[[], object],
+	) -> None:
 		title = _("Accessify Play Installation")
 		super().__init__(parent, title=title)
 		self._donate_callback = donate_callback
@@ -77,7 +84,7 @@ class InstallInfoDialog(wx.Dialog):
 		self.SetSizerAndFit(main_sizer)
 		self.Bind(wx.EVT_CLOSE, self._on_close)
 
-	def _on_donate(self, _evt):
+	def _on_donate(self, _evt: wx.Event) -> None:
 		if not self._donate_callback:
 			wx.MessageBox(
 				_("Unable to open the donation link right now."),
@@ -95,15 +102,15 @@ class InstallInfoDialog(wx.Dialog):
 				wx.OK | wx.ICON_WARNING,
 			)
 
-	def _on_continue(self, _evt):
+	def _on_continue(self, _evt: wx.Event) -> None:
 		self.EndModal(wx.ID_OK)
 
-	def _on_close(self, _evt):
+	def _on_close(self, _evt: wx.Event) -> None:
 		# Treat closing the window like continuing the installation.
 		self.EndModal(wx.ID_OK)
 
 
-def _defensive_cleanup_nvda_import_tracker(addon_name: str):
+def _defensive_cleanup_nvda_import_tracker(addon_name: str) -> None:
 	"""Detach built-in modules from NVDA's import tracker for this add-on.
 
 	Built-in or compiled modules (like `_overlapped`) get dragged in by
@@ -154,7 +161,7 @@ def _defensive_cleanup_nvda_import_tracker(addon_name: str):
 			pass
 
 
-def onInstall():
+def onInstall() -> None:
 	"""Show the add-on's information after it is installed."""
 	addon = addonHandler.getCodeAddon()
 	addon_name = addon.manifest.get("summary") or addon.manifest.get("name")
@@ -164,7 +171,7 @@ def onInstall():
 
 	done_event = threading.Event()
 
-	def _show_dialog():
+	def _show_dialog() -> None:
 		gui.mainFrame.prePopup()
 		dialog = None
 		try:

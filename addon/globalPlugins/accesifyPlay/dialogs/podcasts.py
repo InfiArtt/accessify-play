@@ -5,6 +5,10 @@
 
 """A podcast's episodes."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import ui
 import wx
 
@@ -12,6 +16,10 @@ from ..core.thread_manager import thread_manager
 from ..language import init_translation
 from ..ui.base_dialog import AccessifyDialog
 from ..utils import conf_get, copy_link
+
+if TYPE_CHECKING:
+	from ..spotify_client import SpotifyClient
+	from ..spotify_types import Item
 
 init_translation()
 
@@ -25,7 +33,7 @@ class PodcastEpisodesDialog(AccessifyDialog):
 	MENU_SAVE_EPISODE = wx.NewIdRef()
 	DEFAULT_EPISODES_PAGE_SIZE = 30
 
-	def __init__(self, parent, client, show_id, show_name):
+	def __init__(self, parent: wx.Window, client: SpotifyClient, show_id: str, show_name: str) -> None:
 		title = _("Episodes for {show_name}").format(show_name=show_name)
 		super().__init__(parent, title=title, size=(500, 400))
 		self.client = client
@@ -40,7 +48,7 @@ class PodcastEpisodesDialog(AccessifyDialog):
 		self.load_episodes()
 		self._create_accelerators()
 
-	def init_ui(self):
+	def init_ui(self) -> None:
 		"""Build the episode list and buttons."""
 		panel = wx.Panel(self)
 		sizer = wx.BoxSizer(wx.VERTICAL)
@@ -67,7 +75,7 @@ class PodcastEpisodesDialog(AccessifyDialog):
 		sizer.Add(buttons_sizer, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
 		panel.SetSizer(sizer)
 
-	def _create_accelerators(self):
+	def _create_accelerators(self) -> None:
 		accel_entries = [
 			(wx.ACCEL_ALT, ord("P"), self.MENU_PLAY_EPISODE.GetId()),
 			(wx.ACCEL_ALT, ord("Q"), self.MENU_ADD_QUEUE.GetId()),
@@ -81,7 +89,7 @@ class PodcastEpisodesDialog(AccessifyDialog):
 		self.Bind(wx.EVT_MENU, self.on_add_to_queue, id=self.MENU_ADD_QUEUE.GetId())
 		self.Bind(wx.EVT_MENU, self.on_copy_link, id=self.MENU_COPY_LINK.GetId())
 
-	def load_episodes(self):
+	def load_episodes(self) -> None:
 		"""Load the episodes from the start."""
 		self.episodes = []
 		self._episodes_offset = 0
@@ -89,7 +97,7 @@ class PodcastEpisodesDialog(AccessifyDialog):
 		self.episodes_list.Clear()
 		self._load_more_episodes()
 
-	def _load_more_episodes(self):
+	def _load_more_episodes(self) -> None:
 		if self._episodes_loading or not self._episodes_has_more:
 			return
 		self._episodes_loading = True
@@ -98,13 +106,13 @@ class PodcastEpisodesDialog(AccessifyDialog):
 			self.episodes_list.Append(_("Loading..."))
 		thread_manager.submit_task(self._load_more_episodes_thread, name="DialogTask", daemon=True)
 
-	def _load_more_episodes_thread(self):
+	def _load_more_episodes_thread(self) -> None:
 		results = self.client.get_show_episodes(
 			self.show_id, limit=self._episodes_page_size, offset=self._episodes_offset
 		)
 		wx.CallAfter(self._finish_load_episodes, results)
 
-	def _finish_load_episodes(self, results):
+	def _finish_load_episodes(self, results: Item | str) -> None:
 		self._episodes_loading = False
 		if isinstance(results, str):
 			if not self.episodes:
@@ -139,7 +147,7 @@ class PodcastEpisodesDialog(AccessifyDialog):
 
 		self._append_episodes_to_list(items)
 
-	def _append_episodes_to_list(self, new_items):
+	def _append_episodes_to_list(self, new_items: list[Item]) -> None:
 		if self._has_episodes_placeholder():
 			self.episodes_list.Delete(self.episodes_list.GetCount() - 1)
 
@@ -152,19 +160,19 @@ class PodcastEpisodesDialog(AccessifyDialog):
 
 		self._refresh_episodes_placeholder()
 
-	def _refresh_episodes_placeholder(self):
+	def _refresh_episodes_placeholder(self) -> None:
 		if self._has_episodes_placeholder():
 			self.episodes_list.Delete(self.episodes_list.GetCount() - 1)
 		if self._episodes_has_more:
 			self.episodes_list.Append(self._episodes_load_more_label)
 
-	def _has_episodes_placeholder(self):
+	def _has_episodes_placeholder(self) -> bool:
 		count = self.episodes_list.GetCount()
 		if count == 0:
 			return False
 		return self.episodes_list.GetString(count - 1) == self._episodes_load_more_label
 
-	def _is_episode_load_more(self, selection):
+	def _is_episode_load_more(self, selection: int) -> bool:
 		if selection == wx.NOT_FOUND:
 			return False
 		return (
@@ -173,14 +181,14 @@ class PodcastEpisodesDialog(AccessifyDialog):
 			and selection == self.episodes_list.GetCount() - 1
 		)
 
-	def _on_episode_activate(self):
+	def _on_episode_activate(self) -> None:
 		selection = self.episodes_list.GetSelection()
 		if self._is_episode_load_more(selection):
 			self._load_more_episodes()
 			return
 		self.on_play_episode()
 
-	def _get_selected_episode(self):
+	def _get_selected_episode(self) -> Item | None:
 		selection = self.episodes_list.GetSelection()
 		if (
 			selection == wx.NOT_FOUND
@@ -191,7 +199,7 @@ class PodcastEpisodesDialog(AccessifyDialog):
 			return None
 		return self.episodes[selection]
 
-	def on_context_menu(self, _evt):
+	def on_context_menu(self, _evt: wx.Event) -> None:
 		"""Show the actions for the selected episode."""
 		item = self._get_selected_episode()
 		if not item:
@@ -206,7 +214,7 @@ class PodcastEpisodesDialog(AccessifyDialog):
 		self.PopupMenu(menu)
 		menu.Destroy()
 
-	def on_play_episode(self, _evt=None):
+	def on_play_episode(self, _evt: wx.Event | None = None) -> None:
 		"""Play the selected episode."""
 		episode = self._get_selected_episode()
 		if not episode:
@@ -222,19 +230,19 @@ class PodcastEpisodesDialog(AccessifyDialog):
 		else:
 			self._play_uri(episode_uri)
 
-	def on_add_to_queue(self, _evt=None):
+	def on_add_to_queue(self, _evt: wx.Event | None = None) -> None:
 		"""Add the selected episode to the queue."""
 		episode = self._get_selected_episode()
 		if episode:
 			self._queue_add_track(episode.get("uri"), episode.get("name"))
 
-	def on_copy_link(self, _evt=None):
+	def on_copy_link(self, _evt: wx.Event | None = None) -> None:
 		"""Copy the selected episode's Spotify link."""
 		episode = self._get_selected_episode()
 		if episode:
 			link = episode.get("external_urls", {}).get("spotify")
 			copy_link(link)
 
-	def on_save_episode(self, _evt=None):
+	def on_save_episode(self, _evt: wx.Event | None = None) -> None:
 		"""Save the selected episode, or remove it when saved."""
 		self._toggle_saved("episode", self._get_selected_episode())

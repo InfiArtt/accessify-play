@@ -5,6 +5,8 @@
 
 """The add-on's panel in NVDA's settings."""
 
+from __future__ import annotations
+
 import webbrowser
 
 import config
@@ -33,11 +35,11 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 
 	title = _("Accessify Play")
 
-	def __init__(self, parent):
+	def __init__(self, parent: wx.Window) -> None:
 		super().__init__(parent)
 		self.client = spotify_client.get_client()
 
-	def makeSettings(self, settings_sizer):
+	def makeSettings(self, settings_sizer: wx.BoxSizer) -> None:
 		"""Build the controls."""
 		s_helper = guiHelper.BoxSizerHelper(self, sizer=settings_sizer)
 
@@ -118,14 +120,14 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 		s_helper.addItem(buttons_sizer)
 		self.Layout()  # Ensure all elements are properly laid out
 
-	def _build_language_entries(self):
+	def _build_language_entries(self) -> list[tuple[str, str]]:
 		entries = [(LANGUAGE_AUTO, _("Follow NVDA language (default)"))]
 		for code in AVAILABLE_LANGUAGE_CODES:
 			label = LANGUAGE_DISPLAY_OVERRIDES.get(code, code)
 			entries.append((code, label))
 		return entries
 
-	def isValid(self):
+	def isValid(self) -> bool:
 		"""Refuse to save a client ID that is not 32 letters and digits."""
 		value = self.ownClientIDCtrl.GetValue().strip()
 		if value and not spotify_client.is_valid_client_id(value):
@@ -144,13 +146,13 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 			return False
 		return super().isValid()
 
-	def onSave(self):
+	def onSave(self) -> None:
 		"""Save the settings; sign in again when the client ID changed."""
 		if self._save_values():
 			self.client.reset_session()
 			thread_manager.submit_task(self._sign_in_after_client_id_change, name="DialogTask", daemon=True)
 
-	def _sign_in_after_client_id_change(self):
+	def _sign_in_after_client_id_change(self) -> None:
 		"""Use the token saved for the new Client ID, if it was signed in before."""
 		self.client.initialize()
 		if self.client.client:
@@ -162,7 +164,7 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 			# the user still needs to sign in with it.
 			wx.CallAfter(ui.message, _("Client ID changed. Choose Validate Credentials to sign in."))
 
-	def _save_values(self):
+	def _save_values(self) -> bool:
 		"""Store the panel's values. Returns whether the Client ID changed."""
 		config.conf["spotify"]["searchLimit"] = self.limitCtrl.GetValue()
 		config.conf["spotify"]["seekDuration"] = self.seekDurationCtrl.GetValue()
@@ -190,7 +192,7 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 		config.conf["spotify"]["ownClientID"] = own_client_id
 		return changed
 
-	def on_validate(self, _evt):
+	def on_validate(self, _evt: wx.Event) -> None:
 		"""Save the settings and sign in to Spotify."""
 		if not self.isValid():
 			return
@@ -200,12 +202,12 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 		ui.message(_("Validating credentials with Spotify..."))
 		thread_manager.submit_task(self.run_validation, name="DialogTask", daemon=True)
 
-	def run_validation(self):
+	def run_validation(self) -> None:
 		"""Sign in to Spotify; runs in a background thread."""
 		success = self.client.validate()  # Validate without explicit parameters
-		wx.CallAfter(self.show_validation_result, success)
+		wx.CallAfter(self.show_validation_result, success=success)
 
-	def on_clear_credentials(self, _evt):
+	def on_clear_credentials(self, _evt: wx.Event) -> None:
 		# Translators: Confirmation message before clearing Spotify credentials and cache.
 		"""Forget the Spotify sign-in, after asking."""
 		confirmation_msg = _(
@@ -221,14 +223,14 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 			ui.message(_("Clearing credentials and cache..."))
 			thread_manager.submit_task(self._clear_credentials_thread, name="DialogTask", daemon=True)
 
-	def _clear_credentials_thread(self):
+	def _clear_credentials_thread(self) -> None:
 		message = self.client.clear_credentials_and_cache()
 		wx.CallAfter(self._update_ui_after_clear, message)
 
-	def _update_ui_after_clear(self, message):
+	def _update_ui_after_clear(self, message: str) -> None:
 		ui.message(message)
 
-	def show_validation_result(self, success):
+	def show_validation_result(self, *, success: bool) -> None:
 		"""Tell the user whether signing in worked."""
 		if success:
 			messageBox(_("Validation successful!"), _("Success"), wx.OK | wx.ICON_INFORMATION)

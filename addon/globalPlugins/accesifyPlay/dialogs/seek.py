@@ -5,6 +5,10 @@
 
 """Jump to a position in the current track."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import ui
 import wx
 from gui import guiHelper
@@ -13,13 +17,16 @@ from ..core.thread_manager import thread_manager
 from ..language import init_translation
 from ..ui.base_dialog import AccessifyDialog
 
+if TYPE_CHECKING:
+	from ..spotify_client import SpotifyClient
+
 init_translation()
 
 
 class SeekDialog(AccessifyDialog):
 	"""Jump to a time (1:30) or move by seconds (30, -10) in the current track."""
 
-	def __init__(self, parent, client):
+	def __init__(self, parent: wx.Window, client: SpotifyClient) -> None:
 		super().__init__(parent, title=_("Seek / Jump"))
 		self.client = client
 
@@ -50,7 +57,7 @@ class SeekDialog(AccessifyDialog):
 		self.SetSizerAndFit(main_sizer)
 		self.timeCtrl.SetFocus()
 
-	def on_seek(self, _evt):
+	def on_seek(self, _evt: wx.Event) -> None:
 		"""Seek to what was typed."""
 		time_str = self.timeCtrl.GetValue().strip()
 		if not time_str:
@@ -60,7 +67,7 @@ class SeekDialog(AccessifyDialog):
 		thread_manager.submit_task(self._seek_thread, time_str, name="DialogTask", daemon=True)
 		self.Close()
 
-	def _seek_thread(self, time_str):
+	def _seek_thread(self, time_str: str) -> None:
 		result = self.client.smart_seek(time_str)
 		if isinstance(result, str):
 			wx.CallAfter(ui.message, result)

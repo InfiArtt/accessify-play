@@ -12,6 +12,8 @@ home directory instead, which left an OAuth token behind after uninstall;
 migrate_legacy_data() moves anything it finds there on first run.
 """
 
+from __future__ import annotations
+
 import os
 import shutil
 from pathlib import Path
@@ -35,23 +37,23 @@ _LEGACY_NAMES = {
 _OBSOLETE_LEGACY_NAMES = (".spotify_client_id.json",)
 
 
-def _legacy_dir():
+def _legacy_dir() -> Path:
 	return Path(os.path.expandvars("%USERPROFILE%"))
 
 
-def get_data_dir():
+def get_data_dir() -> Path:
 	"""Return the add-on's data folder, created if it does not exist yet."""
 	path = Path(globalVars.appArgs.configPath) / "accessifyPlay"
 	path.mkdir(parents=True, exist_ok=True)
 	return path
 
 
-def get_data_path(name):
+def get_data_path(name: str) -> Path:
 	"""Absolute path of one of the add-on's data files."""
 	return get_data_dir() / name
 
 
-def migrate_legacy_data():
+def migrate_legacy_data() -> None:
 	"""Move pre-1.9.2 data files out of the user's home directory.
 
 	Safe to call repeatedly: a file is only moved when the new location does

@@ -5,11 +5,14 @@
 
 """Accessify Play: control Spotify from NVDA, with a command layer and accessible dialogs."""
 
+from __future__ import annotations
+
 import json
 import sys
 import threading
 import time
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import config
 import globalPluginHandler
@@ -79,19 +82,24 @@ from .lyrics import Lyrics, LyricsAutoReader, fetch_lyrics, parse_lrc  # noqa: E
 
 init_translation()
 
+if TYPE_CHECKING:
+	import inputCore
+
+	from .spotify_types import Item, TimedLines
+
 
 class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	"""The add-on: its scripts, the track poller and the windows it opens."""
 
 	scriptCategory = _("Accessify Play")
 
-	def __init__(self):
+	def __init__(self) -> None:
 		super().__init__()
 		# Before anything reads a data file: versions up to 1.9.1 kept them in
 		# the user's home directory.
 		paths.migrate_legacy_data()
 		#: Held while a playback command runs; see utils.one_at_a_time.
-		self._playback_lock = threading.Lock()
+		self.playback_lock = threading.Lock()
 		self.client = spotify_client.get_client()
 
 		self.searchDialog = None
@@ -137,7 +145,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		self._register_settings_panel()
 
 	@staticmethod
-	def _register_settings_panel():
+	def _register_settings_panel() -> None:
 		"""Add our panel to NVDA's settings dialog, replacing any stale copy.
 
 		Reloading plugins re-imports this module, so an earlier registration
@@ -156,7 +164,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	# layer intercepts gestures through inputCore's capture function instead;
 	# see CommandLayerManager.
 
-	def terminate(self):
+	def terminate(self) -> None:
 		"""Stop pollers, timers and windows when NVDA unloads the add-on."""
 		super().terminate()
 		self.is_running = False
@@ -198,7 +206,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			if dialog:
 				dialog.Destroy()
 
-	def track_change_poller(self):
+	def track_change_poller(self) -> int | None:
 		"""Poll once for track changes; thread_manager.create_poller() repeats it.
 
 		Do NOT add a while loop here — create_poller() already handles the polling cycle.
@@ -215,7 +223,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			return None
 		return delay
 
-	def _poll_once(self):
+	def _poll_once(self) -> int | None:
 		needs_poll = (
 			utils.conf_get("announceTrackChanges", default=False)
 			or self._auto_reader.is_active
@@ -246,7 +254,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			return POLL_PLAYING_SECONDS
 		return POLL_PAUSED_SECONDS if playback else POLL_IDLE_SECONDS
 
-	def _keep_lyrics_in_time(self, playback, current_track_id, *, is_playing):
+	def _keep_lyrics_in_time(self, playback: Item, current_track_id: str | None, *, is_playing: bool) -> None:
 		"""Pause, resume or correct the auto-reader's lyric timers to match playback."""
 		if self._last_is_playing and not is_playing:
 			# Just paused — cancel pending timers so lyrics stop speaking
@@ -269,7 +277,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			self._auto_reader.resync(self._auto_reader_synced_lyrics, playback.get("progress_ms", 0))
 			self._last_lyric_resync = time.monotonic()
 
-	def _on_track_changed(self, playback, current_track_id):
+	def _on_track_changed(self, playback: Item, current_track_id: str | None) -> None:
 		"""Announce the new track and bring the lyrics along."""
 		self.last_track_id = current_track_id
 		# Its lyrics may still be loading; resyncing now would time the old ones.
@@ -298,7 +306,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
 	# --- LYRICS SUPPORT METHODS ---
 
-	def _seek_to_position(self, position_ms):
+	def _seek_to_position(self, position_ms: int) -> None:
 		"""Seek Spotify playback to an absolute position (milliseconds).
 
 		Called by LyricsDialog when the user presses Enter on a lyric line.
@@ -307,7 +315,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		"""
 
 		@utils.run_in_thread
-		def _do_seek():
+		def _do_seek() -> None:
 			try:
 				self.client.run_on_device("seek_track", position_ms=position_ms)
 			except Exception:
@@ -315,14 +323,14 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
 		_do_seek()
 
-	def _jump_lyrics_to_current(self):
+	def _jump_lyrics_to_current(self) -> None:
 		"""Move the lyrics window's cursor to the line playing now.
 
 		Called by the 'Jump to Current' button.
 		"""
 
 		@utils.run_in_thread
-		def _do():
+		def _do() -> None:
 			try:
 				playback = self.client.run_request("current_playback")
 				if playback and isinstance(playback, dict):
@@ -334,7 +342,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
 		_do()
 
-	def _restart_auto_reader(self, item, progress_ms):
+	def _restart_auto_reader(self, item: Item, progress_ms: int) -> None:
 		"""Fetch lyrics for a new track and restart the auto-reader.
 
 		Called in a background thread when track_change_poller detects a song change.
@@ -384,7 +392,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 				_("No synced lyrics found for {track}.").format(track=track_name),
 			)
 
-	def _refresh_lyrics_window(self, item):
+	def _refresh_lyrics_window(self, item: Item) -> None:
 		"""Fetch plain lyrics for a new track and update the open lyrics window.
 
 		Called when song changes and window is open but auto-reader is not active.
@@ -421,7 +429,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	@scriptHandler.script(
 		description=_("Show lyrics window for the current track."),
 	)
-	def script_showLyricsWindow(self, _gesture):
+	def script_showLyricsWindow(self, _gesture: inputCore.InputGesture) -> None:
 		if self.lyricsDialog:
 			self.lyricsDialog.Raise()
 			return
@@ -431,7 +439,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		nvda_ui.message(_("Loading lyrics..."))
 
 		@utils.run_in_thread
-		def _fetch():
+		def _fetch() -> None:
 			try:
 				playback = self.client.run_on_device("current_playback")
 				if not isinstance(playback, dict) or not playback.get("item"):
@@ -481,7 +489,9 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
 		_fetch()
 
-	def _open_lyrics_dialog(self, track_name, artist_name, plain_lyrics, synced_lines=None):
+	def _open_lyrics_dialog(
+		self, track_name: str, artist_name: str, plain_lyrics: str, synced_lines: TimedLines | None = None
+	) -> None:
 		if self.lyricsDialog:
 			self.lyricsDialog.Raise()
 			return
@@ -492,7 +502,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			jump_callback=self._jump_lyrics_to_current,
 		)
 
-		def on_close(evt):
+		def on_close(evt: wx.Event) -> None:
 			# Clear the auto-scroll callback so the reader stops updating the window
 			self._auto_reader.set_line_callback(None)
 			self._destroy_dialog("lyricsDialog", evt)
@@ -511,7 +521,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	@scriptHandler.script(
 		description=_("Toggle automatic lyric reading as the song plays."),
 	)
-	def script_toggleAutoReadLyrics(self, _gesture):
+	def script_toggleAutoReadLyrics(self, _gesture: inputCore.InputGesture) -> None:
 		if self._auto_reader.is_active:
 			self._auto_reader.stop()
 			self._auto_reader_synced_lyrics = None
@@ -532,7 +542,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		nvda_ui.message(_("Loading synced lyrics..."))
 
 		@utils.run_in_thread
-		def _fetch():
+		def _fetch() -> None:
 			try:
 				playback = self.client.run_on_device("current_playback")
 				if not isinstance(playback, dict) or not playback.get("item"):
@@ -601,7 +611,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
 		_fetch()
 
-	def keep_alive_poller(self):
+	def keep_alive_poller(self) -> int:
 		"""Ping Spotify every keepAliveInterval seconds (at least 5), if the user turned it on.
 
 		Returns how long to wait before the next call; see create_poller.
@@ -612,7 +622,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		self.client.send_keep_alive()
 		return max(interval, utils.KEEP_ALIVE_MIN_SECONDS)
 
-	def _destroy_dialog(self, attr_name, evt):
+	def _destroy_dialog(self, attr_name: str, evt: wx.Event) -> None:
 		dialog = getattr(self, attr_name, None)
 		if dialog:
 			setattr(self, attr_name, None)
@@ -626,53 +636,53 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		description=_("Accessify Play layer commands. Press F1 for help."),
 		gesture="kb:NVDA+alt+g",
 	)
-	def script_activateCommandLayer(self, _gesture):
+	def script_activateCommandLayer(self, _gesture: inputCore.InputGesture) -> None:
 		self.commandLayer.activate()
 
 	# The next three are layer keys, not commands of their own: NVDA lists a
 	# script with a docstring in Input Gestures, so they deliberately have none.
-	def script_commandLayerHelp(self, _gesture):  # noqa: D102 - a docstring would list it in Input Gestures
+	def script_commandLayerHelp(self, _gesture: inputCore.InputGesture) -> None:  # noqa: D102 - a docstring would list it in Input Gestures
 		self.commandLayer.show_help()
 
-	def script_commandLayerCancel(self, _gesture):  # noqa: D102 - a docstring would list it in Input Gestures
+	def script_commandLayerCancel(self, _gesture: inputCore.InputGesture) -> None:  # noqa: D102 - a docstring would list it in Input Gestures
 		self.commandLayer.finish(announce=True)
 
-	def script_showLayerEditor(self, _gesture):  # noqa: D102 - a docstring would list it in Input Gestures
+	def script_showLayerEditor(self, _gesture: inputCore.InputGesture) -> None:  # noqa: D102 - a docstring would list it in Input Gestures
 		self.commandLayer.show_editor()
 
 	@scriptHandler.script(
 		description=_("Announce the currently playing track."),
 	)
 	@utils.speak_in_thread
-	def script_announceTrack(self, _gesture):
+	def script_announceTrack(self, _gesture: inputCore.InputGesture) -> str | None:
 		return self.client.get_current_track_info()
 
 	@scriptHandler.script(
 		description=_("Announces the current track's playback time."),
 	)
 	@utils.speak_in_thread
-	def script_announcePlaybackTime(self, _gesture):
+	def script_announcePlaybackTime(self, _gesture: inputCore.InputGesture) -> str | None:
 		return self.client.get_playback_time_info()
 
 	@scriptHandler.script(
 		description=_("Copy the URL of the current track."),
 	)
 	@utils.copy_in_thread
-	def script_copyTrackURL(self, _gesture):
+	def script_copyTrackURL(self, _gesture: inputCore.InputGesture) -> str | None:
 		return self.client.get_current_track_url()
 
 	@scriptHandler.script(
 		description=_("Play your top tracks from the last month."),
 	)
 	@utils.speak_in_thread
-	def script_playMyTopTracks(self, _gesture):
+	def script_playMyTopTracks(self, _gesture: inputCore.InputGesture) -> str | None:
 		return self.client.play_my_top_tracks()
 
 	@scriptHandler.script(
 		description=_("Play your recently played tracks."),
 	)
 	@utils.speak_in_thread
-	def script_playRecentlyPlayed(self, _gesture):
+	def script_playRecentlyPlayed(self, _gesture: inputCore.InputGesture) -> str | None:
 		return self.client.play_recently_played()
 
 	@scriptHandler.script(
@@ -680,7 +690,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	)
 	@utils.speak_in_thread
 	@utils.one_at_a_time
-	def script_playPause(self, _gesture):
+	def script_playPause(self, _gesture: inputCore.InputGesture) -> str | None:
 		playback = self.client.run_on_device("current_playback")
 		if isinstance(playback, str):
 			return playback
@@ -691,7 +701,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		# Only say it happened if Spotify did it.
 		return result if isinstance(result, str) else done
 
-	def _skip(self, command, done):
+	def _skip(self, command: str, done: str) -> str:
 		"""Next or previous track, then say what is playing now."""
 		result = self.client.run_on_device(command)
 		if isinstance(result, str):
@@ -705,7 +715,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	)
 	@utils.speak_in_thread
 	@utils.one_at_a_time
-	def script_nextTrack(self, _gesture):
+	def script_nextTrack(self, _gesture: inputCore.InputGesture) -> str | None:
 		return self._skip("next_track", _("Next track"))
 
 	@scriptHandler.script(
@@ -713,10 +723,10 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	)
 	@utils.speak_in_thread
 	@utils.one_at_a_time
-	def script_previousTrack(self, _gesture):
+	def script_previousTrack(self, _gesture: inputCore.InputGesture) -> str | None:
 		return self._skip("previous_track", _("Previous track"))
 
-	def _change_volume(self, direction):
+	def _change_volume(self, direction: int) -> str:
 		"""Volume up (direction 1) or down (-1) by the step from the settings."""
 		playback = self.client.run_on_device("current_playback")
 		if isinstance(playback, str):
@@ -736,7 +746,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	)
 	@utils.speak_in_thread
 	@utils.one_at_a_time
-	def script_volumeUp(self, _gesture):
+	def script_volumeUp(self, _gesture: inputCore.InputGesture) -> str | None:
 		return self._change_volume(1)
 
 	@scriptHandler.script(
@@ -744,10 +754,10 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	)
 	@utils.speak_in_thread
 	@utils.one_at_a_time
-	def script_volumeDown(self, _gesture):
+	def script_volumeDown(self, _gesture: inputCore.InputGesture) -> str | None:
 		return self._change_volume(-1)
 
-	def _seek_by(self, direction):
+	def _seek_by(self, direction: int) -> str:
 		"""Seek forward (direction 1) or backward (-1) by the duration from the settings."""
 		seconds = utils.conf_get("seekDuration", 15)
 		result = self.client.seek_track(direction * seconds * 1000)
@@ -762,7 +772,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	)
 	@utils.speak_in_thread
 	@utils.one_at_a_time
-	def script_seekForward(self, _gesture):
+	def script_seekForward(self, _gesture: inputCore.InputGesture) -> str | None:
 		return self._seek_by(1)
 
 	@scriptHandler.script(
@@ -770,7 +780,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	)
 	@utils.speak_in_thread
 	@utils.one_at_a_time
-	def script_seekBackward(self, _gesture):
+	def script_seekBackward(self, _gesture: inputCore.InputGesture) -> str | None:
 		return self._seek_by(-1)
 
 	@scriptHandler.script(
@@ -778,7 +788,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	)
 	@utils.speak_in_thread
 	@utils.one_at_a_time
-	def script_toggleShuffle(self, _gesture):
+	def script_toggleShuffle(self, _gesture: inputCore.InputGesture) -> str | None:
 		# H = sHuffle (S is already used as Search)
 		return self.client.toggle_shuffle()
 
@@ -787,21 +797,21 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	)
 	@utils.speak_in_thread
 	@utils.one_at_a_time
-	def script_cycleRepeat(self, _gesture):
+	def script_cycleRepeat(self, _gesture: inputCore.InputGesture) -> str | None:
 		return self.client.cycle_repeat()
 
 	@scriptHandler.script(
 		description=_("Announce the next track in the queue."),
 	)
 	@utils.speak_in_thread
-	def script_announceNextInQueue(self, _gesture):
+	def script_announceNextInQueue(self, _gesture: inputCore.InputGesture) -> str | None:
 		return self.client.get_next_track_in_queue()
 
 	@scriptHandler.script(
 		description=_("Toggle 'Liked' status for the current track (Save/Remove)."),
 	)
 	@utils.speak_in_thread
-	def script_toggleLike(self, _gesture):
+	def script_toggleLike(self, _gesture: inputCore.InputGesture) -> str | None:
 		playback = self.client.run_on_device("current_playback")
 		if isinstance(playback, str):
 			return playback
@@ -824,7 +834,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		description=_("Follow or unfollow the artist of the currently playing track."),
 	)
 	@utils.speak_in_thread
-	def script_toggleFollowArtist(self, _gesture):
+	def script_toggleFollowArtist(self, _gesture: inputCore.InputGesture) -> str | None:
 		artist, problem = self._playing_artist()
 		if problem:
 			return problem
@@ -835,7 +845,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			return _("Now following artist: {artist_name}.").format(artist_name=artist["name"])
 		return _("Unfollowed artist: {artist_name}.").format(artist_name=artist["name"])
 
-	def _playing_artist(self):
+	def _playing_artist(self) -> tuple[Item, None] | tuple[None, str]:
 		"""Return (the playing track's first artist, None), or (None, what to say instead)."""
 		playback = self.client.run_on_device("current_playback")
 		if isinstance(playback, str):
@@ -851,7 +861,9 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			return None, _("Could not identify the artist.")
 		return artists[0], None
 
-	def _open_dialog(self, dialog_class, dialog_attr, *args, **kwargs):
+	def _open_dialog(
+		self, dialog_class: type[wx.Dialog], dialog_attr: str, *args: object, **kwargs: object
+	) -> None:
 		"""Open a dialog, or bring it to the front if it is already open."""
 		if getattr(self, dialog_attr, None):
 			getattr(self, dialog_attr).Raise()
@@ -862,7 +874,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
 		dialog = dialog_class(gui.mainFrame, self.client, *args, **kwargs)
 
-		def on_close(evt):
+		def on_close(evt: wx.Event) -> None:
 			self._destroy_dialog(dialog_attr, evt)
 
 		dialog.Bind(wx.EVT_CLOSE, on_close)
@@ -872,7 +884,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	@scriptHandler.script(
 		description=_("Search for an item on Spotify."),
 	)
-	def script_showSearchDialog(self, _gesture):
+	def script_showSearchDialog(self, _gesture: inputCore.InputGesture) -> None:
 		already_open = getattr(self, "searchDialog", None)
 		self._open_dialog(SearchDialog, "searchDialog")
 		if already_open:
@@ -882,20 +894,20 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	@scriptHandler.script(
 		description=_("Play an item from a Spotify URL."),
 	)
-	def script_showPlayFromLinkDialog(self, _gesture):
+	def script_showPlayFromLinkDialog(self, _gesture: inputCore.InputGesture) -> None:
 		self._open_dialog(PlayFromLinkDialog, "playFromLinkDialog")
 
 	@scriptHandler.script(
 		description=_("Set Spotify volume to a specific percentage."),
 	)
-	def script_setVolume(self, _gesture):
+	def script_setVolume(self, _gesture: inputCore.InputGesture) -> None:
 		if self.setVolumeDialog:
 			self.setVolumeDialog.Raise()
 			return
 
 		# Read the current volume first, so the dialog opens showing it rather
 		# than changing the value under the user once it has been announced.
-		def _fetch():
+		def _fetch() -> None:
 			playback = self.client.run_on_device("current_playback")
 			device = playback.get("device") if isinstance(playback, dict) else None
 			volume = device.get("volume_percent") if isinstance(device, dict) else None
@@ -911,13 +923,13 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	@scriptHandler.script(
 		description=_("Seek to a specific time or jump forward/backward."),
 	)
-	def script_showSeekDialog(self, _gesture):
+	def script_showSeekDialog(self, _gesture: inputCore.InputGesture) -> None:
 		self._open_dialog(SeekDialog, "seekDialog")
 
 	@scriptHandler.script(
 		description=_("Show the Spotify queue list."),
 	)
-	def script_showQueueListDialog(self, _gesture):
+	def script_showQueueListDialog(self, _gesture: inputCore.InputGesture) -> None:
 		if self.queueListDialog:
 			self.queueListDialog.Raise()
 			return
@@ -932,13 +944,13 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		nvda_ui.message(_("Please Wait..."))
 
 		@utils.run_in_thread
-		def _prepare():
+		def _prepare() -> None:
 			data = self.client.get_full_queue()
 			wx.CallAfter(self._finish_queue_dialog_load, data)
 
 		_prepare()
 
-	def _finish_queue_dialog_load(self, data):
+	def _finish_queue_dialog_load(self, data: list[Item] | str) -> None:
 		self._queueDialogLoading = False
 		if isinstance(data, str):
 			nvda_ui.message(data)
@@ -949,7 +961,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	@scriptHandler.script(
 		description=_("Add the currently playing track to a playlist."),
 	)
-	def script_addToPlaylist(self, _gesture):
+	def script_addToPlaylist(self, _gesture: inputCore.InputGesture) -> None:
 		if self.addToPlaylistDialog:
 			self.addToPlaylistDialog.Raise()
 			return
@@ -964,7 +976,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		nvda_ui.message(_("Preparing playlists..."))
 
 		@utils.run_in_thread
-		def _prepare():
+		def _prepare() -> None:
 			playback = self.client.run_on_device("current_playback")
 			if not isinstance(playback, dict) or not playback.get("item"):
 				wx.CallAfter(self._finish_add_to_playlist_dialog, _("Nothing is currently playing."))
@@ -988,7 +1000,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
 		_prepare()
 
-	def _finish_add_to_playlist_dialog(self, payload):
+	def _finish_add_to_playlist_dialog(self, payload: Item | str) -> None:
 		self._addToPlaylistLoading = False
 		if isinstance(payload, str):
 			nvda_ui.message(payload)
@@ -1006,7 +1018,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	@scriptHandler.script(
 		description=_("Manage your Spotify library and playlists."),
 	)
-	def script_showManagementDialog(self, _gesture):
+	def script_showManagementDialog(self, _gesture: inputCore.InputGesture) -> None:
 		if self.managementDialog:
 			self.managementDialog.Raise()
 			return
@@ -1020,7 +1032,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	@scriptHandler.script(
 		description=_("Show available devices to switch playback."),
 	)
-	def script_showDevicesDialog(self, _gesture):
+	def script_showDevicesDialog(self, _gesture: inputCore.InputGesture) -> None:
 		if self.devicesDialog:
 			self.devicesDialog.Raise()
 			return
@@ -1035,13 +1047,13 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		nvda_ui.message(_("Fetching devices..."))
 
 		@utils.run_in_thread
-		def _prepare():
+		def _prepare() -> None:
 			devices = self.client.get_available_devices()
 			wx.CallAfter(self._finish_devices_dialog_load, devices)
 
 		_prepare()
 
-	def _finish_devices_dialog_load(self, devices):
+	def _finish_devices_dialog_load(self, devices: list[Item]) -> None:
 		self._devicesDialogLoading = False
 		if isinstance(devices, str):
 			nvda_ui.message(devices)
@@ -1054,7 +1066,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	@scriptHandler.script(
 		description=_("Open Accessify Play settings."),
 	)
-	def script_openSettings(self, _gesture):
+	def script_openSettings(self, _gesture: inputCore.InputGesture) -> None:
 		gui.mainFrame.popupSettingsDialog(
 			settingsDialogs.NVDASettingsDialog, initialCategory=SpotifySettingsPanel
 		)
@@ -1063,21 +1075,21 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		description=_("Copy Universal (Song.link) URL."),
 	)
 	@utils.copy_in_thread
-	def script_copyUniversalLink(self, _gesture):
+	def script_copyUniversalLink(self, _gesture: inputCore.InputGesture) -> str | None:
 		return self.client.get_current_songlink_url()
 
-	def _get_timer_file_path(self):
+	def _get_timer_file_path(self) -> Path:
 		"""Where the pending sleep-timer deadline is stored between sessions."""
 		return paths.get_data_path(paths.SLEEP_TIMER_FILE)
 
-	def _save_timer_state(self, end_timestamp):
+	def _save_timer_state(self, end_timestamp: float) -> None:
 		"""Save the time the sleep timer should stop playback."""
 		try:
 			self._get_timer_file_path().write_text(json.dumps({"end_time": end_timestamp}), encoding="utf-8")
 		except OSError:
 			log.exception("Error saving sleep timer")
 
-	def _read_timer_state(self):
+	def _read_timer_state(self) -> float | None:
 		"""Read the saved sleep timer end time, if any."""
 		path = self._get_timer_file_path()
 		if not path.exists():
@@ -1092,14 +1104,14 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			return None
 		return data.get("end_time")
 
-	def _clear_timer_state(self):
+	def _clear_timer_state(self) -> None:
 		"""Empty the contents of the timer file (not delete the file)."""
 		try:
 			self._get_timer_file_path().write_text("", encoding="utf-8")
 		except OSError:
 			log.exception("Error clearing sleep timer")
 
-	def _on_sleep_timeout(self):
+	def _on_sleep_timeout(self) -> None:
 		"""Pause playback when the sleep timer runs out."""
 		self._active_sleep_timer = None
 		self._clear_timer_state()
@@ -1109,7 +1121,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			if not isinstance(result, str):
 				wx.CallAfter(nvda_ui.message, _("Sleep timer ended. Playback paused."))
 
-	def _check_resume_sleep_timer(self):
+	def _check_resume_sleep_timer(self) -> None:
 		"""Pick up a sleep timer that was still running when NVDA stopped."""
 		end_time = self._read_timer_state()
 		if not end_time:
@@ -1124,7 +1136,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		else:
 			self._clear_timer_state()
 
-	def _handle_sleep_timer(self, minutes):
+	def _handle_sleep_timer(self, minutes: int) -> None:
 		if minutes <= 0:
 			if self._active_sleep_timer or self._read_timer_state():
 				if self._active_sleep_timer:
@@ -1149,14 +1161,14 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	@scriptHandler.script(
 		description=_("Set Sleep Timer."),
 	)
-	def script_showSleepTimerDialog(self, _gesture):
+	def script_showSleepTimerDialog(self, _gesture: inputCore.InputGesture) -> None:
 		if self.sleepTimerDialog:
 			self.sleepTimerDialog.Raise()
 			return
 
 		self.sleepTimerDialog = SleepTimerDialog(gui.mainFrame, callback=self._handle_sleep_timer)
 
-		def on_close(evt):
+		def on_close(evt: wx.Event) -> None:
 			if self.sleepTimerDialog:
 				self.sleepTimerDialog.Destroy()
 				self.sleepTimerDialog = None

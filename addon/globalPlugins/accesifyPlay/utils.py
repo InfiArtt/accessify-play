@@ -5,7 +5,10 @@
 
 """Small helpers shared across the add-on."""
 
+from __future__ import annotations
+
 from functools import wraps
+from typing import TYPE_CHECKING, ParamSpec, TypeVar
 
 import api
 import config
@@ -16,30 +19,38 @@ from logHandler import log
 from .core.thread_manager import thread_manager
 from .language import init_translation
 
+if TYPE_CHECKING:
+	from collections.abc import Callable
+
+	from .spotify_types import Item
+
 init_translation()
 
 #: The shortest keep-alive interval, in seconds; 0 turns keep-alive off.
 KEEP_ALIVE_MIN_SECONDS = 5
 
+P = ParamSpec("P")
+T = TypeVar("T")
 
-def run_in_thread(func):
+
+def run_in_thread(func: Callable[P, object]) -> Callable[P, None]:
 	"""Run the function in a background thread, ignoring its result."""
 
 	@wraps(func)
-	def wrapper(*args, **kwargs):
+	def wrapper(*args: P.args, **kwargs: P.kwargs) -> None:
 		thread_manager.submit_task(func, *args, name=f"run_{func.__name__}", daemon=True, **kwargs)
 
 	return wrapper
 
 
-def speak_in_thread(func):
+def speak_in_thread(func: Callable[P, str | None]) -> Callable[P, None]:
 	"""Run the method in a background thread and speak the message it returns."""
 
 	@wraps(func)
-	def wrapper(self, *args, **kwargs):
-		def thread_target():
+	def wrapper(*args: P.args, **kwargs: P.kwargs) -> None:
+		def thread_target() -> None:
 			try:
-				message = func(self, *args, **kwargs)
+				message = func(*args, **kwargs)
 				if message and isinstance(message, str):
 					wx.CallAfter(ui.message, message)
 			except Exception:
@@ -51,34 +62,35 @@ def speak_in_thread(func):
 	return wrapper
 
 
-def one_at_a_time(func):
+def one_at_a_time(func: Callable[P, str | None]) -> Callable[P, str | None]:
 	"""For playback commands: while one is running, another press says "Please wait...".
 
-	Takes self._playback_lock without waiting, so two quick presses can never
+	Takes self.playback_lock without waiting, so two quick presses can never
 	both get through, as they could with a flag that is checked and set in two
 	steps. Put it under speak_in_thread, so the message is spoken.
 	"""
 
 	@wraps(func)
-	def wrapper(self, *args, **kwargs):
-		if not self._playback_lock.acquire(blocking=False):
+	def wrapper(*args: P.args, **kwargs: P.kwargs) -> str | None:
+		lock = args[0].playback_lock  # args[0] is the plugin
+		if not lock.acquire(blocking=False):
 			return _("Please wait...")
 		try:
-			return func(self, *args, **kwargs)
+			return func(*args, **kwargs)
 		finally:
-			self._playback_lock.release()
+			lock.release()
 
 	return wrapper
 
 
-def copy_in_thread(func):
+def copy_in_thread(func: Callable[P, str | None]) -> Callable[P, None]:
 	"""Run the method in a background thread and copy its result to the clipboard."""
 
 	@wraps(func)
-	def wrapper(self, *args, **kwargs):
-		def thread_target():
+	def wrapper(*args: P.args, **kwargs: P.kwargs) -> None:
+		def thread_target() -> None:
 			try:
-				result = func(self, *args, **kwargs)
+				result = func(*args, **kwargs)
 				wx.CallAfter(_copy_result, result)
 			except Exception:
 				log.exception("Error in copy_in_thread for %s", func.__name__)
@@ -89,7 +101,7 @@ def copy_in_thread(func):
 	return wrapper
 
 
-def _copy_result(text):
+def _copy_result(text: str) -> None:
 	"""Copy a link from copy_in_thread; anything else is a message from the client."""
 	if not text:
 		return
@@ -99,7 +111,7 @@ def _copy_result(text):
 		ui.message(text)
 
 
-def copy_link(link):
+def copy_link(link: str) -> None:
 	"""Put a Spotify link on the clipboard and say whether that worked."""
 	if not link:
 		ui.message(_("Link not available."))
@@ -109,7 +121,7 @@ def copy_link(link):
 		ui.message(_("Could not open clipboard."))
 
 
-def conf_get(key, default=None):
+def conf_get(key: str, default: T | None = None) -> T | None:
 	"""Read one of our settings without ever raising.
 
 	A missing key means the config spec has not been applied to the section.
@@ -126,7 +138,7 @@ def conf_get(key, default=None):
 	return default if value is None else value
 
 
-def safe_text(value, fallback):
+def safe_text(value: object, fallback: str) -> str:
 	"""Coerce a Spotify field into something a wx control will accept.
 
 	Spotify sends null for fields it has no value for -- the personalised
@@ -147,7 +159,7 @@ def safe_text(value, fallback):
 # position must use the real one.
 
 
-def playlist_rows(items):
+def playlist_rows(items: list[Item]) -> list[tuple[Item, int]]:
 	"""Visible rows from a raw playlist listing, with their real positions.
 
 	Returns a list of (track, position) pairs, skipping null tracks.
@@ -160,7 +172,7 @@ def playlist_rows(items):
 	return rows
 
 
-def duplicate_occurrences(rows):
+def duplicate_occurrences(rows: list[tuple[Item, int]]) -> list[tuple[str, int]]:
 	"""Later copies of any track that appears more than once.
 
 	Keeps the first copy of each URI and returns (uri, position) pairs for the
@@ -180,7 +192,7 @@ def duplicate_occurrences(rows):
 	return extra
 
 
-def positions_after_move(positions, row, direction):
+def positions_after_move(positions: list[int], row: int, direction: int) -> list[int]:
 	"""Return new real positions after moving the track at `row` one row up or down.
 
 	Mirrors SpotifyClient.reorder_playlist_track. Moving up inserts the track

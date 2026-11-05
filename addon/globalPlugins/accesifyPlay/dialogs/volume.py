@@ -5,6 +5,10 @@
 
 """Set Spotify's volume to an exact percentage."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import ui
 import wx
 from gui import guiHelper
@@ -13,13 +17,16 @@ from ..core.thread_manager import thread_manager
 from ..language import init_translation
 from ..ui.base_dialog import AccessifyDialog
 
+if TYPE_CHECKING:
+	from ..spotify_client import SpotifyClient
+
 init_translation()
 
 
 class SetVolumeDialog(AccessifyDialog):
 	"""Ask for a volume percentage."""
 
-	def __init__(self, parent, client, initial_volume=None):
+	def __init__(self, parent: wx.Window, client: SpotifyClient, initial_volume: int | None = None) -> None:
 		super().__init__(parent, title=_("Set Spotify Volume"))
 		self.client = client
 		main_sizer = wx.BoxSizer(wx.VERTICAL)
@@ -48,14 +55,14 @@ class SetVolumeDialog(AccessifyDialog):
 		self.SetSizerAndFit(main_sizer)
 		self.volumeCtrl.SetFocus()
 
-	def on_set(self, _evt):
+	def on_set(self, _evt: wx.Event) -> None:
 		"""Set the volume in the background."""
 		volume = self.volumeCtrl.GetValue()
 		ui.message(_("Setting volume to {volume}%...").format(volume=volume))
 		thread_manager.submit_task(self._set_volume_thread, volume, name="DialogTask", daemon=True)
 		self.Close()
 
-	def _set_volume_thread(self, volume):
+	def _set_volume_thread(self, volume: int) -> None:
 		result = self.client.run_on_device("volume", volume)
 		if isinstance(result, str):  # Error message
 			wx.CallAfter(ui.message, result)

@@ -5,6 +5,8 @@
 
 """The donation link."""
 
+from __future__ import annotations
+
 import webbrowser
 
 import wx
@@ -16,7 +18,7 @@ from .language import init_translation
 init_translation()
 
 
-def open_donate_link():
+def open_donate_link() -> None:
 	"""Open the PayPal donation link in the default web browser."""
 	try:
 		# Translators: The message shown when the user clicks the donate button.

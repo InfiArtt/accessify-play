@@ -5,6 +5,10 @@
 
 """Choose the Spotify device to play on."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import ui
 import wx
 
@@ -12,13 +16,17 @@ from ..core.thread_manager import thread_manager
 from ..language import init_translation
 from ..ui.base_dialog import AccessifyDialog
 
+if TYPE_CHECKING:
+	from ..spotify_client import SpotifyClient
+	from ..spotify_types import Item
+
 init_translation()
 
 
 class DevicesDialog(AccessifyDialog):
 	"""The user's Spotify devices; choosing one moves playback there."""
 
-	def __init__(self, parent, client, devices_info):
+	def __init__(self, parent: wx.Window, client: SpotifyClient, devices_info: list[Item]) -> None:
 		super().__init__(parent, title=_("Spotify Devices"))
 		self.client = client
 		self.devices = devices_info
@@ -61,7 +69,7 @@ class DevicesDialog(AccessifyDialog):
 		self.SetSizerAndFit(main_sizer)
 		self.devicesList.SetFocus()
 
-	def on_change_device(self, _evt=None):
+	def on_change_device(self, _evt: wx.Event | None = None) -> None:
 		"""Move playback to the selected device."""
 		selection = self.devicesList.GetSelection()
 		if selection == wx.NOT_FOUND:
@@ -81,11 +89,11 @@ class DevicesDialog(AccessifyDialog):
 		self.Close()
 		thread_manager.submit_task(self._change_device_thread, device_id, name="DialogTask", daemon=True)
 
-	def _change_device_thread(self, device_id):
+	def _change_device_thread(self, device_id: str) -> None:
 		result = self.client.transfer_playback_to_device(device_id)
 		wx.CallAfter(self._finish_change, result)
 
-	def _finish_change(self, result):
+	def _finish_change(self, result: object) -> None:
 		if isinstance(result, str):
 			ui.message(result)
 		else:

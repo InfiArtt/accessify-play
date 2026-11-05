@@ -5,6 +5,10 @@
 
 """Spotify's browse categories and the playlists in them."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import ui
 import wx
 from logHandler import log
@@ -15,13 +19,19 @@ from ..ui.base_dialog import AccessifyDialog
 from ..utils import copy_link, safe_text
 from .playlist import PlaylistTracksDialog
 
+if TYPE_CHECKING:
+	from collections.abc import Callable
+
+	from ..spotify_client import SpotifyClient
+	from ..spotify_types import Item, Reply
+
 init_translation()
 
 
 class CategoriesDialog(AccessifyDialog):
 	"""Dialog for browsing Spotify categories."""
 
-	def __init__(self, parent, client):
+	def __init__(self, parent: wx.Window, client: SpotifyClient) -> None:
 		super().__init__(parent, title=_("Browse Categories"), size=(500, 400))
 		self.client = client
 		self.categories = []
@@ -35,7 +45,7 @@ class CategoriesDialog(AccessifyDialog):
 		# Load initial categories
 		self._load_categories()
 
-	def _init_ui(self):
+	def _init_ui(self) -> None:
 		main_sizer = wx.BoxSizer(wx.VERTICAL)
 
 		self.categoriesList = wx.ListView(self, style=wx.LC_REPORT | wx.LC_SINGLE_SEL | wx.LC_HRULES)
@@ -58,13 +68,13 @@ class CategoriesDialog(AccessifyDialog):
 		self.SetSizer(main_sizer)
 		self.categoriesList.SetFocus()
 
-	def _create_accelerators(self):
+	def _create_accelerators(self) -> None:
 		accel_tbl = wx.AcceleratorTable(
 			[(wx.ACCEL_NORMAL, wx.WXK_ESCAPE, wx.ID_CLOSE), (wx.ACCEL_NORMAL, wx.WXK_RETURN, wx.ID_OK)]
 		)
 		self.SetAcceleratorTable(accel_tbl)
 
-	def _load_categories(self):
+	def _load_categories(self) -> None:
 		if self._loading or not self._has_more:
 			return
 
@@ -72,7 +82,7 @@ class CategoriesDialog(AccessifyDialog):
 		self.categoriesList.Append([_("Loading...")])
 		thread_manager.submit_task(self._fetch_categories_thread, name="FetchCategories", daemon=True)
 
-	def _fetch_categories_thread(self):
+	def _fetch_categories_thread(self) -> None:
 		try:
 			result = self.client.get_categories(limit=50, offset=self._offset)
 			wx.CallAfter(self._on_categories_loaded, result)
@@ -80,7 +90,7 @@ class CategoriesDialog(AccessifyDialog):
 			log.exception("AccessifyPlay: browse request failed.")
 			wx.CallAfter(self._on_error)
 
-	def _on_categories_loaded(self, result):
+	def _on_categories_loaded(self, result: Item | str) -> None:
 		self._loading = False
 
 		# Remove the "Loading..." item if present
@@ -120,7 +130,7 @@ class CategoriesDialog(AccessifyDialog):
 			self.categoriesList.Select(0)
 			self.categoriesList.Focus(0)
 
-	def _on_error(self):
+	def _on_error(self) -> None:
 		self._loading = False
 		if self.categoriesList.GetItemCount() > 0 and self.categoriesList.GetItemText(
 			self.categoriesList.GetItemCount() - 1
@@ -128,7 +138,7 @@ class CategoriesDialog(AccessifyDialog):
 			self.categoriesList.DeleteItem(self.categoriesList.GetItemCount() - 1)
 		ui.message(_("Could not load this list. Please try again."))
 
-	def on_category_activated(self, evt):
+	def on_category_activated(self, evt: wx.ListEvent) -> None:
 		"""Open the playlists of the chosen category."""
 		idx = evt.GetIndex()
 		if idx < 0:
@@ -144,7 +154,7 @@ class CategoriesDialog(AccessifyDialog):
 		dlg = CategoryPlaylistsDialog(self, self.client, category)
 		dlg.ShowModal()
 
-	def on_list_key_down(self, evt):
+	def on_list_key_down(self, evt: wx.KeyEvent) -> None:
 		"""Load more categories when the user reaches the end of the list."""
 		keycode = evt.GetKeyCode()
 		# Handle end of list for loading more
@@ -155,7 +165,7 @@ class CategoriesDialog(AccessifyDialog):
 				self._load_categories()
 		evt.Skip()
 
-	def _on_close_button(self, _evt):
+	def _on_close_button(self, _evt: wx.Event) -> None:
 		self.EndModal(wx.ID_CLOSE)
 
 
@@ -173,7 +183,14 @@ class PlaylistBrowserDialog(AccessifyDialog):
 	# which would swallow an item bound on its own.
 	MENU_FOLLOW_OWNER = wx.NewIdRef()
 
-	def __init__(self, parent, client, title, fetch_page, empty_message):
+	def __init__(
+		self,
+		parent: wx.Window,
+		client: SpotifyClient,
+		title: str,
+		fetch_page: Callable[[int], Reply | str],
+		empty_message: str,
+	) -> None:
 		"""fetch_page(offset) returns one page of playlists, or the error message."""
 		super().__init__(parent, title=title, size=(600, 400))
 		self.client = client
@@ -189,7 +206,7 @@ class PlaylistBrowserDialog(AccessifyDialog):
 		self._create_accelerators()
 		self._load_playlists()
 
-	def _init_ui(self):
+	def _init_ui(self) -> None:
 		main_sizer = wx.BoxSizer(wx.VERTICAL)
 
 		# Spotify sends its own greeting with Featured Playlists ("Good morning!",
@@ -219,13 +236,13 @@ class PlaylistBrowserDialog(AccessifyDialog):
 		self.SetSizer(main_sizer)
 		self.playlistsList.SetFocus()
 
-	def _create_accelerators(self):
+	def _create_accelerators(self) -> None:
 		accel_tbl = wx.AcceleratorTable(
 			[(wx.ACCEL_NORMAL, wx.WXK_ESCAPE, wx.ID_CLOSE), (wx.ACCEL_NORMAL, wx.WXK_RETURN, wx.ID_OK)]
 		)
 		self.SetAcceleratorTable(accel_tbl)
 
-	def _load_playlists(self):
+	def _load_playlists(self) -> None:
 		if self._loading or not self._has_more:
 			return
 
@@ -233,7 +250,7 @@ class PlaylistBrowserDialog(AccessifyDialog):
 		self.playlistsList.Append([_("Loading..."), ""])
 		thread_manager.submit_task(self._fetch_playlists_thread, name="FetchBrowsePlaylists", daemon=True)
 
-	def _fetch_playlists_thread(self):
+	def _fetch_playlists_thread(self) -> None:
 		try:
 			result = self._fetch_page(self._offset)
 			wx.CallAfter(self._on_playlists_loaded, result)
@@ -241,12 +258,12 @@ class PlaylistBrowserDialog(AccessifyDialog):
 			log.exception("AccessifyPlay: browse request failed.")
 			wx.CallAfter(self._on_error)
 
-	def _remove_loading_row(self):
+	def _remove_loading_row(self) -> None:
 		last = self.playlistsList.GetItemCount() - 1
 		if last >= 0 and self.playlistsList.GetItemText(last) == _("Loading..."):
 			self.playlistsList.DeleteItem(last)
 
-	def _on_playlists_loaded(self, result):
+	def _on_playlists_loaded(self, result: Item | str) -> None:
 		self._loading = False
 		self._remove_loading_row()
 
@@ -289,7 +306,7 @@ class PlaylistBrowserDialog(AccessifyDialog):
 			self.playlistsList.Select(0)
 			self.playlistsList.Focus(0)
 
-	def _set_greeting(self, message):
+	def _set_greeting(self, message: str | None) -> None:
 		"""Show Spotify's greeting once, and speak it.
 
 		A StaticText that changes after the dialog has opened is not announced
@@ -302,16 +319,16 @@ class PlaylistBrowserDialog(AccessifyDialog):
 		self.Layout()
 		ui.message(message)
 
-	def _on_error(self):
+	def _on_error(self) -> None:
 		self._loading = False
 		self._remove_loading_row()
 		ui.message(_("Could not load this list. Please try again."))
 
-	def on_playlist_activated(self, _evt):
+	def on_playlist_activated(self, _evt: wx.Event) -> None:
 		"""Open the chosen playlist's tracks."""
 		self._view_tracks()
 
-	def _menu_playlist(self):
+	def _menu_playlist(self) -> Item | None:
 		"""Return the selected playlist, or None."""
 		idx = self.playlistsList.GetFirstSelected()
 		if idx < 0:
@@ -321,7 +338,7 @@ class PlaylistBrowserDialog(AccessifyDialog):
 			return None
 		return self.playlists[data_idx]
 
-	def on_list_key_down(self, evt):
+	def on_list_key_down(self, evt: wx.KeyEvent) -> None:
 		"""Load more playlists when the user reaches the end of the list."""
 		keycode = evt.GetKeyCode()
 		if keycode in (wx.WXK_DOWN, wx.WXK_PAGEDOWN, wx.WXK_END):
@@ -331,7 +348,7 @@ class PlaylistBrowserDialog(AccessifyDialog):
 				self._load_playlists()
 		evt.Skip()
 
-	def on_context_menu(self, _evt):
+	def on_context_menu(self, _evt: wx.Event) -> None:
 		"""Show the actions for the selected playlist."""
 		playlist = self._menu_playlist()
 		if not playlist:
@@ -348,7 +365,7 @@ class PlaylistBrowserDialog(AccessifyDialog):
 		self.PopupMenu(menu)
 		menu.Destroy()
 
-	def on_menu_item(self, evt):
+	def on_menu_item(self, evt: wx.CommandEvent) -> None:
 		"""Carry out the context menu item that was chosen."""
 		playlist = self._menu_playlist()
 		if not playlist:
@@ -363,31 +380,31 @@ class PlaylistBrowserDialog(AccessifyDialog):
 		elif menu_id == self.MENU_COPY_LINK:
 			copy_link(playlist.get("external_urls", {}).get("spotify"))
 
-	def _view_tracks(self):
+	def _view_tracks(self) -> None:
 		playlist = self._menu_playlist()
 		if playlist:
 			PlaylistTracksDialog(self, self.client, playlist).ShowModal()
 
-	def _play_playlist(self, playlist):
+	def _play_playlist(self, playlist: Item) -> None:
 		uri = playlist.get("uri")
 		if not uri:
 			return
 		ui.message(_("Playing playlist..."))
 		thread_manager.submit_task(self._play_playlist_thread, uri, name="PlayBrowsePlaylist", daemon=True)
 
-	def _play_playlist_thread(self, uri):
+	def _play_playlist_thread(self, uri: str) -> None:
 		result = self.client.play_item(uri)
 		if isinstance(result, str):
 			wx.CallAfter(ui.message, result)
 
-	def _on_close_button(self, _evt):
+	def _on_close_button(self, _evt: wx.Event) -> None:
 		self.EndModal(wx.ID_CLOSE)
 
 
 class CategoryPlaylistsDialog(PlaylistBrowserDialog):
 	"""Playlists in one browse category."""
 
-	def __init__(self, parent, client, category):
+	def __init__(self, parent: wx.Window, client: SpotifyClient, category: Item) -> None:
 		super().__init__(
 			parent,
 			client,
@@ -400,7 +417,7 @@ class CategoryPlaylistsDialog(PlaylistBrowserDialog):
 class FeaturedPlaylistsDialog(PlaylistBrowserDialog):
 	"""Spotify's front-page curated playlists."""
 
-	def __init__(self, parent, client):
+	def __init__(self, parent: wx.Window, client: SpotifyClient) -> None:
 		super().__init__(
 			parent,
 			client,

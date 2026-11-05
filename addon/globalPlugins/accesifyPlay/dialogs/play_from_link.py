@@ -5,6 +5,10 @@
 
 """Look up a Spotify link and play it."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import ui
 import wx
 
@@ -12,13 +16,17 @@ from ..core.thread_manager import thread_manager
 from ..language import init_translation
 from ..ui.base_dialog import AccessifyDialog
 
+if TYPE_CHECKING:
+	from ..spotify_client import SpotifyClient
+	from ..spotify_types import Item
+
 init_translation()
 
 
 class PlayFromLinkDialog(AccessifyDialog):
 	"""Look up a Spotify link or URI, then play it or follow its owner."""
 
-	def __init__(self, parent, client):
+	def __init__(self, parent: wx.Window, client: SpotifyClient) -> None:
 		super().__init__(parent, title=_("Play from Spotify Link"))
 		self.client = client
 		self.link_info = None
@@ -62,7 +70,7 @@ class PlayFromLinkDialog(AccessifyDialog):
 		self.SetSizerAndFit(main_sizer)
 		self.urlText.SetFocus()
 
-	def on_check(self, _evt):
+	def on_check(self, _evt: wx.Event) -> None:
 		"""Look up the link that was typed."""
 		url = self.urlText.GetValue().strip()
 		if not url:
@@ -71,11 +79,11 @@ class PlayFromLinkDialog(AccessifyDialog):
 		self.detailsText.SetValue(_("Checking..."))
 		thread_manager.submit_task(self._check_thread, url, name="DialogTask", daemon=True)
 
-	def _check_thread(self, url):
+	def _check_thread(self, url: str) -> None:
 		details = self.client.get_link_details(url)
 		wx.CallAfter(self.update_details, details)
 
-	def update_details(self, details):
+	def update_details(self, details: Item) -> None:
 		"""Show what the link points to, or why it could not be looked up."""
 		self.followButton.Hide()
 		if "error" in details:
@@ -96,12 +104,12 @@ class PlayFromLinkDialog(AccessifyDialog):
 				self.followButton.SetDefault()
 		self.Layout()
 
-	def on_follow(self, _evt=None):
+	def on_follow(self, _evt: wx.Event | None = None) -> None:
 		"""Follow or unfollow the user the link belongs to."""
 		if self.link_info and self.link_info.get("user"):
 			self._toggle_follow_user(self.link_info["user"])
 
-	def on_play(self, _evt):
+	def on_play(self, _evt: wx.Event) -> None:
 		"""Play what the link points to."""
 		if not self.link_info:
 			ui.message(_("Please check a Spotify link first."))

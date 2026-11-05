@@ -5,10 +5,16 @@
 
 """Background threads that are tracked, so NVDA can stop them cleanly."""
 
+from __future__ import annotations
+
 import threading
 import time
+from typing import TYPE_CHECKING
 
 from logHandler import log
+
+if TYPE_CHECKING:
+	from collections.abc import Callable
 
 
 class ThreadManager:
@@ -18,12 +24,19 @@ class ThreadManager:
 	when the addon is terminated, avoiding orphan processes that freeze NVDA.
 	"""
 
-	def __init__(self):
+	def __init__(self) -> None:
 		self._threads = []
 		self._lock = threading.Lock()
 		self._is_running = True
 
-	def submit_task(self, target, *args, daemon=True, name=None, **kwargs):
+	def submit_task(
+		self,
+		target: Callable[..., object],
+		*args: object,
+		daemon: bool = True,
+		name: str | None = None,
+		**kwargs: object,
+	) -> threading.Thread | None:
 		"""Submit a task to run in a background thread."""
 		if not self._is_running:
 			return None
@@ -32,7 +45,7 @@ class ThreadManager:
 			# Forget threads that have finished.
 			self._threads = [t for t in self._threads if t.is_alive()]
 
-			def wrapped_target(*a, **kw):
+			def wrapped_target(*a: object, **kw: object) -> None:
 				try:
 					target(*a, **kw)
 				except Exception:
@@ -44,14 +57,16 @@ class ThreadManager:
 			thread.start()
 			return thread
 
-	def create_poller(self, target, interval_seconds=1, name=None):
+	def create_poller(
+		self, target: Callable[[], float | None], interval_seconds: float = 1, name: str | None = None
+	) -> threading.Thread | None:
 		"""Start a thread that calls target every interval_seconds.
 
 		target may return a number of seconds to wait before the next call
 		instead, to poll faster or slower as needed.
 		"""
 
-		def poller_wrapper():
+		def poller_wrapper() -> None:
 			while self._is_running:
 				delay = None
 				try:
@@ -69,7 +84,7 @@ class ThreadManager:
 
 		return self.submit_task(poller_wrapper, daemon=True, name=name)
 
-	def stop_all(self, timeout=1.0):
+	def stop_all(self, timeout: float = 1.0) -> None:
 		"""Signal all managed threads to stop and wait for them up to `timeout`."""
 		self._is_running = False
 		with self._lock:

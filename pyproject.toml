@@ -50,9 +50,6 @@ ignore = [
 	# NVDA imports the add-on as globalPlugins.accesifyPlay, the tests import it
 	# under another name; relative imports work in both.
 	"TID252",
-
-	# Not done yet. Each family below is fixed and removed in its own commit.
-	"ANN",
 ]
 
 # NVDA's logger, so ruff knows log.exception() and exc_info=True report the error.
@@ -92,6 +89,11 @@ extend-ignore-names = [
 	"scriptCategory",
 	"N_",
 ]
+
+[tool.ruff.lint.isort]
+# Annotations are not evaluated at runtime, so type-only imports can stay out
+# of NVDA's way (and out of import cycles) under TYPE_CHECKING.
+required-imports = ["from __future__ import annotations"]
 
 [tool.ruff.lint.mccabe]
 max-complexity = 15

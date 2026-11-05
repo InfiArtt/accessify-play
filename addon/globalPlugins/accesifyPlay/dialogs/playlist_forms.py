@@ -5,6 +5,10 @@
 
 """Small playlist forms: create a playlist, edit its details, add to one."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import ui
 import wx
 from gui import guiHelper
@@ -13,13 +17,17 @@ from ..core.thread_manager import thread_manager
 from ..language import init_translation
 from ..ui.base_dialog import AccessifyDialog
 
+if TYPE_CHECKING:
+	from ..spotify_client import SpotifyClient
+	from ..spotify_types import Item
+
 init_translation()
 
 
 class CreatePlaylistDialog(AccessifyDialog):
 	"""Create a playlist."""
 
-	def __init__(self, parent, client):
+	def __init__(self, parent: wx.Window, client: SpotifyClient) -> None:
 		super().__init__(parent, title=_("Create Spotify Playlist"))
 		self.client = client
 		self._creating = False
@@ -51,7 +59,7 @@ class CreatePlaylistDialog(AccessifyDialog):
 		self.SetSizerAndFit(main_sizer)
 		self.nameCtrl.SetFocus()
 
-	def on_create(self, _evt):
+	def on_create(self, _evt: wx.Event) -> None:
 		"""Create the playlist in the background."""
 		if self._creating:
 			return
@@ -68,16 +76,22 @@ class CreatePlaylistDialog(AccessifyDialog):
 		self._creating = True
 		self.createButton.Disable()
 		thread_manager.submit_task(
-			self._create_thread, name, description, public, collaborative, name="DialogTask", daemon=True
+			self._create_thread,
+			name,
+			description,
+			public=public,
+			collaborative=collaborative,
+			name="DialogTask",
+			daemon=True,
 		)
 
-	def _create_thread(self, name, description, public, collaborative):
+	def _create_thread(self, name: str, description: str, *, public: bool, collaborative: bool) -> None:
 		result = self.client.create_playlist(
 			name, public=public, collaborative=collaborative, description=description
 		)
 		wx.CallAfter(self._finish_create, result, name)
 
-	def _finish_create(self, result, name):
+	def _finish_create(self, result: Item | str, name: str) -> None:
 		self._creating = False
 		self.createButton.Enable()
 		if isinstance(result, str):
@@ -93,7 +107,7 @@ class CreatePlaylistDialog(AccessifyDialog):
 class PlaylistDetailsDialog(AccessifyDialog):
 	"""Edit a playlist's name, description and visibility."""
 
-	def __init__(self, parent, client, playlist_data):
+	def __init__(self, parent: wx.Window, client: SpotifyClient, playlist_data: Item) -> None:
 		super().__init__(parent, title=_("Edit Playlist Details"))
 		self.client = client
 		self.playlist_data = playlist_data
@@ -128,7 +142,7 @@ class PlaylistDetailsDialog(AccessifyDialog):
 		self.SetSizerAndFit(main_sizer)
 		self.nameCtrl.SetFocus()
 
-	def on_save(self, _evt):
+	def on_save(self, _evt: wx.Event) -> None:
 		"""Save the details in the background."""
 		if self._saving:
 			return
@@ -150,10 +164,16 @@ class PlaylistDetailsDialog(AccessifyDialog):
 		self._saving = True
 		self.saveButton.Disable()
 		thread_manager.submit_task(
-			self._save_thread, name, description, public, collaborative, name="DialogTask", daemon=True
+			self._save_thread,
+			name,
+			description,
+			public=public,
+			collaborative=collaborative,
+			name="DialogTask",
+			daemon=True,
 		)
 
-	def _save_thread(self, name, description, public, collaborative):
+	def _save_thread(self, name: str, description: str, *, public: bool, collaborative: bool) -> None:
 		result = self.client.update_playlist_details(
 			self.playlist_data.get("id"),
 			name=name,
@@ -163,7 +183,7 @@ class PlaylistDetailsDialog(AccessifyDialog):
 		)
 		wx.CallAfter(self._finish_save, result)
 
-	def _finish_save(self, result):
+	def _finish_save(self, result: object) -> None:
 		self._saving = False
 		self.saveButton.Enable()
 		if isinstance(result, str):
@@ -176,7 +196,9 @@ class PlaylistDetailsDialog(AccessifyDialog):
 class AddToPlaylistDialog(AccessifyDialog):
 	"""Add the playing track to one of the user's playlists."""
 
-	def __init__(self, parent, client, current_track, playlists):
+	def __init__(
+		self, parent: wx.Window, client: SpotifyClient, current_track: Item, playlists: list[Item]
+	) -> None:
 		# Translators: Title for the "Add to Playlist" dialog.
 		super().__init__(parent, title=_("Add Current Track to Playlist"))
 		self.client = client
@@ -186,7 +208,7 @@ class AddToPlaylistDialog(AccessifyDialog):
 		self.selected_playlist_id = None
 		self.init_ui()
 
-	def init_ui(self):
+	def init_ui(self) -> None:
 		"""Build the playlist choice and buttons."""
 		panel = wx.Panel(self)
 		sizer = wx.BoxSizer(wx.VERTICAL)
@@ -234,19 +256,19 @@ class AddToPlaylistDialog(AccessifyDialog):
 		sizer.Fit(self)
 		self.playlist_combobox.SetFocus()
 
-	def on_playlist_selected(self, _evt):
+	def on_playlist_selected(self, _evt: wx.Event) -> None:
 		"""Remember the playlist that was chosen."""
 		selection_index = self.playlist_combobox.GetSelection()
 		if selection_index != wx.NOT_FOUND:
 			self.selected_playlist_id = self.playlists[selection_index]["id"]
 
-	def on_add_to_playlist(self, _evt):
+	def on_add_to_playlist(self, _evt: wx.Event) -> None:
 		"""Add the track to the chosen playlist."""
 		if not self.current_track_uri or not self.selected_playlist_id:
 			ui.message(_("Please select a playlist and ensure a track is playing."))
 			return
 
-		def _add():
+		def _add() -> None:
 			result = self.client.add_items_to_playlist(self.selected_playlist_id, self.current_track_uri)
 			if isinstance(result, str):
 				wx.CallAfter(ui.message, result)
