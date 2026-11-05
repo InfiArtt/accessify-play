@@ -160,7 +160,7 @@ class CommandLayerManager:
 		_set_capture_func(self._captor)
 		self._entry_beep()
 
-	def finish(self, announce=False):
+	def finish(self, *, announce=False):
 		self._deadline = None
 		# Only clear the capture function if it is still ours; something else
 		# (input help, another add-on) may have taken it over in the meantime.

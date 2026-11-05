@@ -32,7 +32,7 @@ class CreatePlaylistDialog(AccessifyDialog):
 		)
 		self.descriptionCtrl.SetMinSize((-1, 80))
 		self.publicCheck = s_helper.addItem(wx.CheckBox(self, label=_("Public playlist")))
-		self.publicCheck.SetValue(True)
+		self.publicCheck.SetValue(state=True)
 		self.collabCheck = s_helper.addItem(wx.CheckBox(self, label=_("Collaborative (requires public off)")))
 
 		buttons_sizer = wx.StdDialogButtonSizer()
@@ -69,7 +69,9 @@ class CreatePlaylistDialog(AccessifyDialog):
 		)
 
 	def _create_thread(self, name, description, public, collaborative):
-		result = self.client.create_playlist(name, public, collaborative, description)
+		result = self.client.create_playlist(
+			name, public=public, collaborative=collaborative, description=description
+		)
 		wx.CallAfter(self._finish_create, result, name)
 
 	def _finish_create(self, result, name):

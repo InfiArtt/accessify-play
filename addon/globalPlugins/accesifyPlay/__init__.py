@@ -73,7 +73,7 @@ from .dialogs.settings import SpotifySettingsPanel  # noqa: E402
 from .dialogs.sleeptimer import SleepTimerDialog  # noqa: E402
 from .dialogs.volume import SetVolumeDialog  # noqa: E402
 from .language import init_translation  # noqa: E402
-from .lyrics import LyricsAutoReader, fetch_lyrics, parse_lrc  # noqa: E402
+from .lyrics import Lyrics, LyricsAutoReader, fetch_lyrics, parse_lrc  # noqa: E402
 
 init_translation()
 
@@ -211,7 +211,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
 	def _poll_once(self):
 		needs_poll = (
-			utils.conf_get("announceTrackChanges", False)
+			utils.conf_get("announceTrackChanges", default=False)
 			or self._auto_reader.is_active
 			or self.lyricsDialog is not None  # also poll when lyrics window is open
 		)
@@ -229,59 +229,66 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			(playback.get("item") or {}).get("id") if playback and isinstance(playback, dict) else None
 		)
 
-		# Detect play/pause transitions and manage lyric timers accordingly
 		if self._auto_reader.is_active:
-			if self._last_is_playing and not is_playing:
-				# Just paused — cancel pending timers so lyrics stop speaking
-				self._auto_reader.pause_timers()
-			elif self._last_is_playing is not None and not self._last_is_playing and is_playing:
-				# Just resumed — resync timers from current playback position
-				if self._auto_reader_synced_lyrics:
-					self._auto_reader.resync(
-						self._auto_reader_synced_lyrics,
-						playback.get("progress_ms", 0),
-					)
-					self._last_lyric_resync = time.monotonic()
-			elif (
-				is_playing
-				and self._auto_reader_synced_lyrics
-				and current_track_id == self.last_track_id
-				and time.monotonic() - self._last_lyric_resync >= LYRIC_RESYNC_SECONDS
-			):
-				# Correct the timers for drift and seeks made elsewhere.
-				self._auto_reader.resync(self._auto_reader_synced_lyrics, playback.get("progress_ms", 0))
-				self._last_lyric_resync = time.monotonic()
+			self._keep_lyrics_in_time(playback, current_track_id, is_playing=is_playing)
 		self._last_is_playing = is_playing
 
 		if self.last_track_id != current_track_id:
-			self.last_track_id = current_track_id
-			# Its lyrics may still be loading; resyncing now would time the old ones.
-			self._last_lyric_resync = time.monotonic()
-			if current_track_id:
-				if utils.conf_get("announceTrackChanges", False):
-					track_string = self.client.get_simple_track_string(playback["item"])
-					wx.CallAfter(nvda_ui.message, track_string)
-				if self._auto_reader.is_active:
-					# auto-reader handles window update internally via _restart_auto_reader
-					thread_manager.submit_task(
-						self._restart_auto_reader,
-						playback["item"],
-						playback.get("progress_ms", 0),
-						daemon=True,
-						name="LyricsNewTrack",
-					)
-				elif self.lyricsDialog:
-					# Window open but auto-reader off → fetch new lyrics and refresh window
-					thread_manager.submit_task(
-						self._refresh_lyrics_window,
-						playback["item"],
-						daemon=True,
-						name="LyricsWindowRefresh",
-					)
+			self._on_track_changed(playback, current_track_id)
 		if is_playing or (playback and self._auto_reader.is_active):
 			# Paused lyrics must pick up promptly once the music resumes.
 			return POLL_PLAYING_SECONDS
 		return POLL_PAUSED_SECONDS if playback else POLL_IDLE_SECONDS
+
+	def _keep_lyrics_in_time(self, playback, current_track_id, *, is_playing):
+		"""Pause, resume or correct the auto-reader's lyric timers to match playback."""
+		if self._last_is_playing and not is_playing:
+			# Just paused — cancel pending timers so lyrics stop speaking
+			self._auto_reader.pause_timers()
+		elif self._last_is_playing is not None and not self._last_is_playing and is_playing:
+			# Just resumed — resync timers from current playback position
+			if self._auto_reader_synced_lyrics:
+				self._auto_reader.resync(
+					self._auto_reader_synced_lyrics,
+					playback.get("progress_ms", 0),
+				)
+				self._last_lyric_resync = time.monotonic()
+		elif (
+			is_playing
+			and self._auto_reader_synced_lyrics
+			and current_track_id == self.last_track_id
+			and time.monotonic() - self._last_lyric_resync >= LYRIC_RESYNC_SECONDS
+		):
+			# Correct the timers for drift and seeks made elsewhere.
+			self._auto_reader.resync(self._auto_reader_synced_lyrics, playback.get("progress_ms", 0))
+			self._last_lyric_resync = time.monotonic()
+
+	def _on_track_changed(self, playback, current_track_id):
+		"""Announce the new track and bring the lyrics along."""
+		self.last_track_id = current_track_id
+		# Its lyrics may still be loading; resyncing now would time the old ones.
+		self._last_lyric_resync = time.monotonic()
+		if current_track_id:
+			if utils.conf_get("announceTrackChanges", default=False):
+				track_string = self.client.get_simple_track_string(playback["item"])
+				wx.CallAfter(nvda_ui.message, track_string)
+			if self._auto_reader.is_active:
+				# auto-reader handles window update internally via _restart_auto_reader
+				thread_manager.submit_task(
+					self._restart_auto_reader,
+					playback["item"],
+					playback.get("progress_ms", 0),
+					daemon=True,
+					name="LyricsNewTrack",
+				)
+			elif self.lyricsDialog:
+				# Window open but auto-reader off → fetch new lyrics and refresh window
+				thread_manager.submit_task(
+					self._refresh_lyrics_window,
+					playback["item"],
+					daemon=True,
+					name="LyricsWindowRefresh",
+				)
 
 	# --- LYRICS SUPPORT METHODS ---
 
@@ -349,13 +356,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		if self.lyricsDialog:
 			synced_lines = parse_lrc(synced) if synced else None
 			wx.CallAfter(
-				self.lyricsDialog.update_content,
-				track_name,
-				artist_name,
-				plain,
-				synced_lines=synced_lines,
-				seek_callback=self._seek_to_position,
-				jump_callback=self._jump_lyrics_to_current,
+				self.lyricsDialog.update_content, Lyrics(track_name, artist_name, plain, synced_lines)
 			)
 
 		if synced:
@@ -402,13 +403,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		if self.lyricsDialog:
 			synced_lines = parse_lrc(synced) if synced else None
 			wx.CallAfter(
-				self.lyricsDialog.update_content,
-				track_name,
-				artist_name,
-				plain,
-				synced_lines=synced_lines,
-				seek_callback=self._seek_to_position,
-				jump_callback=self._jump_lyrics_to_current,
+				self.lyricsDialog.update_content, Lyrics(track_name, artist_name, plain, synced_lines)
 			)
 
 	# --- SCRIPT: LYRICS WINDOW ---
@@ -482,10 +477,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			return
 		dialog = LyricsDialog(
 			gui.mainFrame,
-			track_name,
-			artist_name,
-			plain_lyrics,
-			synced_lines=synced_lines,
+			Lyrics(track_name, artist_name, plain_lyrics, synced_lines),
 			seek_callback=self._seek_to_position,
 			jump_callback=self._jump_lyrics_to_current,
 		)
@@ -606,9 +598,9 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		"""
 		interval = utils.conf_get("keepAliveInterval", 0)
 		if not interval:
-			return 5  # off: look at the setting again in a moment
+			return utils.KEEP_ALIVE_MIN_SECONDS  # off: look at the setting again in a moment
 		self.client.send_keep_alive()
-		return max(interval, 5)
+		return max(interval, utils.KEEP_ALIVE_MIN_SECONDS)
 
 	def _destroy_dialog(self, attr_name, evt):
 		dialog = getattr(self, attr_name, None)
@@ -616,7 +608,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			setattr(self, attr_name, None)
 			dialog.Destroy()
 		if evt:
-			evt.Skip(False)
+			evt.Skip(skip=False)
 
 	# --- SCRIPT GESTURES ---
 
@@ -821,32 +813,31 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	)
 	@utils.speak_in_thread
 	def script_toggleFollowArtist(self, _gesture):
-		playback = self.client.run_on_device("current_playback")
-		if isinstance(playback, str):
-			return playback
-		if not playback or not playback.get("item"):
-			return _("Nothing is currently playing.")
-
-		if playback.get("currently_playing_type") != "track":
-			return _("This action is only available for music tracks.")
-
-		artists = playback["item"].get("artists", [])
-		if not artists:
-			return _("Could not find artist information for this track.")
-
-		primary_artist = artists[0]
-		artist_id = primary_artist.get("id")
-		artist_name = primary_artist.get("name")
-
-		if not artist_id or not artist_name:
-			return _("Could not identify the artist.")
-
-		now = self.client.library_toggle(artist_id, "artist")
+		artist, problem = self._playing_artist()
+		if problem:
+			return problem
+		now = self.client.library_toggle(artist["id"], "artist")
 		if isinstance(now, str):
 			return now
 		if now:
-			return _("Now following artist: {artist_name}.").format(artist_name=artist_name)
-		return _("Unfollowed artist: {artist_name}.").format(artist_name=artist_name)
+			return _("Now following artist: {artist_name}.").format(artist_name=artist["name"])
+		return _("Unfollowed artist: {artist_name}.").format(artist_name=artist["name"])
+
+	def _playing_artist(self):
+		"""(the playing track's first artist, None), or (None, what to say instead)."""
+		playback = self.client.run_on_device("current_playback")
+		if isinstance(playback, str):
+			return None, playback
+		if not playback or not playback.get("item"):
+			return None, _("Nothing is currently playing.")
+		if playback.get("currently_playing_type") != "track":
+			return None, _("This action is only available for music tracks.")
+		artists = playback["item"].get("artists", [])
+		if not artists:
+			return None, _("Could not find artist information for this track.")
+		if not artists[0].get("id") or not artists[0].get("name"):
+			return None, _("Could not identify the artist.")
+		return artists[0], None
 
 	def _open_dialog(self, dialog_class, dialog_attr, *args, **kwargs):
 		"""Open a dialog, or bring it to the front if it is already open."""

@@ -73,7 +73,7 @@ else:
 # ------------------------------------------------ 2. Track menus in album and playlist dialogs
 class Item:
     def __init__(self, label): self.label = label
-    def Enable(self, on): pass
+    def Enable(self, enable=True): pass
 class Menu:
     def __init__(self): self.items = []
     def Append(self, id_, label): self.items.append(label); return Item(label)
@@ -90,6 +90,8 @@ def build_menu(source, cls, track_list, selection, extra=None):
           "safe_text": lambda v, d="": v or d}
     menu_fn = lift(source, cls, "on_context_menu", dict(ns))
     go_to = lift(base_src, "AccessifyDialog", "_append_go_to_options_for_track", dict(ns))
+    add_to_playlist = lift(base_src, "AccessifyDialog", "_append_add_to_playlist", dict(ns))
+    submenu = lift(base_src, "AccessifyDialog", "_playlist_submenu", dict(ns))
     shown = []
     ident = types.SimpleNamespace(GetId=lambda: 1)
     host = types.SimpleNamespace(
@@ -99,6 +101,8 @@ def build_menu(source, cls, track_list, selection, extra=None):
         Bind=lambda *a, **k: None, PopupMenu=lambda m: shown.append(m),
         _get_selected_track=lambda: track_list[selection] if 0 <= selection < len(track_list) else None,
         _append_go_to_options_for_track=lambda m, t: go_to(host, m, t),
+        _append_add_to_playlist=lambda m, i, p: add_to_playlist(host, m, i, p),
+        _playlist_submenu=lambda p, pick, empty: submenu(host, p, pick, empty),
     )
     if extra: extra(host)
     menu_fn(host, None)

@@ -28,20 +28,8 @@ class LyricsDialog(AccessifyDialog):
 	- Enter does nothing, auto-scroll is disabled, no timestamp buttons shown.
 	"""
 
-	def __init__(
-		self,
-		parent,
-		track_name,
-		artist_name,
-		plain_lyrics,
-		synced_lines=None,
-		seek_callback=None,
-		jump_callback=None,
-	):
-		title = _("Lyrics: {track} \u2014 {artist}").format(
-			track=track_name,
-			artist=artist_name,
-		)
+	def __init__(self, parent, lyrics, *, seek_callback=None, jump_callback=None):
+		title = _("Lyrics: {track} \u2014 {artist}").format(track=lyrics.track, artist=lyrics.artist)
 		super().__init__(
 			parent,
 			title=title,
@@ -52,7 +40,7 @@ class LyricsDialog(AccessifyDialog):
 		self._display_lines = []  # [(ms, text)] in display order
 		self._seek_callback = seek_callback
 		self._jump_callback = jump_callback
-		self._build_ui(plain_lyrics, track_name, synced_lines)
+		self._build_ui(lyrics.plain, lyrics.track, lyrics.synced)
 
 	# ------------------------------------------------------------------
 	# UI construction
@@ -213,28 +201,10 @@ class LyricsDialog(AccessifyDialog):
 	# In-place update when song changes
 	# ------------------------------------------------------------------
 
-	def update_content(
-		self,
-		track_name,
-		artist_name,
-		plain_lyrics,
-		synced_lines=None,
-		seek_callback=None,
-		jump_callback=None,
-	):
+	def update_content(self, lyrics):
 		"""Refresh title, lyrics, seek map, and buttons for a new track in-place."""
-		title = _("Lyrics: {track} \u2014 {artist}").format(
-			track=track_name,
-			artist=artist_name,
-		)
-		self.SetTitle(title)
-
-		if seek_callback is not None:
-			self._seek_callback = seek_callback
-		if jump_callback is not None:
-			self._jump_callback = jump_callback
-
-		display_text = self._prepare_display(plain_lyrics, track_name, synced_lines)
+		self.SetTitle(_("Lyrics: {track} \u2014 {artist}").format(track=lyrics.track, artist=lyrics.artist))
+		display_text = self._prepare_display(lyrics.plain, lyrics.track, lyrics.synced)
 		self.lyrics_ctrl.SetValue(display_text)
 		self.lyrics_ctrl.SetInsertionPoint(0)
 		self.lyrics_ctrl.SetFocus()

@@ -19,7 +19,6 @@ class QueueListDialog(AccessifyDialog):
 		super().__init__(parent, title=_("Spotify Queue"))
 		self.client = client
 		self.queue_items = []
-		self._announce_refresh_result = False
 		self._refresh_in_progress = False
 
 		main_sizer = wx.BoxSizer(wx.VERTICAL)
@@ -131,15 +130,12 @@ class QueueListDialog(AccessifyDialog):
 		if item:
 			copy_link(item.get("link"))
 
-	def refresh_queue_data(self, speak_status=True):
+	def refresh_queue_data(self):
 		if self._refresh_in_progress:
-			if speak_status:
-				ui.message(_("Queue is already refreshing."))
+			ui.message(_("Queue is already refreshing."))
 			return
 		self._refresh_in_progress = True
-		self._announce_refresh_result = speak_status
-		if speak_status:
-			ui.message(_("Refreshing queue..."))
+		ui.message(_("Refreshing queue..."))
 		thread_manager.submit_task(self._refresh_thread, name="DialogTask", daemon=True)
 
 	def _refresh_thread(self):
@@ -154,5 +150,4 @@ class QueueListDialog(AccessifyDialog):
 			ui.message(queue_data)
 			return
 		self.update_queue_list(queue_data)
-		if self._announce_refresh_result:
-			ui.message(_("Queue updated."))
+		ui.message(_("Queue updated."))

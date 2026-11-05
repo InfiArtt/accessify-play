@@ -12,7 +12,7 @@ from ..core.thread_manager import thread_manager
 from ..formatting import format_duration
 from ..language import init_translation
 from ..ui.base_dialog import AccessifyDialog
-from ..utils import copy_link, safe_text
+from ..utils import copy_link
 
 init_translation()
 
@@ -145,24 +145,7 @@ class AlbumTracksDialog(AccessifyDialog):
 		menu.Append(self.MENU_COPY_LINK.GetId(), _("Copy Link\tAlt+L"))
 
 		menu.AppendSeparator()
-		playlist_submenu = wx.Menu()
-		if self.user_playlists:
-			for playlist in self.user_playlists:
-				menu_item = playlist_submenu.Append(
-					wx.ID_ANY, safe_text(playlist.get("name"), _("Unknown Playlist"))
-				)
-				self.Bind(
-					wx.EVT_MENU,
-					lambda event, playlist=playlist: self._on_add_to_playlist_selected(
-						event, playlist.get("id"), playlist.get("name")
-					),
-					menu_item,
-				)
-		else:
-			no_playlist_item = playlist_submenu.Append(wx.ID_ANY, _("No owned playlists found."))
-			no_playlist_item.Enable(False)
-
-		menu.AppendSubMenu(playlist_submenu, _("Add to Playlist"))
+		self._append_add_to_playlist(menu, track, self.user_playlists)
 		self._append_go_to_options_for_track(menu, track)
 
 		self.PopupMenu(menu)
@@ -194,28 +177,3 @@ class AlbumTracksDialog(AccessifyDialog):
 		if track:
 			link = track.get("external_urls", {}).get("spotify")
 			copy_link(link)
-
-	def _on_add_to_playlist_selected(self, _event, playlist_id, playlist_name):
-		track = self._get_selected_track()
-		if not track:
-			return
-
-		track_uri = track.get("uri")
-		if not playlist_id or not track_uri:
-			ui.message(_("Could not add track. Information missing."))
-			return
-
-		ui.message(
-			_("Adding '{track_name}' to '{playlist_name}'...").format(
-				track_name=track.get("name"), playlist_name=playlist_name
-			)
-		)
-
-		def _add_thread():
-			result = self.client.add_track_to_playlist(playlist_id, track_uri)
-			if isinstance(result, str):
-				wx.CallAfter(ui.message, result)
-			else:
-				wx.CallAfter(ui.message, _("Track added successfully."))
-
-		thread_manager.submit_task(_add_thread, name="DialogTask", daemon=True)

@@ -8,6 +8,7 @@ import math
 import re
 import time
 import webbrowser
+from http import HTTPStatus
 from urllib.parse import urlparse
 
 import config
@@ -89,16 +90,19 @@ def _get_cache_path():
 	return paths.get_data_path(paths.CACHE_FILE)
 
 
+SECONDS_PER_MINUTE = 60
+
+
 def _format_retry_delay(seconds):
 	"""'about 30 seconds' / 'about 9 minutes', for a Retry-After value."""
 	try:
 		seconds = int(seconds)
 	except (TypeError, ValueError):
 		return None
-	if seconds < 60:
+	if seconds < SECONDS_PER_MINUTE:
 		# Translators: how long to wait before retrying, in seconds.
 		return _("about {count} seconds").format(count=max(1, seconds))
-	minutes = max(1, round(seconds / 60))
+	minutes = max(1, round(seconds / SECONDS_PER_MINUTE))
 	# Translators: how long to wait before retrying, in minutes.
 	return _("about {count} minutes").format(count=minutes)
 
@@ -133,23 +137,20 @@ def _friendly_error(e):
 
 	status = getattr(e, "http_status", None)
 
-	if status == 429:
+	if status == HTTPStatus.TOO_MANY_REQUESTS:
 		return _rate_limit_message(_retry_after(e))
 
 	status_messages = {
-		400: _("Spotify could not handle that request. Please try again."),
-		403: _("Spotify would not allow that. Some actions require Spotify Premium."),
-		404: _(
+		HTTPStatus.BAD_REQUEST: _("Spotify could not handle that request. Please try again."),
+		HTTPStatus.FORBIDDEN: _("Spotify would not allow that. Some actions require Spotify Premium."),
+		HTTPStatus.NOT_FOUND: _(
 			"Spotify could not find that. It may no longer exist, or it may not be available in your country."
 		),
-		405: _("Spotify does not support that action."),
-		502: _("Spotify is having trouble right now. Please try again in a moment."),
-		503: _("Spotify is having trouble right now. Please try again in a moment."),
-		504: _("Spotify is having trouble right now. Please try again in a moment."),
+		HTTPStatus.METHOD_NOT_ALLOWED: _("Spotify does not support that action."),
 	}
 	if status in status_messages:
 		return status_messages[status]
-	if status is not None and status >= 500:
+	if status is not None and status >= HTTPStatus.INTERNAL_SERVER_ERROR:
 		return _("Spotify is having trouble right now. Please try again in a moment.")
 
 	return _("Spotify could not complete that request. Please try again.")
@@ -212,20 +213,44 @@ def _retrying_session():
 
 
 def _is_rate_limit(e):
-	return getattr(e, "http_status", None) == 429
+	return getattr(e, "http_status", None) == HTTPStatus.TOO_MANY_REQUESTS
 
 
 def _is_no_active_device(e):
 	"""Whether a player command failed only because no device is active."""
 	if getattr(e, "reason", None) == "NO_ACTIVE_DEVICE":
 		return True
-	return getattr(e, "http_status", None) == 404 and "no active device" in str(e).lower()
+	return getattr(e, "http_status", None) == HTTPStatus.NOT_FOUND and "no active device" in str(e).lower()
 
 
 @functools.cache
 def get_client():
 	"""The SpotifyClient the whole add-on shares."""
 	return SpotifyClient()
+
+
+def _describe_playing(item, item_type, *, playing):
+	"""Say what is playing (or paused): a track, an episode, or anything else."""
+	if item_type == "episode":
+		if playing:
+			message = _("Playing episode: {episode_name} from the show {show_name}")
+		else:
+			message = _("Paused episode: {episode_name} from the show {show_name}")
+		return message.format(episode_name=item.get("name"), show_name=(item.get("show") or {}).get("name"))
+	if item_type != "track":
+		message = _("Currently playing: {name}") if playing else _("Paused: {name}")
+		return message.format(name=item.get("name", _("Unknown Item")))
+	album = (item.get("album") or {}).get("name")
+	if album and playing:
+		message = _("Currently playing: {track} by {artists}, from the album {album}")
+	elif album:
+		message = _("Paused: {track} by {artists}, from the album {album}")
+	elif playing:
+		message = _("Currently playing: {track} by {artists}")
+	else:
+		message = _("Paused: {track} by {artists}")
+	artists = ", ".join(a["name"] for a in item.get("artists", []))
+	return message.format(track=item.get("name"), artists=artists, album=album)
 
 
 class SpotifyClient:
@@ -239,7 +264,7 @@ class SpotifyClient:
 		"""Creates a CacheFileHandler pointing at the add-on's data folder."""
 		return CacheFileHandler(cache_path=str(_get_cache_path()))
 
-	def _get_auth_manager(self, open_browser=False):
+	def _get_auth_manager(self, *, open_browser=False):
 		return SpotifyPKCE(
 			client_id=own_client_id() or SHARED_CLIENT_ID,
 			redirect_uri=REDIRECT_URI,
@@ -355,18 +380,7 @@ class SpotifyClient:
 		into a clear sentence instead of a raw Spotify error.
 		"""
 		if isinstance(e, SpotifyException):
-			if status_messages and e.http_status in status_messages:
-				log.debug("Spotify returned %s: %s", e.http_status, e)
-				return status_messages[e.http_status]
-			if _is_rate_limit(e):
-				self._note_rate_limit(e)  # logs it; no traceback for something this expected
-				return _friendly_error(e)
-			if "restriction" not in str(e).lower():
-				log.error("Spotify command failed: %s", e, exc_info=e)
-			if e.http_status == 401:  # Unauthorized
-				self.initialize()  # Try to refresh the token silently
-				return _("Token expired, please try again.")
-			return _friendly_error(e)
+			return self._spotify_error_message(e, status_messages)
 		if isinstance(e, _TIMEOUT_ERRORS):
 			log.debug("Spotify request timed out: %s", e)
 			return _("Connection to Spotify timed out. Please try again.")
@@ -375,6 +389,21 @@ class SpotifyClient:
 			return _("Connection to Spotify failed. Please check your internet connection.")
 		log.error("Spotify command failed with an unexpected error: %s", e, exc_info=e)
 		return _("Something went wrong while talking to Spotify. Please try again.")
+
+	def _spotify_error_message(self, e, status_messages):
+		"""What to say for an error answer from Spotify itself."""
+		if status_messages and e.http_status in status_messages:
+			log.debug("Spotify returned %s: %s", e.http_status, e)
+			return status_messages[e.http_status]
+		if _is_rate_limit(e):
+			self._note_rate_limit(e)  # logs it; no traceback for something this expected
+			return _friendly_error(e)
+		if "restriction" not in str(e).lower():
+			log.error("Spotify command failed: %s", e, exc_info=e)
+		if e.http_status == HTTPStatus.UNAUTHORIZED:
+			self.initialize()  # Try to refresh the token silently
+			return _("Token expired, please try again.")
+		return _friendly_error(e)
 
 	def run_on_device(self, command, *args, **kwargs):
 		"""Run a playback command, making sure there is a device to run it on.
@@ -494,40 +523,9 @@ class SpotifyClient:
 		if not playback or not playback.get("item"):
 			return _("Nothing is currently playing.")
 
-		playing = playback.get("is_playing")
-		item_type = playback.get("currently_playing_type")
-		item = playback["item"]
-
-		if item_type == "track":
-			track_name = item.get("name")
-			artists = ", ".join([a["name"] for a in item.get("artists", [])])
-			album = (item.get("album") or {}).get("name")
-			if album:
-				if playing:
-					message = _("Currently playing: {track} by {artists}, from the album {album}")
-				else:
-					message = _("Paused: {track} by {artists}, from the album {album}")
-				return message.format(track=track_name, artists=artists, album=album)
-			if playing:
-				message = _("Currently playing: {track} by {artists}")
-			else:
-				message = _("Paused: {track} by {artists}")
-			return message.format(track=track_name, artists=artists)
-
-		if item_type == "episode":
-			episode_name = item.get("name")
-			show_info = item.get("show", {})
-			show_name = show_info.get("name")
-			if playing:
-				message = _("Playing episode: {episode_name} from the show {show_name}")
-			else:
-				message = _("Paused episode: {episode_name} from the show {show_name}")
-			return message.format(episode_name=episode_name, show_name=show_name)
-
-		name = item.get("name", _("Unknown Item"))
-		if playing:
-			return _("Currently playing: {name}").format(name=name)
-		return _("Paused: {name}").format(name=name)
+		return _describe_playing(
+			playback["item"], playback.get("currently_playing_type"), playing=bool(playback.get("is_playing"))
+		)
 
 	def get_simple_track_string(self, item):
 		"""Returns a simple 'Title - Artist/Show' string from a playback item."""
@@ -952,7 +950,7 @@ class SpotifyClient:
 
 		return True
 
-	def create_playlist(self, name, public=True, collaborative=False, description=""):
+	def create_playlist(self, name, *, public=True, collaborative=False, description=""):
 		"""Creates a new playlist for the current user."""
 		if not self.client:
 			return _("Spotify client not ready. Please validate your credentials.")
@@ -1015,30 +1013,22 @@ class SpotifyClient:
 		)
 
 	def get_context_track_uris(self, uri, item_type):
-		"""Returns a flat list of track URIs for supported context types."""
+		"""The track URIs of an album or a playlist, or a message to say."""
 		if not uri:
 			return _("Unable to determine tracks for this item.")
 		parsed = self._parse_spotify_url(uri)
 		if not parsed:
 			return _("Invalid Spotify link or URI.")
-		_entity_type, entity_id = parsed
-		if item_type == "album":
-			tracks = self.get_album_tracks(entity_id)
-			if isinstance(tracks, str):
-				return tracks
-			return [track.get("uri") for track in tracks if track.get("uri")]
+		fetch = {"album": self.get_album_tracks, "playlist": self.get_playlist_tracks}.get(item_type)
+		if fetch is None:
+			return []
+		entries = fetch(parsed[1])
+		if isinstance(entries, str):
+			return entries
+		# A playlist lists entries that hold a track; an album lists the tracks.
 		if item_type == "playlist":
-			tracks = self.get_playlist_tracks(entity_id)
-			if isinstance(tracks, str):
-				return tracks
-			uris = []
-			for item in tracks:
-				track = item.get("track") if isinstance(item, dict) else item
-				uri_value = track.get("uri") if isinstance(track, dict) else None
-				if uri_value:
-					uris.append(uri_value)
-			return uris
-		return []
+			entries = [entry.get("track") if isinstance(entry, dict) else entry for entry in entries]
+		return [track["uri"] for track in entries if isinstance(track, dict) and track.get("uri")]
 
 	def remove_track_occurrences(self, playlist_id, occurrences):
 		"""Remove specific copies of tracks, identified by playlist position.
@@ -1419,25 +1409,21 @@ class SpotifyClient:
 			return None
 		if url.lower().startswith("spotify:"):
 			parts = [p for p in url.split(":") if p and p.lower() != "spotify"]
-			if not parts:
+		else:
+			parsed = urlparse(url if "://" in url else f"https://{url}")
+			if "spotify" not in parsed.netloc.lower():
 				return None
-			if len(parts) >= 4 and parts[-2] == "playlist":
-				return "playlist", parts[-1]
-			if len(parts) >= 2:
-				return parts[0], parts[1]
-			return None
-		parsed = urlparse(url if "://" in url else f"https://{url}")
-		host = parsed.netloc.lower()
-		if "spotify" not in host:
-			return None
-		segments = [seg for seg in parsed.path.strip("/").split("/") if seg]
-		if not segments:
-			return None
-		if segments[0] == "user" and len(segments) >= 4 and segments[2] == "playlist":
-			return "playlist", segments[3]
-		if len(segments) < 2:
-			return None
-		return segments[0], segments[1].split("?")[0]
+			parts = [seg for seg in parsed.path.split("/") if seg]
+			# Shared links can name a country first: open.spotify.com/intl-nl/track/...
+			if parts and parts[0].startswith("intl-"):
+				parts = parts[1:]
+		match parts:
+			# The old form, spotify:user:<owner>:playlist:<id>.
+			case ["user", _, "playlist", playlist_id, *_]:
+				return "playlist", playlist_id
+			case [kind, item_id, *_]:
+				return kind, item_id
+		return None
 
 	def _build_track_link_details(self, data):
 		artists = ", ".join([a["name"] for a in data.get("artists", [])])

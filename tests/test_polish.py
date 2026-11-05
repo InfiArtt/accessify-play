@@ -38,7 +38,11 @@ for root, dirs, files in os.walk(PKG):
 check(f"no translatable text is hidden inside an f-string ({hidden or 'none'})", not hidden)
 
 # ------------------------------------------------ 2. I on a paused track
-info = lift(source("spotify_client.py"), "SpotifyClient", "get_current_track_info", {"_": lambda s: s})
+client_src = source("spotify_client.py")
+info_ns = {"_": lambda s: s}
+describe = next(n for n in ast.parse(client_src).body if isinstance(n, ast.FunctionDef) and n.name == "_describe_playing")
+exec(compile(ast.fix_missing_locations(ast.Module(body=[describe], type_ignores=[])), "describe", "exec"), info_ns)
+info = lift(client_src, "SpotifyClient", "get_current_track_info", info_ns)
 host = types.SimpleNamespace(run_on_device=None)
 track = {"name": "Song", "artists": [{"name": "A"}, {"name": "B"}], "album": {"name": "LP"}}
 def pb(playing, item=track, kind="track"):

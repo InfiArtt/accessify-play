@@ -11,7 +11,7 @@ from logHandler import log
 
 from ..core.thread_manager import thread_manager
 from ..language import init_translation
-from ..lyrics import fetch_lyrics, parse_lrc
+from ..lyrics import Lyrics, fetch_lyrics, parse_lrc
 from ..utils import safe_text
 
 init_translation()
@@ -281,9 +281,81 @@ class AccessifyDialog(wx.Dialog):
 	def _open_lyrics_preview(self, track_name, artist_name, plain, synced_lines):
 		from ..dialogs.lyrics_window import LyricsDialog  # noqa: PLC0415 - circular import
 
-		dialog = LyricsDialog(self, track_name, artist_name, plain, synced_lines=synced_lines)
+		dialog = LyricsDialog(self, Lyrics(track_name, artist_name, plain, synced_lines))
 		dialog.Show()
 		ui.message(_("Lyrics for {track} opened.").format(track=track_name))
+
+	def _append_menu_item(self, menu, label, handler):
+		"""Add an item to a popup menu; choosing it calls handler(event)."""
+		item = menu.Append(wx.ID_ANY, label)
+		menu.Bind(wx.EVT_MENU, handler, item)
+
+	def _playlist_submenu(self, playlists, on_pick, empty_label):
+		"""A submenu of playlists; choosing one calls on_pick(playlist).
+
+		playlists is None while they are still loading.
+		"""
+		submenu = wx.Menu()
+		if playlists is None:
+			submenu.Append(wx.ID_ANY, _("Loading playlists...")).Enable(enable=False)
+		elif not playlists:
+			submenu.Append(wx.ID_ANY, empty_label).Enable(enable=False)
+		for playlist in playlists or ():
+			menu_item = submenu.Append(wx.ID_ANY, safe_text(playlist.get("name"), _("Unknown")))
+			self.Bind(wx.EVT_MENU, lambda _evt, playlist=playlist: on_pick(playlist), menu_item)
+		return submenu
+
+	def _append_add_to_playlist(self, menu, item, playlists):
+		"""Add the "Add to Playlist" submenu for a track, or "Add Album to Playlist"."""
+		if item.get("type") == "album":
+			submenu = self._playlist_submenu(
+				playlists,
+				lambda playlist: self._add_album_to_playlist(item, playlist),
+				_("No playlists found."),
+			)
+			menu.AppendSubMenu(submenu, _("Add Album to Playlist"))
+		else:
+			submenu = self._playlist_submenu(
+				playlists,
+				lambda playlist: self._add_track_to_playlist(item, playlist),
+				_("No owned playlists found."),
+			)
+			menu.AppendSubMenu(submenu, _("Add to Playlist"))
+
+	def _add_track_to_playlist(self, track, playlist):
+		"""Add a track to a playlist in the background, saying how it went."""
+		playlist_id = playlist.get("id")
+		track_uri = track.get("uri")
+		if not playlist_id or not track_uri:
+			ui.message(_("Could not add track. Information missing."))
+			return
+		ui.message(
+			_("Adding '{track_name}' to '{playlist_name}'...").format(
+				track_name=track.get("name"), playlist_name=playlist.get("name")
+			)
+		)
+
+		def _add():
+			result = self.client.add_track_to_playlist(playlist_id, track_uri)
+			wx.CallAfter(ui.message, result if isinstance(result, str) else _("Track added successfully."))
+
+		thread_manager.submit_task(_add, name="AddTrackToPlaylist", daemon=True)
+
+	def _add_album_to_playlist(self, album, playlist):
+		"""Add all of an album's tracks to a playlist in the background."""
+		ui.message(
+			_("Adding all tracks from '{album}' to '{playlist}'...").format(
+				album=album.get("name"), playlist=playlist.get("name")
+			)
+		)
+
+		def _add():
+			result = self.client.add_album_to_playlist(playlist.get("id"), album.get("id"))
+			wx.CallAfter(
+				ui.message, _("Album added to playlist successfully.") if result is True else str(result)
+			)
+
+		thread_manager.submit_task(_add, name="AddAlbumToPlaylist", daemon=True)
 
 	def _append_go_to_options_for_track(self, menu, track_item):
 		if not track_item or track_item.get("type") != "track":

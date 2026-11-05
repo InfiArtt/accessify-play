@@ -399,13 +399,12 @@ class SearchDialog(AccessifyDialog):
 		if isinstance(playlists, str):
 			wx.CallAfter(ui.message, playlists)
 			self._user_playlists = []
+		elif self._current_user_id:
+			self._user_playlists = [
+				p for p in playlists if p.get("owner", {}).get("id") == self._current_user_id
+			]
 		else:
-			if self._current_user_id:
-				self._user_playlists = [
-					p for p in playlists if p.get("owner", {}).get("id") == self._current_user_id
-				]
-			else:
-				self._user_playlists = playlists
+			self._user_playlists = playlists
 
 		self._playlists_loading = False
 
@@ -419,170 +418,94 @@ class SearchDialog(AccessifyDialog):
 			return
 
 		self.resultsList.SetSelection(selection)
-
-		def show_menu(is_followed=None):
-			menu = wx.Menu()
-			item_type = item.get("type")
-
-			if item.get("uri"):
-				menu.Append(self.MENU_PLAY.GetId(), _("Play\tAlt+P"))
-			if item_type in ("track", "album", "playlist"):
-				menu.Append(self.MENU_ADD_QUEUE.GetId(), _("Add to Queue\tAlt+Q"))
-
-			if item.get("external_urls", {}).get("spotify"):
-				menu.Append(self.MENU_COPY_LINK.GetId(), _("Copy Link\tAlt+L"))
-
-			if item_type == "artist":
-				menu.AppendSeparator()
-				menu.Append(self.MENU_FOLLOW.GetId(), _("Follow/Unfollow Artist\tAlt+F"))
-				menu.Append(self.MENU_DISCO.GetId(), _("View Discography\tAlt+D"))
-
-			elif item_type == "album":
-				menu.AppendSeparator()
-				save_item = menu.Append(wx.ID_ANY, _("Save Album"))
-				self.Bind(wx.EVT_MENU, self.on_save_album, save_item)
-				playlist_submenu = wx.Menu()
-				if self._user_playlists:
-					for playlist in self._user_playlists:
-						menu_item = playlist_submenu.Append(wx.ID_ANY, playlist.get("name", "Unknown"))
-						self.Bind(
-							wx.EVT_MENU,
-							lambda event, playlist=playlist: self._on_add_album_to_playlist_selected(
-								event, playlist.get("id"), playlist.get("name")
-							),
-							menu_item,
-						)
-				else:
-					playlist_submenu.Append(wx.ID_ANY, _("No playlists found.")).Enable(False)
-				menu.AppendSubMenu(playlist_submenu, _("Add Album to Playlist"))
-			elif item_type == "show":
-				menu.AppendSeparator()
-				# Enter already opens the episodes; the menu should say so too.
-				episodes_item = menu.Append(wx.ID_ANY, _("View Episodes"))
-				self.Bind(wx.EVT_MENU, lambda _e, s=item: self._open_podcast_episodes(s), episodes_item)
-				save_item = menu.Append(wx.ID_ANY, _("Save/Unsave Show"))
-				self.Bind(wx.EVT_MENU, self.on_save_show, save_item)
-			elif item_type == "audiobook":
-				menu.AppendSeparator()
-				chapters_item = menu.Append(wx.ID_ANY, _("View Chapters"))
-				self.Bind(wx.EVT_MENU, lambda _e, a=item: self._open_audiobook_chapters(a), chapters_item)
-				save_book_item = menu.Append(wx.ID_ANY, _("Save/Unsave Audiobook"))
-				self.Bind(wx.EVT_MENU, lambda _e, a=item: self._save_audiobook(a), save_book_item)
-			elif item_type == "playlist":
-				is_owned = item.get("owner", {}).get("id") == self._current_user_id
-				if not is_owned:
-					menu.AppendSeparator()
-					if self._owner_of(item):
-						owner_item = menu.Append(wx.ID_ANY, self._follow_owner_label(item))
-						self.Bind(
-							wx.EVT_MENU,
-							lambda _e, item=item: self._toggle_follow_user(self._owner_of(item)),
-							owner_item,
-						)
-					if is_followed is True:
-						unfollow_item = menu.Append(wx.ID_ANY, _("Unfollow Playlist"))
-						self.Bind(
-							wx.EVT_MENU, lambda _e: self.on_toggle_follow_playlist(item, True), unfollow_item
-						)
-					elif is_followed is False:
-						follow_item = menu.Append(wx.ID_ANY, _("Follow Playlist"))
-						self.Bind(
-							wx.EVT_MENU, lambda _e: self.on_toggle_follow_playlist(item, False), follow_item
-						)
-
-			elif item_type == "track":
-				menu.AppendSeparator()
-				playlist_submenu = wx.Menu()
-
-				if self._user_playlists is None:
-					loading_item = playlist_submenu.Append(wx.ID_ANY, _("Loading playlists..."))
-					loading_item.Enable(False)
-				elif self._user_playlists:
-					for playlist in self._user_playlists:
-						menu_item = playlist_submenu.Append(
-							wx.ID_ANY, playlist.get("name", "Unknown Playlist")
-						)
-						self.Bind(
-							wx.EVT_MENU,
-							lambda event, playlist=playlist: self._on_add_to_playlist_selected(
-								event, playlist.get("id"), playlist.get("name")
-							),
-							menu_item,
-						)
-				else:
-					no_playlist_item = playlist_submenu.Append(wx.ID_ANY, _("No owned playlists found."))
-					no_playlist_item.Enable(False)
-
-				menu.AppendSubMenu(playlist_submenu, _("Add to Playlist"))
-				self._append_go_to_options_for_track(menu, item)
-
-			if menu.GetMenuItemCount():
-				self.PopupMenu(menu)
-			menu.Destroy()
-
-		if item.get("type") == "playlist" and item.get("owner", {}).get("id") != self._current_user_id:
+		if item.get("type") == "playlist" and not self._is_own_playlist(item):
 
 			def _check_and_show():
 				result = self.client.library_contains([item.get("id")], "playlist")
-				is_followed_status = result[0] if isinstance(result, list) and result else False
-				wx.CallAfter(show_menu, is_followed_status)
+				is_followed = result[0] if isinstance(result, list) and result else False
+				wx.CallAfter(self._show_results_menu, item, is_followed)
 
 			thread_manager.submit_task(_check_and_show, name="DialogTask", daemon=True)
 		else:
-			show_menu()
+			self._show_results_menu(item)
 
-	def _on_add_to_playlist_selected(self, _event, playlist_id, playlist_name):
-		"""Handles when a playlist is selected from the submenu."""
-		track = self._get_item_at_index(self.resultsList.GetSelection())
-		if not track or track.get("type") != "track":
+	def _show_results_menu(self, item, is_followed=None):
+		"""The context menu for a result. is_followed matters only for others' playlists."""
+		menu = wx.Menu()
+		item_type = item.get("type")
+		if item.get("uri"):
+			menu.Append(self.MENU_PLAY.GetId(), _("Play\tAlt+P"))
+		if item_type in ("track", "album", "playlist"):
+			menu.Append(self.MENU_ADD_QUEUE.GetId(), _("Add to Queue\tAlt+Q"))
+		if item.get("external_urls", {}).get("spotify"):
+			menu.Append(self.MENU_COPY_LINK.GetId(), _("Copy Link\tAlt+L"))
+
+		append_type_items = {
+			"artist": self._append_artist_items,
+			"album": self._append_album_items,
+			"show": self._append_show_items,
+			"audiobook": self._append_audiobook_items,
+			"playlist": lambda menu, item: self._append_playlist_items(menu, item, is_followed),
+			"track": self._append_track_items,
+		}.get(item_type)
+		if append_type_items:
+			append_type_items(menu, item)
+		if menu.GetMenuItemCount():
+			self.PopupMenu(menu)
+		menu.Destroy()
+
+	def _append_artist_items(self, menu, _item):
+		menu.AppendSeparator()
+		menu.Append(self.MENU_FOLLOW.GetId(), _("Follow/Unfollow Artist\tAlt+F"))
+		menu.Append(self.MENU_DISCO.GetId(), _("View Discography\tAlt+D"))
+
+	def _append_album_items(self, menu, item):
+		menu.AppendSeparator()
+		self._append_menu_item(menu, _("Save Album"), self.on_save_album)
+		self._append_add_to_playlist(menu, item, self._user_playlists or [])
+
+	def _append_show_items(self, menu, item):
+		menu.AppendSeparator()
+		# Enter already opens the episodes; the menu should say so too.
+		self._append_menu_item(menu, _("View Episodes"), lambda _evt: self._open_podcast_episodes(item))
+		self._append_menu_item(menu, _("Save/Unsave Show"), self.on_save_show)
+
+	def _append_audiobook_items(self, menu, item):
+		menu.AppendSeparator()
+		self._append_menu_item(menu, _("View Chapters"), lambda _evt: self._open_audiobook_chapters(item))
+		self._append_menu_item(menu, _("Save/Unsave Audiobook"), lambda _evt: self._save_audiobook(item))
+
+	def _append_playlist_items(self, menu, item, is_followed):
+		if self._is_own_playlist(item):
 			return
-
-		track_uri = track.get("uri")
-
-		if not playlist_id or not track_uri:
-			ui.message(_("Could not add track. Information missing."))
-			return
-
-		ui.message(
-			_("Adding '{track_name}' to '{playlist_name}'...").format(
-				track_name=track.get("name"), playlist_name=playlist_name
+		menu.AppendSeparator()
+		if self._owner_of(item):
+			self._append_menu_item(
+				menu,
+				self._follow_owner_label(item),
+				lambda _evt: self._toggle_follow_user(self._owner_of(item)),
 			)
-		)
+		if is_followed is not None:
+			label = _("Unfollow Playlist") if is_followed else _("Follow Playlist")
+			self._append_menu_item(
+				menu,
+				label,
+				lambda _evt: self.on_toggle_follow_playlist(item, is_currently_followed=is_followed),
+			)
 
-		def _add_thread():
-			result = self.client.add_track_to_playlist(playlist_id, track_uri)
-			if isinstance(result, str):
-				wx.CallAfter(ui.message, result)
-			else:
-				wx.CallAfter(ui.message, _("Track added successfully."))
+	def _append_track_items(self, menu, item):
+		menu.AppendSeparator()
+		# None while the playlists are still loading.
+		self._append_add_to_playlist(menu, item, self._user_playlists)
+		self._append_go_to_options_for_track(menu, item)
 
-		thread_manager.submit_task(_add_thread, name="DialogTask", daemon=True)
+	def _is_own_playlist(self, playlist):
+		return playlist.get("owner", {}).get("id") == self._current_user_id
 
 	def on_save_album(self, _evt=None):
 		item = self._get_item_at_index(self.resultsList.GetSelection())
 		if item:
 			self._save_album_to_library(item)
-
-	def _on_add_album_to_playlist_selected(self, _event, playlist_id, playlist_name):
-		album = self._get_item_at_index(self.resultsList.GetSelection())
-		if not album or album.get("type") != "album":
-			return
-
-		album_id = album.get("id")
-		ui.message(
-			_("Adding all tracks from '{album}' to '{playlist}'...").format(
-				album=album.get("name"), playlist=playlist_name
-			)
-		)
-
-		def _process():
-			result = self.client.add_album_to_playlist(playlist_id, album_id)
-			if result is True:
-				wx.CallAfter(ui.message, _("Album added to playlist successfully."))
-			else:
-				wx.CallAfter(ui.message, str(result))
-
-		thread_manager.submit_task(_process, name="DialogTask", daemon=True)
 
 	def on_save_show(self, _evt=None):
 		item = self._get_item_at_index(self.resultsList.GetSelection())
@@ -642,7 +565,7 @@ class SearchDialog(AccessifyDialog):
 		if item:
 			copy_link(item.get("external_urls", {}).get("spotify"))
 
-	def on_toggle_follow_playlist(self, playlist_item, is_currently_followed):
+	def on_toggle_follow_playlist(self, playlist_item, *, is_currently_followed):
 		playlist_id = playlist_item.get("id")
 		playlist_name = playlist_item.get("name")
 

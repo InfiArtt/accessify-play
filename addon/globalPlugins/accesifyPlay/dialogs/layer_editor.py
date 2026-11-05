@@ -133,7 +133,7 @@ class LayerEditorDialog(AccessifyDialog):
 		btn_box = wx.BoxSizer(wx.HORIZONTAL)
 
 		self.btn_edit = wx.Button(self, label=_("&Edit..."))
-		self.btn_edit.Enable(False)
+		self.btn_edit.Enable(enable=False)
 		btn_box.Add(self.btn_edit, 0, wx.RIGHT, 10)
 
 		self.btn_reset = wx.Button(self, label=_("&Reset to Defaults"))
@@ -183,10 +183,10 @@ class LayerEditorDialog(AccessifyDialog):
 			self.item_data_map[i] = script_id
 
 	def on_selection(self, _evt):
-		self.btn_edit.Enable(True)
+		self.btn_edit.Enable(enable=True)
 
 	def on_deselection(self, _evt):
-		self.btn_edit.Enable(False)
+		self.btn_edit.Enable(enable=False)
 
 	def on_edit(self, _evt):
 		idx = self.list_ctrl.GetFirstSelected()

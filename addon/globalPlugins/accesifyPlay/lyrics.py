@@ -8,6 +8,7 @@
 import functools
 import re
 import threading
+from typing import NamedTuple
 
 import addonHandler
 import requests
@@ -16,6 +17,20 @@ import wx
 from logHandler import log
 
 LRCLIB_BASE = "https://lrclib.net/api"
+
+
+class Lyrics(NamedTuple):
+	"""What the lyrics window shows for one song."""
+
+	track: str
+	artist: str
+	plain: str | None
+	#: [(milliseconds, line)] when the lines are timed, else None.
+	synced: list | None = None
+
+
+#: A lyric line still gets spoken when it is at most this late.
+LATE_LINE_TOLERANCE_MS = 200
 
 
 # ---------------------------------------------------------------------------
@@ -183,8 +198,7 @@ class LyricsAutoReader:
 			scheduled = 0
 			for line_ms, text in lines:
 				delay_ms = line_ms - progress_ms
-				# Skip lines already more than 0.2 s in the past
-				if delay_ms < -200:
+				if delay_ms < -LATE_LINE_TOLERANCE_MS:
 					continue
 				delay_s = max(0.0, delay_ms / 1000.0)
 				# Pass ms so _speak can fire the line_callback for auto-scroll

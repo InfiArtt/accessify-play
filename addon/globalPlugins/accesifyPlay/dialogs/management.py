@@ -6,6 +6,8 @@
 """The library and playlist manager (M in the command layer)."""
 
 import threading
+from collections.abc import Callable
+from typing import NamedTuple
 
 import gui
 import ui
@@ -23,6 +25,24 @@ from .playlist_forms import CreatePlaylistDialog, PlaylistDetailsDialog
 from .podcasts import PodcastEpisodesDialog
 
 init_translation()
+
+
+def _name_and_artists(item):
+	"""A track or album as "name - artist, artist"."""
+	return f"{item['name']} - {', '.join(a['name'] for a in item['artists'])}"
+
+
+class _ListTab(NamedTuple):
+	"""One of the library's plain list tabs."""
+
+	key: str
+	title: str
+	loader: Callable
+	formatter: Callable
+	#: Picks the item out of what Spotify lists (a saved track wraps its track).
+	item_parser: Callable = lambda item: item
+	#: What Enter does; plays the item when None.
+	activate: Callable | None = None
 
 
 class ManagementDialog(AccessifyDialog):
@@ -149,32 +169,6 @@ class ManagementDialog(AccessifyDialog):
 		link = item.get("external_urls", {}).get("spotify")
 		copy_link(link)
 
-	def _on_add_to_playlist_selected(self, _event, playlist_id, playlist_name):
-		track = self._get_selected_item()
-		if not track or track.get("type") != "track":
-			return
-
-		track_uri = track.get("uri")
-
-		if not playlist_id or not track_uri:
-			ui.message(_("Could not add track. Information missing."))
-			return
-
-		ui.message(
-			_("Adding '{track_name}' to '{playlist_name}'...").format(
-				track_name=track.get("name"), playlist_name=playlist_name
-			)
-		)
-
-		def _add_thread():
-			result = self.client.add_track_to_playlist(playlist_id, track_uri)
-			if isinstance(result, str):
-				wx.CallAfter(ui.message, result)
-			else:
-				wx.CallAfter(ui.message, _("Track added successfully."))
-
-		thread_manager.submit_task(_add_thread, name="DialogTask", daemon=True)
-
 	def _handle_refresh(self, _evt=None):
 		focused_control = self.FindFocus()
 		if not isinstance(focused_control, (wx.ListBox, wx.TreeCtrl, wx.ComboBox)):
@@ -207,75 +201,67 @@ class ManagementDialog(AccessifyDialog):
 		self.notebook = wx.Notebook(panel)
 		main_sizer.Add(self.notebook, 1, wx.EXPAND | wx.ALL, 5)
 
-		# Inisialisasi setiap tab
 		self.init_manage_playlists_tab()
-		self.init_generic_list_tab(
-			"saved_tracks",
-			_("Saved Tracks"),
-			self.load_saved_tracks,
-			display_formatter=lambda t: f"{t['name']} - {', '.join([a['name'] for a in t['artists']])}",
-			item_parser=lambda item: item["track"],
-			initial_data_key="saved_tracks",
-		)
-		self.init_generic_list_tab(
-			"saved_albums",
-			_("Saved Albums"),
-			self.load_saved_albums,
-			display_formatter=lambda a: f"{a['name']} - {', '.join([x['name'] for x in a['artists']])}",
-			item_parser=lambda item: item["album"],
-			initial_data_key="saved_albums",
-			activate_handler=self.on_view_album_tracks,
-		)
-		self.init_generic_list_tab(
-			"followed_artists",
-			_("Followed Artists"),
-			self.load_followed_artists,
-			display_formatter=lambda a: a["name"],
-			initial_data_key="followed_artists",
-			activate_handler=lambda: self.on_view_discography(None),
-		)
+		for tab in (
+			_ListTab(
+				"saved_tracks",
+				_("Saved Tracks"),
+				self.load_saved_tracks,
+				_name_and_artists,
+				item_parser=lambda item: item["track"],
+			),
+			_ListTab(
+				"saved_albums",
+				_("Saved Albums"),
+				self.load_saved_albums,
+				_name_and_artists,
+				item_parser=lambda item: item["album"],
+				activate=self.on_view_album_tracks,
+			),
+			_ListTab(
+				"followed_artists",
+				_("Followed Artists"),
+				self.load_followed_artists,
+				lambda a: a["name"],
+				activate=lambda: self.on_view_discography(None),
+			),
+		):
+			self.init_generic_list_tab(tab)
 		self.init_top_items_tab()
-		self.init_generic_list_tab(
-			"saved_shows",
-			_("Saved Shows"),
-			self.load_saved_shows,
-			display_formatter=lambda s: f"{s['name']} - {s['publisher']}",
-			item_parser=lambda item: item["show"],
-			initial_data_key="saved_shows",
-			activate_handler=lambda: self.on_view_episodes(None),
-		)
-		self.init_generic_list_tab(
-			"saved_episodes",
-			_("Saved Episodes"),
-			self.load_saved_episodes,
-			display_formatter=self._format_saved_episode,
-			item_parser=lambda item: item["episode"],
-			initial_data_key="saved_episodes",
-		)
-		self.init_generic_list_tab(
-			"saved_audiobooks",
-			_("Saved Audiobooks"),
-			self.load_saved_audiobooks,
-			display_formatter=self._format_saved_audiobook,
-			item_parser=lambda item: item.get("audiobook", item),
-			initial_data_key="saved_audiobooks",
-			activate_handler=lambda: self.on_view_chapters(None),
-		)
-		self.init_generic_list_tab(
-			"new_releases",
-			_("New Releases"),
-			self.load_new_releases,
-			display_formatter=lambda a: f"{a['name']} - {', '.join([x['name'] for x in a['artists']])}",
-			initial_data_key="new_releases",
-		)
-		self.init_generic_list_tab(
-			"recently_played",
-			_("Recently Played"),
-			self.load_recently_played,
-			display_formatter=lambda t: f"{t['name']} - {', '.join([a['name'] for a in t['artists']])}",
-			item_parser=lambda item: item["track"],
-			initial_data_key="recently_played",
-		)
+		for tab in (
+			_ListTab(
+				"saved_shows",
+				_("Saved Shows"),
+				self.load_saved_shows,
+				lambda s: f"{s['name']} - {s['publisher']}",
+				item_parser=lambda item: item["show"],
+				activate=lambda: self.on_view_episodes(None),
+			),
+			_ListTab(
+				"saved_episodes",
+				_("Saved Episodes"),
+				self.load_saved_episodes,
+				self._format_saved_episode,
+				item_parser=lambda item: item["episode"],
+			),
+			_ListTab(
+				"saved_audiobooks",
+				_("Saved Audiobooks"),
+				self.load_saved_audiobooks,
+				self._format_saved_audiobook,
+				item_parser=lambda item: item.get("audiobook", item),
+				activate=lambda: self.on_view_chapters(None),
+			),
+			_ListTab("new_releases", _("New Releases"), self.load_new_releases, _name_and_artists),
+			_ListTab(
+				"recently_played",
+				_("Recently Played"),
+				self.load_recently_played,
+				_name_and_artists,
+				item_parser=lambda item: item["track"],
+			),
+		):
+			self.init_generic_list_tab(tab)
 
 		buttons_sizer = wx.StdDialogButtonSizer()
 		close_button = wx.Button(panel, wx.ID_CANCEL, label=_("&Close"))
@@ -286,18 +272,10 @@ class ManagementDialog(AccessifyDialog):
 
 		panel.SetSizer(main_sizer)
 
-	def init_generic_list_tab(
-		self,
-		key,
-		title,
-		loader_func,
-		display_formatter,
-		item_parser=lambda i: i,
-		initial_data_key=None,
-		activate_handler=None,
-	):
+	def init_generic_list_tab(self, tab):
+		key = tab.key
 		panel = wx.Panel(self.notebook)
-		self.notebook.AddPage(panel, title)
+		self.notebook.AddPage(panel, tab.title)
 		sizer = wx.BoxSizer(wx.VERTICAL)
 		panel.SetSizer(sizer)
 
@@ -307,21 +285,19 @@ class ManagementDialog(AccessifyDialog):
 		self.tabs_config[key] = {
 			"control": list_control,
 			"data_attr": key,
-			"loader": loader_func,
-			"formatter": display_formatter,
-			"item_parser": item_parser,
+			"loader": tab.loader,
+			"formatter": tab.formatter,
+			"item_parser": tab.item_parser,
 		}
 
-		self._bind_list_activation(list_control, activate_handler or self._handle_play)
+		self._bind_list_activation(list_control, tab.activate or self._handle_play)
 		list_control.Bind(wx.EVT_CONTEXT_MENU, self._on_list_context_menu)
 
 		refresh_button = wx.Button(panel, label=_("&Refresh"))
-		refresh_button.Bind(wx.EVT_BUTTON, lambda _evt, func=loader_func: func())
+		refresh_button.Bind(wx.EVT_BUTTON, lambda _evt: tab.loader())
 		sizer.Add(refresh_button, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
 
-		self._register_page(
-			panel, loader_func, list_control, initial_data=self.preloaded_data.get(initial_data_key)
-		)
+		self._register_page(panel, tab.loader, list_control, initial_data=self.preloaded_data.get(key))
 
 	def _populate_generic_list(self, key, data):
 		if not self:
@@ -632,7 +608,7 @@ class ManagementDialog(AccessifyDialog):
 		"""Reload the playlist on screen after changing it, keeping the cursor."""
 		self._show_selected_playlist(force=True, keep_row=self.playlist_tracks_list.GetSelection())
 
-	def _show_selected_playlist(self, force=False, keep_row=None):
+	def _show_selected_playlist(self, *, force=False, keep_row=None):
 		selection_index = self.playlist_choices.GetSelection()
 		if selection_index == wx.NOT_FOUND or selection_index >= len(self.user_playlists):
 			return
@@ -757,27 +733,6 @@ class ManagementDialog(AccessifyDialog):
 		self._playlistDetailsDialog = dialog
 		dialog.Show()
 
-	def _on_add_album_to_playlist_selected(self, _event, playlist_id, playlist_name):
-		album = self._get_selected_item()
-		if not album or album.get("type") != "album":
-			return
-
-		album_id = album.get("id")
-		ui.message(
-			_("Adding all tracks from '{album}' to '{playlist}'...").format(
-				album=album.get("name"), playlist=playlist_name
-			)
-		)
-
-		def _process():
-			result = self.client.add_album_to_playlist(playlist_id, album_id)
-			if result is True:
-				wx.CallAfter(ui.message, _("Album added to playlist successfully."))
-			else:
-				wx.CallAfter(ui.message, str(result))
-
-		thread_manager.submit_task(_process, name="DialogTask", daemon=True)
-
 	def _on_playlist_details_dialog_close(self, evt):
 		if self._playlistDetailsDialog:
 			self._playlistDetailsDialog = None
@@ -841,7 +796,7 @@ class ManagementDialog(AccessifyDialog):
 		track_selection = self.playlist_tracks_list.GetSelection()
 		playlist_selection = self.playlist_choices.GetSelection()
 
-		if track_selection == wx.NOT_FOUND or playlist_selection == wx.NOT_FOUND:
+		if wx.NOT_FOUND in (track_selection, playlist_selection):
 			ui.message(_("Please select a track to remove."))
 			return
 		if self._tracks_loading or track_selection >= len(self.current_playlist_tracks):
@@ -958,7 +913,7 @@ class ManagementDialog(AccessifyDialog):
 		playlist_selection = self.playlist_choices.GetSelection()
 		track_selection = self.playlist_tracks_list.GetSelection()
 
-		if track_selection == wx.NOT_FOUND or playlist_selection == wx.NOT_FOUND:
+		if wx.NOT_FOUND in (track_selection, playlist_selection):
 			return
 		if self._tracks_loading or track_selection >= len(self.current_playlist_tracks):
 			return
@@ -1177,81 +1132,60 @@ class ManagementDialog(AccessifyDialog):
 		if item.get("external_urls", {}).get("spotify"):
 			self._append_menu_item(menu, _("Copy Link"), self._handle_copy_link)
 
-		focused_control = self.FindFocus()
-		if focused_control == self.tabs_config["saved_tracks"]["control"]:
-			self._append_menu_item(menu, _("Remove from Library"), self.on_remove_from_library)
-		elif focused_control == self.tabs_config["followed_artists"]["control"]:
-			self._append_menu_item(menu, _("View Discography"), self.on_view_discography)
-			self._append_menu_item(menu, _("Unfollow"), self.on_unfollow_artist)
-		elif focused_control == self.tabs_config["saved_albums"]["control"]:
-			self._append_menu_item(menu, _("View Album Tracks"), self.on_view_album_tracks)
-			self._append_menu_item(menu, _("Remove from Library"), self.on_remove_album_from_library)
-		elif item.get("type") in ("artist", "album"):
+		tab_items = self._tab_menu_items(item)
+		for label, handler in tab_items:
+			self._append_menu_item(menu, label, handler)
+		if not tab_items and item.get("type") in ("artist", "album"):
 			self._append_menu_item(menu, _("View Discography"), self.on_view_discography)
 			if item.get("type") == "album":
 				self._append_menu_item(menu, _("View Album Tracks"), self.on_view_album_tracks)
 				menu.AppendSeparator()
-				playlist_submenu = wx.Menu()
-				owned_playlists_count = 0
-				if self.user_playlists:
-					for playlist in self.user_playlists:
-						if playlist.get("owner", {}).get("id") == self.current_user_id:
-							menu_item = playlist_submenu.Append(
-								wx.ID_ANY, safe_text(playlist.get("name"), _("Unknown"))
-							)
-							self.Bind(
-								wx.EVT_MENU,
-								lambda event, playlist=playlist: self._on_add_album_to_playlist_selected(
-									event, playlist.get("id"), playlist.get("name")
-								),
-								menu_item,
-							)
-							owned_playlists_count += 1
-
-				if owned_playlists_count == 0:
-					playlist_submenu.Append(wx.ID_ANY, _("No owned playlists found.")).Enable(False)
-
-				menu.AppendSubMenu(playlist_submenu, _("Add Album to Playlist"))
-		elif focused_control == self.tabs_config["saved_shows"]["control"]:
-			self._append_menu_item(menu, _("View Episodes"), self.on_view_episodes)
-			self._append_menu_item(menu, _("Remove from Library"), self.on_remove_show_from_library)
-		elif focused_control == self.tabs_config["saved_episodes"]["control"]:
-			show = item.get("show") or {}
-			if show.get("id"):
-				show_name = safe_text(show.get("name"), _("this show"))
-				self._append_menu_item(
-					menu,
-					_("View All Episodes of {show}").format(show=show_name),
-					self.on_view_episode_show,
-				)
-			self._append_menu_item(menu, _("Remove from Library"), self.on_remove_episode_from_library)
-		elif focused_control == self.tabs_config["saved_audiobooks"]["control"]:
-			self._append_menu_item(menu, _("View Chapters"), self.on_view_chapters)
-			self._append_menu_item(menu, _("Remove from Library"), self.on_remove_audiobook_from_library)
-		if item and item.get("type") == "track":
+				owned = [p for p in self.user_playlists or () if self._is_owned(p)]
+				self._append_add_to_playlist(menu, item, owned)
+		if item.get("type") == "track":
 			menu.AppendSeparator()
-			playlist_submenu = wx.Menu()
-			if self.user_playlists:
-				for playlist in self.user_playlists:
-					menu_item = playlist_submenu.Append(
-						wx.ID_ANY, safe_text(playlist.get("name"), _("Unknown Playlist"))
-					)
-					self.Bind(
-						wx.EVT_MENU,
-						lambda event, playlist=playlist: self._on_add_to_playlist_selected(
-							event, playlist.get("id"), playlist.get("name")
-						),
-						menu_item,
-					)
-			else:
-				no_playlist_item = playlist_submenu.Append(wx.ID_ANY, _("No owned playlists found."))
-				no_playlist_item.Enable(False)
-
-			menu.AppendSubMenu(playlist_submenu, _("Add to Playlist"))
+			self._append_add_to_playlist(menu, item, self.user_playlists or [])
 			self._append_go_to_options_for_track(menu, item)
 		if menu.GetMenuItemCount():
 			self.PopupMenu(menu)
 		menu.Destroy()
+
+	def _tab_menu_items(self, item):
+		"""The menu items that belong to the focused library tab, as (label, handler) pairs."""
+		focused = self.FindFocus()
+		tab = next((key for key, cfg in self.tabs_config.items() if cfg["control"] == focused), None)
+		remove = _("Remove from Library")
+		episode_items = []
+		show = item.get("show") or {}
+		if show.get("id"):
+			show_name = safe_text(show.get("name"), _("this show"))
+			episode_items.append(
+				(_("View All Episodes of {show}").format(show=show_name), self.on_view_episode_show)
+			)
+		items_by_tab = {
+			"saved_tracks": [(remove, self.on_remove_from_library)],
+			"followed_artists": [
+				(_("View Discography"), self.on_view_discography),
+				(_("Unfollow"), self.on_unfollow_artist),
+			],
+			"saved_albums": [
+				(_("View Album Tracks"), self.on_view_album_tracks),
+				(remove, self.on_remove_album_from_library),
+			],
+			"saved_shows": [
+				(_("View Episodes"), self.on_view_episodes),
+				(remove, self.on_remove_show_from_library),
+			],
+			"saved_episodes": [*episode_items, (remove, self.on_remove_episode_from_library)],
+			"saved_audiobooks": [
+				(_("View Chapters"), self.on_view_chapters),
+				(remove, self.on_remove_audiobook_from_library),
+			],
+		}
+		return items_by_tab.get(tab, [])
+
+	def _is_owned(self, playlist):
+		return playlist.get("owner", {}).get("id") == self.current_user_id
 
 	def on_playlist_context_menu(self, _evt):
 		selection = self.playlist_tracks_list.GetSelection()
@@ -1272,12 +1206,20 @@ class ManagementDialog(AccessifyDialog):
 		self.PopupMenu(menu)
 		menu.Destroy()
 
-	def _remove_selected(self, kind, ask, title, done, reload, fallback_name=None):
+	def _remove_selected(self, kind, ask, title, done, fallback_name=None):
 		"""Confirm, then remove the selected item from the library (or unfollow it).
 
 		ask and done turn the item's name into the question and the message
-		said afterwards; reload refreshes the tab once Spotify has done it.
+		said afterwards. The tab is reloaded once Spotify has done it.
 		"""
+		reload = {
+			"track": self.load_saved_tracks,
+			"episode": self.load_saved_episodes,
+			"audiobook": self.load_saved_audiobooks,
+			"album": self.load_saved_albums,
+			"show": self.load_saved_shows,
+			"artist": self.load_followed_artists,
+		}[kind]
 		item = self._get_selected_item()
 		if not item or not item.get("id"):
 			return
@@ -1303,7 +1245,6 @@ class ManagementDialog(AccessifyDialog):
 			),
 			_("Confirm Remove Track"),
 			lambda n: _("Track '{track_name}' removed from your library.").format(track_name=n),
-			self.load_saved_tracks,
 		)
 
 	def on_view_episode_show(self, _evt=None):
@@ -1324,7 +1265,6 @@ class ManagementDialog(AccessifyDialog):
 			lambda n: _("Are you sure you want to remove '{name}' from your saved episodes?").format(name=n),
 			_("Confirm Remove Episode"),
 			lambda n: _("Episode '{name}' removed from your library.").format(name=n),
-			self.load_saved_episodes,
 			fallback_name=_("this episode"),
 		)
 
@@ -1336,7 +1276,6 @@ class ManagementDialog(AccessifyDialog):
 			),
 			_("Confirm Remove Audiobook"),
 			lambda n: _("Audiobook '{name}' removed from your library.").format(name=n),
-			self.load_saved_audiobooks,
 			fallback_name=_("this audiobook"),
 		)
 
@@ -1348,7 +1287,6 @@ class ManagementDialog(AccessifyDialog):
 			),
 			_("Confirm Remove Album"),
 			lambda n: _("Album '{album_name}' removed from your library.").format(album_name=n),
-			self.load_saved_albums,
 		)
 
 	def on_remove_show_from_library(self, _evt=None):
@@ -1359,7 +1297,6 @@ class ManagementDialog(AccessifyDialog):
 			),
 			_("Confirm Remove Show"),
 			lambda n: _("Show '{show_name}' removed from your library.").format(show_name=n),
-			self.load_saved_shows,
 		)
 
 	def on_unfollow_artist(self, _evt=None):
@@ -1368,7 +1305,6 @@ class ManagementDialog(AccessifyDialog):
 			lambda n: _("Are you sure you want to unfollow {artist_name}?").format(artist_name=n),
 			_("Confirm Unfollow"),
 			lambda n: _("You have unfollowed {artist_name}.").format(artist_name=n),
-			self.load_followed_artists,
 		)
 
 	def on_view_discography(self, _evt):
@@ -1410,10 +1346,6 @@ class ManagementDialog(AccessifyDialog):
 			ui.message(_("Please select a show to view episodes."))
 
 	# --- Other helpers ---
-	def _append_menu_item(self, menu, label, handler):
-		item = menu.Append(wx.ID_ANY, label)
-		menu.Bind(wx.EVT_MENU, handler, item)
-
 	def _open_create_playlist_dialog(self, _evt=None):
 		if self._createPlaylistDialog:
 			self._createPlaylistDialog.Raise()

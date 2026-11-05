@@ -266,23 +266,25 @@ del conf["ownClientID"], conf["clientID"]
 # --- 7. The poller paces itself and keeps the lyrics in time ----------------
 
 import ast
+import functools
 init_tree = ast.parse(init_src)
 pns = {}
 for node in init_tree.body:   # the POLL_* constants, from the source itself
     if isinstance(node, ast.Assign) and any(getattr(t, "id", "").startswith(("POLL_", "LYRIC_")) for t in node.targets):
         exec(compile(ast.Module(body=[node], type_ignores=[]), "consts", "exec"), pns)
 klass = next(n for n in init_tree.body if isinstance(n, ast.ClassDef) and n.name == "GlobalPlugin")
-fn = next(n for n in klass.body if isinstance(n, ast.FunctionDef) and n.name == "_poll_once")
+POLL_PARTS = ("_poll_once", "_keep_lyrics_in_time", "_on_track_changed")
+fns = [n for n in klass.body if isinstance(n, ast.FunctionDef) and n.name in POLL_PARTS]
 SAID, RESYNCS, TASKS = [], [], []
 CONF = {"announceTrackChanges": True}
 pns.update(
     time=time, log=types.SimpleNamespace(error=lambda *a, **k: None, exception=lambda *a, **k: None),
-    utils=types.SimpleNamespace(conf_get=lambda k, d=None: CONF.get(k, d)),
+    utils=types.SimpleNamespace(conf_get=lambda k, default=None: CONF.get(k, default)),
     wx=types.SimpleNamespace(CallAfter=lambda f, *a: f(*a)),
     nvda_ui=types.SimpleNamespace(message=SAID.append),
     thread_manager=types.SimpleNamespace(submit_task=lambda f, *a, **k: TASKS.append(f)),
 )
-exec(compile(ast.fix_missing_locations(ast.Module(body=[fn], type_ignores=[])), "poller", "exec"), pns)
+exec(compile(ast.fix_missing_locations(ast.Module(body=fns, type_ignores=[])), "poller", "exec"), pns)
 poll = pns["_poll_once"]
 check("no separate lyric resync poller any more", "_lyric_resync_poller" not in init_src)
 
@@ -295,9 +297,12 @@ def plugin(answers):
     answers = list(answers)
     client = types.SimpleNamespace(client=object(), run_request=lambda name: answers.pop(0),
                                    get_simple_track_string=lambda item: item["name"])
-    return types.SimpleNamespace(client=client, _auto_reader=Reader(), _auto_reader_synced_lyrics=None,
-                                 lyricsDialog=None, last_track_id=None, _last_is_playing=None,
-                                 _last_lyric_resync=0.0, _restart_auto_reader=None, _refresh_lyrics_window=None)
+    ns = types.SimpleNamespace(client=client, _auto_reader=Reader(), _auto_reader_synced_lyrics=None,
+                               lyricsDialog=None, last_track_id=None, _last_is_playing=None,
+                               _last_lyric_resync=0.0, _restart_auto_reader=None, _refresh_lyrics_window=None)
+    for name in POLL_PARTS[1:]:
+        setattr(ns, name, functools.partial(pns[name], ns))
+    return ns
 
 def playing(tid="t1", ms=1000, on=True):
     return {"is_playing": on, "progress_ms": ms, "item": {"id": tid, "name": f"Song {tid}"}}

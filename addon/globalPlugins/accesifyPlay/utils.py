@@ -16,6 +16,9 @@ from .language import init_translation
 
 init_translation()
 
+#: The shortest keep-alive interval, in seconds; 0 turns keep-alive off.
+KEEP_ALIVE_MIN_SECONDS = 5
+
 
 def run_in_thread(func):
 	"""Run the function in a background thread, ignoring its result."""

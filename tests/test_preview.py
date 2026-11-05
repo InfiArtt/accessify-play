@@ -39,9 +39,8 @@ def fake_fetch(track, artist, album, duration):
     if isinstance(r, Exception): raise r
     return r
 class FakeLyricsDialog:
-    def __init__(self, parent, track, artist, plain, synced_lines=None,
-                 seek_callback=None, jump_callback=None):
-        OPENED.append(dict(track=track, artist=artist, plain=plain, synced=synced_lines,
+    def __init__(self, parent, lyrics, seek_callback=None, jump_callback=None):
+        OPENED.append(dict(track=lyrics.track, artist=lyrics.artist, plain=lyrics.plain, synced=lyrics.synced,
                            seek=seek_callback, jump=jump_callback))
     def Show(self): pass
 mod("acc.dialogs.lyrics_window", LyricsDialog=FakeLyricsDialog)

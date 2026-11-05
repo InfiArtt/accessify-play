@@ -1214,12 +1214,6 @@ msgstr ""
 msgid "Add Album to Playlist"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:841
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1058
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:2572
-msgid "Unknown Playlist"
-msgstr ""
-
 #: addon/globalPlugins/accesifyPlay/dialogs/management.py:850
 #: addon/globalPlugins/accesifyPlay/dialogs/management.py:1067
 #: addon/globalPlugins/accesifyPlay/dialogs/management.py:2548
@@ -1248,15 +1242,6 @@ msgstr ""
 #: addon/globalPlugins/accesifyPlay/dialogs/management.py:1513
 #: addon/globalPlugins/accesifyPlay/dialogs/search.py:490
 msgid "Track added successfully."
-msgstr ""
-
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:912
-#, python-brace-format
-msgid "Adding tracks from '{album}' to '{playlist}'..."
-msgstr ""
-
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:920
-msgid "Album added successfully."
 msgstr ""
 
 #: addon/globalPlugins/accesifyPlay/dialogs/management.py:934

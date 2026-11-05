@@ -19,7 +19,7 @@ from ..language import (
 	LANGUAGE_DISPLAY_OVERRIDES,
 	init_translation,
 )
-from ..utils import conf_get
+from ..utils import KEEP_ALIVE_MIN_SECONDS, conf_get
 
 init_translation()
 
@@ -82,7 +82,7 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 		self.announceTrackChanges = s_helper.addItem(
 			wx.CheckBox(self, label=_("Announce track changes automatically:"))
 		)
-		self.announceTrackChanges.SetValue(conf_get("announceTrackChanges", False))
+		self.announceTrackChanges.SetValue(conf_get("announceTrackChanges", default=False))
 
 		# Translators: Label for an optional setting where users can enter the Client ID
 		# of a Spotify developer app of their own, instead of the shared one.
@@ -169,8 +169,8 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 			ui.message(_("Language changes will take effect after restarting NVDA."))
 			self._originalLanguage = selected_code
 		ka_val = self.keepAliveCtrl.GetValue()
-		if ka_val > 0 and ka_val < 5:
-			ka_val = 5
+		if 0 < ka_val < KEEP_ALIVE_MIN_SECONDS:
+			ka_val = KEEP_ALIVE_MIN_SECONDS
 			ui.message(_("Keep Alive interval adjusted to minimum 5 seconds."))
 
 		config.conf["spotify"]["keepAliveInterval"] = ka_val

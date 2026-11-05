@@ -12,7 +12,7 @@ from ..core.thread_manager import thread_manager
 from ..formatting import format_followers
 from ..language import init_translation
 from ..ui.base_dialog import AccessifyDialog
-from ..utils import conf_get, copy_link, safe_text
+from ..utils import conf_get, copy_link
 from .album import AlbumTracksDialog
 from .playlist import PlaylistTracksDialog
 
@@ -406,40 +406,36 @@ class ArtistDiscographyDialog(AccessifyDialog):
 		self.info_text.SetValue("\n".join(info_lines))
 
 	def _get_selected_item(self):
-		current_page_index = self.notebook.GetSelection()
-
-		if current_page_index == self.info_page_index:
+		page = self.notebook.GetSelection()
+		if page == self.info_page_index:
 			ui.message(_("This tab has informational content only."))
 			return None
-
-		if current_page_index == self.top_tracks_page_index:
-			selection = self.top_tracks_list.GetSelection()
-			if selection != wx.NOT_FOUND and selection < len(self.top_tracks):
-				return self.top_tracks[selection]
-
-		elif current_page_index == self.playlists_page_index:
-			selection = self.playlists_list.GetSelection()
-			if selection != wx.NOT_FOUND and selection < len(self.playlists):
-				return self.playlists[selection]
-
-		elif current_page_index == self.all_tracks_page_index:
-			selection = self.all_tracks_list.GetSelection()
-			if selection != wx.NOT_FOUND and selection < len(self.all_tracks):
-				return self.all_tracks[selection]
-			if self._is_all_tracks_load_more(selection):
-				ui.message(_("Loading more tracks..."))
-				self._load_more_all_tracks()
-				return None
-			if selection != wx.NOT_FOUND:
-				ui.message(_("Please select a track, or load more items."))
-				return None
-
-		elif current_page_index == self.albums_page_index:
-			selection = self.albums_list.GetSelection()
-			if selection != wx.NOT_FOUND:
-				return self.albums[selection]
-
+		if page == self.all_tracks_page_index:
+			return self._selected_all_tracks_item()
+		lists = {
+			self.top_tracks_page_index: (self.top_tracks_list, self.top_tracks),
+			self.playlists_page_index: (self.playlists_list, self.playlists),
+			self.albums_page_index: (self.albums_list, self.albums),
+		}
+		control, items = lists.get(page, (None, []))
+		selection = control.GetSelection() if control else wx.NOT_FOUND
+		if 0 <= selection < len(items):
+			return items[selection]
 		ui.message(_("Please select an item from the active tab first."))
+		return None
+
+	def _selected_all_tracks_item(self):
+		"""The selected track on the All Tracks tab; on its Load More row, load more."""
+		selection = self.all_tracks_list.GetSelection()
+		if 0 <= selection < len(self.all_tracks):
+			return self.all_tracks[selection]
+		if self._is_all_tracks_load_more(selection):
+			ui.message(_("Loading more tracks..."))
+			self._load_more_all_tracks()
+		elif selection != wx.NOT_FOUND:
+			ui.message(_("Please select a track, or load more items."))
+		else:
+			ui.message(_("Please select an item from the active tab first."))
 		return None
 
 	def _is_all_tracks_load_more(self, selection):
@@ -491,47 +487,15 @@ class ArtistDiscographyDialog(AccessifyDialog):
 			menu.AppendSeparator()
 			save_album_item = menu.Append(wx.ID_ANY, _("Save Album to Library"))
 			self.Bind(wx.EVT_MENU, lambda _evt, alb=item: self._save_album_to_library(alb), save_album_item)
-			playlist_submenu = wx.Menu()
-			if self._user_playlists:
-				for playlist in self._user_playlists:
-					menu_item = playlist_submenu.Append(
-						wx.ID_ANY, safe_text(playlist.get("name"), _("Unknown"))
-					)
-					self.Bind(
-						wx.EVT_MENU,
-						lambda _event, playlist=playlist, album=item: self._on_add_album_to_playlist_action(
-							playlist.get("id"), playlist.get("name"), album.get("id"), album.get("name")
-						),
-						menu_item,
-					)
-			else:
-				playlist_submenu.Append(wx.ID_ANY, _("No playlists found.")).Enable(False)
-			menu.AppendSubMenu(playlist_submenu, _("Add Album to Playlist"))
+			self._append_add_to_playlist(menu, item, self._user_playlists)
 		elif item_type == "track":
 			menu.AppendSeparator()
-			playlist_submenu = wx.Menu()
-			if self._user_playlists:
-				for playlist in self._user_playlists:
-					menu_item = playlist_submenu.Append(
-						wx.ID_ANY, safe_text(playlist.get("name"), _("Unknown Playlist"))
-					)
-					self.Bind(
-						wx.EVT_MENU,
-						lambda event, playlist=playlist: self._on_add_to_playlist_selected(
-							event, playlist.get("id"), playlist.get("name")
-						),
-						menu_item,
-					)
-			else:
-				no_playlist_item = playlist_submenu.Append(wx.ID_ANY, _("No owned playlists found."))
-				no_playlist_item.Enable(False)
-
-			menu.AppendSubMenu(playlist_submenu, _("Add to Playlist"))
+			self._append_add_to_playlist(menu, item, self._user_playlists)
 			self._append_go_to_options_for_track(menu, item)
 
-		if menu.GetMenuItemCount() > 0:
+		if menu.GetMenuItemCount():
 			self.PopupMenu(menu)
-			menu.Destroy()
+		menu.Destroy()
 
 	def on_play_selected(self, _evt=None):
 		item = self._get_selected_item()
@@ -557,44 +521,3 @@ class ArtistDiscographyDialog(AccessifyDialog):
 		if item:
 			link = item.get("external_urls", {}).get("spotify")
 			copy_link(link)
-
-	def _on_add_to_playlist_selected(self, _event, playlist_id, playlist_name):
-		track = self._get_selected_item()
-		if not track or track.get("type") != "track":
-			return
-
-		track_uri = track.get("uri")
-		if not playlist_id or not track_uri:
-			ui.message(_("Could not add track. Information missing."))
-			return
-
-		ui.message(
-			_("Adding '{track_name}' to '{playlist_name}'...").format(
-				track_name=track.get("name"), playlist_name=playlist_name
-			)
-		)
-
-		def _add_thread():
-			result = self.client.add_track_to_playlist(playlist_id, track_uri)
-			if isinstance(result, str):
-				wx.CallAfter(ui.message, result)
-			else:
-				wx.CallAfter(ui.message, _("Track added successfully."))
-
-		thread_manager.submit_task(_add_thread, name="DialogTask", daemon=True)
-
-	def _on_add_album_to_playlist_action(self, playlist_id, playlist_name, album_id, album_name):
-		ui.message(
-			_("Adding tracks from '{album}' to '{playlist}'...").format(
-				album=album_name, playlist=playlist_name
-			)
-		)
-
-		def _thread():
-			result = self.client.add_album_to_playlist(playlist_id, album_id)
-			if result is True:
-				wx.CallAfter(ui.message, _("Album added successfully."))
-			else:
-				wx.CallAfter(ui.message, str(result))
-
-		thread_manager.submit_task(_thread, name="DialogTask", daemon=True)
