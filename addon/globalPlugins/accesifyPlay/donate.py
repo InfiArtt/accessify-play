@@ -3,6 +3,8 @@
 # This file is covered by the GNU General Public License, version 2.
 # See the file LICENSE for more details.
 
+"""The donation link."""
+
 import webbrowser
 
 import wx
@@ -15,9 +17,7 @@ init_translation()
 
 
 def open_donate_link():
-	"""
-	Opens the PayPal donation link in the default web browser.
-	"""
+	"""Open the PayPal donation link in the default web browser."""
 	try:
 		# Translators: The message shown when the user clicks the donate button.
 		if (

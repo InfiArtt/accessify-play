@@ -3,6 +3,8 @@
 # This file is covered by the GNU General Public License, version 2.
 # See the file LICENSE for more details.
 
+"""The command layer's keys, as the user configured them."""
+
 import json
 
 from logHandler import log
@@ -61,7 +63,7 @@ class LayerConfigManager:
 		self.load()
 
 	def load(self):
-		"""Loads configuration from file, then injects any missing defaults."""
+		"""Load configuration from file, then injects any missing defaults."""
 		try:
 			if self.config_file.exists():
 				self.config = json.loads(self.config_file.read_text(encoding="utf-8"))
@@ -74,9 +76,10 @@ class LayerConfigManager:
 			self.reset_to_defaults()
 
 	def _inject_missing_defaults(self):
-		"""Adds any new commands from _default_specs that are missing from the
-		loaded config. Existing user customizations are left completely untouched.
-		Saves automatically if anything was injected.
+		"""Add the default commands missing from the loaded config.
+
+		Existing user customizations are left completely untouched. Saves
+		automatically if anything was added.
 		"""
 		injected = False
 		for script, gesture, desc, label, keep_open in self._default_specs:
@@ -93,14 +96,14 @@ class LayerConfigManager:
 			self.save()
 
 	def save(self):
-		"""Saves current configuration to file."""
+		"""Save current configuration to file."""
 		try:
 			self.config_file.write_text(json.dumps(self.config, indent=4), encoding="utf-8")
 		except Exception:
 			log.exception("Error saving layer config")
 
 	def reset_to_defaults(self):
-		"""Resets configuration to hardcoded defaults."""
+		"""Reset configuration to hardcoded defaults."""
 		self.config = {}
 		for script, gesture, desc, label, keep_open in self._default_specs:
 			self.config[script] = {
@@ -112,16 +115,18 @@ class LayerConfigManager:
 		self.save()
 
 	def get_script_config(self, script_name):
+		"""Return a command's keys and settings, or None."""
 		return self.config.get(script_name)
 
 	def set_script_config(self, script_name, gestures, keep_open):
+		"""Change a command's keys and whether the layer stays open after it."""
 		if script_name in self.config:
 			self.config[script_name]["gestures"] = gestures
 			self.config[script_name]["keep_open"] = keep_open
 			self.save()
 
 	def get_all_configs(self):
-		"""Returns a list of tuples for UI or processing."""
+		"""Return a list of tuples for UI or processing."""
 		# Ensure order matches default specs for consistency
 		result = []
 		for script, _, _, _, _ in self._default_specs:
@@ -131,7 +136,7 @@ class LayerConfigManager:
 		return result
 
 	def get_gesture_map(self):
-		"""Returns a dict of gesture -> script_name for binding."""
+		"""Return a dict of gesture -> script_name for binding."""
 		gesture_map = {}
 		for script, data in self.config.items():
 			for gesture in data.get("gestures", []):
@@ -139,4 +144,5 @@ class LayerConfigManager:
 		return gesture_map
 
 	def should_keep_open(self, script_name):
+		"""Return whether the layer stays open after this command."""
 		return self.config.get(script_name, {}).get("keep_open", False)

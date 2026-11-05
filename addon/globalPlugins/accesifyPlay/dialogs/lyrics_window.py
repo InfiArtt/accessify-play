@@ -3,6 +3,8 @@
 # This file is covered by the GNU General Public License, version 2.
 # See the file LICENSE for more details.
 
+"""The lyrics window."""
+
 import api
 import wx
 
@@ -13,8 +15,7 @@ init_translation()
 
 
 class LyricsDialog(AccessifyDialog):
-	"""
-	Popup window that displays lyrics for the current track.
+	"""Popup window that displays lyrics for the current track.
 
 	If synced lyrics are available:
 	- Lines are shown without timestamps (clean reading experience).
@@ -142,6 +143,7 @@ class LyricsDialog(AccessifyDialog):
 
 	def set_current_ms(self, playback_ms):
 		"""Move the cursor to the lyric line that best matches playback_ms.
+
 		Called automatically from the auto-reader's line_callback as each
 		line fires, giving a live auto-scroll effect while Y is active.
 		"""

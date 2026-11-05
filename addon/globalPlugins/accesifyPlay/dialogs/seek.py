@@ -3,6 +3,8 @@
 # This file is covered by the GNU General Public License, version 2.
 # See the file LICENSE for more details.
 
+"""Jump to a position in the current track."""
+
 import ui
 import wx
 from gui import guiHelper
@@ -15,6 +17,8 @@ init_translation()
 
 
 class SeekDialog(AccessifyDialog):
+	"""Jump to a time (1:30) or move by seconds (30, -10) in the current track."""
+
 	def __init__(self, parent, client):
 		super().__init__(parent, title=_("Seek / Jump"))
 		self.client = client
@@ -47,6 +51,7 @@ class SeekDialog(AccessifyDialog):
 		self.timeCtrl.SetFocus()
 
 	def on_seek(self, _evt):
+		"""Seek to what was typed."""
 		time_str = self.timeCtrl.GetValue().strip()
 		if not time_str:
 			return

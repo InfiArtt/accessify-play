@@ -3,6 +3,8 @@
 # This file is covered by the GNU General Public License, version 2.
 # See the file LICENSE for more details.
 
+"""Background threads that are tracked, so NVDA can stop them cleanly."""
+
 import threading
 import time
 
@@ -10,8 +12,8 @@ from logHandler import log
 
 
 class ThreadManager:
-	"""
-	Centralized manager for background threads.
+	"""Centralized manager for background threads.
+
 	Ensures threads are tracked and can be joined/stopped gracefully
 	when the addon is terminated, avoiding orphan processes that freeze NVDA.
 	"""
@@ -22,9 +24,7 @@ class ThreadManager:
 		self._is_running = True
 
 	def submit_task(self, target, *args, daemon=True, name=None, **kwargs):
-		"""
-		Submits a task to run in a background thread.
-		"""
+		"""Submit a task to run in a background thread."""
 		if not self._is_running:
 			return None
 
@@ -45,10 +45,10 @@ class ThreadManager:
 			return thread
 
 	def create_poller(self, target, interval_seconds=1, name=None):
-		"""
-		Creates a continuous polling thread that calls target every
-		interval_seconds. target may return a number of seconds to wait
-		before the next call instead, to poll faster or slower as needed.
+		"""Start a thread that calls target every interval_seconds.
+
+		target may return a number of seconds to wait before the next call
+		instead, to poll faster or slower as needed.
 		"""
 
 		def poller_wrapper():
@@ -70,9 +70,7 @@ class ThreadManager:
 		return self.submit_task(poller_wrapper, daemon=True, name=name)
 
 	def stop_all(self, timeout=1.0):
-		"""
-		Signals all managed threads to stop and waits for them up to `timeout`.
-		"""
+		"""Signal all managed threads to stop and wait for them up to `timeout`."""
 		self._is_running = False
 		with self._lock:
 			for thread in self._threads:

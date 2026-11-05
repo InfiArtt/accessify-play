@@ -18,6 +18,8 @@ init_translation()
 
 
 class AlbumTracksDialog(AccessifyDialog):
+	"""An album's tracks."""
+
 	MENU_PLAY = wx.NewIdRef()
 	MENU_ADD_QUEUE = wx.NewIdRef()
 	MENU_COPY_LINK = wx.NewIdRef()
@@ -135,6 +137,7 @@ class AlbumTracksDialog(AccessifyDialog):
 		return self.tracks[selection]
 
 	def on_context_menu(self, _evt):
+		"""Show the actions for the selected track."""
 		track = self._get_selected_track()
 		if not track:
 			return
@@ -152,6 +155,7 @@ class AlbumTracksDialog(AccessifyDialog):
 		menu.Destroy()
 
 	def on_play_selected(self, _evt=None):
+		"""Play the album from the selected track."""
 		track = self._get_selected_track()
 		if not track:
 			return
@@ -168,11 +172,13 @@ class AlbumTracksDialog(AccessifyDialog):
 			self._play_uri(track_uri)
 
 	def on_add_to_queue(self, _evt=None):
+		"""Add the selected track to the queue."""
 		track = self._get_selected_track()
 		if track:
 			self._queue_add_track(track.get("uri"), track.get("name"))
 
 	def on_copy_link(self, _evt=None):
+		"""Copy the selected track's Spotify link."""
 		track = self._get_selected_track()
 		if track:
 			link = track.get("external_urls", {}).get("spotify")

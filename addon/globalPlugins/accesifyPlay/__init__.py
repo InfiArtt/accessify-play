@@ -3,6 +3,8 @@
 # This file is covered by the GNU General Public License, version 2.
 # See the file LICENSE for more details.
 
+"""Accessify Play: control Spotify from NVDA, with a command layer and accessible dialogs."""
+
 import json
 import sys
 import threading
@@ -79,6 +81,8 @@ init_translation()
 
 
 class GlobalPlugin(globalPluginHandler.GlobalPlugin):
+	"""The add-on: its scripts, the track poller and the windows it opens."""
+
 	scriptCategory = _("Accessify Play")
 
 	def __init__(self):
@@ -153,6 +157,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	# see CommandLayerManager.
 
 	def terminate(self):
+		"""Stop pollers, timers and windows when NVDA unloads the add-on."""
 		super().terminate()
 		self.is_running = False
 
@@ -194,7 +199,8 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 				dialog.Destroy()
 
 	def track_change_poller(self):
-		"""Single-pass poll for track changes. Called repeatedly by thread_manager.create_poller().
+		"""Poll once for track changes; thread_manager.create_poller() repeats it.
+
 		Do NOT add a while loop here — create_poller() already handles the polling cycle.
 
 		Returns how long to wait before the next poll: every request counts
@@ -294,6 +300,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
 	def _seek_to_position(self, position_ms):
 		"""Seek Spotify playback to an absolute position (milliseconds).
+
 		Called by LyricsDialog when the user presses Enter on a lyric line.
 		Uses run_on_device(client.seek_track) directly to perform an ABSOLUTE seek,
 		bypassing the seek_track() wrapper which does a relative offset seek.
@@ -309,8 +316,9 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		_do_seek()
 
 	def _jump_lyrics_to_current(self):
-		"""Fetch the current Spotify playback position and scroll the lyrics
-		window cursor to the matching line. Called by the 'Jump to Current' button.
+		"""Move the lyrics window's cursor to the line playing now.
+
+		Called by the 'Jump to Current' button.
 		"""
 
 		@utils.run_in_thread
@@ -328,6 +336,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
 	def _restart_auto_reader(self, item, progress_ms):
 		"""Fetch lyrics for a new track and restart the auto-reader.
+
 		Called in a background thread when track_change_poller detects a song change.
 		Also updates the lyrics window in-place if it is currently open.
 		"""
@@ -377,6 +386,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
 	def _refresh_lyrics_window(self, item):
 		"""Fetch plain lyrics for a new track and update the open lyrics window.
+
 		Called when song changes and window is open but auto-reader is not active.
 		"""
 		track_name = item.get("name", "")
@@ -619,13 +629,15 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	def script_activateCommandLayer(self, _gesture):
 		self.commandLayer.activate()
 
-	def script_commandLayerHelp(self, _gesture):
+	# The next three are layer keys, not commands of their own: NVDA lists a
+	# script with a docstring in Input Gestures, so they deliberately have none.
+	def script_commandLayerHelp(self, _gesture):  # noqa: D102 - a docstring would list it in Input Gestures
 		self.commandLayer.show_help()
 
-	def script_commandLayerCancel(self, _gesture):
+	def script_commandLayerCancel(self, _gesture):  # noqa: D102 - a docstring would list it in Input Gestures
 		self.commandLayer.finish(announce=True)
 
-	def script_showLayerEditor(self, _gesture):
+	def script_showLayerEditor(self, _gesture):  # noqa: D102 - a docstring would list it in Input Gestures
 		self.commandLayer.show_editor()
 
 	@scriptHandler.script(
@@ -824,7 +836,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		return _("Unfollowed artist: {artist_name}.").format(artist_name=artist["name"])
 
 	def _playing_artist(self):
-		"""(the playing track's first artist, None), or (None, what to say instead)."""
+		"""Return (the playing track's first artist, None), or (None, what to say instead)."""
 		playback = self.client.run_on_device("current_playback")
 		if isinstance(playback, str):
 			return None, playback
@@ -1088,7 +1100,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			log.exception("Error clearing sleep timer")
 
 	def _on_sleep_timeout(self):
-		"""Function that is executed when time expires."""
+		"""Pause playback when the sleep timer runs out."""
 		self._active_sleep_timer = None
 		self._clear_timer_state()
 		if self.client and self.client.client:
@@ -1098,7 +1110,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 				wx.CallAfter(nvda_ui.message, _("Sleep timer ended. Playback paused."))
 
 	def _check_resume_sleep_timer(self):
-		"""Called at startup: Checks if there are any unfinished timers."""
+		"""Pick up a sleep timer that was still running when NVDA stopped."""
 		end_time = self._read_timer_state()
 		if not end_time:
 			return

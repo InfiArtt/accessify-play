@@ -3,6 +3,8 @@
 # This file is covered by the GNU General Public License, version 2.
 # See the file LICENSE for more details.
 
+"""Spotify's browse categories and the playlists in them."""
+
 import ui
 import wx
 from logHandler import log
@@ -127,6 +129,7 @@ class CategoriesDialog(AccessifyDialog):
 		ui.message(_("Could not load this list. Please try again."))
 
 	def on_category_activated(self, evt):
+		"""Open the playlists of the chosen category."""
 		idx = evt.GetIndex()
 		if idx < 0:
 			return
@@ -142,6 +145,7 @@ class CategoriesDialog(AccessifyDialog):
 		dlg.ShowModal()
 
 	def on_list_key_down(self, evt):
+		"""Load more categories when the user reaches the end of the list."""
 		keycode = evt.GetKeyCode()
 		# Handle end of list for loading more
 		if keycode in (wx.WXK_DOWN, wx.WXK_PAGEDOWN, wx.WXK_END):
@@ -304,10 +308,11 @@ class PlaylistBrowserDialog(AccessifyDialog):
 		ui.message(_("Could not load this list. Please try again."))
 
 	def on_playlist_activated(self, _evt):
+		"""Open the chosen playlist's tracks."""
 		self._view_tracks()
 
 	def _menu_playlist(self):
-		"""The selected playlist, or None."""
+		"""Return the selected playlist, or None."""
 		idx = self.playlistsList.GetFirstSelected()
 		if idx < 0:
 			return None
@@ -317,6 +322,7 @@ class PlaylistBrowserDialog(AccessifyDialog):
 		return self.playlists[data_idx]
 
 	def on_list_key_down(self, evt):
+		"""Load more playlists when the user reaches the end of the list."""
 		keycode = evt.GetKeyCode()
 		if keycode in (wx.WXK_DOWN, wx.WXK_PAGEDOWN, wx.WXK_END):
 			selected = self.playlistsList.GetFirstSelected()
@@ -326,6 +332,7 @@ class PlaylistBrowserDialog(AccessifyDialog):
 		evt.Skip()
 
 	def on_context_menu(self, _evt):
+		"""Show the actions for the selected playlist."""
 		playlist = self._menu_playlist()
 		if not playlist:
 			return
@@ -342,6 +349,7 @@ class PlaylistBrowserDialog(AccessifyDialog):
 		menu.Destroy()
 
 	def on_menu_item(self, evt):
+		"""Carry out the context menu item that was chosen."""
 		playlist = self._menu_playlist()
 		if not playlist:
 			return

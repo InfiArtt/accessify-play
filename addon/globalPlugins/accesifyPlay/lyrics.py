@@ -3,7 +3,7 @@
 # This file is covered by the GNU General Public License, version 2.
 # See the file LICENSE for more details.
 
-# Lyrics fetching, LRC parsing, and auto-read timer management.
+"""Lyrics from lrclib.net: fetching, LRC parsing, and reading them along with the song."""
 
 import functools
 import re
@@ -39,8 +39,7 @@ LATE_LINE_TOLERANCE_MS = 200
 
 
 def fetch_lyrics(track_name, artist_name, album_name, duration_ms):
-	"""
-	Fetch lyrics from lrclib.net for a given track.
+	"""Fetch lyrics from lrclib.net for a given track.
 
 	Tries an exact match first (artist + track + album + duration).
 	Falls back to a fuzzy keyword search if the exact match returns nothing.
@@ -93,7 +92,7 @@ def _get_user_agent():
 
 
 def _make_request(endpoint, params):
-	"""The JSON answer of one lrclib endpoint, or None if there is none."""
+	"""Return the JSON answer of one lrclib endpoint, or None if there is none."""
 	try:
 		response = requests.get(
 			f"{LRCLIB_BASE}/{endpoint}",
@@ -128,8 +127,7 @@ def _timestamp_ms(minutes, seconds, fraction):
 
 
 def parse_lrc(lrc_text):
-	"""
-	Parse an LRC-format string into a sorted list of (timestamp_ms, line_text) tuples.
+	"""Parse an LRC-format string into a sorted list of (timestamp_ms, line_text) tuples.
 
 	Handles timestamps with no fraction ([01:23]) and with one to three
 	fractional digits, and lines carrying several timestamps
@@ -161,9 +159,9 @@ def parse_lrc(lrc_text):
 
 
 class LyricsAutoReader:
-	"""
-	Schedules one threading.Timer per lyric line so NVDA speaks each line
-	exactly when the song reaches it.
+	"""Speak each lyric line exactly when the song reaches it.
+
+	It schedules one threading.Timer per line.
 
 	Timer-based approach avoids constant polling:
 	- All remaining lines are pre-scheduled on start().
@@ -179,11 +177,11 @@ class LyricsAutoReader:
 
 	@property
 	def is_active(self):
+		"""Return whether lyrics are being read along with the song."""
 		return self._active
 
 	def start(self, synced_lyrics, progress_ms):
-		"""
-		Cancel any existing timers and schedule all upcoming lyric lines.
+		"""Cancel any existing timers and schedule all upcoming lyric lines.
 
 		Returns True if at least one line was scheduled, False otherwise
 		(e.g. the song is already over or synced_lyrics is empty/None).
@@ -217,14 +215,15 @@ class LyricsAutoReader:
 
 	def pause_timers(self):
 		"""Cancel all pending timers WITHOUT marking the reader as inactive.
+
 		Call resync() when playback resumes to re-schedule from the new position.
 		This is used when Spotify is paused so timers don't keep firing into silence.
 		"""
 		self._cancel_timers()
 
 	def resync(self, synced_lyrics, progress_ms):
-		"""
-		Re-schedule timers from a new playback position.
+		"""Re-schedule timers from a new playback position.
+
 		Call this after a seek or pause/resume to correct drift.
 		Has no effect if the reader is not active.
 		"""
@@ -233,8 +232,9 @@ class LyricsAutoReader:
 		self.start(synced_lyrics, progress_ms)
 
 	def set_line_callback(self, callback):
-		"""Set (or clear) a callable invoked with the timestamp (ms) of each line
-		as it fires. Pass None to disable. Used by the lyrics window for auto-scroll.
+		"""Set a callable to call with the timestamp (ms) of each line as it is spoken.
+
+		Pass None to disable. Used by the lyrics window for auto-scroll.
 		"""
 		self._line_callback = callback
 

@@ -3,6 +3,8 @@
 # This file is covered by the GNU General Public License, version 2.
 # See the file LICENSE for more details.
 
+"""What NVDA runs when the add-on is installed."""
+
 import threading
 from pathlib import Path
 
@@ -27,6 +29,8 @@ def _load_donate_module():
 
 
 class InstallInfoDialog(wx.Dialog):
+	"""What the add-on is and does, shown once after installing."""
+
 	def __init__(
 		self,
 		parent,
@@ -100,9 +104,10 @@ class InstallInfoDialog(wx.Dialog):
 
 
 def _defensive_cleanup_nvda_import_tracker(addon_name: str):
-	"""
-	Intercepts NVDA's addonImportTrackers to forcefully detach any built-in/compiled module
-	(like `_overlapped`) dragged in by asynchronous deps (e.g., urllib, asyncio).
+	"""Detach built-in modules from NVDA's import tracker for this add-on.
+
+	Built-in or compiled modules (like `_overlapped`) get dragged in by
+	asynchronous dependencies (e.g., urllib, asyncio).
 
 	NVDA's `_cleanupAddonImports` naively calls `__file__` without a `hasattr` check, crashing
 	when inspecting built-in modules without file paths (especially isolated in Python 3.13).
@@ -150,6 +155,7 @@ def _defensive_cleanup_nvda_import_tracker(addon_name: str):
 
 
 def onInstall():
+	"""Show the add-on's information after it is installed."""
 	addon = addonHandler.getCodeAddon()
 	addon_name = addon.manifest.get("summary") or addon.manifest.get("name")
 	addon_version = addon.manifest.get("version", "")

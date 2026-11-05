@@ -3,6 +3,8 @@
 # This file is covered by the GNU General Public License, version 2.
 # See the file LICENSE for more details.
 
+"""Change the keys of the command layer."""
+
 import core
 import wx
 
@@ -13,6 +15,8 @@ init_translation()
 
 
 class EditCommandDialog(AccessifyDialog):
+	"""Change the key of one layer command, and whether the layer stays open after it."""
+
 	def __init__(self, parent, script_name, display_label, current_gestures, keep_open):
 		super().__init__(parent, title=_("Edit Command: {name}").format(name=display_label))
 		self.script_name = script_name
@@ -57,6 +61,7 @@ class EditCommandDialog(AccessifyDialog):
 			evt.Skip()
 
 	def on_ok(self, evt):
+		"""Store the key that was typed, adding the kb: prefix if needed."""
 		val = self.txt_gesture.GetValue().strip()
 		if val:
 			# Automatically prepend kb: if not present (though we stripped it for UI)
@@ -70,6 +75,8 @@ class EditCommandDialog(AccessifyDialog):
 
 
 class LayerEditorDialog(AccessifyDialog):
+	"""All layer commands and their keys."""
+
 	def __init__(self, parent, config_manager):
 		super().__init__(parent, title=_("Command Layer Editor"), size=(600, 400))
 		self.config_manager = config_manager
@@ -82,7 +89,7 @@ class LayerEditorDialog(AccessifyDialog):
 		self._populate_list()
 
 	def _get_script_labels(self):
-		"""Translatable display names for each script id."""
+		"""Return translatable display names for each script id."""
 		return {
 			"playMyTopTracks": _("Play My Top Tracks"),
 			"playRecentlyPlayed": _("Play Recently Played"),
@@ -183,12 +190,15 @@ class LayerEditorDialog(AccessifyDialog):
 			self.item_data_map[i] = script_id
 
 	def on_selection(self, _evt):
+		"""Allow editing once a command is selected."""
 		self.btn_edit.Enable(enable=True)
 
 	def on_deselection(self, _evt):
+		"""Disallow editing while no command is selected."""
 		self.btn_edit.Enable(enable=False)
 
 	def on_edit(self, _evt):
+		"""Edit the selected command."""
 		idx = self.list_ctrl.GetFirstSelected()
 		if idx == -1:
 			return
@@ -222,6 +232,7 @@ class LayerEditorDialog(AccessifyDialog):
 		dlg.Destroy()
 
 	def on_reset(self, _evt):
+		"""Put every key back to its default, after asking."""
 		if (
 			wx.MessageBox(
 				_("Are you sure you want to reset all shortcuts to default?"),
@@ -235,11 +246,13 @@ class LayerEditorDialog(AccessifyDialog):
 			self._populate_list()
 
 	def on_close(self, evt):
+		"""Offer to restart NVDA when keys were changed."""
 		if self.is_dirty:
 			self.is_dirty = False
 			res = wx.MessageBox(
 				_(
-					"You have made changes to the command layer. NVDA needs to restart to apply them fully.\n\nRestart now?"
+					"You have made changes to the command layer. "
+					"NVDA needs to restart to apply them fully.\n\nRestart now?"
 				),
 				_("Restart Required"),
 				wx.YES_NO | wx.ICON_QUESTION,

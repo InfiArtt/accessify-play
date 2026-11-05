@@ -17,6 +17,8 @@ init_translation()
 
 
 class PodcastEpisodesDialog(AccessifyDialog):
+	"""A show's episodes, loaded page by page."""
+
 	MENU_PLAY_EPISODE = wx.NewIdRef()
 	MENU_ADD_QUEUE = wx.NewIdRef()
 	MENU_COPY_LINK = wx.NewIdRef()
@@ -39,6 +41,7 @@ class PodcastEpisodesDialog(AccessifyDialog):
 		self._create_accelerators()
 
 	def init_ui(self):
+		"""Build the episode list and buttons."""
 		panel = wx.Panel(self)
 		sizer = wx.BoxSizer(wx.VERTICAL)
 
@@ -79,6 +82,7 @@ class PodcastEpisodesDialog(AccessifyDialog):
 		self.Bind(wx.EVT_MENU, self.on_copy_link, id=self.MENU_COPY_LINK.GetId())
 
 	def load_episodes(self):
+		"""Load the episodes from the start."""
 		self.episodes = []
 		self._episodes_offset = 0
 		self._episodes_has_more = True
@@ -188,6 +192,7 @@ class PodcastEpisodesDialog(AccessifyDialog):
 		return self.episodes[selection]
 
 	def on_context_menu(self, _evt):
+		"""Show the actions for the selected episode."""
 		item = self._get_selected_episode()
 		if not item:
 			return
@@ -202,6 +207,7 @@ class PodcastEpisodesDialog(AccessifyDialog):
 		menu.Destroy()
 
 	def on_play_episode(self, _evt=None):
+		"""Play the selected episode."""
 		episode = self._get_selected_episode()
 		if not episode:
 			return
@@ -217,15 +223,18 @@ class PodcastEpisodesDialog(AccessifyDialog):
 			self._play_uri(episode_uri)
 
 	def on_add_to_queue(self, _evt=None):
+		"""Add the selected episode to the queue."""
 		episode = self._get_selected_episode()
 		if episode:
 			self._queue_add_track(episode.get("uri"), episode.get("name"))
 
 	def on_copy_link(self, _evt=None):
+		"""Copy the selected episode's Spotify link."""
 		episode = self._get_selected_episode()
 		if episode:
 			link = episode.get("external_urls", {}).get("spotify")
 			copy_link(link)
 
 	def on_save_episode(self, _evt=None):
+		"""Save the selected episode, or remove it when saved."""
 		self._toggle_saved("episode", self._get_selected_episode())

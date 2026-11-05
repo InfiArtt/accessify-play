@@ -3,6 +3,8 @@
 # This file is covered by the GNU General Public License, version 2.
 # See the file LICENSE for more details.
 
+"""An audiobook's chapters."""
+
 import ui
 import wx
 
@@ -40,6 +42,7 @@ class AudiobookChaptersDialog(AccessifyDialog):
 		self._create_accelerators()
 
 	def init_ui(self):
+		"""Build the chapter list and buttons."""
 		panel = wx.Panel(self)
 		sizer = wx.BoxSizer(wx.VERTICAL)
 
@@ -77,6 +80,7 @@ class AudiobookChaptersDialog(AccessifyDialog):
 		self.Bind(wx.EVT_MENU, self.on_copy_link, id=self.MENU_COPY_LINK.GetId())
 
 	def load_chapters(self):
+		"""Load the chapters from the start."""
 		self.chapters = []
 		self._chapters_offset = 0
 		self._chapters_has_more = True
@@ -192,6 +196,7 @@ class AudiobookChaptersDialog(AccessifyDialog):
 		return self.chapters[selection]
 
 	def on_context_menu(self, _evt):
+		"""Show the actions for the selected chapter."""
 		if not self._get_selected_chapter():
 			return
 
@@ -204,6 +209,7 @@ class AudiobookChaptersDialog(AccessifyDialog):
 		menu.Destroy()
 
 	def on_play_chapter(self, _evt=None):
+		"""Play the selected chapter."""
 		chapter = self._get_selected_chapter()
 		if not chapter:
 			return
@@ -224,11 +230,13 @@ class AudiobookChaptersDialog(AccessifyDialog):
 			self._play_uri(chapter_uri)
 
 	def on_add_to_queue(self, _evt=None):
+		"""Add the selected chapter to the queue."""
 		chapter = self._get_selected_chapter()
 		if chapter:
 			self._queue_add_track(chapter.get("uri"), chapter.get("name"))
 
 	def on_copy_link(self, _evt=None):
+		"""Copy the selected chapter's Spotify link."""
 		chapter = self._get_selected_chapter()
 		if chapter:
 			copy_link(chapter.get("external_urls", {}).get("spotify"))

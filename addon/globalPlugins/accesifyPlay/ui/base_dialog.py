@@ -3,6 +3,8 @@
 # This file is covered by the GNU General Public License, version 2.
 # See the file LICENSE for more details.
 
+"""The base class of the add-on's windows."""
+
 import contextlib
 
 import ui
@@ -18,8 +20,8 @@ init_translation()
 
 
 class AccessifyDialog(wx.Dialog):
-	"""
-	Strictly managed base dialog.
+	"""Strictly managed base dialog.
+
 	Ensures Destroy() is always called on exit and background acts are managed.
 	"""
 
@@ -40,6 +42,7 @@ class AccessifyDialog(wx.Dialog):
 		self._is_queuing = False
 
 	def bind_close_button(self, button):
+		"""Make button close the dialog."""
 		button.Bind(wx.EVT_BUTTON, lambda _e: self.Close())
 
 	def _on_char_hook(self, evt):
@@ -195,7 +198,7 @@ class AccessifyDialog(wx.Dialog):
 		control.Bind(wx.EVT_CHAR_HOOK, on_char)
 
 	def _owner_of(self, playlist):
-		"""A playlist's owner as {"id", "display_name"}, or None."""
+		"""Return a playlist's owner as {"id", "display_name"}, or None."""
 		owner = (playlist or {}).get("owner") or {}
 		return owner if owner.get("id") else None
 
@@ -291,7 +294,7 @@ class AccessifyDialog(wx.Dialog):
 		menu.Bind(wx.EVT_MENU, handler, item)
 
 	def _playlist_submenu(self, playlists, on_pick, empty_label):
-		"""A submenu of playlists; choosing one calls on_pick(playlist).
+		"""Return a submenu of playlists; choosing one calls on_pick(playlist).
 
 		playlists is None while they are still loading.
 		"""
@@ -336,7 +339,7 @@ class AccessifyDialog(wx.Dialog):
 		)
 
 		def _add():
-			result = self.client.add_track_to_playlist(playlist_id, track_uri)
+			result = self.client.add_items_to_playlist(playlist_id, track_uri)
 			wx.CallAfter(ui.message, result if isinstance(result, str) else _("Track added successfully."))
 
 		thread_manager.submit_task(_add, name="AddTrackToPlaylist", daemon=True)

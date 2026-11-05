@@ -3,6 +3,8 @@
 # This file is covered by the GNU General Public License, version 2.
 # See the file LICENSE for more details.
 
+"""The add-on's panel in NVDA's settings."""
+
 import webbrowser
 
 import config
@@ -27,6 +29,8 @@ DEVELOPER_DASHBOARD_URL = "https://developer.spotify.com/dashboard"
 
 
 class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
+	"""Accessify Play's settings in NVDA's settings dialog."""
+
 	title = _("Accessify Play")
 
 	def __init__(self, parent):
@@ -34,6 +38,7 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 		self.client = spotify_client.get_client()
 
 	def makeSettings(self, settings_sizer):
+		"""Build the controls."""
 		s_helper = guiHelper.BoxSizerHelper(self, sizer=settings_sizer)
 
 		# Translators: Label for a setting to choose how many search results to load at a time.
@@ -121,6 +126,7 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 		return entries
 
 	def isValid(self):
+		"""Refuse to save a client ID that is not 32 letters and digits."""
 		value = self.ownClientIDCtrl.GetValue().strip()
 		if value and not spotify_client.is_valid_client_id(value):
 			messageBox(
@@ -139,6 +145,7 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 		return super().isValid()
 
 	def onSave(self):
+		"""Save the settings; sign in again when the client ID changed."""
 		if self._save_values():
 			self.client.reset_session()
 			thread_manager.submit_task(self._sign_in_after_client_id_change, name="DialogTask", daemon=True)
@@ -184,6 +191,7 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 		return changed
 
 	def on_validate(self, _evt):
+		"""Save the settings and sign in to Spotify."""
 		if not self.isValid():
 			return
 		# Save current UI values to config.conf before validating
@@ -193,11 +201,13 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 		thread_manager.submit_task(self.run_validation, name="DialogTask", daemon=True)
 
 	def run_validation(self):
+		"""Sign in to Spotify; runs in a background thread."""
 		success = self.client.validate()  # Validate without explicit parameters
 		wx.CallAfter(self.show_validation_result, success)
 
 	def on_clear_credentials(self, _evt):
 		# Translators: Confirmation message before clearing Spotify credentials and cache.
+		"""Forget the Spotify sign-in, after asking."""
 		confirmation_msg = _(
 			"Are you sure you want to delete your stored Spotify access token? "
 			"You will need to sign in to Spotify again to use the add-on."
@@ -219,6 +229,7 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 		ui.message(message)
 
 	def show_validation_result(self, success):
+		"""Tell the user whether signing in worked."""
 		if success:
 			messageBox(_("Validation successful!"), _("Success"), wx.OK | wx.ICON_INFORMATION)
 		else:

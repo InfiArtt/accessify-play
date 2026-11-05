@@ -40,7 +40,7 @@ def _legacy_dir():
 
 
 def get_data_dir():
-	"""The add-on's data folder, created if it does not exist yet."""
+	"""Return the add-on's data folder, created if it does not exist yet."""
 	path = Path(globalVars.appArgs.configPath) / "accessifyPlay"
 	path.mkdir(parents=True, exist_ok=True)
 	return path

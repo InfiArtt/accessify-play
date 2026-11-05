@@ -45,14 +45,14 @@ ignore = [
 	# Each pair is mutually exclusive; D211 and D212 are the ones kept.
 	"D203",
 	"D213",
+	# A class's docstring describes how to create it, as in the numpy convention.
+	"D107",
 	# NVDA imports the add-on as globalPlugins.accesifyPlay, the tests import it
 	# under another name; relative imports work in both.
 	"TID252",
 
 	# Not done yet. Each family below is fixed and removed in its own commit.
 	"ANN",
-	"D",
-	"E501",
 ]
 
 # NVDA's logger, so ruff knows log.exception() and exc_info=True report the error.
@@ -62,14 +62,20 @@ logger-objects = ["logHandler.log"]
 # The package name is the add-on's identity: NVDA stores custom gestures under
 # globalPlugins.accesifyPlay, so renaming it would silently drop them.
 "addon/globalPlugins/accesifyPlay/**" = ["N999"]
-# sconstruct, from the NVDA add-on template, reads these names.
-"buildVars.py" = ["N816"]
+# sconstruct, from the NVDA add-on template, reads these names. The add-on's
+# description and changelog are prose for the add-on store, kept as written.
+"buildVars.py" = ["N816", "E501"]
 # NVDA runs installTasks.py from the add-on's root folder, which is not a package.
 "addon/installTasks.py" = ["INP001"]
 
 [tool.ruff.lint.flake8-copyright]
 # Empty package markers hold nothing to license.
 min-file-size = 1
+
+[tool.ruff.lint.pydocstyle]
+# NVDA scripts are described by their decorator, which NVDA shows in Input
+# Gestures; a docstring would only repeat it.
+ignore-decorators = ["scriptHandler.script"]
 
 [tool.ruff.lint.pep8-naming]
 # Names NVDA calls by convention.

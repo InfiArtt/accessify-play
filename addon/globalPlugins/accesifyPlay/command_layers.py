@@ -3,6 +3,8 @@
 # This file is covered by the GNU General Public License, version 2.
 # See the file LICENSE for more details.
 
+"""The command layer: NVDA+Alt+G, then one key for a Spotify command."""
+
 import time
 
 import gui
@@ -23,7 +25,7 @@ init_translation()
 
 
 def _capture_func():
-	"""The function NVDA hands every gesture to first, if any.
+	"""Return the function NVDA hands every gesture to first, if any.
 
 	NVDA offers no public way to read or set it; input help uses the same
 	attribute.
@@ -145,9 +147,11 @@ class CommandLayerManager:
 
 	@property
 	def is_active(self):
+		"""Return whether the layer is waiting for a key."""
 		return _capture_func() is self._captor
 
 	def activate(self):
+		"""Start waiting for a layer key, unless something else captures input."""
 		if self.is_active:
 			self._error_beep()
 			return
@@ -161,6 +165,7 @@ class CommandLayerManager:
 		self._entry_beep()
 
 	def finish(self, *, announce=False):
+		"""Stop waiting for a layer key; announce it when asked."""
 		self._deadline = None
 		# Only clear the capture function if it is still ours; something else
 		# (input help, another add-on) may have taken it over in the meantime.
@@ -235,6 +240,8 @@ class CommandLayerManager:
 	# --- Dialogs ---
 
 	def show_help(self):
+		"""Show the list of layer keys."""
+
 		def _show():
 			if self._help_dialog:
 				self._help_dialog.Raise()
@@ -257,6 +264,8 @@ class CommandLayerManager:
 		wx.CallAfter(_show)
 
 	def show_editor(self):
+		"""Open the command layer editor."""
+
 		def _show():
 			if self._editor_dialog:
 				self._editor_dialog.Raise()

@@ -3,6 +3,8 @@
 # This file is covered by the GNU General Public License, version 2.
 # See the file LICENSE for more details.
 
+"""Build settings and metadata of the add-on."""
+
 # Build customizations
 # Change this file instead of sconstruct or manifest files, whenever possible.
 

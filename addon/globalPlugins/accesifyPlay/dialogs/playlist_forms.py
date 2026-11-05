@@ -17,6 +17,8 @@ init_translation()
 
 
 class CreatePlaylistDialog(AccessifyDialog):
+	"""Create a playlist."""
+
 	def __init__(self, parent, client):
 		super().__init__(parent, title=_("Create Spotify Playlist"))
 		self.client = client
@@ -50,6 +52,7 @@ class CreatePlaylistDialog(AccessifyDialog):
 		self.nameCtrl.SetFocus()
 
 	def on_create(self, _evt):
+		"""Create the playlist in the background."""
 		if self._creating:
 			return
 		name = self.nameCtrl.GetValue().strip()
@@ -88,6 +91,8 @@ class CreatePlaylistDialog(AccessifyDialog):
 
 
 class PlaylistDetailsDialog(AccessifyDialog):
+	"""Edit a playlist's name, description and visibility."""
+
 	def __init__(self, parent, client, playlist_data):
 		super().__init__(parent, title=_("Edit Playlist Details"))
 		self.client = client
@@ -124,6 +129,7 @@ class PlaylistDetailsDialog(AccessifyDialog):
 		self.nameCtrl.SetFocus()
 
 	def on_save(self, _evt):
+		"""Save the details in the background."""
 		if self._saving:
 			return
 		name = self.nameCtrl.GetValue().strip()
@@ -168,6 +174,8 @@ class PlaylistDetailsDialog(AccessifyDialog):
 
 
 class AddToPlaylistDialog(AccessifyDialog):
+	"""Add the playing track to one of the user's playlists."""
+
 	def __init__(self, parent, client, current_track, playlists):
 		# Translators: Title for the "Add to Playlist" dialog.
 		super().__init__(parent, title=_("Add Current Track to Playlist"))
@@ -179,6 +187,7 @@ class AddToPlaylistDialog(AccessifyDialog):
 		self.init_ui()
 
 	def init_ui(self):
+		"""Build the playlist choice and buttons."""
 		panel = wx.Panel(self)
 		sizer = wx.BoxSizer(wx.VERTICAL)
 
@@ -226,17 +235,19 @@ class AddToPlaylistDialog(AccessifyDialog):
 		self.playlist_combobox.SetFocus()
 
 	def on_playlist_selected(self, _evt):
+		"""Remember the playlist that was chosen."""
 		selection_index = self.playlist_combobox.GetSelection()
 		if selection_index != wx.NOT_FOUND:
 			self.selected_playlist_id = self.playlists[selection_index]["id"]
 
 	def on_add_to_playlist(self, _evt):
+		"""Add the track to the chosen playlist."""
 		if not self.current_track_uri or not self.selected_playlist_id:
 			ui.message(_("Please select a playlist and ensure a track is playing."))
 			return
 
 		def _add():
-			result = self.client.add_track_to_playlist(self.selected_playlist_id, self.current_track_uri)
+			result = self.client.add_items_to_playlist(self.selected_playlist_id, self.current_track_uri)
 			if isinstance(result, str):
 				wx.CallAfter(ui.message, result)
 			else:

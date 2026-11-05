@@ -20,6 +20,8 @@ init_translation()
 
 
 class ArtistDiscographyDialog(AccessifyDialog):
+	"""An artist's popular songs, albums, playlists, all tracks and info, one tab each."""
+
 	DEFAULT_ALL_TRACKS_BATCH_SIZE = 40
 	MENU_PLAY = wx.NewIdRef()
 	MENU_ADD_QUEUE = wx.NewIdRef()
@@ -70,6 +72,7 @@ class ArtistDiscographyDialog(AccessifyDialog):
 		return list_control, page_index
 
 	def init_ui(self):
+		"""Build the tabs and buttons."""
 		panel = wx.Panel(self)
 		main_sizer = wx.BoxSizer(wx.VERTICAL)
 
@@ -159,7 +162,7 @@ class ArtistDiscographyDialog(AccessifyDialog):
 		self.Bind(wx.EVT_MENU, self.on_copy_link, id=self.MENU_COPY_LINK.GetId())
 
 	def _current_position(self):
-		"""The position of the visible tab in self._pages."""
+		"""Return the position of the visible tab in self._pages."""
 		current = self.notebook.GetSelection()
 		for position, (page_index, _control) in enumerate(self._pages):
 			if page_index == current:
@@ -191,6 +194,7 @@ class ArtistDiscographyDialog(AccessifyDialog):
 			pass
 
 	def load_data(self):
+		"""Load the artist's tabs in the background."""
 		thread_manager.submit_task(self._load_data_thread, name="DialogTask", daemon=True)
 
 	def _load_data_thread(self):
@@ -425,7 +429,7 @@ class ArtistDiscographyDialog(AccessifyDialog):
 		return None
 
 	def _selected_all_tracks_item(self):
-		"""The selected track on the All Tracks tab; on its Load More row, load more."""
+		"""Return the selected track on the All Tracks tab; on its Load More row, load more."""
 		selection = self.all_tracks_list.GetSelection()
 		if 0 <= selection < len(self.all_tracks):
 			return self.all_tracks[selection]
@@ -464,6 +468,7 @@ class ArtistDiscographyDialog(AccessifyDialog):
 		dialog.Show()
 
 	def on_context_menu(self, _evt):
+		"""Show the actions for the selected item."""
 		item = self._get_selected_item()
 		if not item:
 			return
@@ -498,11 +503,13 @@ class ArtistDiscographyDialog(AccessifyDialog):
 		menu.Destroy()
 
 	def on_play_selected(self, _evt=None):
+		"""Play the selected item."""
 		item = self._get_selected_item()
 		if item:
 			self._play_uri(item.get("uri"))
 
 	def on_add_to_queue(self, _evt=None):
+		"""Add the selected item to the queue."""
 		item = self._get_selected_item()
 		if not item:
 			return
@@ -517,6 +524,7 @@ class ArtistDiscographyDialog(AccessifyDialog):
 			self._queue_add_context(uri, item_type, name)
 
 	def on_copy_link(self, _evt=None):
+		"""Copy the selected item's Spotify link."""
 		item = self._get_selected_item()
 		if item:
 			link = item.get("external_urls", {}).get("spotify")

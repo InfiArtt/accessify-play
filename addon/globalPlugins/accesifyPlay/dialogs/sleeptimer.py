@@ -3,6 +3,8 @@
 # This file is covered by the GNU General Public License, version 2.
 # See the file LICENSE for more details.
 
+"""Stop playback after a number of minutes."""
+
 import wx
 from gui import guiHelper
 
@@ -13,6 +15,8 @@ init_translation()
 
 
 class SleepTimerDialog(AccessifyDialog):
+	"""Ask how many minutes until playback stops."""
+
 	def __init__(self, parent, callback):
 		super().__init__(parent, title=_("Set Sleep Timer"))
 		self.callback = callback
@@ -41,6 +45,7 @@ class SleepTimerDialog(AccessifyDialog):
 		self.minutesCtrl.SetFocus()
 
 	def on_ok(self, _evt):
+		"""Start the timer and close."""
 		minutes = self.minutesCtrl.GetValue()
 		self.callback(minutes)
 		self.Close()

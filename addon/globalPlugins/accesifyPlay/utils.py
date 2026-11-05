@@ -3,6 +3,8 @@
 # This file is covered by the GNU General Public License, version 2.
 # See the file LICENSE for more details.
 
+"""Small helpers shared across the add-on."""
+
 from functools import wraps
 
 import api
@@ -179,7 +181,7 @@ def duplicate_occurrences(rows):
 
 
 def positions_after_move(positions, row, direction):
-	"""New real positions after moving the track at `row` one row up or down.
+	"""Return new real positions after moving the track at `row` one row up or down.
 
 	Mirrors SpotifyClient.reorder_playlist_track. Moving up inserts the track
 	at the position of the row above, pushing that row and any hidden null

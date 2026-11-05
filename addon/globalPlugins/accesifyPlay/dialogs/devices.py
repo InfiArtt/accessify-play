@@ -3,6 +3,8 @@
 # This file is covered by the GNU General Public License, version 2.
 # See the file LICENSE for more details.
 
+"""Choose the Spotify device to play on."""
+
 import ui
 import wx
 
@@ -14,6 +16,8 @@ init_translation()
 
 
 class DevicesDialog(AccessifyDialog):
+	"""The user's Spotify devices; choosing one moves playback there."""
+
 	def __init__(self, parent, client, devices_info):
 		super().__init__(parent, title=_("Spotify Devices"))
 		self.client = client
@@ -58,6 +62,7 @@ class DevicesDialog(AccessifyDialog):
 		self.devicesList.SetFocus()
 
 	def on_change_device(self, _evt=None):
+		"""Move playback to the selected device."""
 		selection = self.devicesList.GetSelection()
 		if selection == wx.NOT_FOUND:
 			ui.message(_("Please select a device."))

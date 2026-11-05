@@ -3,6 +3,8 @@
 # This file is covered by the GNU General Public License, version 2.
 # See the file LICENSE for more details.
 
+"""Look up a Spotify link and play it."""
+
 import ui
 import wx
 
@@ -14,6 +16,8 @@ init_translation()
 
 
 class PlayFromLinkDialog(AccessifyDialog):
+	"""Look up a Spotify link or URI, then play it or follow its owner."""
+
 	def __init__(self, parent, client):
 		super().__init__(parent, title=_("Play from Spotify Link"))
 		self.client = client
@@ -59,6 +63,7 @@ class PlayFromLinkDialog(AccessifyDialog):
 		self.urlText.SetFocus()
 
 	def on_check(self, _evt):
+		"""Look up the link that was typed."""
 		url = self.urlText.GetValue().strip()
 		if not url:
 			return
@@ -71,6 +76,7 @@ class PlayFromLinkDialog(AccessifyDialog):
 		wx.CallAfter(self.update_details, details)
 
 	def update_details(self, details):
+		"""Show what the link points to, or why it could not be looked up."""
 		self.followButton.Hide()
 		if "error" in details:
 			self.detailsText.SetValue(details["error"])
@@ -91,10 +97,12 @@ class PlayFromLinkDialog(AccessifyDialog):
 		self.Layout()
 
 	def on_follow(self, _evt=None):
+		"""Follow or unfollow the user the link belongs to."""
 		if self.link_info and self.link_info.get("user"):
 			self._toggle_follow_user(self.link_info["user"])
 
 	def on_play(self, _evt):
+		"""Play what the link points to."""
 		if not self.link_info:
 			ui.message(_("Please check a Spotify link first."))
 			return

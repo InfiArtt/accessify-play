@@ -3,6 +3,8 @@
 # This file is covered by the GNU General Public License, version 2.
 # See the file LICENSE for more details.
 
+"""The playback queue."""
+
 import ui
 import wx
 
@@ -15,6 +17,8 @@ init_translation()
 
 
 class QueueListDialog(AccessifyDialog):
+	"""What plays now and next."""
+
 	def __init__(self, parent, client, queue_data):
 		super().__init__(parent, title=_("Spotify Queue"))
 		self.client = client
@@ -66,6 +70,7 @@ class QueueListDialog(AccessifyDialog):
 		self.Bind(wx.EVT_MENU, lambda _evt: self.refresh_queue_data(), id=self._queueRefreshId.GetId())
 
 	def update_queue_list(self, queue_data):
+		"""Show a fresh copy of the queue."""
 		self.queueList.Clear()
 		self.queue_items = []
 		if isinstance(queue_data, str):
@@ -89,6 +94,7 @@ class QueueListDialog(AccessifyDialog):
 		return self.queue_items[selection]
 
 	def on_queue_context_menu(self, _evt):
+		"""Show the actions for the selected queue item."""
 		item = self._get_queue_selection()
 		if not item:
 			return
@@ -104,6 +110,7 @@ class QueueListDialog(AccessifyDialog):
 		menu.Destroy()
 
 	def play_selected_queue_item(self, _evt=None):
+		"""Skip ahead to the selected queue item."""
 		selection = self.queueList.GetSelection()
 		item = self._get_queue_selection()
 		if selection == wx.NOT_FOUND or not item:
@@ -126,11 +133,13 @@ class QueueListDialog(AccessifyDialog):
 			pass
 
 	def copy_selected_queue_link(self, _evt=None):
+		"""Copy the selected queue item's Spotify link."""
 		item = self._get_queue_selection()
 		if item:
 			copy_link(item.get("link"))
 
 	def refresh_queue_data(self):
+		"""Fetch the queue again in the background."""
 		if self._refresh_in_progress:
 			ui.message(_("Queue is already refreshing."))
 			return

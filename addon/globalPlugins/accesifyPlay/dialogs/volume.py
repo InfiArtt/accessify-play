@@ -3,6 +3,8 @@
 # This file is covered by the GNU General Public License, version 2.
 # See the file LICENSE for more details.
 
+"""Set Spotify's volume to an exact percentage."""
+
 import ui
 import wx
 from gui import guiHelper
@@ -15,6 +17,8 @@ init_translation()
 
 
 class SetVolumeDialog(AccessifyDialog):
+	"""Ask for a volume percentage."""
+
 	def __init__(self, parent, client, initial_volume=None):
 		super().__init__(parent, title=_("Set Spotify Volume"))
 		self.client = client
@@ -45,6 +49,7 @@ class SetVolumeDialog(AccessifyDialog):
 		self.volumeCtrl.SetFocus()
 
 	def on_set(self, _evt):
+		"""Set the volume in the background."""
 		volume = self.volumeCtrl.GetValue()
 		ui.message(_("Setting volume to {volume}%...").format(volume=volume))
 		thread_manager.submit_task(self._set_volume_thread, volume, name="DialogTask", daemon=True)

@@ -3,6 +3,8 @@
 # This file is covered by the GNU General Public License, version 2.
 # See the file LICENSE for more details.
 
+"""Translations, in the language the user chose for the add-on."""
+
 import functools
 import gettext
 import inspect
@@ -22,7 +24,7 @@ LANGUAGE_DISPLAY_OVERRIDES = {
 
 
 def _discover_language_codes():
-	"""The languages the add-on has a catalogue for."""
+	"""Return the languages the add-on has a catalogue for."""
 	if not locale_path.is_dir():
 		return []
 	return sorted(
@@ -44,7 +46,7 @@ def _normalize_language_setting(lang_code):
 
 
 def get_language_setting():
-	"""The configured add-on language, or LANGUAGE_AUTO if it is unusable.
+	"""Return the configured add-on language, or LANGUAGE_AUTO if it is unusable.
 
 	Strictly read-only, and never creates the config section: this runs on the
 	first translated string, which can be during import, and materialising the
@@ -62,7 +64,7 @@ def get_language_setting():
 
 @functools.cache
 def _get_translation():
-	"""The catalogue, built once per session.
+	"""Return the catalogue, built once per session.
 
 	The settings panel already tells the user that a language change takes
 	effect after restarting NVDA.
