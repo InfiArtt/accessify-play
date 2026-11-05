@@ -29,6 +29,8 @@ Changes since 1.12.2.
 - **Two quick presses of a playback command** could both get through, sending the command twice.
 - **An error every 5 seconds in the NVDA log** while Spotify reported nothing playing, such as between items.
 - **A timeout on a playback command was logged as an unexpected error**, with a full traceback.
+- **Shared links with a country in them** (`open.spotify.com/intl-nl/track/...`) were misread by Play from Link and the link details. They now work like any other link.
+- **Copying the lyrics** from the lyrics window gave no feedback. NVDA now says they were copied.
 
 ### 🧹 Under the hood
 
@@ -38,7 +40,12 @@ Changes since 1.12.2.
 - **management.py is split up**: it held eight dialogs in 2,900 lines. The library manager stays there; the album, playlist, artist, podcast and playlist-form dialogs have their own modules.
 - **Featured Playlists and category playlists share one dialog** instead of two near-identical copies.
 - **The popular songs of an artist take one request fewer** when the artist's name is known.
-- Nearly 400 lines less code, the new features included, and dead code removed, such as error branches that could never run. The tests cover the new behaviour, 691 checks in all.
+- **Every ruff rule is on** (`select = ["ALL"]`), with the few exceptions listed in `pyproject.toml` along with the reason for each. ruff check and ruff format run in pre-commit, and so in CI.
+- **Type annotations and docstrings on everything**: every function says what it takes and returns, and every module, class and public method says what it is for.
+- **Errors are handled on purpose**: catching every exception is narrowed to what can actually fail, or kept at a boundary and logged, instead of being swallowed silently.
+- **One clipboard helper**, built on NVDA's `api.copyToClip`, replaces three hand-written ones; **one set of add-to-playlist helpers** replaces four copies in four windows; the long context menus are split into small parts.
+- **Lyrics are fetched with requests**, already bundled for spotipy, instead of hand-built urllib requests; paths use pathlib; HTTP statuses use `http.HTTPStatus`.
+- Nearly 400 lines less code from the clean-up, the new features included, and dead code removed, such as error branches that could never run. The tests cover the new behaviour, 695 checks in all.
 
 ## Version 1.12.2
 
