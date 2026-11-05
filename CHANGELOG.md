@@ -38,7 +38,7 @@ Changes since 1.12.2.
 - **management.py is split up**: it held eight dialogs in 2,900 lines. The library manager stays there; the album, playlist, artist, podcast and playlist-form dialogs have their own modules.
 - **Featured Playlists and category playlists share one dialog** instead of two near-identical copies.
 - **The popular songs of an artist take one request fewer** when the artist's name is known.
-- About 600 lines less code, and dead code removed, such as error branches that could never run. The tests cover the new behaviour, 691 checks in all.
+- Nearly 400 lines less code, the new features included, and dead code removed, such as error branches that could never run. The tests cover the new behaviour, 691 checks in all.
 
 ## Version 1.12.2
 
