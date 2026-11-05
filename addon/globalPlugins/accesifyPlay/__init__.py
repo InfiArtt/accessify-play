@@ -161,12 +161,8 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		# plugin can never keep hold of the keyboard.
 		self.commandLayer.terminate()
 
-		# Cancel sleep timer safely
 		if self._active_sleep_timer:
-			try:
-				self._active_sleep_timer.cancel()
-			except Exception:
-				pass
+			self._active_sleep_timer.cancel()
 
 		try:
 			categories = settingsDialogs.NVDASettingsDialog.categoryClasses
@@ -208,83 +204,85 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		auto-reader's lyrics in time, which used to take a poller of its own.
 		"""
 		try:
-			needs_poll = (
-				utils.conf_get("announceTrackChanges", False)
-				or self._auto_reader.is_active
-				or self.lyricsDialog is not None  # also poll when lyrics window is open
-			)
-			if not (needs_poll and self.client.client):
-				return None
-
-			playback = self.client.run_request("current_playback")
-			if isinstance(playback, str):
-				# An error message (offline, rate limited...): say nothing and keep
-				# the state, or the track would be announced again once it clears.
-				return POLL_IDLE_SECONDS
-			is_playing = (
-				playback.get("is_playing", False) if playback and isinstance(playback, dict) else False
-			)
-			# "item" is null during ads and between items, so not just missing.
-			current_track_id = (
-				(playback.get("item") or {}).get("id") if playback and isinstance(playback, dict) else None
-			)
-
-			# Detect play/pause transitions and manage lyric timers accordingly
-			if self._auto_reader.is_active:
-				if self._last_is_playing and not is_playing:
-					# Just paused — cancel pending timers so lyrics stop speaking
-					self._auto_reader.pause_timers()
-				elif self._last_is_playing is not None and not self._last_is_playing and is_playing:
-					# Just resumed — resync timers from current playback position
-					if self._auto_reader_synced_lyrics:
-						self._auto_reader.resync(
-							self._auto_reader_synced_lyrics,
-							playback.get("progress_ms", 0),
-						)
-						self._last_lyric_resync = time.monotonic()
-				elif (
-					is_playing
-					and self._auto_reader_synced_lyrics
-					and current_track_id == self.last_track_id
-					and time.monotonic() - self._last_lyric_resync >= LYRIC_RESYNC_SECONDS
-				):
-					# Correct the timers for drift and seeks made elsewhere.
-					self._auto_reader.resync(self._auto_reader_synced_lyrics, playback.get("progress_ms", 0))
-					self._last_lyric_resync = time.monotonic()
-			self._last_is_playing = is_playing
-
-			if self.last_track_id != current_track_id:
-				self.last_track_id = current_track_id
-				# Its lyrics may still be loading; resyncing now would time the old ones.
-				self._last_lyric_resync = time.monotonic()
-				if current_track_id:
-					if utils.conf_get("announceTrackChanges", False):
-						track_string = self.client.get_simple_track_string(playback["item"])
-						wx.CallAfter(nvda_ui.message, track_string)
-					if self._auto_reader.is_active:
-						# auto-reader handles window update internally via _restart_auto_reader
-						thread_manager.submit_task(
-							self._restart_auto_reader,
-							playback["item"],
-							playback.get("progress_ms", 0),
-							daemon=True,
-							name="LyricsNewTrack",
-						)
-					elif self.lyricsDialog:
-						# Window open but auto-reader off → fetch new lyrics and refresh window
-						thread_manager.submit_task(
-							self._refresh_lyrics_window,
-							playback["item"],
-							daemon=True,
-							name="LyricsWindowRefresh",
-						)
-			if is_playing or (playback and self._auto_reader.is_active):
-				# Paused lyrics must pick up promptly once the music resumes.
-				return POLL_PLAYING_SECONDS
-			return POLL_PAUSED_SECONDS if playback else POLL_IDLE_SECONDS
+			delay = self._poll_once()
 		except Exception:
 			log.exception("Error in Spotify polling thread")
 			return None
+		return delay
+
+	def _poll_once(self):
+		needs_poll = (
+			utils.conf_get("announceTrackChanges", False)
+			or self._auto_reader.is_active
+			or self.lyricsDialog is not None  # also poll when lyrics window is open
+		)
+		if not (needs_poll and self.client.client):
+			return None
+
+		playback = self.client.run_request("current_playback")
+		if isinstance(playback, str):
+			# An error message (offline, rate limited...): say nothing and keep
+			# the state, or the track would be announced again once it clears.
+			return POLL_IDLE_SECONDS
+		is_playing = playback.get("is_playing", False) if playback and isinstance(playback, dict) else False
+		# "item" is null during ads and between items, so not just missing.
+		current_track_id = (
+			(playback.get("item") or {}).get("id") if playback and isinstance(playback, dict) else None
+		)
+
+		# Detect play/pause transitions and manage lyric timers accordingly
+		if self._auto_reader.is_active:
+			if self._last_is_playing and not is_playing:
+				# Just paused — cancel pending timers so lyrics stop speaking
+				self._auto_reader.pause_timers()
+			elif self._last_is_playing is not None and not self._last_is_playing and is_playing:
+				# Just resumed — resync timers from current playback position
+				if self._auto_reader_synced_lyrics:
+					self._auto_reader.resync(
+						self._auto_reader_synced_lyrics,
+						playback.get("progress_ms", 0),
+					)
+					self._last_lyric_resync = time.monotonic()
+			elif (
+				is_playing
+				and self._auto_reader_synced_lyrics
+				and current_track_id == self.last_track_id
+				and time.monotonic() - self._last_lyric_resync >= LYRIC_RESYNC_SECONDS
+			):
+				# Correct the timers for drift and seeks made elsewhere.
+				self._auto_reader.resync(self._auto_reader_synced_lyrics, playback.get("progress_ms", 0))
+				self._last_lyric_resync = time.monotonic()
+		self._last_is_playing = is_playing
+
+		if self.last_track_id != current_track_id:
+			self.last_track_id = current_track_id
+			# Its lyrics may still be loading; resyncing now would time the old ones.
+			self._last_lyric_resync = time.monotonic()
+			if current_track_id:
+				if utils.conf_get("announceTrackChanges", False):
+					track_string = self.client.get_simple_track_string(playback["item"])
+					wx.CallAfter(nvda_ui.message, track_string)
+				if self._auto_reader.is_active:
+					# auto-reader handles window update internally via _restart_auto_reader
+					thread_manager.submit_task(
+						self._restart_auto_reader,
+						playback["item"],
+						playback.get("progress_ms", 0),
+						daemon=True,
+						name="LyricsNewTrack",
+					)
+				elif self.lyricsDialog:
+					# Window open but auto-reader off → fetch new lyrics and refresh window
+					thread_manager.submit_task(
+						self._refresh_lyrics_window,
+						playback["item"],
+						daemon=True,
+						name="LyricsWindowRefresh",
+					)
+		if is_playing or (playback and self._auto_reader.is_active):
+			# Paused lyrics must pick up promptly once the music resumes.
+			return POLL_PLAYING_SECONDS
+		return POLL_PAUSED_SECONDS if playback else POLL_IDLE_SECONDS
 
 	# --- LYRICS SUPPORT METHODS ---
 
@@ -612,25 +610,6 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			return 5  # off: look at the setting again in a moment
 		self.client.send_keep_alive()
 		return max(interval, 5)
-
-	def _set_clipboard(self, text):
-		"""Copy a link to the clipboard; must run on the main thread."""
-		if not text:
-			return
-		if text.startswith("http"):
-			try:
-				if wx.TheClipboard.Open():
-					wx.TheClipboard.SetData(wx.TextDataObject(text))
-					wx.TheClipboard.Close()
-					nvda_ui.message(_("Link copied"))
-				else:
-					nvda_ui.message(_("Could not open clipboard."))
-			except Exception:
-				log.exception("Failed to copy to clipboard")
-				nvda_ui.message(_("Clipboard error"))
-		else:
-			# Anything that is not a link is a message from the client.
-			nvda_ui.message(text)
 
 	def _destroy_dialog(self, attr_name, evt):
 		dialog = getattr(self, attr_name, None)
@@ -1095,8 +1074,8 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		try:
 			with open(self._get_timer_file_path(), "w") as f:
 				json.dump({"end_time": end_timestamp}, f)
-		except Exception as e:
-			log.error("Error saving sleep timer: %s", e)
+		except OSError:
+			log.exception("Error saving sleep timer")
 
 	def _read_timer_state(self):
 		"""Read the saved sleep timer end time, if any."""
@@ -1109,17 +1088,18 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 				if not content:
 					return None
 				data = json.loads(content)
-				return data.get("end_time")
-		except Exception:
+		except (OSError, ValueError):
+			log.debugWarning("Unreadable sleep timer file", exc_info=True)
 			return None
+		return data.get("end_time")
 
 	def _clear_timer_state(self):
 		"""Empty the contents of the timer file (not delete the file)."""
 		try:
 			with open(self._get_timer_file_path(), "w") as f:
 				f.write("")
-		except Exception:
-			pass
+		except OSError:
+			log.exception("Error clearing sleep timer")
 
 	def _on_sleep_timeout(self):
 		"""Function that is executed when time expires."""

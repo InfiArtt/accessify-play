@@ -12,7 +12,7 @@ from ..core.thread_manager import thread_manager
 from ..formatting import format_followers
 from ..language import init_translation
 from ..ui.base_dialog import AccessifyDialog
-from ..utils import conf_get, safe_text
+from ..utils import conf_get, copy_link, safe_text
 from .album import AlbumTracksDialog
 from .playlist import PlaylistTracksDialog
 
@@ -556,7 +556,7 @@ class ArtistDiscographyDialog(AccessifyDialog):
 		item = self._get_selected_item()
 		if item:
 			link = item.get("external_urls", {}).get("spotify")
-			self.copy_link(link)
+			copy_link(link)
 
 	def _on_add_to_playlist_selected(self, _event, playlist_id, playlist_name):
 		track = self._get_selected_item()

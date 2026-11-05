@@ -101,27 +101,27 @@ check("builtins _ left untouched", builtins._("Play") == "NVDA<Play>")
 check("ngettext installed too", callable(consumer.ngettext))
 
 # --- explicit language override ---
-lang._translation = None
+lang._get_translation.cache_clear()
 CONF["spotify"]["language"] = "en"
 check("override honoured", consumer._("Play") == "Play(en)")
 check("override still does not touch builtins", builtins._("Play") == "NVDA<Play>")
 
 # --- unknown language falls back to auto ---
-lang._translation = None
+lang._get_translation.cache_clear()
 CONF["spotify"]["language"] = "zz"
 check("unknown code normalised to auto", lang.get_language_setting() == lang.LANGUAGE_AUTO)
 check("unknown code NOT rewritten in config", CONF["spotify"]["language"] == "zz")
 check("unknown code falls back to NVDA language", consumer._("Play") == "Putar")
 
 # --- config not registered yet (import-order case) ---
-lang._translation = None
+lang._get_translation.cache_clear()
 saved = CONF.pop("spotify")
 check("missing config section does not raise", lang.get_language_setting() == lang.LANGUAGE_AUTO)
 check("still translates with no config", consumer._("Play") == "Putar")
 CONF["spotify"] = saved
 
 # --- untranslated string passes through ---
-lang._translation = None
+lang._get_translation.cache_clear()
 check("unknown message returned verbatim", consumer._("Not In Catalogue") == "Not In Catalogue")
 
 # --- regression: reading the language must not touch config ---
@@ -151,7 +151,7 @@ conf_mod = _sys.modules["config"]
 # (a) section absent entirely
 tracking = _TrackingConf({})
 conf_mod.conf = tracking
-lang._translation = None
+lang._get_translation.cache_clear()
 check("absent section: returns auto", lang.get_language_setting() == lang.LANGUAGE_AUTO)
 check("absent section: NOT created", tracking.created == [])
 check("absent section: nothing written", tracking.wrote == [])
@@ -162,13 +162,13 @@ sec._parent = _TrackingConf({})
 tracking = _TrackingConf({"spotify": sec})
 sec._parent = tracking
 conf_mod.conf = tracking
-lang._translation = None
+lang._get_translation.cache_clear()
 check("missing key: returns auto", lang.get_language_setting() == lang.LANGUAGE_AUTO)
 check("missing key: nothing written back", tracking.wrote == [])
 
 # (c) an unusable stored value must not be written back either
 sec["language"] = "zz"; tracking.wrote.clear()
-lang._translation = None
+lang._get_translation.cache_clear()
 check("bad value: normalised to auto", lang.get_language_setting() == lang.LANGUAGE_AUTO)
 check("bad value: not rewritten", tracking.wrote == [])
 

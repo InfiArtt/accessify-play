@@ -9,6 +9,7 @@ import wx
 from ..core.thread_manager import thread_manager
 from ..language import init_translation
 from ..ui.base_dialog import AccessifyDialog
+from ..utils import copy_link
 
 init_translation()
 
@@ -128,7 +129,7 @@ class QueueListDialog(AccessifyDialog):
 	def copy_selected_queue_link(self, _evt=None):
 		item = self._get_queue_selection()
 		if item:
-			self.copy_link(item.get("link"))
+			copy_link(item.get("link"))
 
 	def refresh_queue_data(self, speak_status=True):
 		if self._refresh_in_progress:

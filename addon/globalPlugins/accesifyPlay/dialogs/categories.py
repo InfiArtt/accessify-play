@@ -10,7 +10,7 @@ from logHandler import log
 from ..core.thread_manager import thread_manager
 from ..language import init_translation
 from ..ui.base_dialog import AccessifyDialog
-from ..utils import safe_text
+from ..utils import copy_link, safe_text
 from .playlist import PlaylistTracksDialog
 
 init_translation()
@@ -353,7 +353,7 @@ class PlaylistBrowserDialog(AccessifyDialog):
 		elif menu_id == self.MENU_PLAY:
 			self._play_playlist(playlist)
 		elif menu_id == self.MENU_COPY_LINK:
-			self.copy_link(playlist.get("external_urls", {}).get("spotify"))
+			copy_link(playlist.get("external_urls", {}).get("spotify"))
 
 	def _view_tracks(self):
 		playlist = self._menu_playlist()

@@ -5,6 +5,7 @@
 
 # Lyrics fetching, LRC parsing, and auto-read timer management.
 
+import functools
 import json
 import re
 import threading
@@ -12,6 +13,8 @@ from urllib import error as url_error
 from urllib import parse as url_parse
 from urllib import request as url_request
 
+import addonHandler
+import ui as nvda_ui
 import wx
 from logHandler import log
 
@@ -64,25 +67,18 @@ def _fetch_search(track_name, artist_name):
 	return None
 
 
-_user_agent = None
-
-
+@functools.cache
 def _get_user_agent():
 	"""Identify ourselves to lrclib with the add-on's real version.
 
 	lrclib asks clients for a name, version and homepage. This used to be a
 	hard-coded "1.6.1", five releases stale.
 	"""
-	global _user_agent
-	if _user_agent is None:
-		try:
-			import addonHandler
-
-			version = addonHandler.getCodeAddon().manifest["version"]
-		except Exception:
-			version = "unknown"
-		_user_agent = f"AccessifyPlay-NVDA-Addon/{version} (+https://github.com/InfiArtt/accessify-play)"
-	return _user_agent
+	try:
+		version = addonHandler.getCodeAddon().manifest["version"]
+	except addonHandler.AddonError:
+		version = "unknown"
+	return f"AccessifyPlay-NVDA-Addon/{version} (+https://github.com/InfiArtt/accessify-play)"
 
 
 def _make_request(url):
@@ -238,8 +234,6 @@ class LyricsAutoReader:
 
 	def _speak(self, text, ms=None):
 		if self._active:
-			import ui as nvda_ui
-
 			wx.CallAfter(nvda_ui.message, text)
 			if ms is not None and self._line_callback:
 				wx.CallAfter(self._line_callback, ms)

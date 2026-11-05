@@ -15,9 +15,10 @@ from gui import guiHelper
 from ..core.thread_manager import thread_manager
 from ..language import init_translation
 from ..ui.base_dialog import AccessifyDialog
-from ..utils import duplicate_occurrences, playlist_rows, positions_after_move, safe_text
+from ..utils import copy_link, duplicate_occurrences, playlist_rows, positions_after_move, safe_text
 from .album import AlbumTracksDialog
 from .artist import ArtistDiscographyDialog
+from .audiobooks import AudiobookChaptersDialog
 from .playlist_forms import CreatePlaylistDialog, PlaylistDetailsDialog
 from .podcasts import PodcastEpisodesDialog
 
@@ -146,7 +147,7 @@ class ManagementDialog(AccessifyDialog):
 		if not item:
 			return
 		link = item.get("external_urls", {}).get("spotify")
-		self.copy_link(link)
+		copy_link(link)
 
 	def _on_add_to_playlist_selected(self, _event, playlist_id, playlist_name):
 		track = self._get_selected_item()
@@ -422,7 +423,6 @@ class ManagementDialog(AccessifyDialog):
 		audiobook = self._get_selected_item()
 		if not audiobook or not audiobook.get("id"):
 			return
-		from .audiobooks import AudiobookChaptersDialog
 
 		dialog = AudiobookChaptersDialog(
 			self, self.client, audiobook["id"], safe_text(audiobook.get("name"), _("Audiobook"))

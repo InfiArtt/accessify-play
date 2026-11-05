@@ -10,7 +10,7 @@ from ..core.thread_manager import thread_manager
 from ..formatting import format_duration
 from ..language import init_translation
 from ..ui.base_dialog import AccessifyDialog
-from ..utils import conf_get
+from ..utils import conf_get, copy_link
 
 init_translation()
 
@@ -231,4 +231,4 @@ class AudiobookChaptersDialog(AccessifyDialog):
 	def on_copy_link(self, _evt=None):
 		chapter = self._get_selected_chapter()
 		if chapter:
-			self.copy_link(chapter.get("external_urls", {}).get("spotify"))
+			copy_link(chapter.get("external_urls", {}).get("spotify"))

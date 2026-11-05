@@ -272,18 +272,18 @@ for node in init_tree.body:   # the POLL_* constants, from the source itself
     if isinstance(node, ast.Assign) and any(getattr(t, "id", "").startswith(("POLL_", "LYRIC_")) for t in node.targets):
         exec(compile(ast.Module(body=[node], type_ignores=[]), "consts", "exec"), pns)
 klass = next(n for n in init_tree.body if isinstance(n, ast.ClassDef) and n.name == "GlobalPlugin")
-fn = next(n for n in klass.body if isinstance(n, ast.FunctionDef) and n.name == "track_change_poller")
+fn = next(n for n in klass.body if isinstance(n, ast.FunctionDef) and n.name == "_poll_once")
 SAID, RESYNCS, TASKS = [], [], []
 CONF = {"announceTrackChanges": True}
 pns.update(
-    time=time, log=types.SimpleNamespace(error=lambda *a, **k: None),
+    time=time, log=types.SimpleNamespace(error=lambda *a, **k: None, exception=lambda *a, **k: None),
     utils=types.SimpleNamespace(conf_get=lambda k, d=None: CONF.get(k, d)),
     wx=types.SimpleNamespace(CallAfter=lambda f, *a: f(*a)),
     nvda_ui=types.SimpleNamespace(message=SAID.append),
     thread_manager=types.SimpleNamespace(submit_task=lambda f, *a, **k: TASKS.append(f)),
 )
 exec(compile(ast.fix_missing_locations(ast.Module(body=[fn], type_ignores=[])), "poller", "exec"), pns)
-poll = pns["track_change_poller"]
+poll = pns["_poll_once"]
 check("no separate lyric resync poller any more", "_lyric_resync_poller" not in init_src)
 
 class Reader:

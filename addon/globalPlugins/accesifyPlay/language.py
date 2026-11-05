@@ -3,12 +3,14 @@
 # This file is covered by the GNU General Public License, version 2.
 # See the file LICENSE for more details.
 
+import functools
 import gettext
 import inspect
 import os
 
 import config
 import languageHandler
+from logHandler import log
 
 addon_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
@@ -41,10 +43,6 @@ def _discover_language_codes():
 
 AVAILABLE_LANGUAGE_CODES = _discover_language_codes()
 
-#: Built once per session. The settings panel already tells the user that a
-#: language change takes effect after restarting NVDA.
-_translation = None
-
 
 def _normalize_language_setting(lang_code):
 	if not lang_code or lang_code == LANGUAGE_AUTO:
@@ -66,19 +64,23 @@ def get_language_setting():
 			return LANGUAGE_AUTO
 		stored = config.conf["spotify"].get("language")
 	except Exception:
+		log.debug("AccessifyPlay: language setting unreadable", exc_info=True)
 		return LANGUAGE_AUTO
 	return _normalize_language_setting(stored)
 
 
+@functools.cache
 def _get_translation():
-	global _translation
-	if _translation is None:
-		setting = get_language_setting()
-		if setting == LANGUAGE_AUTO:
-			# Same catalogue NVDA's own addonHandler.initTranslation would pick.
-			setting = languageHandler.getLanguage()
-		_translation = gettext.translation("nvda", localedir=locale_path, languages=[setting], fallback=True)
-	return _translation
+	"""The catalogue, built once per session.
+
+	The settings panel already tells the user that a language change takes
+	effect after restarting NVDA.
+	"""
+	setting = get_language_setting()
+	if setting == LANGUAGE_AUTO:
+		# Same catalogue NVDA's own addonHandler.initTranslation would pick.
+		setting = languageHandler.getLanguage()
+	return gettext.translation("nvda", localedir=locale_path, languages=[setting], fallback=True)
 
 
 # The catalogue is resolved on the first translated string rather than at

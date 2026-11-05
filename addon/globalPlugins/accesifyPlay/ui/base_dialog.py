@@ -3,12 +3,15 @@
 # This file is covered by the GNU General Public License, version 2.
 # See the file LICENSE for more details.
 
+import contextlib
+
 import ui
 import wx
 from logHandler import log
 
 from ..core.thread_manager import thread_manager
 from ..language import init_translation
+from ..lyrics import fetch_lyrics, parse_lrc
 from ..utils import safe_text
 
 init_translation()
@@ -53,18 +56,14 @@ class AccessifyDialog(wx.Dialog):
 		self.Unbind(wx.EVT_CLOSE)
 		self.Unbind(wx.EVT_CHAR_HOOK)
 
-		try:
-			wx.CallAfter(self._raise_parent_dialog)
-			wx.CallAfter(self.Destroy)
-		except Exception as e:
-			log.error("Error destroying dialog %s: %s", self.__class__.__name__, e)
+		wx.CallAfter(self._raise_parent_dialog)
+		wx.CallAfter(self.Destroy)
 
 	def _raise_parent_dialog(self):
 		if self._parentDialog:
-			try:
+			# The parent may have been closed in the meantime.
+			with contextlib.suppress(RuntimeError):
 				self._parentDialog.Raise()
-			except Exception:
-				pass
 
 	# --- Spotify actions (run through the thread manager) ---
 
@@ -184,20 +183,6 @@ class AccessifyDialog(wx.Dialog):
 
 		thread_manager.submit_task(_run, name="ToggleSavedTask")
 
-	def copy_link(self, link):
-		if not link:
-			ui.message(_("Link not available."))
-			return
-		try:
-			if wx.TheClipboard.Open():
-				wx.TheClipboard.SetData(wx.TextDataObject(link))
-				wx.TheClipboard.Close()
-				ui.message(_("Link copied"))
-			else:
-				ui.message(_("Could not open clipboard."))
-		except Exception:
-			ui.message(_("Clipboard error"))
-
 	def _bind_list_activation(self, control, activate_callback):
 		control.Bind(wx.EVT_LISTBOX_DCLICK, lambda _evt: activate_callback())
 
@@ -268,8 +253,6 @@ class AccessifyDialog(wx.Dialog):
 		ui.message(_("Loading lyrics..."))
 
 		def _fetch():
-			from ..lyrics import fetch_lyrics, parse_lrc
-
 			try:
 				result = fetch_lyrics(track_name, artist_name, album_name, duration_ms)
 			except Exception:
@@ -296,7 +279,7 @@ class AccessifyDialog(wx.Dialog):
 		thread_manager.submit_task(_fetch, name="LyricsPreviewTask")
 
 	def _open_lyrics_preview(self, track_name, artist_name, plain, synced_lines):
-		from ..dialogs.lyrics_window import LyricsDialog
+		from ..dialogs.lyrics_window import LyricsDialog  # noqa: PLC0415 - circular import
 
 		dialog = LyricsDialog(self, track_name, artist_name, plain, synced_lines=synced_lines)
 		dialog.Show()
@@ -335,14 +318,14 @@ class AccessifyDialog(wx.Dialog):
 
 	def _handle_go_to_album(self, _event, album):
 		user_playlists = getattr(self, "_user_playlists", []) or getattr(self, "user_playlists", [])
-		from ..dialogs.album import AlbumTracksDialog
+		from ..dialogs.album import AlbumTracksDialog  # noqa: PLC0415 - circular import
 
 		dialog = AlbumTracksDialog(self, self.client, album, user_playlists)
 		dialog.Show()
 
 	def _handle_go_to_artist(self, _event, artist):
 		user_playlists = getattr(self, "_user_playlists", []) or getattr(self, "user_playlists", [])
-		from ..dialogs.artist import ArtistDiscographyDialog
+		from ..dialogs.artist import ArtistDiscographyDialog  # noqa: PLC0415 - circular import
 
 		dialog = ArtistDiscographyDialog(
 			self, self.client, artist.get("id"), artist.get("name"), user_playlists

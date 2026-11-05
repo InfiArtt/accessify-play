@@ -12,7 +12,7 @@ from ..core.thread_manager import thread_manager
 from ..formatting import format_duration
 from ..language import init_translation
 from ..ui.base_dialog import AccessifyDialog
-from ..utils import safe_text
+from ..utils import copy_link, safe_text
 
 init_translation()
 
@@ -193,7 +193,7 @@ class AlbumTracksDialog(AccessifyDialog):
 		track = self._get_selected_track()
 		if track:
 			link = track.get("external_urls", {}).get("spotify")
-			self.copy_link(link)
+			copy_link(link)
 
 	def _on_add_to_playlist_selected(self, _event, playlist_id, playlist_name):
 		track = self._get_selected_track()

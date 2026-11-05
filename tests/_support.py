@@ -1,6 +1,8 @@
 """Shared helpers for the test scripts."""
 import os
 import subprocess
+import sys
+import types
 
 #: The repository root: the folder above tests/.
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -42,3 +44,37 @@ def have(module):
 	import importlib.util
 
 	return importlib.util.find_spec(module) is not None
+
+
+def _default_nvda_stubs():
+	"""Stand-ins for NVDA modules that tests rarely care about.
+
+	Registered only when missing, so a test that builds its own fake of one
+	of these still gets it.
+	"""
+	api = types.ModuleType("api")
+	api.copyToClip = lambda text, notify=False: True
+	sys.modules.setdefault("api", api)
+
+	addon_handler = types.ModuleType("addonHandler")
+
+	class AddonError(Exception):
+		pass
+
+	def get_code_addon(*_args, **_kwargs):
+		raise AddonError("Not running inside an add-on.")
+
+	addon_handler.AddonError = AddonError
+	addon_handler.getCodeAddon = get_code_addon
+	sys.modules.setdefault("addonHandler", addon_handler)
+
+	ui = types.ModuleType("ui")
+	ui.message = lambda *_args, **_kwargs: None
+	sys.modules.setdefault("ui", ui)
+
+	config = types.ModuleType("config")
+	config.conf = {}
+	sys.modules.setdefault("config", config)
+
+
+_default_nvda_stubs()

@@ -5,6 +5,8 @@
 
 from functools import wraps
 
+import api
+import config
 import ui
 import wx
 from logHandler import log
@@ -69,12 +71,10 @@ def copy_in_thread(func):
 
 	@wraps(func)
 	def wrapper(self, *args, **kwargs):
-		plugin_instance = self
-
 		def thread_target():
 			try:
-				result_text = func(self, *args, **kwargs)
-				wx.CallAfter(plugin_instance._set_clipboard, result_text)
+				result = func(self, *args, **kwargs)
+				wx.CallAfter(_copy_result, result)
 			except Exception:
 				log.exception("Error in copy_in_thread for %s", func.__name__)
 				wx.CallAfter(ui.message, _("An unexpected error occurred."))
@@ -82,6 +82,26 @@ def copy_in_thread(func):
 		thread_manager.submit_task(thread_target, name=f"copy_{func.__name__}", daemon=True)
 
 	return wrapper
+
+
+def _copy_result(text):
+	"""Copy a link from copy_in_thread; anything else is a message from the client."""
+	if not text:
+		return
+	if text.startswith("http"):
+		copy_link(text)
+	else:
+		ui.message(text)
+
+
+def copy_link(link):
+	"""Put a Spotify link on the clipboard and say whether that worked."""
+	if not link:
+		ui.message(_("Link not available."))
+	elif api.copyToClip(link):
+		ui.message(_("Link copied"))
+	else:
+		ui.message(_("Could not open clipboard."))
 
 
 def conf_get(key, default=None):
@@ -93,12 +113,10 @@ def conf_get(key, default=None):
 	NVDA's whole settings dialog. Falling back to the default degrades one
 	control instead.
 	"""
-	import config
-
 	try:
 		value = config.conf["spotify"][key]
 	except Exception:
-		log.debug("AccessifyPlay: setting %r unavailable, using %r.", key, default)
+		log.debug("AccessifyPlay: setting %r unavailable, using %r.", key, default, exc_info=True)
 		return default
 	return default if value is None else value
 

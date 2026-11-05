@@ -9,8 +9,11 @@ import wx
 from ..core.thread_manager import thread_manager
 from ..language import init_translation
 from ..ui.base_dialog import AccessifyDialog
+from ..utils import copy_link
 from .album import AlbumTracksDialog
 from .artist import ArtistDiscographyDialog
+from .audiobooks import AudiobookChaptersDialog
+from .categories import CategoriesDialog, FeaturedPlaylistsDialog
 from .playlist import PlaylistTracksDialog
 from .podcasts import PodcastEpisodesDialog
 
@@ -165,13 +168,11 @@ class SearchDialog(AccessifyDialog):
 		self.Bind(wx.EVT_MENU, self.on_show_lyrics, id=self.MENU_SHOW_LYRICS.GetId())
 
 	def on_browse_categories(self, _evt):
-		from .categories import CategoriesDialog
 
 		dlg = CategoriesDialog(self, self.client)
 		dlg.ShowModal()
 
 	def on_featured_playlists(self, _evt):
-		from .categories import FeaturedPlaylistsDialog
 
 		dlg = FeaturedPlaylistsDialog(self, self.client)
 		dlg.ShowModal()
@@ -377,7 +378,6 @@ class SearchDialog(AccessifyDialog):
 		self._toggle_saved("audiobook", audiobook)
 
 	def _open_audiobook_chapters(self, audiobook):
-		from .audiobooks import AudiobookChaptersDialog
 
 		dialog = AudiobookChaptersDialog(self, self.client, audiobook["id"], audiobook.get("name"))
 		dialog.Show()
@@ -640,7 +640,7 @@ class SearchDialog(AccessifyDialog):
 	def copy_selected_link(self, _evt=None):
 		item = self._get_item_at_index(self.resultsList.GetSelection())
 		if item:
-			self.copy_link(item.get("external_urls", {}).get("spotify"))
+			copy_link(item.get("external_urls", {}).get("spotify"))
 
 	def on_toggle_follow_playlist(self, playlist_item, is_currently_followed):
 		playlist_id = playlist_item.get("id")

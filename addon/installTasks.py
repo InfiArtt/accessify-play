@@ -134,7 +134,8 @@ def _defensive_cleanup_nvda_import_tracker(addon_name: str):
 			file_path = getattr(mod, "__file__", "")
 			if not file_path or not str(file_path).startswith(_ADDON_DIR):
 				to_remove.append(mod)
-		except Exception:
+		except Exception:  # a module's __file__ can be anything
+			log.debug("AccessifyPlay installTasks: unreadable __file__", exc_info=True)
 			to_remove.append(mod)
 
 	for invalid_mod in to_remove:

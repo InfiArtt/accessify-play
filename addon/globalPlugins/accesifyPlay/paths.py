@@ -75,8 +75,8 @@ def migrate_legacy_data():
 			# folders can sit on different drives.
 			shutil.move(old_path, new_path)
 			log.info("AccessifyPlay: moved %s into %s.", legacy_name, data_dir)
-		except Exception as e:
-			log.error("AccessifyPlay: could not move %s to %s: %s", old_path, new_path, e)
+		except OSError as e:
+			log.warning("AccessifyPlay: could not move %s to %s: %s", old_path, new_path, e)
 
 	for legacy_name in _OBSOLETE_LEGACY_NAMES:
 		old_path = os.path.join(legacy_dir, legacy_name)
@@ -85,5 +85,5 @@ def migrate_legacy_data():
 		try:
 			os.remove(old_path)
 			log.info("AccessifyPlay: removed obsolete %s.", legacy_name)
-		except Exception as e:
-			log.error("AccessifyPlay: could not remove %s: %s", old_path, e)
+		except OSError as e:
+			log.warning("AccessifyPlay: could not remove %s: %s", old_path, e)

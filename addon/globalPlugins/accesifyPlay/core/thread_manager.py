@@ -79,7 +79,7 @@ class ThreadManager:
 				if thread.is_alive():
 					try:
 						thread.join(timeout=timeout)
-					except Exception as e:
+					except RuntimeError as e:  # the calling thread itself
 						log.debug("Failed to join thread %s: %s", thread.name, e)
 			self._threads.clear()
 

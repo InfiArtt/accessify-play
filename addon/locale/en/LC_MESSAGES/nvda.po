@@ -179,11 +179,6 @@ msgstr ""
 msgid "Could not open clipboard."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:610
-#: addon/globalPlugins/accesifyPlay/ui/base_dialog.py:204
-msgid "Clipboard error"
-msgstr ""
-
 #: addon/globalPlugins/accesifyPlay/__init__.py:626
 msgid "Accessify Play layer commands. Press F1 for help."
 msgstr ""

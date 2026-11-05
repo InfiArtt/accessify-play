@@ -3,6 +3,7 @@
 # This file is covered by the GNU General Public License, version 2.
 # See the file LICENSE for more details.
 
+import functools
 import math
 import os
 import re
@@ -25,9 +26,6 @@ from .formatting import format_duration, format_followers
 from .language import init_translation
 
 init_translation()
-
-# This will be the single, shared instance of the client
-_instance = None
 
 #: The ncspot client ID: extended quota and PKCE, so nobody has to register an app.
 #: Its request limit is shared by everyone using it, which is why users may set their own.
@@ -65,7 +63,7 @@ def own_client_id():
 	"""
 	try:
 		value = (config.conf["spotify"]["ownClientID"] or "").strip()
-	except Exception:
+	except KeyError:
 		return ""
 	return value if is_valid_client_id(value) else ""
 
@@ -225,12 +223,10 @@ def _is_no_active_device(e):
 	return getattr(e, "http_status", None) == 404 and "no active device" in str(e).lower()
 
 
+@functools.cache
 def get_client():
-	"""Returns the shared instance of the SpotifyClient."""
-	global _instance
-	if _instance is None:
-		_instance = SpotifyClient()
-	return _instance
+	"""The SpotifyClient the whole add-on shares."""
+	return SpotifyClient()
 
 
 class SpotifyClient:
@@ -276,31 +272,28 @@ class SpotifyClient:
 			log.exception("Spotify: silent initialization failed")
 
 	def validate(self):
-		"""Interactively validates credentials, opening a browser if needed."""
+		"""Sign in interactively, opening a browser if needed. Returns whether it worked."""
 		log.info("Spotify: attempting interactive validation.")
 		auth_manager = self._get_auth_manager(open_browser=True)
+		self.client = None
 		try:
-			token_info = auth_manager.get_access_token(check_cache=False)
-			if token_info:
-				self.client = _new_spotify(auth_manager)
-				self.client.current_user()  # Test call
-				log.info("Spotify: validation successful.")
-				return True
-			self.client = None
-			log.warning("Spotify: could not get a token, even with interactive login.")
-			return False
+			if not auth_manager.get_access_token(check_cache=False):
+				log.warning("Spotify: could not get a token, even with interactive login.")
+				return False
+			client = _new_spotify(auth_manager)
+			client.current_user()  # Test call
 		except _TIMEOUT_ERRORS as e:
-			self.client = None
 			log.debug("Spotify interactive validation timeout: %s", e)
 			return False
 		except _CONNECTION_ERRORS as e:
-			self.client = None
-			log.error("Spotify: connection error during validation: %s", e)
+			log.warning("Spotify: connection error during validation: %s", e)
 			return False
 		except Exception:
-			self.client = None
 			log.exception("Spotify: interactive validation failed")
 			return False
+		self.client = client
+		log.info("Spotify: validation successful.")
+		return True
 
 	def reset_session(self):
 		"""Forget the sign-in, device and rate limit, after the Client ID changed.
@@ -413,7 +406,7 @@ class SpotifyClient:
 			if "device_id" in command.__code__.co_varnames:
 				kwargs["device_id"] = self.device_id
 			return command(*args, **kwargs)
-		except Exception as e:
+		except Exception as e:  # noqa: BLE001 - _error_message logs whatever is unexpected
 			return self._error_message(e)
 
 	def run_request(self, command, *args, status_messages=None, **kwargs):
@@ -426,7 +419,7 @@ class SpotifyClient:
 			return blocked
 		try:
 			return self._prepare(command, kwargs)(*args, **kwargs)
-		except Exception as e:
+		except Exception as e:  # noqa: BLE001 - _error_message logs whatever is unexpected
 			return self._error_message(e, status_messages)
 
 	def _retired_endpoint_message(self):
@@ -447,8 +440,8 @@ class SpotifyClient:
 			return
 		try:
 			self.client.current_user()
-		except Exception:
-			pass
+		except Exception:  # nothing depends on it
+			log.debug("Spotify: keep-alive request failed", exc_info=True)
 
 	def _try(self, what, call):
 		"""Run call(); on failure log it (a traceback only if unexpected) and return None.

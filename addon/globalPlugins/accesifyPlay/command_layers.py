@@ -121,7 +121,8 @@ class CommandLayerManager:
 			try:
 				normalized[inputCore.normalizeGestureIdentifier(identifier)] = script_name
 			except Exception:
-				log.error("AccessifyPlay: ignoring malformed layer gesture %r", identifier)
+				# The file is user-editable, so anything can be in it.
+				log.exception("AccessifyPlay: ignoring malformed layer gesture %r", identifier)
 		return normalized
 
 	def _build_help_entries(self):

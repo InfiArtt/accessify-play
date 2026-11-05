@@ -11,7 +11,7 @@ import wx
 from ..core.thread_manager import thread_manager
 from ..language import init_translation
 from ..ui.base_dialog import AccessifyDialog
-from ..utils import conf_get
+from ..utils import conf_get, copy_link
 
 init_translation()
 
@@ -225,7 +225,7 @@ class PodcastEpisodesDialog(AccessifyDialog):
 		episode = self._get_selected_episode()
 		if episode:
 			link = episode.get("external_urls", {}).get("spotify")
-			self.copy_link(link)
+			copy_link(link)
 
 	def on_save_episode(self, _evt=None):
 		self._toggle_saved("episode", self._get_selected_episode())

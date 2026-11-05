@@ -3,6 +3,7 @@
 # This file is covered by the GNU General Public License, version 2.
 # See the file LICENSE for more details.
 
+import api
 import wx
 
 from ..language import init_translation
@@ -147,12 +148,6 @@ class LyricsDialog(AccessifyDialog):
 		m = total_s // 60
 		return f"[{m:02d}:{s:02d}.{cs:02d}]"
 
-	@staticmethod
-	def _copy_to_clipboard(text):
-		if wx.TheClipboard.Open():
-			wx.TheClipboard.SetData(wx.TextDataObject(text))
-			wx.TheClipboard.Close()
-
 	# ------------------------------------------------------------------
 	# Public: auto-scroll called by line_callback from LyricsAutoReader
 	# ------------------------------------------------------------------
@@ -202,12 +197,12 @@ class LyricsDialog(AccessifyDialog):
 			text = "\n".join(t for _, t in self._display_lines)
 		else:
 			text = self.lyrics_ctrl.GetValue()
-		self._copy_to_clipboard(text)
+		api.copyToClip(text, notify=True)
 
 	def _on_copy_with_timestamps(self, _evt):
 		"""Copy lyrics in LRC [mm:ss.cs] format to clipboard."""
 		lines = [f"{self._ms_to_lrc(ms)} {text}" for ms, text in self._display_lines]
-		self._copy_to_clipboard("\n".join(lines))
+		api.copyToClip("\n".join(lines), notify=True)
 
 	def _on_jump_to_current(self, _evt):
 		"""Ask __init__.py for the current Spotify position, then scroll there."""

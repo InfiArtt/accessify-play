@@ -192,11 +192,6 @@ msgstr "Tautan disalin"
 msgid "Could not open clipboard."
 msgstr "Tidak dapat membuka papan klip."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:610
-#: addon/globalPlugins/accesifyPlay/ui/base_dialog.py:204
-msgid "Clipboard error"
-msgstr "Kesalahan papan klip"
-
 #: addon/globalPlugins/accesifyPlay/__init__.py:626
 msgid "Accessify Play layer commands. Press F1 for help."
 msgstr "Perintah lapisan Accessify Play. Tekan F1 untuk bantuan."
