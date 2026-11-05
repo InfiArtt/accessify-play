@@ -19,8 +19,11 @@ These work anywhere in the Search window. If there is text in the search field, 
 | Shortcut | Action |
 | :------- | :----- |
 | `Ctrl+1` to `Ctrl+6` | Song, Album, Artist, Playlist, Podcast, Audiobook |
-| `Ctrl+PageDown` / `Ctrl+PageUp` | Next or previous type |
+| `Ctrl+Tab` or `Ctrl+PageDown` | Next type |
+| `Ctrl+Shift+Tab` or `Ctrl+PageUp` | Previous type |
 | `Ctrl+F` | Back to the search field, with its text selected |
+
+The artist window below uses the same keys for its tabs.
 
 ## What Enter does
 
@@ -63,12 +66,21 @@ In an episode list, `Alt+S` (or Save/Unsave Episode in the context menu) saves t
 
 ## Artist discography
 
-The discography window has four tabs:
+The discography window opens on Top Tracks, with the focus on the first song once it has loaded. It has five tabs:
 
-* **Artist Info**: followers, popularity, genres and the artist's link.
-* **Top Tracks**: popular songs by the artist.
-* **All Tracks**: every song from the artist's albums and singles, without duplicates, loaded page by page.
-* **Albums and Singles**: press `Enter` to open an album's tracks.
+1. **Top Tracks**: popular songs by the artist. `Enter` plays one.
+2. **Albums and Singles**: `Enter` opens an album's tracks.
+3. **Playlists**: playlists found by searching for the artist's name, made by Spotify or by anyone else. `Enter` opens a playlist's tracks.
+4. **All Tracks**: every song from the artist's albums and singles, without duplicates, loaded page by page.
+5. **Artist Info**: followers, popularity, genres and the artist's link.
+
+| Shortcut | Action |
+| :------- | :----- |
+| `Ctrl+1` to `Ctrl+5` | Go to that tab, with the focus in its list |
+| `Ctrl+Tab` or `Ctrl+PageDown` | Next tab |
+| `Ctrl+Shift+Tab` or `Ctrl+PageUp` | Previous tab |
+
+`Alt+P`, `Alt+Q` and `Alt+L` play, queue and copy the link of the selected song, album or playlist.
 
 ## Browse Categories and Featured Playlists
 

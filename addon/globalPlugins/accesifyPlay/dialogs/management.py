@@ -477,15 +477,23 @@ class ArtistDiscographyDialog(AccessifyDialog):
 	MENU_PLAY = wx.NewIdRef()
 	MENU_ADD_QUEUE = wx.NewIdRef()
 	MENU_COPY_LINK = wx.NewIdRef()
+	# Ctrl+1 to Ctrl+5 jump to a tab, in the order the tabs are shown; Ctrl+Tab and
+	# Ctrl+PageDown go to the next tab, with Shift or PageUp to the previous one.
+	# The Search dialog uses the same keys for its types.
+	MENU_PAGE_IDS = [wx.NewIdRef() for _i in range(5)]
+	MENU_NEXT_PAGE = wx.NewIdRef()
+	MENU_PREV_PAGE = wx.NewIdRef()
 
 	def __init__(self, parent, client, artist_id, artist_name, user_playlists):
 		title = _("Discography for {artist_name}").format(artist_name=artist_name)
 		super().__init__(parent, title=title, size=(600, 500))
 		self.client = client
 		self.artist_id = artist_id
+		self.artist_name = artist_name
 		self.all_tracks_batch_size = _get_search_limit(self.DEFAULT_ALL_TRACKS_BATCH_SIZE)
 		self.top_tracks = []
 		self.albums = []
+		self.playlists = []
 		self.all_tracks = []
 		self.artist_info = None
 		self._all_tracks_seen_ids = set()
@@ -496,8 +504,23 @@ class ArtistDiscographyDialog(AccessifyDialog):
 		self._all_tracks_load_more_label = "--- {} ---".format(_("Load More"))
 		self._user_playlists = user_playlists
 		self.init_ui()
+		# Open on the popular songs; the focus moves into that list once it is loaded.
+		self.notebook.SetSelection(self.top_tracks_page_index)
 		self.load_data()
 		self._create_accelerators()
+
+	def _add_list_page(self, title):
+		"""Add a notebook page holding one list, labelled so screen readers name the list."""
+		page = wx.Panel(self.notebook)
+		sizer = wx.BoxSizer(wx.VERTICAL)
+		page.SetSizer(sizer)
+		# The label right before the list is what screen readers announce as its name.
+		sizer.Add(wx.StaticText(page, label=f"{title}:"), 0, wx.LEFT | wx.TOP, 5)
+		list_control = wx.ListBox(page)
+		sizer.Add(list_control, 1, wx.EXPAND | wx.ALL, 5)
+		page_index = self.notebook.GetPageCount()
+		self.notebook.AddPage(page, title)
+		return list_control, page_index
 
 	def init_ui(self):
 		panel = wx.Panel(self)
@@ -505,6 +528,12 @@ class ArtistDiscographyDialog(AccessifyDialog):
 
 		self.notebook = wx.Notebook(panel)
 		main_sizer.Add(self.notebook, 1, wx.EXPAND | wx.ALL, 5)
+
+		# Tab order: what you most often want first, the profile last.
+		self.top_tracks_list, self.top_tracks_page_index = self._add_list_page(_("Top Tracks"))
+		self.albums_list, self.albums_page_index = self._add_list_page(_("Albums and Singles"))
+		self.playlists_list, self.playlists_page_index = self._add_list_page(_("Playlists"))
+		self.all_tracks_list, self.all_tracks_page_index = self._add_list_page(_("All Tracks"))
 
 		panel_info = wx.Panel(self.notebook)
 		sizer_info = wx.BoxSizer(wx.VERTICAL)
@@ -519,37 +548,20 @@ class ArtistDiscographyDialog(AccessifyDialog):
 		self.info_page_index = self.notebook.GetPageCount()
 		self.notebook.AddPage(panel_info, _("Artist Info"))
 
-		panel_tracks = wx.Panel(self.notebook)
-		sizer_tracks = wx.BoxSizer(wx.VERTICAL)
-		panel_tracks.SetSizer(sizer_tracks)
-
-		self.top_tracks_list = wx.ListBox(panel_tracks)
-		sizer_tracks.Add(self.top_tracks_list, 1, wx.EXPAND | wx.ALL, 5)
-		self.top_tracks_page_index = self.notebook.GetPageCount()
-		self.notebook.AddPage(panel_tracks, _("Top Tracks"))
-
-		panel_all_tracks = wx.Panel(self.notebook)
-		sizer_all_tracks = wx.BoxSizer(wx.VERTICAL)
-		panel_all_tracks.SetSizer(sizer_all_tracks)
-
-		self.all_tracks_list = wx.ListBox(panel_all_tracks)
-		sizer_all_tracks.Add(self.all_tracks_list, 1, wx.EXPAND | wx.ALL, 5)
-		self.all_tracks_page_index = self.notebook.GetPageCount()
-		self.notebook.AddPage(panel_all_tracks, _("All Tracks"))
-
-		panel_albums = wx.Panel(self.notebook)
-		sizer_albums = wx.BoxSizer(wx.VERTICAL)
-		panel_albums.SetSizer(sizer_albums)
-
-		self.albums_list = wx.ListBox(panel_albums)
-		sizer_albums.Add(self.albums_list, 1, wx.EXPAND | wx.ALL, 5)
-		self.albums_page_index = self.notebook.GetPageCount()
-		self.notebook.AddPage(panel_albums, _("Albums and Singles"))
+		# What Ctrl+1 to Ctrl+5 jump to, and which control gets the focus there.
+		self._pages = [
+			(self.top_tracks_page_index, self.top_tracks_list),
+			(self.albums_page_index, self.albums_list),
+			(self.playlists_page_index, self.playlists_list),
+			(self.all_tracks_page_index, self.all_tracks_list),
+			(self.info_page_index, self.info_text),
+		]
 
 		self._bind_list_activation(self.top_tracks_list, self.on_play_selected)
 		self._bind_list_activation(self.albums_list, self._on_album_activate)
+		self._bind_list_activation(self.playlists_list, self._on_playlist_activate)
 		self._bind_list_activation(self.all_tracks_list, self._on_all_tracks_activate)
-		for list_control in [self.top_tracks_list, self.albums_list, self.all_tracks_list]:
+		for list_control in [self.top_tracks_list, self.albums_list, self.playlists_list, self.all_tracks_list]:
 			list_control.Bind(wx.EVT_CONTEXT_MENU, self.on_context_menu)
 
 		buttons_sizer = wx.StdDialogButtonSizer()
@@ -570,27 +582,70 @@ class ArtistDiscographyDialog(AccessifyDialog):
 			(wx.ACCEL_ALT, ord("Q"), self.MENU_ADD_QUEUE.GetId()),
 			(wx.ACCEL_ALT, ord("L"), self.MENU_COPY_LINK.GetId()),
 		]
+		for position, page_id in enumerate(self.MENU_PAGE_IDS):
+			accel_entries.append((wx.ACCEL_CTRL, ord(str(position + 1)), page_id.GetId()))
+			self.Bind(wx.EVT_MENU, lambda evt, p=position: self.show_page(p), id=page_id.GetId())
+		accel_entries += [
+			(wx.ACCEL_CTRL, wx.WXK_TAB, self.MENU_NEXT_PAGE.GetId()),
+			(wx.ACCEL_CTRL, wx.WXK_PAGEDOWN, self.MENU_NEXT_PAGE.GetId()),
+			(wx.ACCEL_CTRL | wx.ACCEL_SHIFT, wx.WXK_TAB, self.MENU_PREV_PAGE.GetId()),
+			(wx.ACCEL_CTRL, wx.WXK_PAGEUP, self.MENU_PREV_PAGE.GetId()),
+		]
+		self.Bind(wx.EVT_MENU, lambda evt: self.show_page(self._current_position() + 1), id=self.MENU_NEXT_PAGE.GetId())
+		self.Bind(wx.EVT_MENU, lambda evt: self.show_page(self._current_position() - 1), id=self.MENU_PREV_PAGE.GetId())
 		self.SetAcceleratorTable(wx.AcceleratorTable(accel_entries))
 		self.Bind(wx.EVT_MENU, self.on_play_selected, id=self.MENU_PLAY.GetId())
 		self.Bind(wx.EVT_MENU, self.on_add_to_queue, id=self.MENU_ADD_QUEUE.GetId())
 		self.Bind(wx.EVT_MENU, self.on_copy_link, id=self.MENU_COPY_LINK.GetId())
 
+	def _current_position(self):
+		"""The position of the visible tab in self._pages."""
+		current = self.notebook.GetSelection()
+		for position, (page_index, _control) in enumerate(self._pages):
+			if page_index == current:
+				return position
+		return 0
+
+	def show_page(self, position):
+		"""Switch to a tab (0 = the first, wrapping around) and put the focus in its list, on an item."""
+		page_index, control = self._pages[position % len(self._pages)]
+		self.notebook.SetSelection(page_index)
+		control.SetFocus()
+		if isinstance(control, wx.ListBox) and control.GetSelection() == wx.NOT_FOUND and control.GetCount():
+			control.SetSelection(0)
+
+	def _focus_top_tracks(self):
+		"""Land on the first popular song once loaded, unless the user has already moved on."""
+		try:
+			if self.notebook.GetSelection() != self.top_tracks_page_index:
+				return
+			focus = wx.Window.FindFocus()
+			# Focus in another window, or on one of this window's buttons: leave it.
+			if focus is not None and (wx.GetTopLevelParent(focus) is not self or isinstance(focus, wx.Button)):
+				return
+			self.show_page(0)
+		except RuntimeError:
+			# The dialog was closed before the songs arrived.
+			pass
+
 	def load_data(self):
 		thread_manager.submit_task(self._load_data_thread, name='DialogTask', daemon=True)
 
 	def _load_data_thread(self):
+		# Popular songs first: the dialog opens on them.
+		top_tracks_results = self.client.get_artist_top_tracks(self.artist_id)
+		if isinstance(top_tracks_results, str):
+			wx.CallAfter(ui.message, top_tracks_results)
+		else:
+			self.top_tracks = [t for t in top_tracks_results.get("tracks", []) if t]
+		wx.CallAfter(self._fill_top_tracks_list)
+
 		artist_info = self.client.get_artist_details(self.artist_id)
 		if isinstance(artist_info, str):
 			wx.CallAfter(ui.message, artist_info)
 		else:
 			self.artist_info = artist_info
 			wx.CallAfter(self._update_info_tab, artist_info)
-
-		top_tracks_results = self.client.get_artist_top_tracks(self.artist_id)
-		if not isinstance(top_tracks_results, str):
-			self.top_tracks = top_tracks_results.get("tracks", [])
-			for track in self.top_tracks:
-				wx.CallAfter(self.top_tracks_list.Append, track["name"])
 
 		albums_results = self.client.get_artist_albums(self.artist_id)
 		if not isinstance(albums_results, str):
@@ -601,6 +656,52 @@ class ArtistDiscographyDialog(AccessifyDialog):
 			wx.CallAfter(self._prepare_all_tracks_loader)
 		else:
 			wx.CallAfter(ui.message, albums_results)
+
+		# Spotify has no "playlists of this artist", so search playlists by the artist's name.
+		playlist_results = self.client.search(self.artist_name, "playlist") if self.artist_name else None
+		if isinstance(playlist_results, str):
+			wx.CallAfter(ui.message, playlist_results)
+		elif isinstance(playlist_results, dict):
+			found = (playlist_results.get("playlists") or {}).get("items") or []
+			self.playlists = [p for p in found if p]
+		wx.CallAfter(self._fill_playlists_list)
+
+	def _fill_top_tracks_list(self):
+		try:
+			self.top_tracks_list.Clear()
+		except RuntimeError:
+			return
+		for track in self.top_tracks:
+			name = track.get("name", _("Unknown"))
+			artists = [a.get("name") for a in track.get("artists", []) if a.get("name")]
+			# Only name the artists when someone else is on the song too: this
+			# window is already about this artist, so it would be said on every line.
+			if any(artist != self.artist_name for artist in artists):
+				name = f"{name} - {', '.join(artists)}"
+			self.top_tracks_list.Append(name)
+		if not self.top_tracks:
+			self.top_tracks_list.Append(_("No tracks available."))
+		self._focus_top_tracks()
+
+	def _fill_playlists_list(self):
+		try:
+			self.playlists_list.Clear()
+		except RuntimeError:
+			return
+		for playlist in self.playlists:
+			name = playlist.get("name") or _("Unknown")
+			owner = (playlist.get("owner") or {}).get("display_name")
+			self.playlists_list.Append(f"{name} - by {owner}" if owner else name)
+		if not self.playlists:
+			self.playlists_list.Append(_("No playlists found."))
+
+	def _on_playlist_activate(self):
+		selection = self.playlists_list.GetSelection()
+		if selection == wx.NOT_FOUND or selection >= len(self.playlists):
+			ui.message(_("Please select a playlist first."))
+			return
+		dialog = PlaylistTracksDialog(self, self.client, self.playlists[selection])
+		dialog.Show()
 
 	def _prepare_all_tracks_loader(self):
 		"""Reset state and start batched loading for the All Tracks tab."""
@@ -751,8 +852,13 @@ class ArtistDiscographyDialog(AccessifyDialog):
 
 		if current_page_index == self.top_tracks_page_index:
 			selection = self.top_tracks_list.GetSelection()
-			if selection != wx.NOT_FOUND:
+			if selection != wx.NOT_FOUND and selection < len(self.top_tracks):
 				return self.top_tracks[selection]
+
+		elif current_page_index == self.playlists_page_index:
+			selection = self.playlists_list.GetSelection()
+			if selection != wx.NOT_FOUND and selection < len(self.playlists):
+				return self.playlists[selection]
 
 		elif current_page_index == self.all_tracks_page_index:
 			selection = self.all_tracks_list.GetSelection()
@@ -809,13 +915,17 @@ class ArtistDiscographyDialog(AccessifyDialog):
 
 		if item.get("uri"):
 			menu.Append(self.MENU_PLAY.GetId(), _("Play\tAlt+P"))
-		if item_type in ("track", "album"):
+		if item_type in ("track", "album", "playlist"):
 			menu.Append(self.MENU_ADD_QUEUE.GetId(), _("Add to Queue\tAlt+Q"))
 
 		if item.get("external_urls", {}).get("spotify"):
 			menu.Append(self.MENU_COPY_LINK.GetId(), _("Copy Link\tAlt+L"))
 
-		if item_type == "album":
+		if item_type == "playlist":
+			menu.AppendSeparator()
+			tracks_item = menu.Append(wx.ID_ANY, _("View Tracks in Playlist"))
+			self.Bind(wx.EVT_MENU, lambda evt: self._on_playlist_activate(), tracks_item)
+		elif item_type == "album":
 			menu.AppendSeparator()
 			save_album_item = menu.Append(wx.ID_ANY, _("Save Album to Library"))
 			self.Bind(wx.EVT_MENU, lambda evt, alb=item: self._save_album_to_library(alb), save_album_item)
@@ -873,8 +983,8 @@ class ArtistDiscographyDialog(AccessifyDialog):
 
 		if item_type == "track":
 			self._queue_add_track(uri, name)
-		elif item_type == "album":
-			self._queue_add_context(uri, "album", name)
+		elif item_type in ("album", "playlist"):
+			self._queue_add_context(uri, item_type, name)
 
 	def on_copy_link(self, evt=None):
 		item = self._get_selected_item()

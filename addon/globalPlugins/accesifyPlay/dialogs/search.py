@@ -30,8 +30,9 @@ class SearchDialog(AccessifyDialog):
 	MENU_DISCO = wx.NewIdRef()
 	MENU_COPY_LINK = wx.NewIdRef()
 	MENU_SHOW_LYRICS = wx.NewIdRef()
-	# Ctrl+1 to Ctrl+6 pick a search type, Ctrl+PageDown/PageUp cycle through
-	# them, and Ctrl+F jumps back to the search field.
+	# Ctrl+1 to Ctrl+6 pick a search type; Ctrl+Tab and Ctrl+PageDown go to the
+	# next type, with Shift or PageUp to the previous one (the same keys as the
+	# tabs of the artist window); Ctrl+F jumps back to the search field.
 	MENU_TYPE_IDS = [wx.NewIdRef() for _i in range(6)]
 	MENU_NEXT_TYPE = wx.NewIdRef()
 	MENU_PREV_TYPE = wx.NewIdRef()
@@ -136,7 +137,9 @@ class SearchDialog(AccessifyDialog):
 			(wx.ACCEL_ALT, ord("L"), self.MENU_COPY_LINK.GetId()),
 			# W, as in the command layer's lyrics window.
 			(wx.ACCEL_ALT, ord("W"), self.MENU_SHOW_LYRICS.GetId()),
+			(wx.ACCEL_CTRL, wx.WXK_TAB, self.MENU_NEXT_TYPE.GetId()),
 			(wx.ACCEL_CTRL, wx.WXK_PAGEDOWN, self.MENU_NEXT_TYPE.GetId()),
+			(wx.ACCEL_CTRL | wx.ACCEL_SHIFT, wx.WXK_TAB, self.MENU_PREV_TYPE.GetId()),
 			(wx.ACCEL_CTRL, wx.WXK_PAGEUP, self.MENU_PREV_TYPE.GetId()),
 			(wx.ACCEL_CTRL, ord("F"), self.MENU_FOCUS_QUERY.GetId()),
 		]
@@ -167,7 +170,8 @@ class SearchDialog(AccessifyDialog):
 	def select_type(self, index):
 		"""Switch the search type, and search again right away if there is a query.
 
-		Bound to Ctrl+1 to Ctrl+6 and to Ctrl+PageDown/PageUp, which wrap around.
+		Bound to Ctrl+1 to Ctrl+6, and to Ctrl+Tab/Ctrl+PageDown and
+		Ctrl+Shift+Tab/Ctrl+PageUp, which wrap around.
 		"""
 		labels = list(self.search_types.keys())
 		index %= len(labels)
