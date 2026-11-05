@@ -153,8 +153,8 @@ class AlbumTracksDialog(AccessifyDialog):
 				)
 				self.Bind(
 					wx.EVT_MENU,
-					lambda event, p_id=playlist.get("id"), p_name=playlist.get("name"): (
-						self._on_add_to_playlist_selected(event, p_id, p_name)
+					lambda event, playlist=playlist: self._on_add_to_playlist_selected(
+						event, playlist.get("id"), playlist.get("name")
 					),
 					menu_item,
 				)

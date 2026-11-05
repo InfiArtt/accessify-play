@@ -6,14 +6,11 @@
 # Lyrics fetching, LRC parsing, and auto-read timer management.
 
 import functools
-import json
 import re
 import threading
-from urllib import error as url_error
-from urllib import parse as url_parse
-from urllib import request as url_request
 
 import addonHandler
+import requests
 import ui as nvda_ui
 import wx
 from logHandler import log
@@ -47,21 +44,20 @@ def fetch_lyrics(track_name, artist_name, album_name, duration_ms):
 
 
 def _fetch_exact(track_name, artist_name, album_name, duration_s):
-	params = url_parse.urlencode(
+	return _make_request(
+		"get",
 		{
 			"track_name": track_name,
 			"artist_name": artist_name,
 			"album_name": album_name,
 			"duration": duration_s,
-		}
+		},
 	)
-	return _make_request(f"{LRCLIB_BASE}/get?{params}")
 
 
 def _fetch_search(track_name, artist_name):
 	"""Fuzzy search: returns the first result or None."""
-	params = url_parse.urlencode({"q": f"{artist_name} {track_name}"})
-	result = _make_request(f"{LRCLIB_BASE}/search?{params}")
+	result = _make_request("search", {"q": f"{artist_name} {track_name}"})
 	if isinstance(result, list) and result:
 		return result[0]
 	return None
@@ -81,16 +77,19 @@ def _get_user_agent():
 	return f"AccessifyPlay-NVDA-Addon/{version} (+https://github.com/InfiArtt/accessify-play)"
 
 
-def _make_request(url):
-	req = url_request.Request(
-		url,
-		headers={"User-Agent": _get_user_agent()},
-	)
+def _make_request(endpoint, params):
+	"""The JSON answer of one lrclib endpoint, or None if there is none."""
 	try:
-		with url_request.urlopen(req, timeout=10) as resp:
-			return json.loads(resp.read().decode("utf-8"))
-	except (url_error.URLError, TimeoutError, json.JSONDecodeError, OSError) as e:
-		log.debug("AccessifyPlay lyrics: request failed (%s): %s", url, e)
+		response = requests.get(
+			f"{LRCLIB_BASE}/{endpoint}",
+			params=params,
+			headers={"User-Agent": _get_user_agent()},
+			timeout=10,
+		)
+		response.raise_for_status()
+		return response.json()
+	except (requests.RequestException, ValueError) as e:
+		log.debug("AccessifyPlay lyrics: %s request failed: %s", endpoint, e)
 		return None
 
 

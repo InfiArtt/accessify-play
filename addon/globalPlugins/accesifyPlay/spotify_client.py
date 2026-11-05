@@ -5,7 +5,6 @@
 
 import functools
 import math
-import os
 import re
 import time
 import webbrowser
@@ -238,7 +237,7 @@ class SpotifyClient:
 
 	def _get_cache_handler(self):
 		"""Creates a CacheFileHandler pointing at the add-on's data folder."""
-		return CacheFileHandler(cache_path=_get_cache_path())
+		return CacheFileHandler(cache_path=str(_get_cache_path()))
 
 	def _get_auth_manager(self, open_browser=False):
 		return SpotifyPKCE(
@@ -818,8 +817,8 @@ class SpotifyClient:
 			config.conf.save()  # Save config to ensure other settings are persisted
 
 			cache_path = _get_cache_path()
-			if os.path.exists(cache_path):
-				os.remove(cache_path)
+			if cache_path.exists():
+				cache_path.unlink()
 				log.info("Spotify: token cache file deleted: %s", cache_path)
 			else:
 				log.info("Spotify: no token cache file at %s, nothing to delete.", cache_path)
@@ -921,10 +920,7 @@ class SpotifyClient:
 			track = item.get("track")
 			if track and track.get("uri"):
 				existing_uris.add(track.get("uri"))
-		uris_to_add = []
-		for uri in uris:
-			if uri not in existing_uris:
-				uris_to_add.append(uri)
+		uris_to_add = [uri for uri in uris if uri not in existing_uris]
 		if not uris_to_add:
 			if len(uris) == 1:
 				return _("This track is already in the playlist.")

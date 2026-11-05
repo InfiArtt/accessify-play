@@ -3,8 +3,8 @@
 # This file is covered by the GNU General Public License, version 2.
 # See the file LICENSE for more details.
 
-import os
 import threading
+from pathlib import Path
 
 import addonHandler
 import gui
@@ -13,7 +13,7 @@ from logHandler import log
 
 addonHandler.initTranslation()
 
-_ADDON_DIR = os.path.dirname(__file__)
+_ADDON_DIR = str(Path(__file__).parent)
 
 
 def _load_donate_module():

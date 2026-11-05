@@ -6,15 +6,13 @@
 import functools
 import gettext
 import inspect
-import os
+from pathlib import Path
 
 import config
 import languageHandler
 from logHandler import log
 
-addon_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-
-locale_path = os.path.join(addon_root, "locale")
+locale_path = Path(__file__).resolve().parents[2] / "locale"
 LANGUAGE_AUTO = "auto"
 # Friendly display names for known language codes; fall back to the raw code when unknown.
 LANGUAGE_DISPLAY_OVERRIDES = {
@@ -24,21 +22,14 @@ LANGUAGE_DISPLAY_OVERRIDES = {
 
 
 def _discover_language_codes():
-	if not os.path.isdir(locale_path):
+	"""The languages the add-on has a catalogue for."""
+	if not locale_path.is_dir():
 		return []
-	codes = []
-	for entry in os.listdir(locale_path):
-		lang_dir = os.path.join(locale_path, entry)
-		if not os.path.isdir(lang_dir):
-			continue
-		messages_dir = os.path.join(lang_dir, "LC_MESSAGES")
-		if not os.path.isdir(messages_dir):
-			continue
-		po_path = os.path.join(messages_dir, "nvda.po")
-		mo_path = os.path.join(messages_dir, "nvda.mo")
-		if os.path.isfile(po_path) or os.path.isfile(mo_path):
-			codes.append(entry)
-	return sorted(codes)
+	return sorted(
+		lang_dir.name
+		for lang_dir in locale_path.iterdir()
+		if any((lang_dir / "LC_MESSAGES" / name).is_file() for name in ("nvda.po", "nvda.mo"))
+	)
 
 
 AVAILABLE_LANGUAGE_CODES = _discover_language_codes()

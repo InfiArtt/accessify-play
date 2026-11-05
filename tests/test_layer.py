@@ -208,7 +208,7 @@ inputCore.manager._captureFunc = None
 
 # 12. layer config lives under NVDA's config dir, not %USERPROFILE%
 expected = os.path.join(CONFIG_DIR, "accessifyPlay", "layerConfig.json")
-check("layer config written to the data folder", mgr.config_manager.config_file == expected)
+check("layer config written to the data folder", str(mgr.config_manager.config_file) == expected)
 check("layer config file actually created", os.path.isfile(expected))
 check("nothing written to the fake home", not os.path.exists(os.path.join(WORK, "layer_config.json")))
 

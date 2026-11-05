@@ -14,6 +14,7 @@ migrate_legacy_data() moves anything it finds there on first run.
 
 import os
 import shutil
+from pathlib import Path
 
 import globalVars
 from logHandler import log
@@ -35,19 +36,19 @@ _OBSOLETE_LEGACY_NAMES = (".spotify_client_id.json",)
 
 
 def _legacy_dir():
-	return os.path.expandvars("%USERPROFILE%")
+	return Path(os.path.expandvars("%USERPROFILE%"))
 
 
 def get_data_dir():
 	"""The add-on's data folder, created if it does not exist yet."""
-	path = os.path.join(globalVars.appArgs.configPath, "accessifyPlay")
-	os.makedirs(path, exist_ok=True)
+	path = Path(globalVars.appArgs.configPath) / "accessifyPlay"
+	path.mkdir(parents=True, exist_ok=True)
 	return path
 
 
 def get_data_path(name):
 	"""Absolute path of one of the add-on's data files."""
-	return os.path.join(get_data_dir(), name)
+	return get_data_dir() / name
 
 
 def migrate_legacy_data():
@@ -64,11 +65,11 @@ def migrate_legacy_data():
 		log.exception("AccessifyPlay: could not create the data folder.")
 		return
 
-	legacy_dir = _legacy_dir()
+	legacy_dir = Path(_legacy_dir())
 	for name, legacy_name in _LEGACY_NAMES.items():
-		old_path = os.path.join(legacy_dir, legacy_name)
-		new_path = os.path.join(data_dir, name)
-		if not os.path.isfile(old_path) or os.path.exists(new_path):
+		old_path = legacy_dir / legacy_name
+		new_path = data_dir / name
+		if not old_path.is_file() or new_path.exists():
 			continue
 		try:
 			# shutil.move rather than os.replace: on a portable NVDA the two
@@ -79,11 +80,11 @@ def migrate_legacy_data():
 			log.warning("AccessifyPlay: could not move %s to %s: %s", old_path, new_path, e)
 
 	for legacy_name in _OBSOLETE_LEGACY_NAMES:
-		old_path = os.path.join(legacy_dir, legacy_name)
-		if not os.path.isfile(old_path):
+		old_path = legacy_dir / legacy_name
+		if not old_path.is_file():
 			continue
 		try:
-			os.remove(old_path)
+			old_path.unlink()
 			log.info("AccessifyPlay: removed obsolete %s.", legacy_name)
 		except OSError as e:
 			log.warning("AccessifyPlay: could not remove %s: %s", old_path, e)

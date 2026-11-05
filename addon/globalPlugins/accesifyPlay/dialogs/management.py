@@ -901,7 +901,7 @@ class ManagementDialog(AccessifyDialog):
 		if self._tracks_loading:
 			ui.message(_("Please wait until the playlist has loaded."))
 			return
-		rows = list(zip(self.current_playlist_tracks, self.current_playlist_positions))
+		rows = list(zip(self.current_playlist_tracks, self.current_playlist_positions, strict=True))
 		extra = duplicate_occurrences(rows)
 		if not extra:
 			ui.message(_("This playlist has no duplicate tracks."))
@@ -1201,8 +1201,8 @@ class ManagementDialog(AccessifyDialog):
 							)
 							self.Bind(
 								wx.EVT_MENU,
-								lambda event, p_id=playlist.get("id"), p_name=playlist.get("name"): (
-									self._on_add_album_to_playlist_selected(event, p_id, p_name)
+								lambda event, playlist=playlist: self._on_add_album_to_playlist_selected(
+									event, playlist.get("id"), playlist.get("name")
 								),
 								menu_item,
 							)
@@ -1238,8 +1238,8 @@ class ManagementDialog(AccessifyDialog):
 					)
 					self.Bind(
 						wx.EVT_MENU,
-						lambda event, p_id=playlist.get("id"), p_name=playlist.get("name"): (
-							self._on_add_to_playlist_selected(event, p_id, p_name)
+						lambda event, playlist=playlist: self._on_add_to_playlist_selected(
+							event, playlist.get("id"), playlist.get("name")
 						),
 						menu_item,
 					)

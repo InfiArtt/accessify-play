@@ -39,7 +39,7 @@ addon_info = AddonInfo(
 - Optional: sign in with a Spotify Client ID of your own, with a Spotify Developer Dashboard button in settings.
 - Track changes are no longer announced again after a connection or rate-limit error.
 	"""),
-	# Author(s)
+	# Authors
 	addon_author="Rafli I .<rafli08523717409@gmail.com>, Rexya <rexya2017@gmail.com>",
 	# URL for the add-on documentation support
 	addon_url="https://github.com/InfiArtt/accessify-play",

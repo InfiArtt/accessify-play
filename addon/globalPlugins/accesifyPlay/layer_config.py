@@ -4,7 +4,6 @@
 # See the file LICENSE for more details.
 
 import json
-import os
 
 from logHandler import log
 
@@ -22,7 +21,7 @@ _ = N_
 class LayerConfigManager:
 	"""Manages configuration for the Accessify Play command layer."""
 
-	_default_specs = [
+	_default_specs = (
 		# ScriptName, DefaultGesture, Description, HelpLabel, DefaultKeepOpen
 		("playMyTopTracks", "kb:g", _("Play your top tracks from the last month."), "G", False),
 		("playRecentlyPlayed", "kb:o", _("Play your recently played tracks."), "O", False),
@@ -54,7 +53,7 @@ class LayerConfigManager:
 		("openSettings", "kb:f4", _("Open Accessify Play settings."), "F4", False),
 		("showLyricsWindow", "kb:w", _("Show lyrics window for the current track."), "W", False),
 		("toggleAutoReadLyrics", "kb:y", _("Toggle automatic lyric reading as the song plays."), "Y", False),
-	]
+	)
 
 	def __init__(self):
 		self.config_file = paths.get_data_path(paths.LAYER_CONFIG_FILE)
@@ -64,9 +63,8 @@ class LayerConfigManager:
 	def load(self):
 		"""Loads configuration from file, then injects any missing defaults."""
 		try:
-			if os.path.exists(self.config_file):
-				with open(self.config_file) as f:
-					self.config = json.load(f)
+			if self.config_file.exists():
+				self.config = json.loads(self.config_file.read_text(encoding="utf-8"))
 				# Merge new commands that didn't exist in the saved file
 				self._inject_missing_defaults()
 			else:
@@ -97,8 +95,7 @@ class LayerConfigManager:
 	def save(self):
 		"""Saves current configuration to file."""
 		try:
-			with open(self.config_file, "w") as f:
-				json.dump(self.config, f, indent=4)
+			self.config_file.write_text(json.dumps(self.config, indent=4), encoding="utf-8")
 		except Exception:
 			log.exception("Error saving layer config")
 

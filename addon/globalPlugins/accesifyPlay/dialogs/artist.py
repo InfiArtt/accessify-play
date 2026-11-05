@@ -27,7 +27,7 @@ class ArtistDiscographyDialog(AccessifyDialog):
 	# Ctrl+1 to Ctrl+5 jump to a tab, in the order the tabs are shown; Ctrl+Tab and
 	# Ctrl+PageDown go to the next tab, with Shift or PageUp to the previous one.
 	# The Search dialog uses the same keys for its types.
-	MENU_PAGE_IDS = [wx.NewIdRef() for _i in range(5)]
+	MENU_PAGE_IDS = tuple(wx.NewIdRef() for _i in range(5))
 	MENU_NEXT_PAGE = wx.NewIdRef()
 	MENU_PREV_PAGE = wx.NewIdRef()
 
@@ -499,8 +499,8 @@ class ArtistDiscographyDialog(AccessifyDialog):
 					)
 					self.Bind(
 						wx.EVT_MENU,
-						lambda _event, p_id=playlist.get("id"), p_name=playlist.get("name"), a_id=item.get("id"), a_name=item.get("name"): (
-							self._on_add_album_to_playlist_action(p_id, p_name, a_id, a_name)
+						lambda _event, playlist=playlist, album=item: self._on_add_album_to_playlist_action(
+							playlist.get("id"), playlist.get("name"), album.get("id"), album.get("name")
 						),
 						menu_item,
 					)
@@ -517,8 +517,8 @@ class ArtistDiscographyDialog(AccessifyDialog):
 					)
 					self.Bind(
 						wx.EVT_MENU,
-						lambda event, p_id=playlist.get("id"), p_name=playlist.get("name"): (
-							self._on_add_to_playlist_selected(event, p_id, p_name)
+						lambda event, playlist=playlist: self._on_add_to_playlist_selected(
+							event, playlist.get("id"), playlist.get("name")
 						),
 						menu_item,
 					)

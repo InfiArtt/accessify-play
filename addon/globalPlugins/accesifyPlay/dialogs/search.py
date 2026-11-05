@@ -35,7 +35,7 @@ class SearchDialog(AccessifyDialog):
 	# Ctrl+1 to Ctrl+6 pick a search type; Ctrl+Tab and Ctrl+PageDown go to the
 	# next type, with Shift or PageUp to the previous one (the same keys as the
 	# tabs of the artist window); Ctrl+F jumps back to the search field.
-	MENU_TYPE_IDS = [wx.NewIdRef() for _i in range(6)]
+	MENU_TYPE_IDS = tuple(wx.NewIdRef() for _i in range(6))
 	MENU_NEXT_TYPE = wx.NewIdRef()
 	MENU_PREV_TYPE = wx.NewIdRef()
 	MENU_FOCUS_QUERY = wx.NewIdRef()
@@ -447,8 +447,8 @@ class SearchDialog(AccessifyDialog):
 						menu_item = playlist_submenu.Append(wx.ID_ANY, playlist.get("name", "Unknown"))
 						self.Bind(
 							wx.EVT_MENU,
-							lambda event, p_id=playlist.get("id"), p_name=playlist.get("name"): (
-								self._on_add_album_to_playlist_selected(event, p_id, p_name)
+							lambda event, playlist=playlist: self._on_add_album_to_playlist_selected(
+								event, playlist.get("id"), playlist.get("name")
 							),
 							menu_item,
 						)
@@ -476,7 +476,7 @@ class SearchDialog(AccessifyDialog):
 						owner_item = menu.Append(wx.ID_ANY, self._follow_owner_label(item))
 						self.Bind(
 							wx.EVT_MENU,
-							lambda _e, u=self._owner_of(item): self._toggle_follow_user(u),
+							lambda _e, item=item: self._toggle_follow_user(self._owner_of(item)),
 							owner_item,
 						)
 					if is_followed is True:
@@ -504,8 +504,8 @@ class SearchDialog(AccessifyDialog):
 						)
 						self.Bind(
 							wx.EVT_MENU,
-							lambda event, p_id=playlist.get("id"), p_name=playlist.get("name"): (
-								self._on_add_to_playlist_selected(event, p_id, p_name)
+							lambda event, playlist=playlist: self._on_add_to_playlist_selected(
+								event, playlist.get("id"), playlist.get("name")
 							),
 							menu_item,
 						)

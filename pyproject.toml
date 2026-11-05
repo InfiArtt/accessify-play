@@ -54,15 +54,8 @@ ignore = [
 	"D",
 	"E501",
 	"FBT",
-	"B008",
 	"PLR",
-	"PTH",
 	"C901",
-	"S310",
-	"RUF012",
-	"PERF401",
-	"ERA001",
-	"B905",
 ]
 
 # NVDA's logger, so ruff knows log.exception() and exc_info=True report the error.

@@ -4,10 +4,10 @@
 # See the file LICENSE for more details.
 
 import json
-import os
 import sys
 import threading
 import time
+from pathlib import Path
 
 import config
 import globalPluginHandler
@@ -19,8 +19,7 @@ from gui import settingsDialogs
 from logHandler import log
 
 # Add the 'lib' folder to sys.path before other imports
-addon_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-lib_path = os.path.join(addon_root, "lib")
+lib_path = str(Path(__file__).resolve().parents[2] / "lib")
 if lib_path not in sys.path:
 	sys.path.insert(0, lib_path)
 
@@ -785,7 +784,6 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	@utils.speak_in_thread
 	@utils.one_at_a_time
 	def script_cycleRepeat(self, _gesture):
-		# R = Repeat
 		return self.client.cycle_repeat()
 
 	@scriptHandler.script(
@@ -1072,22 +1070,20 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	def _save_timer_state(self, end_timestamp):
 		"""Save the time the sleep timer should stop playback."""
 		try:
-			with open(self._get_timer_file_path(), "w") as f:
-				json.dump({"end_time": end_timestamp}, f)
+			self._get_timer_file_path().write_text(json.dumps({"end_time": end_timestamp}), encoding="utf-8")
 		except OSError:
 			log.exception("Error saving sleep timer")
 
 	def _read_timer_state(self):
 		"""Read the saved sleep timer end time, if any."""
 		path = self._get_timer_file_path()
-		if not os.path.exists(path):
+		if not path.exists():
 			return None
 		try:
-			with open(path) as f:
-				content = f.read().strip()
-				if not content:
-					return None
-				data = json.loads(content)
+			content = path.read_text(encoding="utf-8").strip()
+			if not content:
+				return None
+			data = json.loads(content)
 		except (OSError, ValueError):
 			log.debugWarning("Unreadable sleep timer file", exc_info=True)
 			return None
@@ -1096,8 +1092,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	def _clear_timer_state(self):
 		"""Empty the contents of the timer file (not delete the file)."""
 		try:
-			with open(self._get_timer_file_path(), "w") as f:
-				f.write("")
+			self._get_timer_file_path().write_text("", encoding="utf-8")
 		except OSError:
 			log.exception("Error clearing sleep timer")
 
