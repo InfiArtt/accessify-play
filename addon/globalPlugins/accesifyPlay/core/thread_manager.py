@@ -35,8 +35,8 @@ class ThreadManager:
 			def wrapped_target(*a, **kw):
 				try:
 					target(*a, **kw)
-				except Exception as e:
-					log.error(f"Error in threaded task {name or target.__name__}: {e}", exc_info=True)
+				except Exception:
+					log.exception("Error in threaded task %s", name or target.__name__)
 
 			thread = threading.Thread(target=wrapped_target, args=args, kwargs=kwargs, name=name)
 			thread.daemon = daemon
@@ -56,8 +56,8 @@ class ThreadManager:
 				delay = None
 				try:
 					delay = target()
-				except Exception as e:
-					log.error(f"Error in poller {name or target.__name__}: {e}", exc_info=True)
+				except Exception:
+					log.exception("Error in poller %s", name or target.__name__)
 				if delay is None:
 					delay = interval_seconds
 
@@ -80,7 +80,7 @@ class ThreadManager:
 					try:
 						thread.join(timeout=timeout)
 					except Exception as e:
-						log.debug(f"Failed to join thread {thread.name}: {e}")
+						log.debug("Failed to join thread %s: %s", thread.name, e)
 			self._threads.clear()
 
 

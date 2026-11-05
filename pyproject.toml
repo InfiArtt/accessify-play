@@ -52,7 +52,6 @@ ignore = [
 	# Not done yet. Each family below is fixed and removed in its own commit.
 	"ANN",
 	"D",
-	"SLF001",
 	"BLE001",
 	"E501",
 	"FBT",
@@ -73,6 +72,9 @@ ignore = [
 	"ERA001",
 	"B905",
 ]
+
+# NVDA's logger, so ruff knows log.exception() and exc_info=True report the error.
+logger-objects = ["logHandler.log"]
 
 [tool.ruff.lint.per-file-ignores]
 # The package name is the add-on's identity: NVDA stores custom gestures under

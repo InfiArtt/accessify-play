@@ -22,7 +22,7 @@ def _load_donate_module():
 		if addon:
 			return addon.loadModule("globalPlugins.accesifyPlay.donate")
 	except Exception:
-		log.error("AccessifyPlay installTasks: failed to load donate module", exc_info=True)
+		log.exception("AccessifyPlay installTasks: failed to load donate module")
 	return None
 
 
@@ -84,7 +84,7 @@ class InstallInfoDialog(wx.Dialog):
 		try:
 			self._donate_callback()
 		except Exception:
-			log.error("AccessifyPlay installTasks: donate callback failed", exc_info=True)
+			log.exception("AccessifyPlay installTasks: donate callback failed")
 			wx.MessageBox(
 				_("Unable to open the donation link right now."),
 				_("Donate"),
@@ -107,10 +107,12 @@ def _defensive_cleanup_nvda_import_tracker(addon_name: str):
 	NVDA's `_cleanupAddonImports` naively calls `__file__` without a `hasattr` check, crashing
 	when inspecting built-in modules without file paths (especially isolated in Python 3.13).
 	"""
-	if not hasattr(addonHandler, "_addonImportTrackers"):
+	# NVDA-internal, and not in every NVDA version.
+	trackers = getattr(addonHandler, "_addonImportTrackers", None)
+	if not trackers:
 		return
 
-	tracker_set = addonHandler._addonImportTrackers.get(addon_name)
+	tracker_set = trackers.get(addon_name)
 	if not tracker_set:
 		return
 
@@ -139,7 +141,8 @@ def _defensive_cleanup_nvda_import_tracker(addon_name: str):
 		try:
 			tracker_set.remove(invalid_mod)
 			log.debug(
-				f"AccessifyPlay installTasks: Scrubber removed incompatible '{getattr(invalid_mod, '__name__', 'unknown')}' from tracker"
+				"AccessifyPlay installTasks: Scrubber removed incompatible '%s' from tracker",
+				getattr(invalid_mod, "__name__", "unknown"),
 			)
 		except KeyError:
 			pass
@@ -166,7 +169,7 @@ def onInstall():
 			)
 			dialog.ShowModal()
 		except Exception:
-			log.error("AccessifyPlay installTasks: install dialog failed", exc_info=True)
+			log.exception("AccessifyPlay installTasks: install dialog failed")
 		finally:
 			try:
 				if dialog:
@@ -186,5 +189,5 @@ def onInstall():
 	# procedure immediately before NVDA takes over.
 	try:
 		_defensive_cleanup_nvda_import_tracker(addon_name)
-	except Exception as e:
-		log.error(f"AccessifyPlay installTasks: defensive cleanup scrubber failed: {e}", exc_info=True)
+	except Exception:
+		log.exception("AccessifyPlay installTasks: defensive cleanup scrubber failed")

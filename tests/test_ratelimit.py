@@ -89,11 +89,11 @@ def fresh(device_id=None):
 # --- 1. The device lookup is skipped once a device is known -----------------
 
 c = fresh()
-c._execute("next_track")
+c.run_on_device("next_track")
 check("first command looks the device up", c.client.names() == ["devices", "next_track"])
 check("first command targets the device it found", c.client.calls[-1][1]["device_id"] == "pc")
 c.client.calls.clear()
-c._execute("next_track")
+c.run_on_device("next_track")
 check("later commands cost one request, not two", c.client.names() == ["next_track"])
 check("later commands go to the active device, not a remembered one",
       c.client.calls[-1][1]["device_id"] is None)
@@ -101,7 +101,7 @@ check("later commands go to the active device, not a remembered one",
 c = fresh("pc")
 c.client.raise_next["next_track"] = [NO_DEVICE]
 c.client.devices_result = {"devices": [{"id": "pc", "is_active": False}]}
-result = c._execute("next_track")
+result = c.run_on_device("next_track")
 check("no active device: wakes the device and retries",
       c.client.names() == ["next_track", "devices", "transfer_playback", "next_track"])
 check("the retry succeeds quietly", result is None)
@@ -109,7 +109,7 @@ check("the retry targets the woken device", c.client.calls[-1][1]["device_id"] =
 
 c = fresh("pc")
 c.client.playback = [None, {"is_playing": False}]
-result = c._execute("current_playback")
+result = c.run_on_device("current_playback")
 check("empty current_playback also wakes the device",
       c.client.names() == ["current_playback", "devices", "current_playback"])
 check("and returns the state after waking", result == {"is_playing": False})
@@ -118,11 +118,11 @@ c = fresh("pc")
 c.client.devices_result = {"devices": []}
 c.client.raise_next["next_track"] = [NO_DEVICE]
 check("no device anywhere still says so",
-      c._execute("next_track") == "No active Spotify device found. Please start playback in your Spotify app.")
+      c.run_on_device("next_track") == "No active Spotify device found. Please start playback in your Spotify app.")
 
 c = fresh("pc")
 c.client.raise_next["next_track"] = [SpotifyException(403, -1, "Player command failed: Restriction violated")]
-c._execute("next_track")
+c.run_on_device("next_track")
 check("other errors are not retried", c.client.names() == ["next_track"])
 
 
@@ -133,23 +133,23 @@ LIMIT_MSG = "Spotify is limiting requests at the moment. Please try again in abo
 c = fresh("pc")
 c.client.raise_next["next_track"] = [LIMITED]
 LOGGED_ERRORS.clear()
-check("429 on a command says how long to wait", c._execute("next_track") == LIMIT_MSG)
+check("429 on a command says how long to wait", c.run_on_device("next_track") == LIMIT_MSG)
 check("429 is not retried", c.client.names() == ["next_track"])
 check("429 logs no traceback", not LOGGED_ERRORS)
 
 c = fresh()
 c.client.raise_next["devices"] = [LIMITED]
-check("429 while looking up devices is not called 'no device'", c._execute("next_track") == LIMIT_MSG)
+check("429 while looking up devices is not called 'no device'", c.run_on_device("next_track") == LIMIT_MSG)
 
 c = fresh()
 c.client.devices_result = {"devices": [{"id": "pc", "is_active": False}]}
 c.client.raise_next["transfer_playback"] = [LIMITED]
-check("429 while waking a device is not called 'no device'", c._execute("next_track") == LIMIT_MSG)
+check("429 while waking a device is not called 'no device'", c.run_on_device("next_track") == LIMIT_MSG)
 
 c = fresh()
 c.client.raise_next["current_playback"] = [LIMITED]
 LOGGED_ERRORS.clear()
-check("429 in a background poll gives the message", c._execute_web_api("current_playback") == LIMIT_MSG)
+check("429 in a background poll gives the message", c.run_request("current_playback") == LIMIT_MSG)
 check("429 in a background poll logs no traceback", not LOGGED_ERRORS)
 
 
@@ -203,23 +203,23 @@ with open(os.path.join(ADDON, "dialogs", "settings.py"), encoding="utf-8") as f:
 
 c = fresh("pc")
 c.client.raise_next["next_track"] = [LIMITED]
-c._execute("next_track")
+c.run_on_device("next_track")
 c.client.calls.clear()
 check("a command during the limit is answered without a request",
-      c._execute("next_track").startswith("Spotify is limiting requests") and not c.client.calls)
-check("so is a background poll", c._execute_web_api("current_playback").startswith("Spotify is limiting")
+      c.run_on_device("next_track").startswith("Spotify is limiting requests") and not c.client.calls)
+check("so is a background poll", c.run_request("current_playback").startswith("Spotify is limiting")
       and not c.client.calls)
 c.client.calls.clear(); c.send_keep_alive()
 check("and the keep-alive", not c.client.calls)
 check("the message counts down to the end of the limit", "about 30 seconds" in c.rate_limit_message())
 c._rate_limited_until = time.monotonic() - 1
-c._execute("next_track")
+c.run_on_device("next_track")
 check("requests resume once Retry-After has passed", c.client.names() == ["next_track"])
 
 c = fresh("pc")
 c.client.raise_next["next_track"] = [SpotifyException(429, -1, "rate limit")]
 before = time.monotonic()
-c._execute("next_track")
+c.run_on_device("next_track")
 check("a 429 without Retry-After still holds requests briefly",
       before + 4 <= c._rate_limited_until <= time.monotonic() + 6)
 
@@ -293,7 +293,7 @@ class Reader:
 
 def plugin(answers):
     answers = list(answers)
-    client = types.SimpleNamespace(client=object(), _execute_web_api=lambda name: answers.pop(0),
+    client = types.SimpleNamespace(client=object(), run_request=lambda name: answers.pop(0),
                                    get_simple_track_string=lambda item: item["name"])
     return types.SimpleNamespace(client=client, _auto_reader=Reader(), _auto_reader_synced_lyrics=None,
                                  lyricsDialog=None, last_track_id=None, _last_is_playing=None,

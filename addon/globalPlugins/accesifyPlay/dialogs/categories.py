@@ -75,7 +75,7 @@ class CategoriesDialog(AccessifyDialog):
 			result = self.client.get_categories(limit=50, offset=self._offset)
 			wx.CallAfter(self._on_categories_loaded, result)
 		except Exception:
-			log.error("AccessifyPlay: browse request failed.", exc_info=True)
+			log.exception("AccessifyPlay: browse request failed.")
 			wx.CallAfter(self._on_error)
 
 	def _on_categories_loaded(self, result):
@@ -234,7 +234,7 @@ class PlaylistBrowserDialog(AccessifyDialog):
 			result = self._fetch_page(self._offset)
 			wx.CallAfter(self._on_playlists_loaded, result)
 		except Exception:
-			log.error("AccessifyPlay: browse request failed.", exc_info=True)
+			log.exception("AccessifyPlay: browse request failed.")
 			wx.CallAfter(self._on_error)
 
 	def _remove_loading_row(self):

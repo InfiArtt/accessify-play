@@ -35,8 +35,8 @@ def speak_in_thread(func):
 				message = func(self, *args, **kwargs)
 				if message and isinstance(message, str):
 					wx.CallAfter(ui.message, message)
-			except Exception as e:
-				log.error(f"Error in threaded function {func.__name__}: {e}", exc_info=True)
+			except Exception:
+				log.exception("Error in threaded function %s", func.__name__)
 				wx.CallAfter(ui.message, _("An unexpected error occurred."))
 
 		thread_manager.submit_task(thread_target, name=f"speak_{func.__name__}", daemon=True)
@@ -75,8 +75,8 @@ def copy_in_thread(func):
 			try:
 				result_text = func(self, *args, **kwargs)
 				wx.CallAfter(plugin_instance._set_clipboard, result_text)
-			except Exception as e:
-				log.error(f"Error in copy_in_thread for {func.__name__}: {e}", exc_info=True)
+			except Exception:
+				log.exception("Error in copy_in_thread for %s", func.__name__)
 				wx.CallAfter(ui.message, _("An unexpected error occurred."))
 
 		thread_manager.submit_task(thread_target, name=f"copy_{func.__name__}", daemon=True)
@@ -98,7 +98,7 @@ def conf_get(key, default=None):
 	try:
 		value = config.conf["spotify"][key]
 	except Exception:
-		log.debug(f"AccessifyPlay: setting {key!r} unavailable, using {default!r}.")
+		log.debug("AccessifyPlay: setting %r unavailable, using %r.", key, default)
 		return default
 	return default if value is None else value
 

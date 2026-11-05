@@ -7,6 +7,7 @@ import ui
 import wx
 
 from ..core.thread_manager import thread_manager
+from ..formatting import format_duration
 from ..language import init_translation
 from ..ui.base_dialog import AccessifyDialog
 from ..utils import conf_get
@@ -148,7 +149,7 @@ class AudiobookChaptersDialog(AccessifyDialog):
 			display = f"{number}. {display}"
 		duration = chapter.get("duration_ms")
 		if duration:
-			display = f"{display} ({self.client._format_duration(duration)})"
+			display = f"{display} ({format_duration(duration)})"
 		return display
 
 	def _refresh_chapters_placeholder(self):

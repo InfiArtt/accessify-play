@@ -71,8 +71,8 @@ class LayerConfigManager:
 				self._inject_missing_defaults()
 			else:
 				self.reset_to_defaults()
-		except Exception as e:
-			log.error(f"Error loading layer config: {e}", exc_info=True)
+		except Exception:
+			log.exception("Error loading layer config")
 			self.reset_to_defaults()
 
 	def _inject_missing_defaults(self):
@@ -90,7 +90,7 @@ class LayerConfigManager:
 					"keep_open": keep_open,
 				}
 				injected = True
-				log.info(f"AccessifyPlay: injected new default command '{script}' into layer config.")
+				log.info("AccessifyPlay: injected new default command '%s' into layer config.", script)
 		if injected:
 			self.save()
 
@@ -99,8 +99,8 @@ class LayerConfigManager:
 		try:
 			with open(self.config_file, "w") as f:
 				json.dump(self.config, f, indent=4)
-		except Exception as e:
-			log.error(f"Error saving layer config: {e}", exc_info=True)
+		except Exception:
+			log.exception("Error saving layer config")
 
 	def reset_to_defaults(self):
 		"""Resets configuration to hardcoded defaults."""

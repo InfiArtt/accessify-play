@@ -94,7 +94,7 @@ def _make_request(url):
 		with url_request.urlopen(req, timeout=10) as resp:
 			return json.loads(resp.read().decode("utf-8"))
 	except (url_error.URLError, TimeoutError, json.JSONDecodeError, OSError) as e:
-		log.debug(f"AccessifyPlay lyrics: request failed ({url}): {e}")
+		log.debug("AccessifyPlay lyrics: request failed (%s): %s", url, e)
 		return None
 
 

@@ -22,6 +22,19 @@ from .ui.base_dialog import AccessifyDialog
 init_translation()
 
 
+def _capture_func():
+	"""The function NVDA hands every gesture to first, if any.
+
+	NVDA offers no public way to read or set it; input help uses the same
+	attribute.
+	"""
+	return inputCore.manager._captureFunc  # noqa: SLF001
+
+
+def _set_capture_func(func):
+	inputCore.manager._captureFunc = func  # noqa: SLF001
+
+
 class LayerHelpDialog(AccessifyDialog):
 	"""Simple read-only dialog to list available layered commands."""
 
@@ -108,7 +121,7 @@ class CommandLayerManager:
 			try:
 				normalized[inputCore.normalizeGestureIdentifier(identifier)] = script_name
 			except Exception:
-				log.error(f"AccessifyPlay: ignoring malformed layer gesture {identifier!r}")
+				log.error("AccessifyPlay: ignoring malformed layer gesture %r", identifier)
 		return normalized
 
 	def _build_help_entries(self):
@@ -131,27 +144,27 @@ class CommandLayerManager:
 
 	@property
 	def is_active(self):
-		return inputCore.manager._captureFunc is self._captor
+		return _capture_func() is self._captor
 
 	def activate(self):
 		if self.is_active:
 			self._error_beep()
 			return
-		if inputCore.manager._captureFunc is not None:
+		if _capture_func() is not None:
 			# Input help or another add-on is already capturing input. Taking it
 			# over would silently break them, so refuse instead.
 			self._error_beep()
 			return
 		self._deadline = time.monotonic() + self.TIMEOUT
-		inputCore.manager._captureFunc = self._captor
+		_set_capture_func(self._captor)
 		self._entry_beep()
 
 	def finish(self, announce=False):
 		self._deadline = None
 		# Only clear the capture function if it is still ours; something else
 		# (input help, another add-on) may have taken it over in the meantime.
-		if inputCore.manager._captureFunc is self._captor:
-			inputCore.manager._captureFunc = None
+		if _capture_func() is self._captor:
+			_set_capture_func(None)
 		if announce:
 			self._queue(ui.message, _("Command layer closed"))
 
@@ -187,7 +200,7 @@ class CommandLayerManager:
 
 		script = getattr(self.plugin, f"script_{script_name}", None)
 		if script is None:
-			log.error(f"AccessifyPlay: layer command {script_name!r} has no matching script.")
+			log.error("AccessifyPlay: layer command %r has no matching script.", script_name)
 			self._error_beep()
 			self.finish()
 			return False

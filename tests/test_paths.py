@@ -22,9 +22,9 @@ def mod(n, **a):
 
 LOGS = []
 mod("logHandler", log=types.SimpleNamespace(
-    info=lambda m, **k: LOGS.append(("info", m)),
-    error=lambda m, **k: LOGS.append(("error", m)),
-    debug=lambda m, **k: None))
+    info=lambda m, *a, **k: LOGS.append(("info", m % a)),
+    error=lambda m, *a, **k: LOGS.append(("error", m % a)),
+    debug=lambda m, *a, **k: None))
 mod("globalVars", appArgs=types.SimpleNamespace(configPath=CFG))
 
 spec = importlib.util.spec_from_file_location("paths", os.path.join(ADDON, "paths.py"))

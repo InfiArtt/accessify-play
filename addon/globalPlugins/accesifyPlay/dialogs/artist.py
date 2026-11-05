@@ -9,6 +9,7 @@ import ui
 import wx
 
 from ..core.thread_manager import thread_manager
+from ..formatting import format_followers
 from ..language import init_translation
 from ..ui.base_dialog import AccessifyDialog
 from ..utils import conf_get, safe_text
@@ -389,7 +390,7 @@ class ArtistDiscographyDialog(AccessifyDialog):
 		followers_total = (info.get("followers") or {}).get("total")
 		followers_text = ""
 		if self.client:
-			followers_text = self.client._format_followers(followers_total)
+			followers_text = format_followers(followers_total)
 		popularity = info.get("popularity")
 		genres = info.get("genres") or []
 		info_lines = [

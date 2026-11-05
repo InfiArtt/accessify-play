@@ -216,7 +216,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			if not (needs_poll and self.client.client):
 				return None
 
-			playback = self.client._execute_web_api("current_playback")
+			playback = self.client.run_request("current_playback")
 			if isinstance(playback, str):
 				# An error message (offline, rate limited...): say nothing and keep
 				# the state, or the track would be announced again once it clears.
@@ -282,8 +282,8 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 				# Paused lyrics must pick up promptly once the music resumes.
 				return POLL_PLAYING_SECONDS
 			return POLL_PAUSED_SECONDS if playback else POLL_IDLE_SECONDS
-		except Exception as e:
-			log.error(f"Error in Spotify polling thread: {e}", exc_info=True)
+		except Exception:
+			log.exception("Error in Spotify polling thread")
 			return None
 
 	# --- LYRICS SUPPORT METHODS ---
@@ -291,16 +291,16 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	def _seek_to_position(self, position_ms):
 		"""Seek Spotify playback to an absolute position (milliseconds).
 		Called by LyricsDialog when the user presses Enter on a lyric line.
-		Uses _execute(client.seek_track) directly to perform an ABSOLUTE seek,
+		Uses run_on_device(client.seek_track) directly to perform an ABSOLUTE seek,
 		bypassing the seek_track() wrapper which does a relative offset seek.
 		"""
 
 		@utils.run_in_thread
 		def _do_seek():
 			try:
-				self.client._execute("seek_track", position_ms=position_ms)
-			except Exception as e:
-				log.error(f"AccessifyPlay lyrics seek error: {e}", exc_info=True)
+				self.client.run_on_device("seek_track", position_ms=position_ms)
+			except Exception:
+				log.exception("AccessifyPlay lyrics seek error")
 
 		_do_seek()
 
@@ -312,13 +312,13 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		@utils.run_in_thread
 		def _do():
 			try:
-				playback = self.client._execute_web_api("current_playback")
+				playback = self.client.run_request("current_playback")
 				if playback and isinstance(playback, dict):
 					ms = playback.get("progress_ms", 0)
 					if self.lyricsDialog:
 						wx.CallAfter(self.lyricsDialog.set_current_ms, ms)
-			except Exception as e:
-				log.error(f"AccessifyPlay jump-to-current error: {e}", exc_info=True)
+			except Exception:
+				log.exception("AccessifyPlay jump-to-current error")
 
 		_do()
 
@@ -431,7 +431,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		@utils.run_in_thread
 		def _fetch():
 			try:
-				playback = self.client._execute("current_playback")
+				playback = self.client.run_on_device("current_playback")
 				if not isinstance(playback, dict) or not playback.get("item"):
 					wx.CallAfter(nvda_ui.message, _("Nothing is currently playing."))
 					return
@@ -470,8 +470,8 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 					plain,
 					synced_lines=parse_lrc(synced) if synced else None,
 				)
-			except Exception as e:
-				log.error(f"AccessifyPlay lyrics window fetch error: {e}", exc_info=True)
+			except Exception:
+				log.exception("AccessifyPlay lyrics window fetch error")
 				wx.CallAfter(
 					nvda_ui.message,
 					_("Could not load lyrics. Please check your internet connection."),
@@ -535,7 +535,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		@utils.run_in_thread
 		def _fetch():
 			try:
-				playback = self.client._execute("current_playback")
+				playback = self.client.run_on_device("current_playback")
 				if not isinstance(playback, dict) or not playback.get("item"):
 					wx.CallAfter(nvda_ui.message, _("Nothing is currently playing."))
 					return
@@ -591,8 +591,8 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 						nvda_ui.message,
 						_("No synced lyrics found for {track}.").format(track=track_name),
 					)
-			except Exception as e:
-				log.error(f"AccessifyPlay auto-read lyrics fetch error: {e}", exc_info=True)
+			except Exception:
+				log.exception("AccessifyPlay auto-read lyrics fetch error")
 				wx.CallAfter(
 					nvda_ui.message,
 					_("Could not load lyrics. Please check your internet connection."),
@@ -625,8 +625,8 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 					nvda_ui.message(_("Link copied"))
 				else:
 					nvda_ui.message(_("Could not open clipboard."))
-			except Exception as e:
-				log.error(f"Failed to copy to clipboard: {e}", exc_info=True)
+			except Exception:
+				log.exception("Failed to copy to clipboard")
 				nvda_ui.message(_("Clipboard error"))
 		else:
 			# Anything that is not a link is a message from the client.
@@ -699,23 +699,23 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	@utils.speak_in_thread
 	@utils.one_at_a_time
 	def script_playPause(self, _gesture):
-		playback = self.client._execute("current_playback")
+		playback = self.client.run_on_device("current_playback")
 		if isinstance(playback, str):
 			return playback
 		if playback and playback.get("is_playing"):
-			result, done = self.client._execute("pause_playback"), _("Paused")
+			result, done = self.client.run_on_device("pause_playback"), _("Paused")
 		else:
-			result, done = self.client._execute("start_playback"), _("Playing")
+			result, done = self.client.run_on_device("start_playback"), _("Playing")
 		# Only say it happened if Spotify did it.
 		return result if isinstance(result, str) else done
 
 	def _skip(self, command, done):
 		"""Next or previous track, then say what is playing now."""
-		result = self.client._execute(command)
+		result = self.client.run_on_device(command)
 		if isinstance(result, str):
 			return result
 		time.sleep(0.4)  # Give Spotify a moment to apply the change.
-		playback = self.client._execute("current_playback")
+		playback = self.client.run_on_device("current_playback")
 		return self.client.get_current_track_info(playback) if isinstance(playback, dict) else done
 
 	@scriptHandler.script(
@@ -736,7 +736,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
 	def _change_volume(self, direction):
 		"""Volume up (direction 1) or down (-1) by the step from the settings."""
-		playback = self.client._execute("current_playback")
+		playback = self.client.run_on_device("current_playback")
 		if isinstance(playback, str):
 			return playback
 		device = (playback or {}).get("device")
@@ -746,7 +746,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			return _("This device does not let Spotify change its volume.")
 		step = utils.conf_get("volumeStep", 5)
 		new_volume = max(0, min(100, device["volume_percent"] + direction * step))
-		result = self.client._execute("volume", new_volume)
+		result = self.client.run_on_device("volume", new_volume)
 		return result if isinstance(result, str) else _("Volume {volume}%").format(volume=new_volume)
 
 	@scriptHandler.script(
@@ -821,7 +821,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	)
 	@utils.speak_in_thread
 	def script_toggleLike(self, _gesture):
-		playback = self.client._execute("current_playback")
+		playback = self.client.run_on_device("current_playback")
 		if isinstance(playback, str):
 			return playback
 		item = (playback or {}).get("item")
@@ -844,7 +844,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	)
 	@utils.speak_in_thread
 	def script_toggleFollowArtist(self, _gesture):
-		playback = self.client._execute("current_playback")
+		playback = self.client.run_on_device("current_playback")
 		if isinstance(playback, str):
 			return playback
 		if not playback or not playback.get("item"):
@@ -916,7 +916,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		# Read the current volume first, so the dialog opens showing it rather
 		# than changing the value under the user once it has been announced.
 		def _fetch():
-			playback = self.client._execute("current_playback")
+			playback = self.client.run_on_device("current_playback")
 			device = playback.get("device") if isinstance(playback, dict) else None
 			volume = device.get("volume_percent") if isinstance(device, dict) else None
 			wx.CallAfter(
@@ -985,7 +985,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
 		@utils.run_in_thread
 		def _prepare():
-			playback = self.client._execute("current_playback")
+			playback = self.client.run_on_device("current_playback")
 			if not isinstance(playback, dict) or not playback.get("item"):
 				wx.CallAfter(self._finish_add_to_playlist_dialog, _("Nothing is currently playing."))
 				return
@@ -1096,7 +1096,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			with open(self._get_timer_file_path(), "w") as f:
 				json.dump({"end_time": end_timestamp}, f)
 		except Exception as e:
-			log.error(f"Error saving sleep timer: {e}")
+			log.error("Error saving sleep timer: %s", e)
 
 	def _read_timer_state(self):
 		"""Read the saved sleep timer end time, if any."""
@@ -1126,7 +1126,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		self._active_sleep_timer = None
 		self._clear_timer_state()
 		if self.client and self.client.client:
-			result = self.client._execute("pause_playback")
+			result = self.client.run_on_device("pause_playback")
 			log.info("Sleep timer executed: Playback paused.")
 			if not isinstance(result, str):
 				wx.CallAfter(nvda_ui.message, _("Sleep timer ended. Playback paused."))

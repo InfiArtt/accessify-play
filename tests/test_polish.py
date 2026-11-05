@@ -39,7 +39,7 @@ check(f"no translatable text is hidden inside an f-string ({hidden or 'none'})",
 
 # ------------------------------------------------ 2. I on a paused track
 info = lift(source("spotify_client.py"), "SpotifyClient", "get_current_track_info", {"_": lambda s: s})
-host = types.SimpleNamespace(_execute=None)
+host = types.SimpleNamespace(run_on_device=None)
 track = {"name": "Song", "artists": [{"name": "A"}, {"name": "B"}], "album": {"name": "LP"}}
 def pb(playing, item=track, kind="track"):
     return {"is_playing": playing, "currently_playing_type": kind, "item": item}
@@ -62,7 +62,7 @@ ns = {"wx": types.SimpleNamespace(CallAfter=lambda f, *a, **k: f(*a, **k)), "Set
 set_volume = lift(init_src, "GlobalPlugin", "script_setVolume", ns)
 def plugin(playback):
     return types.SimpleNamespace(
-        setVolumeDialog=None, client=types.SimpleNamespace(_execute=lambda *a: playback),
+        setVolumeDialog=None, client=types.SimpleNamespace(run_on_device=lambda *a: playback),
         _open_dialog=lambda cls, attr, **kw: OPENED.append(kw))
 set_volume(plugin({"device": {"volume_percent": 37}}), None)
 check("the dialog is opened with the device's current volume", OPENED[-1] == {"initial_volume": 37})
@@ -101,11 +101,11 @@ ns = {"_": lambda s: s, "log": types.SimpleNamespace(info=lambda *a: None),
       "nvda_ui": types.SimpleNamespace(message=SPOKEN.append)}
 timeout = lift(init_src, "GlobalPlugin", "_on_sleep_timeout", ns)
 p = types.SimpleNamespace(_active_sleep_timer=1, _clear_timer_state=lambda: None,
-                          client=types.SimpleNamespace(client=object(), _execute=lambda *a: None))
+                          client=types.SimpleNamespace(client=object(), run_on_device=lambda *a: None))
 timeout(p)
 check("when the timer ends, it says so", SPOKEN == ["Sleep timer ended. Playback paused."])
 SPOKEN.clear()
-p.client._execute = lambda *a: "Spotify is already paused."
+p.client.run_on_device = lambda *a: "Spotify is already paused."
 timeout(p)
 check("...but not when pausing failed", SPOKEN == [])
 

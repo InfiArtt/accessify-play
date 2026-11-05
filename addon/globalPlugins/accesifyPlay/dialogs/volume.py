@@ -51,7 +51,7 @@ class SetVolumeDialog(AccessifyDialog):
 		self.Close()
 
 	def _set_volume_thread(self, volume):
-		result = self.client._execute("volume", volume)
+		result = self.client.run_on_device("volume", volume)
 		if isinstance(result, str):  # Error message
 			wx.CallAfter(ui.message, result)
 		else:

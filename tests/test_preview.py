@@ -14,7 +14,7 @@ def mod(n, **a):
 
 SPOKEN, OPENED, FETCHES = [], [], []
 mod("logHandler", log=types.SimpleNamespace(info=lambda *a, **k: None, error=lambda *a, **k: None,
-    debug=lambda *a, **k: None))
+    exception=lambda *a, **k: None, debug=lambda *a, **k: None))
 mod("globalVars", appArgs=types.SimpleNamespace(configPath=tempfile.mkdtemp()))
 mod("languageHandler", getLanguage=lambda: "en")
 class _C:

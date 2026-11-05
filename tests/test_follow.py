@@ -127,7 +127,7 @@ t = c.get_link_details("https://open.spotify.com/track/abc")
 check("existing link types default to playable", t.get("playable") is True and t.get("type") == "track")
 
 del Remote.track
-r = c._execute_web_api("track", "abc")
+r = c.run_request("track", "abc")
 check("an unknown method name returns a message instead of raising",
       r == "Something went wrong while talking to Spotify. Please try again.")
 

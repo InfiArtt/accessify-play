@@ -40,28 +40,28 @@ def _found_device():
 c._ensure_device = _found_device
 
 # Logged out: every wrapper returns the message, nothing raises.
-for fn, args in [("_execute", ("next_track",)), ("_execute", ("volume", 50)),
-                 ("_execute", ("current_playback",)), ("_execute_web_api", ("current_user",))]:
+for fn, args in [("run_on_device", ("next_track",)), ("run_on_device", ("volume", 50)),
+                 ("run_on_device", ("current_playback",)), ("run_request", ("current_user",))]:
     try: r = getattr(c, fn)(*args); ok = isinstance(r, str) and "not ready" in r
     except Exception as e: ok = False; print("   raised", type(e).__name__, e)
     check(f"logged out: {fn}({args[0]!r}) returns message", ok)
 
 p = Player(); c.client = p
-c._execute("next_track")
+c.run_on_device("next_track")
 check("resolved name is called", p.calls[-1][0] == "next")
 check("device_id injected on the resolved method", p.calls[-1] == ("next", "DEV1"))
-c._execute("volume", 40)
+c.run_on_device("volume", 40)
 # Once a device is known the command goes to the active one, so no device_id.
 check("positional args pass through", p.calls[-1] == ("vol", 40, None))
-c._execute_web_api("current_playback")
+c.run_request("current_playback")
 check("current_playback gets additional_types=episode", p.calls[-1] == ("playback", "episode"))
-check("web api returns the value", c._execute_web_api("current_user") == {"id": "me"})
+check("web api returns the value", c.run_request("current_user") == {"id": "me"})
 
 # Callables are still accepted, for any caller not yet converted.
-check("callable still accepted", c._execute_web_api(p.current_user) == {"id": "me"})
+check("callable still accepted", c.run_request(p.current_user) == {"id": "me"})
 
 # The poller's pre-check pattern still short-circuits when logged out.
 c.client = None
-check("no AttributeError when a name is used logged out", c._execute_web_api("does_not_matter").startswith("Spotify client not ready"))
+check("no AttributeError when a name is used logged out", c.run_request("does_not_matter").startswith("Spotify client not ready"))
 
 print(); print("FAILURES:", FAILS if FAILS else "none"); sys.exit(1 if FAILS else 0)

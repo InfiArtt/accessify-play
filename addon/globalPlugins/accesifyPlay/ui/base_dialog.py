@@ -57,7 +57,7 @@ class AccessifyDialog(wx.Dialog):
 			wx.CallAfter(self._raise_parent_dialog)
 			wx.CallAfter(self.Destroy)
 		except Exception as e:
-			log.error(f"Error destroying dialog {self.__class__.__name__}: {e}")
+			log.error("Error destroying dialog %s: %s", self.__class__.__name__, e)
 
 	def _raise_parent_dialog(self):
 		if self._parentDialog:
@@ -273,7 +273,7 @@ class AccessifyDialog(wx.Dialog):
 			try:
 				result = fetch_lyrics(track_name, artist_name, album_name, duration_ms)
 			except Exception:
-				log.error("AccessifyPlay: lyrics preview fetch failed.", exc_info=True)
+				log.exception("AccessifyPlay: lyrics preview fetch failed.")
 				result = None
 			finally:
 				self._lyrics_loading = False

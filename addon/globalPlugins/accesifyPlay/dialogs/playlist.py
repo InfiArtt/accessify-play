@@ -9,6 +9,7 @@ import ui
 import wx
 
 from ..core.thread_manager import thread_manager
+from ..formatting import format_duration
 from ..language import init_translation
 from ..ui.base_dialog import AccessifyDialog
 from ..utils import conf_get
@@ -184,7 +185,7 @@ class PlaylistTracksDialog(AccessifyDialog):
 	def _format_track_display(self, index, track):
 		name = track.get("name", _("Unknown"))
 		artists = ", ".join([a.get("name", _("Unknown")) for a in track.get("artists", [])])
-		duration = self.client._format_duration(track.get("duration_ms"))
+		duration = format_duration(track.get("duration_ms"))
 		display = f"{index}. {name}"
 		if artists:
 			display = f"{display} — {artists}"

@@ -32,7 +32,7 @@ def open_donate_link():
 	except Exception:
 		# Fallback message if the browser fails to open. The raw exception goes
 		# to the log; the user gets the address so they can open it themselves.
-		log.error("AccessifyPlay: could not open the donation link.", exc_info=True)
+		log.exception("AccessifyPlay: could not open the donation link.")
 		wx.CallAfter(
 			messageBox,
 			_(

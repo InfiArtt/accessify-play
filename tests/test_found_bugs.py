@@ -43,7 +43,7 @@ class Plugin:
     def __init__(self):
         self.lyricsDialog = None
         self._lyrics_cache = {}
-        self.client = types.SimpleNamespace(client=object(), _execute=lambda *a, **k: PLAYBACK)
+        self.client = types.SimpleNamespace(client=object(), run_on_device=lambda *a, **k: PLAYBACK)
     def _open_lyrics_dialog(self, track, artist, plain, synced_lines=None):
         OPENED.append((track, plain, synced_lines))
 

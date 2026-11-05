@@ -61,7 +61,7 @@ def migrate_legacy_data():
 	try:
 		data_dir = get_data_dir()
 	except Exception:
-		log.error("AccessifyPlay: could not create the data folder.", exc_info=True)
+		log.exception("AccessifyPlay: could not create the data folder.")
 		return
 
 	legacy_dir = _legacy_dir()
@@ -74,9 +74,9 @@ def migrate_legacy_data():
 			# shutil.move rather than os.replace: on a portable NVDA the two
 			# folders can sit on different drives.
 			shutil.move(old_path, new_path)
-			log.info(f"AccessifyPlay: moved {legacy_name} into {data_dir}.")
+			log.info("AccessifyPlay: moved %s into %s.", legacy_name, data_dir)
 		except Exception as e:
-			log.error(f"AccessifyPlay: could not move {old_path} to {new_path}: {e}")
+			log.error("AccessifyPlay: could not move %s to %s: %s", old_path, new_path, e)
 
 	for legacy_name in _OBSOLETE_LEGACY_NAMES:
 		old_path = os.path.join(legacy_dir, legacy_name)
@@ -84,6 +84,6 @@ def migrate_legacy_data():
 			continue
 		try:
 			os.remove(old_path)
-			log.info(f"AccessifyPlay: removed obsolete {legacy_name}.")
+			log.info("AccessifyPlay: removed obsolete %s.", legacy_name)
 		except Exception as e:
-			log.error(f"AccessifyPlay: could not remove {old_path}: {e}")
+			log.error("AccessifyPlay: could not remove %s: %s", old_path, e)

@@ -28,7 +28,7 @@ def check(label, cond):
     print(("PASS  " if cond else "FAIL  ") + label)
     if not cond: FAILS.append(label)
 
-# --- _execute_web_api status_messages, reproduced faithfully ---------------
+# --- run_request status_messages, reproduced faithfully ---------------
 class SpotifyException(Exception):
     def __init__(self, http_status, msg):
         self.http_status = http_status
@@ -36,7 +36,7 @@ class SpotifyException(Exception):
         super().__init__(msg)
 
 def execute_web_api(command, *args, status_messages=None, **kwargs):
-    """Mirror of SpotifyClient._execute_web_api's SpotifyException branch."""
+    """Mirror of SpotifyClient.run_request's SpotifyException branch."""
     try:
         return command(*args, **kwargs)
     except SpotifyException as e:

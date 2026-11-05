@@ -15,10 +15,13 @@ import requests
 import spotipy
 import urllib3
 from logHandler import log
+from requests.adapters import HTTPAdapter
 from spotipy.exceptions import SpotifyException
 from spotipy.oauth2 import CacheFileHandler, SpotifyPKCE
+from urllib3.util.retry import Retry
 
 from . import paths
+from .formatting import format_duration, format_followers
 from .language import init_translation
 
 init_translation()
@@ -183,16 +186,32 @@ def _new_spotify(auth_manager):
 	for seconds or minutes. Only server errors are retried now; a 429 comes
 	straight back and _friendly_error says how long to wait.
 	"""
-	client = spotipy.Spotify(
+	return spotipy.Spotify(
 		auth_manager=auth_manager,
+		requests_session=_retrying_session(),
 		requests_timeout=10,
-		status_forcelist=(500, 502, 503, 504),
 	)
-	# urllib3 also retries any 429 that carries Retry-After, whatever the
-	# status list says; turning that off is what makes the 429 come back.
-	for adapter in client._session.adapters.values():
-		adapter.max_retries = adapter.max_retries.new(respect_retry_after_header=False)
-	return client
+
+
+def _retrying_session():
+	"""The session spotipy would build, minus the retries of a 429.
+
+	urllib3 retries any 429 that carries Retry-After, whatever the status
+	list says; respect_retry_after_header=False is what makes it come back.
+	"""
+	retry = Retry(
+		total=3,
+		connect=None,
+		read=False,
+		status=3,
+		backoff_factor=0.3,
+		allowed_methods=frozenset(("GET", "POST", "PUT", "DELETE")),
+		status_forcelist=(500, 502, 503, 504),
+		respect_retry_after_header=False,
+	)
+	session = requests.Session()
+	session.mount("https://", HTTPAdapter(max_retries=retry))
+	return session
 
 
 def _is_rate_limit(e):
@@ -248,13 +267,13 @@ class SpotifyClient:
 				log.info("Spotify: no valid token in cache.")
 		except _CONNECTION_ERRORS as e:
 			self.client = None
-			log.debug(f"Spotify silent initialization network error (offline): {e}")
+			log.debug("Spotify silent initialization network error (offline): %s", e)
 		except _TIMEOUT_ERRORS as e:
 			self.client = None
-			log.debug(f"Spotify silent initialization timeout: {e}")
-		except Exception as e:
+			log.debug("Spotify silent initialization timeout: %s", e)
+		except Exception:
 			self.client = None
-			log.error(f"Spotify: silent initialization failed: {e}", exc_info=True)
+			log.exception("Spotify: silent initialization failed")
 
 	def validate(self):
 		"""Interactively validates credentials, opening a browser if needed."""
@@ -272,15 +291,15 @@ class SpotifyClient:
 			return False
 		except _TIMEOUT_ERRORS as e:
 			self.client = None
-			log.debug(f"Spotify interactive validation timeout: {e}")
+			log.debug("Spotify interactive validation timeout: %s", e)
 			return False
 		except _CONNECTION_ERRORS as e:
 			self.client = None
-			log.error(f"Spotify: connection error during validation: {e}")
+			log.error("Spotify: connection error during validation: %s", e)
 			return False
-		except Exception as e:
+		except Exception:
 			self.client = None
-			log.error(f"Spotify: interactive validation failed: {e}", exc_info=True)
+			log.exception("Spotify: interactive validation failed")
 			return False
 
 	def reset_session(self):
@@ -302,7 +321,7 @@ class SpotifyClient:
 		"""
 		seconds = _retry_after(e) or _DEFAULT_RATE_LIMIT_SECONDS
 		self._rate_limited_until = max(self._rate_limited_until, time.monotonic() + seconds)
-		log.debug(f"Spotify rate limit: holding requests for {seconds} s ({e})")
+		log.debug("Spotify rate limit: holding requests for %s s (%s)", seconds, e)
 
 	def rate_limit_message(self):
 		"""What to say instead of sending a request while a rate limit lasts, or None."""
@@ -339,34 +358,33 @@ class SpotifyClient:
 	def _error_message(self, e, status_messages=None):
 		"""What to say for a failed request. Only the unexpected gets a traceback in the log.
 
-		Must be called from inside the except block, so the traceback is there to log.
 		status_messages optionally maps an HTTP status to the message for it, so a
 		caller can turn an expected failure (a retired endpoint answering 404, say)
 		into a clear sentence instead of a raw Spotify error.
 		"""
 		if isinstance(e, SpotifyException):
 			if status_messages and e.http_status in status_messages:
-				log.debug(f"Spotify returned {e.http_status}: {e}")
+				log.debug("Spotify returned %s: %s", e.http_status, e)
 				return status_messages[e.http_status]
 			if _is_rate_limit(e):
 				self._note_rate_limit(e)  # logs it; no traceback for something this expected
 				return _friendly_error(e)
 			if "restriction" not in str(e).lower():
-				log.error(f"Spotify command failed: {e}", exc_info=True)
+				log.error("Spotify command failed: %s", e, exc_info=e)
 			if e.http_status == 401:  # Unauthorized
 				self.initialize()  # Try to refresh the token silently
 				return _("Token expired, please try again.")
 			return _friendly_error(e)
 		if isinstance(e, _TIMEOUT_ERRORS):
-			log.debug(f"Spotify request timed out: {e}")
+			log.debug("Spotify request timed out: %s", e)
 			return _("Connection to Spotify timed out. Please try again.")
 		if isinstance(e, _CONNECTION_ERRORS):
-			log.debug(f"Spotify connection failed (offline?): {e}")
+			log.debug("Spotify connection failed (offline?): %s", e)
 			return _("Connection to Spotify failed. Please check your internet connection.")
-		log.error(f"Spotify command failed with an unexpected error: {e}", exc_info=True)
+		log.error("Spotify command failed with an unexpected error: %s", e, exc_info=e)
 		return _("Something went wrong while talking to Spotify. Please try again.")
 
-	def _execute(self, command, *args, **kwargs):
+	def run_on_device(self, command, *args, **kwargs):
 		"""Run a playback command, making sure there is a device to run it on.
 
 		Looking the device up costs a request of its own, so it is done only
@@ -398,7 +416,7 @@ class SpotifyClient:
 		except Exception as e:
 			return self._error_message(e)
 
-	def _execute_web_api(self, command, *args, status_messages=None, **kwargs):
+	def run_request(self, command, *args, status_messages=None, **kwargs):
 		"""Run a request that needs no device. Returns the result, or a message to say.
 
 		status_messages: see _error_message.
@@ -435,7 +453,7 @@ class SpotifyClient:
 	def _try(self, what, call):
 		"""Run call(); on failure log it (a traceback only if unexpected) and return None.
 
-		A rate limit is raised on, so _execute says how long to wait rather than
+		A rate limit is raised on, so run_on_device says how long to wait rather than
 		"no device".
 		"""
 		try:
@@ -443,11 +461,11 @@ class SpotifyClient:
 		except SpotifyException as e:
 			if _is_rate_limit(e):
 				raise
-			log.error(f"Spotify: could not {what}: {e}", exc_info=True)
+			log.exception("Spotify: could not %s", what)
 		except _TIMEOUT_ERRORS + _CONNECTION_ERRORS as e:
-			log.debug(f"Spotify: could not {what} (offline or slow): {e}")
-		except Exception as e:
-			log.error(f"Spotify: could not {what}: {e}", exc_info=True)
+			log.debug("Spotify: could not %s (offline or slow): %s", what, e)
+		except Exception:
+			log.exception("Spotify: could not %s", what)
 		return None
 
 	def _fetch_devices(self):
@@ -478,7 +496,7 @@ class SpotifyClient:
 
 	def get_current_track_info(self, playback=None):
 		if playback is None:
-			playback = self._execute("current_playback")
+			playback = self.run_on_device("current_playback")
 		if isinstance(playback, str):
 			return playback
 		if not playback or not playback.get("item"):
@@ -540,7 +558,7 @@ class SpotifyClient:
 
 	def _playing_now(self):
 		"""(playback, None) when a track or episode is loaded, else (None, the message to say)."""
-		playback = self._execute("current_playback")
+		playback = self.run_on_device("current_playback")
 		if isinstance(playback, str):
 			return None, playback
 		if not playback or not playback.get("item"):
@@ -579,10 +597,10 @@ class SpotifyClient:
 		if not query:
 			return None
 
-		return self._execute_web_api("search", q=query, type=search_type, limit=search_limit(), offset=offset)
+		return self.run_request("search", q=query, type=search_type, limit=search_limit(), offset=offset)
 
 	def play_my_top_tracks(self):
-		top_tracks = self._execute_web_api("current_user_top_tracks", limit=50, time_range="short_term")
+		top_tracks = self.run_request("current_user_top_tracks", limit=50, time_range="short_term")
 		if isinstance(top_tracks, str):
 			return top_tracks
 
@@ -593,14 +611,14 @@ class SpotifyClient:
 		if not uris:
 			return _("No playable tracks found.")
 
-		result = self._execute("start_playback", uris=uris)
+		result = self.run_on_device("start_playback", uris=uris)
 		if isinstance(result, str):
 			return result
 
 		return _("Playing your top tracks.")
 
 	def play_recently_played(self):
-		recent_tracks = self._execute_web_api("current_user_recently_played", limit=50)
+		recent_tracks = self.run_request("current_user_recently_played", limit=50)
 		if isinstance(recent_tracks, str):
 			return recent_tracks
 
@@ -624,7 +642,7 @@ class SpotifyClient:
 		if not unique_uris:
 			return _("No playable tracks found in history.")
 
-		result = self._execute("start_playback", uris=unique_uris)
+		result = self.run_on_device("start_playback", uris=unique_uris)
 		if isinstance(result, str):
 			return result
 
@@ -637,7 +655,7 @@ class SpotifyClient:
 		"""
 		if isinstance(uris, list):
 			# Treat any list as an explicit set of tracks/episodes.
-			return self._execute("start_playback", uris=uris)
+			return self.run_on_device("start_playback", uris=uris)
 
 		uri = uris or ""
 		entity_type = None
@@ -654,10 +672,10 @@ class SpotifyClient:
 					uri = f"spotify:{entity_type}:{entity_id}"
 
 		if entity_type in ("track", "episode"):
-			return self._execute("start_playback", uris=[uri])
+			return self.run_on_device("start_playback", uris=[uri])
 
 		# Default to context playback (album, artist, playlist, show, etc.)
-		return self._execute("start_playback", context_uri=uri)
+		return self.run_on_device("start_playback", context_uri=uri)
 
 	def play_context_with_offset(self, context_uri, track_uri):
 		"""
@@ -666,14 +684,14 @@ class SpotifyClient:
 		:param track_uri: The URI of the track to start from.
 		"""
 		offset = {"uri": track_uri}
-		return self._execute("start_playback", context_uri=context_uri, offset=offset)
+		return self.run_on_device("start_playback", context_uri=context_uri, offset=offset)
 
 	def add_to_queue(self, uri):
-		return self._execute("add_to_queue", uri=uri)
+		return self.run_on_device("add_to_queue", uri=uri)
 
 	def get_next_track_in_queue(self, queue_data=None):
 		if queue_data is None:
-			queue_data = self._execute_web_api("queue")
+			queue_data = self.run_request("queue")
 		if isinstance(queue_data, str):
 			return queue_data
 		queue_items = self._get_filtered_queue_items(queue_data)
@@ -685,7 +703,7 @@ class SpotifyClient:
 		return f"{description} {self._queue_autoplay_notice()}"
 
 	def get_full_queue(self):
-		queue_data = self._execute_web_api("queue")
+		queue_data = self.run_request("queue")
 		if isinstance(queue_data, str):
 			return queue_data
 
@@ -789,12 +807,12 @@ class SpotifyClient:
 			return _("Already playing the selected item.")
 
 		for _step in range(index):
-			result = self._execute("next_track")
+			result = self.run_on_device("next_track")
 			if isinstance(result, str):
 				return result
 			time.sleep(0.2)
 
-		playback = self._execute("current_playback")
+		playback = self.run_on_device("current_playback")
 		if isinstance(playback, str):
 			return playback
 		if playback and playback.get("item"):
@@ -809,17 +827,14 @@ class SpotifyClient:
 			cache_path = _get_cache_path()
 			if os.path.exists(cache_path):
 				os.remove(cache_path)
-				log.info(f"Spotify: token cache file deleted: {cache_path}")
+				log.info("Spotify: token cache file deleted: %s", cache_path)
 			else:
-				log.info(f"Spotify: no token cache file at {cache_path}, nothing to delete.")
+				log.info("Spotify: no token cache file at %s, nothing to delete.", cache_path)
 
 			self.client = None
 			return _("Spotify credentials and cache cleared successfully.")
-		except Exception as e:
-			log.error(
-				f"Spotify: failed to clear credentials and cache: {e}",
-				exc_info=True,
-			)
+		except Exception:
+			log.exception("Spotify: failed to clear credentials and cache")
 			return _("Could not clear your Spotify login. Please try again.")
 
 	def seek_track(self, offset_ms):
@@ -832,7 +847,7 @@ class SpotifyClient:
 	def _seek_within(self, playback, position_ms):
 		"""Seek to position_ms, kept within the loaded item."""
 		duration_ms = playback["item"].get("duration_ms", 0)
-		return self._execute("seek_track", position_ms=max(0, min(position_ms, duration_ms)))
+		return self.run_on_device("seek_track", position_ms=max(0, min(position_ms, duration_ms)))
 
 	def smart_seek(self, time_input):
 		"""
@@ -858,13 +873,13 @@ class SpotifyClient:
 
 	def _change_mode(self, command, pick):
 		"""Set shuffle or repeat to what pick(playback) returns as (state, message to say)."""
-		playback = self._execute("current_playback")
+		playback = self.run_on_device("current_playback")
 		if isinstance(playback, str):
 			return playback
 		if not playback:
 			return _("No active playback found. Please play something first.")
 		state, message = pick(playback)
-		result = self._execute(command, state=state)
+		result = self.run_on_device(command, state=state)
 		return result if isinstance(result, str) else message
 
 	def toggle_shuffle(self):
@@ -921,7 +936,7 @@ class SpotifyClient:
 			if len(uris) == 1:
 				return _("This track is already in the playlist.")
 			return _("All these tracks are already in the playlist.")
-		result = self._execute_web_api("playlist_add_items", playlist_id=playlist_id, items=uris_to_add)
+		result = self.run_request("playlist_add_items", playlist_id=playlist_id, items=uris_to_add)
 		if isinstance(result, str):
 			return result
 		skipped_count = len(uris) - len(uris_to_add)
@@ -953,7 +968,7 @@ class SpotifyClient:
 		if not self.client:
 			return _("Spotify client not ready. Please validate your credentials.")
 
-		return self._execute_web_api(
+		return self.run_request(
 			"current_user_playlist_create",
 			name=name,
 			public=public,
@@ -973,7 +988,7 @@ class SpotifyClient:
 		self, playlist_id, name=None, public=None, collaborative=None, description=None
 	):
 		"""Updates the details of a playlist."""
-		return self._execute_web_api(
+		return self.run_request(
 			"playlist_change_details",
 			playlist_id=playlist_id,
 			name=name,
@@ -1003,7 +1018,7 @@ class SpotifyClient:
 
 	def get_playlist_tracks_page(self, playlist_id, limit=50, offset=0):
 		"""Gets a single page of tracks from a playlist."""
-		return self._execute_web_api(
+		return self.run_request(
 			"playlist_items",
 			playlist_id=playlist_id,
 			limit=limit,
@@ -1050,7 +1065,7 @@ class SpotifyClient:
 		for start in range(0, len(by_position), 100):
 			chunk = by_position[start : start + 100]
 			items = [{"uri": uri, "positions": [pos]} for uri, pos in chunk]
-			result = self._execute_web_api(
+			result = self.run_request(
 				"playlist_remove_specific_occurrences_of_items",
 				playlist_id,
 				items,
@@ -1061,7 +1076,7 @@ class SpotifyClient:
 
 	def clear_playlist(self, playlist_id):
 		"""Remove every item from a playlist, keeping the playlist itself."""
-		return self._execute_web_api("playlist_replace_items", playlist_id, [])
+		return self.run_request("playlist_replace_items", playlist_id, [])
 
 	def reorder_playlist_track(self, playlist_id, from_index, to_index):
 		"""Moves a track in a playlist from one position to another."""
@@ -1069,7 +1084,7 @@ class SpotifyClient:
 		# If we move a track down (e.g., from index 2 to 3), we insert it before index 4.
 		insert_before = to_index + 1 if from_index < to_index else to_index
 
-		return self._execute_web_api(
+		return self.run_request(
 			"playlist_reorder_items",
 			playlist_id=playlist_id,
 			range_start=from_index,
@@ -1098,19 +1113,19 @@ class SpotifyClient:
 		}
 		entity_type = alias_map.get(entity_type, entity_type)
 		fetchers = {
-			"track": lambda: self._execute_web_api("track", entity_id),
-			"album": lambda: self._execute_web_api("album", entity_id),
-			"artist": lambda: self._execute_web_api("artist", entity_id),
-			"playlist": lambda: self._execute_web_api("playlist", entity_id),
-			"show": lambda: self._execute_web_api("show", entity_id),
-			"episode": lambda: self._execute_web_api("episode", entity_id),
-			"audiobook": lambda: self._execute_web_api(
+			"track": lambda: self.run_request("track", entity_id),
+			"album": lambda: self.run_request("album", entity_id),
+			"artist": lambda: self.run_request("artist", entity_id),
+			"playlist": lambda: self.run_request("playlist", entity_id),
+			"show": lambda: self.run_request("show", entity_id),
+			"episode": lambda: self.run_request("episode", entity_id),
+			"audiobook": lambda: self.run_request(
 				"get_audiobook",
 				entity_id,
 				status_messages={404: _("This audiobook is not available in your country.")},
 			),
 			# spotipy has no binding for chapters; the endpoint itself is current.
-			"chapter": lambda: self._execute_web_api(
+			"chapter": lambda: self.run_request(
 				"_get",
 				f"chapters/{entity_id}",
 				status_messages={404: _("This chapter is not available in your country.")},
@@ -1153,7 +1168,7 @@ class SpotifyClient:
 		after = None
 		limit = 50  # Max limit per request
 		while True:
-			results = self._execute_web_api("current_user_followed_artists", limit=limit, after=after)
+			results = self.run_request("current_user_followed_artists", limit=limit, after=after)
 			if isinstance(results, str):
 				return results  # Error message
 
@@ -1169,9 +1184,9 @@ class SpotifyClient:
 		"""Fetches the user's top tracks or artists."""
 		limit = 50
 		if item_type == "tracks":
-			return self._execute_web_api("current_user_top_tracks", limit=limit, time_range=time_range)
+			return self.run_request("current_user_top_tracks", limit=limit, time_range=time_range)
 		if item_type == "artists":
-			return self._execute_web_api("current_user_top_artists", limit=limit, time_range=time_range)
+			return self.run_request("current_user_top_artists", limit=limit, time_range=time_range)
 		return None
 
 	def get_saved_shows(self):
@@ -1198,7 +1213,7 @@ class SpotifyClient:
 		results = []
 		for start in range(0, len(uris), self.LIBRARY_BATCH):
 			chunk = uris[start : start + self.LIBRARY_BATCH]
-			result = self._execute_web_api(verb, path, uris=",".join(chunk))
+			result = self.run_request(verb, path, uris=",".join(chunk))
 			if isinstance(result, str):
 				return result
 			results.append(result)
@@ -1240,7 +1255,7 @@ class SpotifyClient:
 		items = []
 		offset = 0
 		while True:
-			results = self._execute_web_api(command, *args, limit=limit, offset=offset, **kwargs)
+			results = self.run_request(command, *args, limit=limit, offset=offset, **kwargs)
 			if isinstance(results, str):
 				return results  # Error message
 			if not results or not results.get("items"):
@@ -1266,16 +1281,16 @@ class SpotifyClient:
 	def get_new_releases(self):
 		"""Fetches new album releases."""
 		retired = self._retired_endpoint_message()
-		return self._execute_web_api("new_releases", limit=50, status_messages={404: retired, 403: retired})
+		return self.run_request("new_releases", limit=50, status_messages={404: retired, 403: retired})
 
 	def get_recently_played(self, limit=50):
 		"""Fetches the user's recently played tracks."""
-		return self._execute_web_api("current_user_recently_played", limit=limit)
+		return self.run_request("current_user_recently_played", limit=limit)
 
 	def get_categories(self, country=None, locale=None, limit=50, offset=0):
 		"""Get a list of categories used to tag items in Spotify."""
 		retired = self._retired_endpoint_message()
-		return self._execute_web_api(
+		return self.run_request(
 			"categories",
 			country=country,
 			locale=locale,
@@ -1287,7 +1302,7 @@ class SpotifyClient:
 	def get_category_playlists(self, category_id, country=None, limit=50, offset=0):
 		"""Get a list of Spotify playlists tagged with a particular category."""
 		retired = self._retired_endpoint_message()
-		return self._execute_web_api(
+		return self.run_request(
 			"category_playlists",
 			category_id=category_id,
 			country=country,
@@ -1305,13 +1320,13 @@ class SpotifyClient:
 		The search uses the market of the signed-in account.
 		"""
 		if not artist_name:
-			artist_info = self._execute_web_api("artist", artist_id=artist_id)
+			artist_info = self.run_request("artist", artist_id=artist_id)
 			if isinstance(artist_info, str):
 				return artist_info
 			artist_name = artist_info.get("name")
 		if not artist_name:
 			return {"tracks": []}
-		results = self._execute_web_api("search", q=f'artist:"{artist_name}"', limit=10, type="track")
+		results = self.run_request("search", q=f'artist:"{artist_name}"', limit=10, type="track")
 		if isinstance(results, str):
 			return results
 		return {"tracks": (results.get("tracks") or {}).get("items") or []}
@@ -1327,15 +1342,15 @@ class SpotifyClient:
 
 	def get_artist_details(self, artist_id):
 		"""Gets profile information for the given artist."""
-		return self._execute_web_api("artist", artist_id=artist_id)
+		return self.run_request("artist", artist_id=artist_id)
 
 	def get_show_episodes(self, show_id, limit=50, offset=0):
 		"""Gets episodes for a show (paginated)."""
-		return self._execute_web_api("show_episodes", show_id=show_id, limit=limit, offset=offset)
+		return self.run_request("show_episodes", show_id=show_id, limit=limit, offset=offset)
 
 	def get_audiobook_chapters(self, audiobook_id, limit=50, offset=0):
 		"""Gets chapters for an audiobook (paginated)."""
-		return self._execute_web_api(
+		return self.run_request(
 			"get_audiobook_chapters",
 			audiobook_id,
 			limit=limit,
@@ -1350,7 +1365,7 @@ class SpotifyClient:
 		(``message``, e.g. "Good morning!") and the ``playlists`` page.
 		"""
 		retired = self._retired_endpoint_message()
-		return self._execute_web_api(
+		return self.run_request(
 			"featured_playlists",
 			limit=limit,
 			offset=offset,
@@ -1359,7 +1374,7 @@ class SpotifyClient:
 
 	def get_current_user_profile(self):
 		"""Returns information about the current Spotify user."""
-		return self._execute_web_api("current_user")
+		return self.run_request("current_user")
 
 	def get_current_user_id(self):
 		"""The logged-in user's id, cached; None if it can't be fetched."""
@@ -1386,26 +1401,13 @@ class SpotifyClient:
 
 	def get_user_profile(self, user_id):
 		"""Public profile of any Spotify user (display name, followers)."""
-		return self._execute_web_api(
+		return self.run_request(
 			"user", user_id, status_messages={404: _("That Spotify user could not be found.")}
 		)
 
 	def get_saved_albums(self):
 		"""Fetches all saved albums from the user's library."""
 		return self._paginate("current_user_saved_albums")
-
-	@staticmethod
-	def _format_duration(duration_ms):
-		if not duration_ms:
-			return "0:00"
-		minutes, seconds = divmod(duration_ms // 1000, 60)
-		return f"{minutes}:{seconds:02d}"
-
-	@staticmethod
-	def _format_followers(total):
-		if total is None:
-			return ""
-		return f"{total:,}"
 
 	def _get_type_label(self, entity_type):
 		labels = {
@@ -1451,7 +1453,7 @@ class SpotifyClient:
 	def _build_track_link_details(self, data):
 		artists = ", ".join([a["name"] for a in data.get("artists", [])])
 		album = data.get("album", {}).get("name", "")
-		duration = self._format_duration(data.get("duration_ms", 0))
+		duration = format_duration(data.get("duration_ms", 0))
 		lines = [
 			_("Type: Track"),
 			_("Title: {name}").format(name=data.get("name", "")),
@@ -1498,7 +1500,7 @@ class SpotifyClient:
 
 	def _build_artist_link_details(self, data):
 		genres = ", ".join(data.get("genres", []))
-		followers = self._format_followers(data.get("followers", {}).get("total"))
+		followers = format_followers(data.get("followers", {}).get("total"))
 		popularity = data.get("popularity")
 		lines = [
 			_("Type: Artist"),
@@ -1597,9 +1599,7 @@ class SpotifyClient:
 			lines.append(_("Audiobook: {name}").format(name=audiobook["name"]))
 		if data.get("chapter_number") is not None:
 			lines.append(_("Chapter {number}").format(number=data["chapter_number"]))
-		lines.append(
-			_("Duration: {duration}").format(duration=self._format_duration(data.get("duration_ms", 0)))
-		)
+		lines.append(_("Duration: {duration}").format(duration=format_duration(data.get("duration_ms", 0))))
 		# A chapter's own uri is a spotify:episode: URI, which plays as a single item.
 		return {"uri": data.get("uri"), "lines": lines, "metadata": {"name": data.get("name")}}
 
@@ -1610,7 +1610,7 @@ class SpotifyClient:
 			_("Name: {name}").format(name=data.get("display_name") or data.get("id") or ""),
 		]
 		if followers is not None:
-			lines.append(_("Followers: {count}").format(count=self._format_followers(followers)))
+			lines.append(_("Followers: {count}").format(count=format_followers(followers)))
 		lines.append(_("A user profile cannot be played. Use Follow to follow this user."))
 		return {
 			"uri": data.get("uri"),
@@ -1625,7 +1625,7 @@ class SpotifyClient:
 		show = data.get("show", {})
 		show_name = show.get("name")
 		release_date = data.get("release_date", "")
-		duration = self._format_duration(data.get("duration_ms", 0))
+		duration = format_duration(data.get("duration_ms", 0))
 		lines = [
 			_("Type: Episode"),
 			_("Title: {name}").format(name=data.get("name", "")),
@@ -1647,11 +1647,11 @@ class SpotifyClient:
 
 	def get_available_devices(self):
 		"""Fetches a list of available devices."""
-		result = self._execute_web_api("devices")
+		result = self.run_request("devices")
 		if isinstance(result, str):
 			return result
 		return result.get("devices", [])
 
 	def transfer_playback_to_device(self, device_id):
 		"""Transfers playback to a specific device ID."""
-		return self._execute_web_api("transfer_playback", device_id=device_id, force_play=False)
+		return self.run_request("transfer_playback", device_id=device_id, force_play=False)
