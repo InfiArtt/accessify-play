@@ -27,6 +27,9 @@ pybabel.py
 .noscan
 .agent/
 .ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
 
 addon/doc/*.css
 
