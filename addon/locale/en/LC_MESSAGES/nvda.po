@@ -2482,20 +2482,12 @@ msgstr ""
 msgid "No active playback found. Please play something first."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:772
-msgid "Shuffle control is disabled for this playback context."
-msgstr ""
-
 #: addon/globalPlugins/accesifyPlay/spotify_client.py:776
 msgid "Shuffle On"
 msgstr ""
 
 #: addon/globalPlugins/accesifyPlay/spotify_client.py:776
 msgid "Shuffle Off"
-msgstr ""
-
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:778
-msgid "Could not toggle shuffle. (Premium might be required)."
 msgstr ""
 
 #: addon/globalPlugins/accesifyPlay/spotify_client.py:794
@@ -2508,14 +2500,6 @@ msgstr ""
 
 #: addon/globalPlugins/accesifyPlay/spotify_client.py:800
 msgid "Repeat: Off"
-msgstr ""
-
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:805
-msgid "Repeat control is disabled for this playback context."
-msgstr ""
-
-#: addon/globalPlugins/accesifyPlay/spotify_client.py:811
-msgid "Could not change repeat mode. (Premium might be required)."
 msgstr ""
 
 #: addon/globalPlugins/accesifyPlay/spotify_client.py:857
@@ -2860,3 +2844,25 @@ msgstr ""
 msgid "An unexpected error occurred."
 msgstr ""
 
+#: addon/globalPlugins/accesifyPlay/__init__.py:822
+msgid "This item cannot be saved."
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/__init__.py:832
+msgid "Removed from Your Episodes."
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/__init__.py:832
+msgid "Added to Your Episodes."
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/dialogs/management.py:535
+msgid "Playlists"
+msgstr ""
+
+#. Translators: Spoken when the search type is switched with a shortcut
+#. and the search runs again, e.g. "Artist, searching...".
+#: addon/globalPlugins/accesifyPlay/dialogs/search.py:183
+#, python-brace-format
+msgid "{type}, searching..."
+msgstr ""

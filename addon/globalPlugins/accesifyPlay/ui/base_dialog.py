@@ -66,7 +66,8 @@ class AccessifyDialog(wx.Dialog):
 	# --- Spotify actions (run through the thread manager) ---
 
 	def _play_uri(self, uri):
-		if not self.client: return
+		if not self.client:
+			return
 		if not uri:
 			ui.message(_("Unable to play selection. URI not found."))
 			return

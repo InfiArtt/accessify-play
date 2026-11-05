@@ -307,14 +307,9 @@ class CategoryPlaylistsDialog(AccessifyDialog):
 
 	def on_menu_item(self, evt):
 		menu_id = evt.GetId()
-		
-		idx = self.playlistsList.GetFirstSelected()
-		if idx < 0: return
-		data_idx = self.playlistsList.GetItemData(idx)
-		if data_idx >= len(self.playlists) or data_idx < 0: return
-		
-		playlist = self.playlists[data_idx]
-		
+		playlist = self._menu_playlist()
+		if not playlist:
+			return
 		if menu_id == self.MENU_FOLLOW_OWNER:
 			self._toggle_follow_user(self._owner_of(playlist))
 		elif menu_id == self.MENU_VIEW_TRACKS:
@@ -329,19 +324,14 @@ class CategoryPlaylistsDialog(AccessifyDialog):
 				ui.message(_("Link copied to clipboard."))
 
 	def _view_tracks(self):
-		idx = self.playlistsList.GetFirstSelected()
-		if idx < 0: return
-		data_idx = self.playlistsList.GetItemData(idx)
-		if data_idx >= len(self.playlists) or data_idx < 0: return
-		
-		playlist = self.playlists[data_idx]
-		dlg = PlaylistTracksDialog(self, self.client, playlist)
-		dlg.ShowModal()
+		playlist = self._menu_playlist()
+		if playlist:
+			PlaylistTracksDialog(self, self.client, playlist).ShowModal()
 
 	def _play_playlist(self, playlist):
 		uri = playlist.get("uri")
-		if not uri: return
-		
+		if not uri:
+			return
 		ui.message(_("Playing playlist..."))
 		thread_manager.submit_task(self._play_playlist_thread, uri, name='PlayPlaylist', daemon=True)
 
