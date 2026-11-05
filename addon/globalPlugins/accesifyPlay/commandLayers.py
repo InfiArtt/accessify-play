@@ -110,7 +110,7 @@ class CommandLayerManager:
 	def _build_help_entries(self):
 		configs = self.config_manager.get_all_configs()
 		entries = []
-		for script, data in configs:
+		for _script, data in configs:
 			gestures = data.get("gestures", [])
 			# Strip kb: prefix and join multiple gestures
 			clean_gestures = [g.replace("kb:", "") for g in gestures]

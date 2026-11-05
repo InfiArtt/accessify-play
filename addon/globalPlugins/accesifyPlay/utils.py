@@ -41,6 +41,26 @@ def speak_in_thread(func):
 	return wrapper
 
 
+def one_at_a_time(func):
+	"""For playback commands: while one is running, another press says "Please wait...".
+
+	Takes self._playback_lock without waiting, so two quick presses can never
+	both get through, as they could with a flag that is checked and set in two
+	steps. Put it under speak_in_thread, so the message is spoken.
+	"""
+
+	@wraps(func)
+	def wrapper(self, *args, **kwargs):
+		if not self._playback_lock.acquire(blocking=False):
+			return _("Please wait...")
+		try:
+			return func(self, *args, **kwargs)
+		finally:
+			self._playback_lock.release()
+
+	return wrapper
+
+
 def copy_in_thread(func):
 	"""Run the method in a background thread and copy its result to the clipboard."""
 

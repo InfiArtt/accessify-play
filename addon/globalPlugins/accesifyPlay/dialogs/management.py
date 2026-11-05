@@ -633,7 +633,7 @@ class ArtistDiscographyDialog(AccessifyDialog):
 
 	def _load_data_thread(self):
 		# Popular songs first: the dialog opens on them.
-		top_tracks_results = self.client.get_artist_top_tracks(self.artist_id)
+		top_tracks_results = self.client.get_artist_top_tracks(self.artist_id, self.artist_name)
 		if isinstance(top_tracks_results, str):
 			wx.CallAfter(ui.message, top_tracks_results)
 		else:

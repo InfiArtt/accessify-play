@@ -87,7 +87,8 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		# Before anything reads a data file: versions up to 1.9.1 kept them in
 		# the user's home directory.
 		paths.migrate_legacy_data()
-		self._is_modifying_playback = False
+		#: Held while a playback command runs; see utils.one_at_a_time.
+		self._playback_lock = threading.Lock()
 		self.client = spotify_client.get_client()
 
 		self.searchDialog = None
@@ -119,7 +120,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		self.last_track_id = None
 		self.is_running = True
 		thread_manager.create_poller(self.track_change_poller, interval_seconds=POLL_PLAYING_SECONDS, name="TrackChangePoller")
-		thread_manager.submit_task(self.keep_alive_worker, daemon=True, name="KeepAliveWorker")
+		thread_manager.create_poller(self.keep_alive_poller, interval_seconds=5, name="KeepAlivePoller")
 		thread_manager.submit_task(self.client.initialize, daemon=True, name="ClientInit")
 
 		self._check_resume_sleep_timer()
@@ -223,8 +224,9 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 				if playback and isinstance(playback, dict)
 				else False
 			)
+			# "item" is null during ads and between items, so not just missing.
 			current_track_id = (
-				playback.get("item", {}).get("id")
+				(playback.get("item") or {}).get("id")
 				if playback and isinstance(playback, dict)
 				else None
 			)
@@ -589,28 +591,16 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
 		_fetch()
 
-	def keep_alive_worker(self):
-		"""Ping Spotify periodically to keep the connection alive."""
-		while self.is_running:
-			interval = utils.conf_get("keepAliveInterval", 0)
+	def keep_alive_poller(self):
+		"""Ping Spotify every keepAliveInterval seconds (at least 5), if the user turned it on.
 
-			if interval == 0:
-				time.sleep(5)
-				continue
-
-			if interval < 5:
-				interval = 5
-
-			try:
-				if self.client.client:
-					self.client.send_keep_alive()
-			except Exception:
-				pass
-
-			for _ in range(interval):
-				if not self.is_running:
-					break
-				time.sleep(1)
+		Returns how long to wait before the next call; see create_poller.
+		"""
+		interval = utils.conf_get("keepAliveInterval", 0)
+		if not interval:
+			return 5  # off: look at the setting again in a moment
+		self.client.send_keep_alive()
+		return max(interval, 5)
 
 	def _set_clipboard(self, text):
 		"""Copy a link to the clipboard; must run on the main thread."""
@@ -696,172 +686,117 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		description=_("Play or pause the current track on Spotify."),
 	)
 	@utils.speak_in_thread
+	@utils.one_at_a_time
 	def script_playPause(self, gesture):
-		if self._is_modifying_playback:
-			return _("Please wait...")
-		try:
-			self._is_modifying_playback = True
-			playback = self.client._execute("current_playback")
-			if not isinstance(playback, dict):
-				return playback
-			if playback and playback.get("is_playing"):
-				self.client._execute("pause_playback")
-				return _("Paused")
-			else:
-				self.client._execute("start_playback")
-				return _("Playing")
-		finally:
-			self._is_modifying_playback = False
+		playback = self.client._execute("current_playback")
+		if isinstance(playback, str):
+			return playback
+		if playback and playback.get("is_playing"):
+			result, done = self.client._execute("pause_playback"), _("Paused")
+		else:
+			result, done = self.client._execute("start_playback"), _("Playing")
+		# Only say it happened if Spotify did it.
+		return result if isinstance(result, str) else done
+
+	def _skip(self, command, done):
+		"""Next or previous track, then say what is playing now."""
+		result = self.client._execute(command)
+		if isinstance(result, str):
+			return result
+		time.sleep(0.4)  # Give Spotify a moment to apply the change.
+		playback = self.client._execute("current_playback")
+		return self.client.get_current_track_info(playback) if isinstance(playback, dict) else done
 
 	@scriptHandler.script(
 		description=_("Skip to the next track on Spotify."),
 	)
 	@utils.speak_in_thread
+	@utils.one_at_a_time
 	def script_nextTrack(self, gesture):
-		if self._is_modifying_playback:
-			return _("Please wait...")
-		try:
-			self._is_modifying_playback = True
-			result = self.client._execute("next_track")
-			if isinstance(result, str):
-				return result
-			time.sleep(0.4)  # Give Spotify a moment to apply the change.
-			playback = self.client._execute("current_playback")
-			return (
-				self.client.get_current_track_info(playback)
-				if isinstance(playback, dict)
-				else _("Next track")
-			)
-		finally:
-			self._is_modifying_playback = False
+		return self._skip("next_track", _("Next track"))
 
 	@scriptHandler.script(
 		description=_("Skip to the previous track on Spotify."),
 	)
 	@utils.speak_in_thread
+	@utils.one_at_a_time
 	def script_previousTrack(self, gesture):
-		if self._is_modifying_playback:
-			return _("Please wait...")
-		try:
-			self._is_modifying_playback = True
-			result = self.client._execute("previous_track")
-			if isinstance(result, str):
-				return result
-			time.sleep(0.4)
-			playback = self.client._execute("current_playback")
-			return (
-				self.client.get_current_track_info(playback)
-				if isinstance(playback, dict)
-				else _("Previous track")
-			)
-		finally:
-			self._is_modifying_playback = False
+		return self._skip("previous_track", _("Previous track"))
+
+	def _change_volume(self, direction):
+		"""Volume up (direction 1) or down (-1) by the step from the settings."""
+		playback = self.client._execute("current_playback")
+		if isinstance(playback, str):
+			return playback
+		device = (playback or {}).get("device")
+		if not device:
+			return _("No active device found.")
+		if device.get("volume_percent") is None:
+			return _("This device does not let Spotify change its volume.")
+		step = utils.conf_get("volumeStep", 5)
+		new_volume = max(0, min(100, device["volume_percent"] + direction * step))
+		result = self.client._execute("volume", new_volume)
+		return result if isinstance(result, str) else _("Volume {volume}%").format(volume=new_volume)
 
 	@scriptHandler.script(
 		description=_("Increase Spotify volume."),
 	)
 	@utils.speak_in_thread
+	@utils.one_at_a_time
 	def script_volumeUp(self, gesture):
-		if self._is_modifying_playback:
-			return _("Please wait...")
-		try:
-			self._is_modifying_playback = True
-			playback = self.client._execute("current_playback")
-			if not isinstance(playback, dict):
-				return playback
-			if playback and playback.get("device"):
-				current_volume = playback["device"]["volume_percent"]
-				step = utils.conf_get("volumeStep", 5)
-				new_volume = min(current_volume + step, 100)
-				self.client._execute("volume", new_volume)
-				return _("Volume {volume}%").format(volume=new_volume)
-			return _("No active device found.")
-		finally:
-			self._is_modifying_playback = False
+		return self._change_volume(1)
 
 	@scriptHandler.script(
 		description=_("Decrease Spotify volume."),
 	)
 	@utils.speak_in_thread
+	@utils.one_at_a_time
 	def script_volumeDown(self, gesture):
-		if self._is_modifying_playback:
-			return _("Please wait...")
-		try:
-			self._is_modifying_playback = True
-			playback = self.client._execute("current_playback")
-			if not isinstance(playback, dict):
-				return playback
-			if playback and playback.get("device"):
-				current_volume = playback["device"]["volume_percent"]
-				step = utils.conf_get("volumeStep", 5)
-				new_volume = max(current_volume - step, 0)
-				self.client._execute("volume", new_volume)
-				return _("Volume {volume}%").format(volume=new_volume)
-			return _("No active device found.")
-		finally:
-			self._is_modifying_playback = False
+		return self._change_volume(-1)
+
+	def _seek_by(self, direction):
+		"""Seek forward (direction 1) or backward (-1) by the duration from the settings."""
+		seconds = utils.conf_get("seekDuration", 15)
+		result = self.client.seek_track(direction * seconds * 1000)
+		if isinstance(result, str):
+			return result
+		if direction > 0:
+			return _("Seeked forward {duration} seconds.").format(duration=seconds)
+		return _("Seeked backward {duration} seconds.").format(duration=seconds)
 
 	@scriptHandler.script(
 		description=_("Seek forward in the current track."),
 	)
 	@utils.speak_in_thread
+	@utils.one_at_a_time
 	def script_seekForward(self, gesture):
-		if self._is_modifying_playback:
-			return _("Please wait...")
-		try:
-			self._is_modifying_playback = True
-			seek_duration = utils.conf_get("seekDuration", 15)
-			result = self.client.seek_track(seek_duration * 1000)
-			if isinstance(result, str):
-				return result
-			return _("Seeked forward {duration} seconds.").format(duration=seek_duration)
-		finally:
-			self._is_modifying_playback = False
+		return self._seek_by(1)
 
 	@scriptHandler.script(
 		description=_("Seek backward in the current track."),
 	)
 	@utils.speak_in_thread
+	@utils.one_at_a_time
 	def script_seekBackward(self, gesture):
-		if self._is_modifying_playback:
-			return _("Please wait...")
-		try:
-			self._is_modifying_playback = True
-			seek_duration = utils.conf_get("seekDuration", 15)
-			result = self.client.seek_track(-seek_duration * 1000)
-			if isinstance(result, str):
-				return result
-			return _("Seeked backward {duration} seconds.").format(duration=seek_duration)
-		finally:
-			self._is_modifying_playback = False
+		return self._seek_by(-1)
 
 	@scriptHandler.script(
 		description=_("Toggle Shuffle mode."),
 	)
 	@utils.speak_in_thread
+	@utils.one_at_a_time
 	def script_toggleShuffle(self, gesture):
 		# H = sHuffle (S is already used as Search)
-		if self._is_modifying_playback:
-			return _("Please wait...")
-		try:
-			self._is_modifying_playback = True
-			return self.client.toggle_shuffle()
-		finally:
-			self._is_modifying_playback = False
+		return self.client.toggle_shuffle()
 
 	@scriptHandler.script(
 		description=_("Cycle Repeat mode (Off, Context, Track)."),
 	)
 	@utils.speak_in_thread
+	@utils.one_at_a_time
 	def script_cycleRepeat(self, gesture):
 		# R = Repeat
-		if self._is_modifying_playback:
-			return _("Please wait...")
-		try:
-			self._is_modifying_playback = True
-			return self.client.cycle_repeat()
-		finally:
-			self._is_modifying_playback = False
+		return self.client.cycle_repeat()
 
 	@scriptHandler.script(
 		description=_("Announce the next track in the queue."),
@@ -878,28 +813,24 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		playback = self.client._execute("current_playback")
 		if isinstance(playback, str):
 			return playback
-		if not playback or not playback.get("item"):
+		item = (playback or {}).get("item")
+		if not item:
 			return _("Nothing is currently playing.")
+		# By URI, so a podcast episode is saved as an episode, not looked up as a song.
+		uri = item.get("uri")
+		if not item.get("id") or not uri:
+			return _("This item cannot be saved.")  # a local file
 
-		track = playback["item"]
-		track_id = track["id"]
-
-		check = self.client.check_if_saved_tracks([track_id])
+		check = self.client.library_contains([uri])
 		if isinstance(check, str):
 			return check
-
-		is_saved = check[0]
-
-		if is_saved:
-			result = self.client.remove_tracks_from_library([track_id])
-			if isinstance(result, str):
-				return result
-			return _("Removed from Liked Songs.")
-		else:
-			result = self.client.save_tracks_to_library([track_id])
-			if isinstance(result, str):
-				return result
-			return _("Added to Liked Songs.")
+		is_saved = bool(check and check[0])
+		result = (self.client.library_remove if is_saved else self.client.library_save)([uri])
+		if isinstance(result, str):
+			return result
+		if item.get("type") == "episode":
+			return _("Removed from Your Episodes.") if is_saved else _("Added to Your Episodes.")
+		return _("Removed from Liked Songs.") if is_saved else _("Added to Liked Songs.")
 
 	@scriptHandler.script(
 		description=_("Follow or unfollow the artist of the currently playing track."),
