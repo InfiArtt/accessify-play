@@ -65,8 +65,9 @@ logger-objects = ["logHandler.log"]
 # sconstruct, from the NVDA add-on template, reads these names. The add-on's
 # description and changelog are prose for the add-on store, kept as written.
 "buildVars.py" = ["N816", "E501"]
-# Tests assert, use literal expected values and look at private state.
-"tests/unit/**" = ["S101", "PLR2004", "SLF001", "INP001"]
+# Tests assert, use literal expected values and look at private state; the
+# stand-in classes inside them mirror real interfaces and need no docstrings.
+"tests/unit/**" = ["S101", "PLR2004", "SLF001", "INP001", "D101", "D102"]
 # The fakes copy NVDA's and wx's names and signatures, whatever ruff thinks of them.
 "tests/fakes/**" = [
 	"N802", "N803", "N815", "N816", "N999", "FBT001", "FBT002", "ARG001", "ARG002", "ANN401", "D1",

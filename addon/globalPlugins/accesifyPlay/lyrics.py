@@ -123,7 +123,7 @@ def _make_request(endpoint: str, params: dict[str, str | int]) -> Reply:
 _LRC_TIMESTAMP = re.compile(r"\[(\d+):(\d{1,2})(?:[.:](\d{1,3}))?\]")
 
 
-def _timestamp_ms(minutes: int, seconds: int, fraction: float) -> int:
+def _timestamp_ms(minutes: str, seconds: str, fraction: str | None) -> int:
 	ms = (int(minutes) * 60 + int(seconds)) * 1000
 	if fraction:
 		# A decimal fraction of a second: ".5" is 500 ms, ".45" is 450 ms and
@@ -187,7 +187,7 @@ class LyricsAutoReader:
 		"""Return whether lyrics are being read along with the song."""
 		return self._active
 
-	def start(self, synced_lyrics: TimedLines, progress_ms: int) -> bool:
+	def start(self, synced_lyrics: str | None, progress_ms: int) -> bool:
 		"""Cancel any existing timers and schedule all upcoming lyric lines.
 
 		Returns True if at least one line was scheduled, False otherwise
@@ -228,7 +228,7 @@ class LyricsAutoReader:
 		"""
 		self._cancel_timers()
 
-	def resync(self, synced_lyrics: TimedLines, progress_ms: int) -> None:
+	def resync(self, synced_lyrics: str | None, progress_ms: int) -> None:
 		"""Re-schedule timers from a new playback position.
 
 		Call this after a seek or pause/resume to correct drift.
@@ -238,7 +238,7 @@ class LyricsAutoReader:
 			return
 		self.start(synced_lyrics, progress_ms)
 
-	def set_line_callback(self, callback: Callable[..., object]) -> None:
+	def set_line_callback(self, callback: Callable[[int], object] | None) -> None:
 		"""Set a callable to call with the timestamp (ms) of each line as it is spoken.
 
 		Pass None to disable. Used by the lyrics window for auto-scroll.
