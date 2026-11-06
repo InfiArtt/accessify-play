@@ -11,6 +11,7 @@ import ast
 import io
 import re
 import string
+import subprocess
 import tokenize
 from functools import cache
 from pathlib import Path
@@ -173,11 +174,24 @@ STALE = (
 )
 
 
+def tracked(folder: Path) -> list[str]:
+	"""Return the files git keeps under folder; a local build adds others that .gitignore leaves out."""
+	result = subprocess.run(  # noqa: S603 - a fixed git command on our own repository
+		["git", "-C", str(ROOT), "ls-files", folder.relative_to(ROOT).as_posix()],  # noqa: S607 - git from PATH
+		capture_output=True,
+		text=True,
+		check=False,
+	)
+	if result.returncode:
+		pytest.skip("not a git checkout")
+	return result.stdout.splitlines()
+
+
 def test_both_languages_have_the_same_pages() -> None:
-	"""Same pages in English and Indonesian, readme.md among them, and no generated HTML."""
+	"""Same pages in English and Indonesian, readme.md among them, and no generated HTML committed."""
 	assert pages("en") == pages("id")
 	assert "readme.md" in pages("en")
-	assert not list(DOC.glob("*/*.html"))
+	assert not [name for name in tracked(DOC) if name.endswith(".html")]
 
 
 @pytest.mark.parametrize("language", LANGS)
