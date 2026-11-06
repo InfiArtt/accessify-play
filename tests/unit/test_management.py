@@ -124,10 +124,35 @@ def ready(client: SpotifyClient, server: SpotifyServer) -> SpotifyServer:
 	return server
 
 
-def open_library(client: SpotifyClient, **preloaded: object) -> ManagementDialog:
-	"""Open the library as the user "me", with the given tabs already loaded."""
-	preloaded.setdefault("playlists", [MINE, THEIRS, NOBODYS])
-	return ManagementDialog(None, client, {"user_profile": {"id": "me"}, **preloaded})
+#: Where each tab's list comes from, and how Spotify wraps it.
+LIST_ROUTES = {
+	"playlists": ("me/playlists", lambda items: {"items": items, "next": None}),
+	"saved_tracks": ("me/tracks", lambda items: {"items": items}),
+	"saved_albums": ("me/albums", lambda items: {"items": items}),
+	"followed_artists": ("me/following", lambda items: {"artists": {"items": items, "next": None}}),
+	"top_items": ("me/top/tracks", lambda items: {"items": items}),
+	"saved_shows": ("me/shows", lambda items: {"items": items}),
+	"saved_episodes": ("me/episodes", lambda items: {"items": items}),
+	"saved_audiobooks": ("me/audiobooks", lambda items: {"items": items}),
+	"new_releases": ("browse/new-releases", lambda items: {"albums": {"items": items}}),
+	"recently_played": ("me/player/recently-played", lambda items: {"items": items}),
+}
+
+
+def open_library(
+	client: SpotifyClient, server: SpotifyServer | None = None, **lists: list
+) -> ManagementDialog:
+	"""Open the library as the user "me"; with lists, Spotify has them and every tab is visited once."""
+	client.current_user_id = "me"
+	for key, items in lists.items():
+		path, wrap = LIST_ROUTES[key]
+		server.routes["GET", path] = wrap(items)
+	library = ManagementDialog(None, client)
+	if lists:
+		for page in range(library.notebook.GetPageCount()):
+			library.notebook.SetSelection(page)
+		library.notebook.SetSelection(0)
+	return library
 
 
 # --- Manage Playlists -----------------------------------------------------------------------
@@ -150,7 +175,7 @@ def test_opening_lists_the_playlists_and_the_first_ones_tracks(client: SpotifyCl
 
 
 def test_playlists_are_fetched_with_the_user(client: SpotifyClient, server: SpotifyServer) -> None:
-	"""Without preloaded data the user and playlists are fetched; a playlist's tracks follow."""
+	"""The user and the playlists are fetched; a playlist's tracks follow."""
 	server.routes["GET", "me"] = {"id": "me"}
 	server.routes["GET", "me/playlists"] = {"items": [THEIRS], "next": None}
 	server.routes["GET", "playlists/p2/items"] = entries(track(3, artists=[]))
@@ -168,12 +193,15 @@ def test_playlists_that_fail_to_load(client: SpotifyClient, server: SpotifyServe
 	library = ManagementDialog(None, client)
 	assert library.playlist_choices.GetStrings() == []
 	assert library.playlist_tracks_list.GetStrings() == [spoken[-1]]
+	# An answer that comes after the window closed changes nothing.
+	library.Destroy()
+	library._show_playlists_failed("late")
+	assert library.playlist_tracks_list.GetStrings() == [spoken[-1]]
 
 
 def test_no_playlists(client: SpotifyClient, server: SpotifyServer) -> None:
 	"""Without playlists the list stays empty and the owner's buttons are off."""
-	server.routes["GET", "me/playlists"] = {"items": [], "next": None}
-	library = open_library(client, playlists=None)
+	library = open_library(client, server, playlists=[])
 	assert library.playlist_tracks_list.GetStrings() == []
 	assert not library.clear_playlist_button.IsEnabled()
 
@@ -270,8 +298,7 @@ def test_playing_a_playlist_track_that_cannot_play_in_order(
 	assert spoken[-1] == "Unable to play selection. URI not found."
 
 
-@pytest.mark.usefixtures("ready")
-def test_menus_for_unusual_items(client: SpotifyClient, spoken: list[str]) -> None:
+def test_menus_for_unusual_items(client: SpotifyClient, ready: SpotifyServer, spoken: list[str]) -> None:
 	"""Menus fit what the item is.
 
 	An artist in Top Items offers its discography; a song without a URI cannot be played or queued;
@@ -279,6 +306,7 @@ def test_menus_for_unusual_items(client: SpotifyClient, spoken: list[str]) -> No
 	"""
 	library = open_library(
 		client,
+		ready,
 		top_items=[ARTIST, {"type": "x", "name": "?"}],
 		saved_tracks=[{"track": {"type": "track", "name": "Local", "artists": []}}],
 		saved_albums=[{"album": {"type": "album", "id": "a9", "name": "Lonely"}}],
@@ -300,7 +328,7 @@ def test_menus_for_unusual_items(client: SpotifyClient, spoken: list[str]) -> No
 
 def test_play_playlist(client: SpotifyClient, ready: SpotifyServer, spoken: list[str]) -> None:
 	"""Play Playlist plays the chosen one, and says so when it can't."""
-	library = open_library(client, playlists=[MINE, {"id": "p9", "name": "Odd", "owner": {}}])
+	library = open_library(client, ready, playlists=[MINE, {"id": "p9", "name": "Odd", "owner": {}}])
 	library.play_playlist_button.press()
 	assert ready.requests[-1][3] == {"context_uri": "spotify:playlist:p1"}
 	library.playlist_choices.SetSelection(1)
@@ -537,16 +565,16 @@ def test_playlist_track_menu(client: SpotifyClient) -> None:
 
 # --- The list tabs --------------------------------------------------------------------------
 
-PRELOADED = {
+LISTS = {
 	"saved_tracks": [{"track": track(1)}],
 	"saved_albums": [{"album": ALBUM}],
 	"followed_artists": [ARTIST],
-	"top_items": {"items": [track(2), ARTIST]},
+	"top_items": [track(2), ARTIST],
 	"saved_shows": [{"show": SHOW}],
 	"saved_episodes": [{"episode": EPISODE}, {"episode": {"name": "Bare"}}],
 	"saved_audiobooks": [{"audiobook": BOOK}, {"name": "Loose", "publisher": "Pub"}, {}],
-	"new_releases": {"albums": {"items": [ALBUM]}},
-	"recently_played": {"items": [{"track": track(3)}]},
+	"new_releases": [ALBUM],
+	"recently_played": [{"track": track(3)}],
 }
 
 ROWS = {
@@ -571,16 +599,15 @@ def tab(library: ManagementDialog, key: str) -> wx.ListBox:
 
 
 @pytest.fixture
-def full(client: SpotifyClient, ready: SpotifyServer) -> ManagementDialog:  # noqa: ARG001 - ready sets up the server
-	"""Return the library with every tab loaded up front."""
-	return open_library(client, **PRELOADED)
+def full(client: SpotifyClient, ready: SpotifyServer) -> ManagementDialog:
+	"""Return the library with every tab visited once, so each has its list."""
+	return open_library(client, ready, **LISTS)
 
 
-def test_preloaded_tabs(full: ManagementDialog, ready: SpotifyServer) -> None:
-	"""Data handed in fills the tabs without asking Spotify."""
+def test_every_tab_lists_its_items(full: ManagementDialog) -> None:
+	"""Each tab shows its items in its own words."""
 	for key, rows in ROWS.items():
 		assert full.tabs_config[key]["control"].GetStrings() == rows, key
-	assert ready.paths() == ["playlists/p1/items"]
 
 
 ROUTES = {

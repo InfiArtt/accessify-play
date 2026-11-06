@@ -49,7 +49,7 @@ New in Accessify Play's settings (NVDA menu, Preferences, Settings, Accessify Pl
 - **One table of settings** (`settings_spec.py`): the config spec, the defaults, and the ranges and labels of the settings panel are all made from it, so a limit is changed in one place. Tests check that the panel and the user guide match it.
 - **One table of commands** (`commands.py`) for the command layer's keys, names and descriptions, which used to be listed three times. `layerConfig.json` now keeps only your keys and whether the layer stays open.
 - **One test suite**: the older test scripts are ported to pytest or removed, including the checks of the translations, the user guides and the bundled libraries. `installTasks.py` is now tested and measured too.
-- Removed code that never ran: an install-time clean-up for an NVDA function that does not exist.
+- Removed code that never ran: an install-time clean-up for an NVDA function that does not exist, and lists the Library could be handed ready-made, which only the tests used (they now go through the stand-in Spotify server).
 - **Links to the source, releases and issues point to this fork** (aradix85/accessify-play): in the add-on's manifest, the readme and the user guide.
 - **Type checking with pyright** runs with the other checks, and found a few places where missing details from Spotify could stop a window (a playlist or artist without a name, a song without an id).
 - **One way to give a window its shortcuts** (`_bind_shortcuts`), instead of an accelerator table written out in each window; the keys come from the settings, and menus show them.

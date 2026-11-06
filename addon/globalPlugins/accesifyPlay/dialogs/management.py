@@ -7,7 +7,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal, NamedTuple
+from typing import TYPE_CHECKING, Literal, NamedTuple
 
 import gui
 import ui
@@ -60,18 +60,13 @@ class _ListTab(NamedTuple):
 class ManagementDialog(AccessifyDialog):
 	"""The library: playlists, saved items, followed artists, top items and more, one tab each."""
 
-	def __init__(
-		self, parent: wx.Window, client: SpotifyClient, preloaded_data: dict[str, Any] | None = None
-	) -> None:
+	def __init__(self, parent: wx.Window, client: SpotifyClient) -> None:
 		super().__init__(parent, title=_("Spotify Management"), size=(600, 500))
 		self.client = client
 
 		# Tabs load lazily: each fetches its list the first time it is shown, so
-		# the dialog opens at once instead of after nine requests. Data passed
-		# in here is used as-is and skips that tab's first fetch.
-		self.preloaded_data = preloaded_data or {}
-		profile = self.preloaded_data.get("user_profile")
-		self.current_user_id = profile.get("id") if isinstance(profile, dict) else client.current_user_id
+		# the dialog opens at once instead of after nine requests.
+		self.current_user_id = client.current_user_id
 		self._createPlaylistDialog = None
 		self._playlistDetailsDialog = None
 		self.is_current_playlist_owned = False
@@ -89,17 +84,8 @@ class ManagementDialog(AccessifyDialog):
 
 	# --- Lazy tab loading ----------------------------------------------------
 
-	def _register_page(
-		self,
-		page: wx.Window,
-		loader: Callable[..., object],
-		control: wx.ListBox,
-		initial_data: object = None,
-	) -> None:
-		"""Load `page` on first view, unless its data was supplied up front."""
-		if initial_data is not None:
-			loader(initial_data=initial_data)
-			return
+	def _register_page(self, page: wx.Window, loader: Callable[[], object], control: wx.ListBox) -> None:
+		"""Load `page` the first time it is shown, saying "Loading..." in control meanwhile."""
 		self._page_loaders[self.notebook.FindPage(page)] = (loader, control)
 
 	def _on_page_changed(self, evt: wx.CommandEvent) -> None:
@@ -291,7 +277,7 @@ class ManagementDialog(AccessifyDialog):
 		refresh_button.Bind(wx.EVT_BUTTON, lambda _evt: tab.loader())
 		sizer.Add(refresh_button, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
 
-		self._register_page(panel, tab.loader, list_control, initial_data=self.preloaded_data.get(key))
+		self._register_page(panel, tab.loader, list_control)
 
 	def _populate_generic_list(self, key: str, data: list[Item] | str) -> None:
 		if not self:
@@ -320,20 +306,15 @@ class ManagementDialog(AccessifyDialog):
 		self,
 		key: str,
 		fetch: Callable[[], Reply | str],
-		initial_data: Item | list[Item] | None = None,
 		unwrap: Callable[[Item], list[Item]] | None = None,
 	) -> None:
-		"""Show a tab's list: initial_data when given, else fetched in the background.
+		"""Fetch a tab's list in the background and show it.
 
 		unwrap picks the list out of an answer that wraps it in a page.
 		"""
 
 		def prepared(data: Reply | str) -> list[Item] | str:
 			return unwrap(data) if unwrap and isinstance(data, dict) else data
-
-		if initial_data is not None:
-			self._populate_generic_list(key, prepared(initial_data))
-			return
 
 		def _load() -> None:
 			data = prepared(fetch())
@@ -345,45 +326,43 @@ class ManagementDialog(AccessifyDialog):
 
 	# --- Tab loaders ---
 
-	def load_saved_tracks(self, initial_data: list[Item] | None = None) -> None:
-		"""Show the saved tracks, fetching them unless they are given."""
-		self._load_list("saved_tracks", self.client.get_saved_tracks, initial_data)
+	def load_saved_tracks(self) -> None:
+		"""Fetch the saved tracks and show them."""
+		self._load_list("saved_tracks", self.client.get_saved_tracks)
 
-	def load_saved_albums(self, initial_data: list[Item] | None = None) -> None:
-		"""Show the saved albums, fetching them unless they are given."""
-		self._load_list("saved_albums", self.client.get_saved_albums, initial_data)
+	def load_saved_albums(self) -> None:
+		"""Fetch the saved albums and show them."""
+		self._load_list("saved_albums", self.client.get_saved_albums)
 
-	def load_followed_artists(self, initial_data: list[Item] | None = None) -> None:
-		"""Show the followed artists, fetching them unless they are given."""
-		self._load_list("followed_artists", self.client.get_followed_artists, initial_data)
+	def load_followed_artists(self) -> None:
+		"""Fetch the followed artists and show them."""
+		self._load_list("followed_artists", self.client.get_followed_artists)
 
-	def load_saved_shows(self, initial_data: list[Item] | None = None) -> None:
-		"""Show the saved shows, fetching them unless they are given."""
-		self._load_list("saved_shows", self.client.get_saved_shows, initial_data)
+	def load_saved_shows(self) -> None:
+		"""Fetch the saved shows and show them."""
+		self._load_list("saved_shows", self.client.get_saved_shows)
 
-	def load_saved_episodes(self, initial_data: list[Item] | None = None) -> None:
-		"""Show the saved episodes, fetching them unless they are given."""
-		self._load_list("saved_episodes", self.client.get_saved_episodes, initial_data)
+	def load_saved_episodes(self) -> None:
+		"""Fetch the saved episodes and show them."""
+		self._load_list("saved_episodes", self.client.get_saved_episodes)
 
-	def load_saved_audiobooks(self, initial_data: list[Item] | None = None) -> None:
-		"""Show the saved audiobooks, fetching them unless they are given."""
-		self._load_list("saved_audiobooks", self.client.get_saved_audiobooks, initial_data)
+	def load_saved_audiobooks(self) -> None:
+		"""Fetch the saved audiobooks and show them."""
+		self._load_list("saved_audiobooks", self.client.get_saved_audiobooks)
 
-	def load_new_releases(self, initial_data: Item | list[Item] | None = None) -> None:
-		"""Show the new releases, fetching them unless they are given."""
+	def load_new_releases(self) -> None:
+		"""Fetch the new releases and show them."""
 		self._load_list(
 			"new_releases",
 			self.client.get_new_releases,
-			initial_data,
 			unwrap=lambda page: (page.get("albums") or {}).get("items") or [],
 		)
 
-	def load_recently_played(self, initial_data: Item | list[Item] | None = None) -> None:
-		"""Show the recently played tracks, fetching them unless they are given."""
+	def load_recently_played(self) -> None:
+		"""Fetch the recently played tracks and show them."""
 		self._load_list(
 			"recently_played",
 			self.client.get_recently_played,
-			initial_data,
 			unwrap=lambda page: page.get("items") or [],
 		)
 
@@ -474,12 +453,7 @@ class ManagementDialog(AccessifyDialog):
 		self._tracks_timer = None
 		self._tracks_loading = False
 
-		self._register_page(
-			panel,
-			self.load_playlists,
-			self.playlist_tracks_list,
-			initial_data=self.preloaded_data.get("playlists"),
-		)
+		self._register_page(panel, self.load_playlists, self.playlist_tracks_list)
 
 	def on_play_playlist(self, _evt: wx.Event) -> None:
 		"""Play the selected playlist."""
@@ -499,21 +473,18 @@ class ManagementDialog(AccessifyDialog):
 		"""Load the playlists again."""
 		self.load_playlists()
 
-	def load_playlists(self, initial_data: list[Item] | str | None = None) -> None:
-		"""Show the user's playlists, fetching them unless they are given."""
+	def load_playlists(self) -> None:
+		"""Fetch the user's playlists in the background and show them."""
+		thread_manager.submit_task(self._load_playlists_thread, name="DialogTask", daemon=True)
+
+	def _show_playlists_failed(self, message: str) -> None:
+		"""Say why the playlists could not be loaded, in the track list; Refresh tries again."""
 		if not self:
-			return
-		if isinstance(initial_data, str):
-			# The preload failed; say why, and let Refresh try again.
-			self.playlists = []
-			self.playlist_choices.Clear()
-			self.playlist_tracks_list.Clear()
-			self.playlist_tracks_list.Append(initial_data)
-			return
-		if initial_data:
-			self._populate_playlists_combobox(initial_data)
-		else:
-			thread_manager.submit_task(self._load_playlists_thread, name="DialogTask", daemon=True)
+			return  # closed while loading
+		self.playlists = []
+		self.playlist_choices.Clear()
+		self.playlist_tracks_list.Clear()
+		self.playlist_tracks_list.Append(message)
 
 	def _load_playlists_thread(self) -> None:
 		if not self.current_user_id:
@@ -522,7 +493,7 @@ class ManagementDialog(AccessifyDialog):
 		data = self.client.get_user_playlists()
 		if isinstance(data, str):
 			wx.CallAfter(ui.message, data)
-			wx.CallAfter(self.load_playlists, data)
+			wx.CallAfter(self._show_playlists_failed, data)
 		else:
 			wx.CallAfter(self._populate_playlists_combobox, data)
 
@@ -1026,9 +997,7 @@ class ManagementDialog(AccessifyDialog):
 		refresh_button.Bind(wx.EVT_BUTTON, self.load_top_items)
 		sizer.Add(refresh_button, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
 
-		self._register_page(
-			panel, self.load_top_items, list_control, initial_data=self.preloaded_data.get("top_items")
-		)
+		self._register_page(panel, self.load_top_items, list_control)
 
 	def _on_top_items_choice(self, _evt: wx.Event | None = None) -> None:
 		# As for the playlist box: arrowing through Show or Time Range sends one
@@ -1037,14 +1006,8 @@ class ManagementDialog(AccessifyDialog):
 			self._top_items_timer.Stop()
 		self._top_items_timer = wx.CallLater(conf_get("listLoadDelayMs"), self.load_top_items)
 
-	def load_top_items(
-		self, _evt: wx.Event | None = None, initial_data: Item | list[Item] | None = None
-	) -> None:
-		"""Show the top tracks or artists for the chosen time range."""
-		if initial_data:
-			items = initial_data.get("items") or [] if isinstance(initial_data, dict) else initial_data
-			self._populate_generic_list("top_items", items)
-			return
+	def load_top_items(self, _evt: wx.Event | None = None) -> None:
+		"""Fetch the top tracks or artists for the chosen time range, and show them."""
 		if self._top_items_timer is not None:
 			self._top_items_timer.Stop()
 			self._top_items_timer = None
