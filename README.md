@@ -1,6 +1,6 @@
 # Accessify Play
-[![Build & Release Addon](https://github.com/InfiArtt/accessify-play/actions/workflows/build_addon.yml/badge.svg)](https://github.com/InfiArtt/accessify-play/actions/workflows/build_addon.yml)
-[![Latest Release](https://img.shields.io/github/v/release/InfiArtt/accessify-play)](https://github.com/InfiArtt/accessify-play/releases/latest)
+[![Build & Release Addon](https://github.com/aradix85/accessify-play/actions/workflows/build_addon.yml/badge.svg)](https://github.com/aradix85/accessify-play/actions/workflows/build_addon.yml)
+[![Latest Release](https://img.shields.io/github/v/release/aradix85/accessify-play)](https://github.com/aradix85/accessify-play/releases/latest)
 [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
 
 <p align="center"><strong>Your Spotify Universe, Commanded by NVDA.</strong></p>
@@ -22,7 +22,7 @@ With effortless, zero-configuration setup, you'll be jamming to your favorite tr
 
 ## Installation
 
-Install Accessify Play from NVDA's **Add-on Store** (NVDA menu → Tools → Add-on Store), or download the `.nvda-addon` file from [GitHub Releases](https://github.com/InfiArtt/accessify-play/releases/latest) and open it.
+Install Accessify Play from NVDA's **Add-on Store** (NVDA menu → Tools → Add-on Store), or download the `.nvda-addon` file from [GitHub Releases](https://github.com/aradix85/accessify-play/releases/latest) and open it.
 
 ## 🚀 First Setup (One-Click Login)
 
@@ -97,7 +97,7 @@ The full user guide is included with the add-on: select Accessify Play in NVDA's
 
 ## 🔄 Updates
 
-Accessify Play is updated through NVDA's Add-on Store (NVDA menu → Tools → Add-on Store), which tells you when a new version is available. Every release is also published on [GitHub Releases](https://github.com/InfiArtt/accessify-play/releases) if you prefer to install it yourself.
+Accessify Play is updated through NVDA's Add-on Store (NVDA menu → Tools → Add-on Store), which tells you when a new version is available. Every release is also published on [GitHub Releases](https://github.com/aradix85/accessify-play/releases) if you prefer to install it yourself.
 
 Versions before 1.12.0 had their own built-in update checker. It was removed in 1.12.0, now that the Add-on Store takes care of updates.
 

@@ -39,11 +39,11 @@ You can change the keys in the layer, and you can also give any command a shortc
 
 ## Updates
 
-Accessify Play is updated through NVDA's Add-on Store (NVDA menu, Tools, Add-on Store), which tells you when a new version is available. Every release is also published on [GitHub Releases](https://github.com/InfiArtt/accessify-play/releases).
+Accessify Play is updated through NVDA's Add-on Store (NVDA menu, Tools, Add-on Store), which tells you when a new version is available. Every release is also published on [GitHub Releases](https://github.com/aradix85/accessify-play/releases).
 
 ## Support and license
 
-Report problems and ideas on [GitHub](https://github.com/InfiArtt/accessify-play/issues). If you find the add-on useful, you can support its development with the **Donate** button in the Accessify Play settings.
+Report problems and ideas on [GitHub](https://github.com/aradix85/accessify-play/issues). If you find the add-on useful, you can support its development with the **Donate** button in the Accessify Play settings.
 
 Lyrics come from [lrclib.net](https://lrclib.net), a free, community-run lyrics database whose lyrics are in the public domain (CC0).
 

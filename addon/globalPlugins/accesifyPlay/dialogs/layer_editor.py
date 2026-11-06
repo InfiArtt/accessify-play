@@ -167,8 +167,8 @@ class LayerEditorDialog(AccessifyDialog):
 			command = BY_SCRIPT[script]
 			idx = self.list_ctrl.InsertItem(self.list_ctrl.GetItemCount(), command.name)
 			# The keys without their kb: prefix.
-			self.list_ctrl.SetItem(idx, 1, ", ".join(g.replace("kb:", "") for g in data.get("gestures", [])))
-			self.list_ctrl.SetItem(idx, 2, _("Yes") if data.get("keep_open") else _("No"))
+			self.list_ctrl.SetItem(idx, 1, ", ".join(g.replace("kb:", "") for g in data["gestures"]))
+			self.list_ctrl.SetItem(idx, 2, _("Yes") if data["keep_open"] else _("No"))
 			self.list_ctrl.SetItem(idx, 3, command.description)
 
 	def on_selection(self, _evt: wx.Event) -> None:
@@ -186,6 +186,8 @@ class LayerEditorDialog(AccessifyDialog):
 			return
 		script_name = self.row_scripts[idx]
 		config = self.config_manager.get_script_config(script_name)
+		if config is None:  # pragma: no cover - every row is a configured command
+			return
 		dlg = EditCommandDialog(
 			self,
 			script_name,
@@ -209,7 +211,7 @@ class LayerEditorDialog(AccessifyDialog):
 		for script, data in self.config_manager.get_all_configs():
 			if script == script_name:
 				continue
-			for gesture in data.get("gestures", []):
+			for gesture in data["gestures"]:
 				try:
 					taken[inputCore.normalizeGestureIdentifier(gesture)] = BY_SCRIPT[script].name
 				except ValueError:

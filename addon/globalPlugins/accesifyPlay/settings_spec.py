@@ -25,6 +25,7 @@ before any other add-on module is imported.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 import config
 from logHandler import log
@@ -186,8 +187,10 @@ def defaults() -> dict[str, Value]:
 	return {key: setting.default for key, setting in SETTINGS.items()}
 
 
-def conf_get(key: str) -> Value:
+def conf_get(key: str) -> Any:  # noqa: ANN401 - each setting has the type of its default
 	"""Read one of our settings without ever raising; its default when it cannot be read.
+
+	The value has the type of the setting's default: bool, int, float or str.
 
 	A missing key means the config spec has not been applied to the section.
 	Reading it directly then raises KeyError, and in a settings panel that

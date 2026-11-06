@@ -240,6 +240,9 @@ def test_device_list_is_retried_once(client: SpotifyClient, server: SpotifyServe
 
 	server.routes["GET", "me/player/devices"] = devices
 	assert client.run_on_device("next_track") is None
+	# Signed out meanwhile (Clear Credentials in the settings): no devices, no crash.
+	client.client = None
+	assert client._fetch_devices() is None
 
 
 def test_waking_a_device_can_fail(client: SpotifyClient, server: SpotifyServer) -> None:

@@ -131,7 +131,10 @@ def init_translation() -> None:
 	keeps the add-on's language setting from replacing `_` for the whole of
 	NVDA and every other add-on.
 	"""
-	frame = inspect.currentframe().f_back
+	current = inspect.currentframe()
+	frame = current.f_back if current else None
+	if frame is None:  # pragma: no cover - CPython always knows its caller
+		return
 	try:
 		# The caller's globals dict is its module namespace, so write there
 		# directly. inspect.getmodule() would find the same module by scanning

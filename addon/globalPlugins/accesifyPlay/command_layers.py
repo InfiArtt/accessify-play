@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 init_translation()
 
 
-def _capture_func() -> Callable[[inputCore.InputGesture], bool] | None:
+def _capture_func() -> Callable[..., object] | None:
 	"""Return the function NVDA hands every gesture to first, if any.
 
 	NVDA offers no public way to read or set it; input help uses the same
@@ -43,7 +43,7 @@ def _capture_func() -> Callable[[inputCore.InputGesture], bool] | None:
 	return inputCore.manager._captureFunc  # noqa: SLF001
 
 
-def _set_capture_func(func: Callable[..., object]) -> None:
+def _set_capture_func(func: Callable[..., object] | None) -> None:
 	inputCore.manager._captureFunc = func  # noqa: SLF001
 
 
@@ -131,7 +131,7 @@ class CommandLayerManager:
 		configs = self.config_manager.get_all_configs()
 		entries = []
 		for script, data in configs:
-			gestures = data.get("gestures", [])
+			gestures = data["gestures"]
 			# Strip kb: prefix and join multiple gestures
 			clean_gestures = [g.replace("kb:", "") for g in gestures]
 			label = ", ".join(clean_gestures) if clean_gestures else _("Unbound")
@@ -255,17 +255,18 @@ class CommandLayerManager:
 				self._help_dialog.Raise()
 				return
 			parent = gui.mainFrame
-			self._help_dialog = LayerHelpDialog(parent, self._help_entries)
+			dialog = LayerHelpDialog(parent, self._help_entries)
+			self._help_dialog = dialog
 
 			def _on_close(evt: wx.Event) -> None:
 				try:
 					evt.Skip()
 				finally:
-					self._help_dialog.Destroy()
+					dialog.Destroy()
 					self._help_dialog = None
 
-			self._help_dialog.Bind(wx.EVT_CLOSE, _on_close)
-			self._help_dialog.Show()
+			dialog.Bind(wx.EVT_CLOSE, _on_close)
+			dialog.Show()
 
 		wx.CallAfter(_show)
 

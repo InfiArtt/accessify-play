@@ -16,7 +16,7 @@ from ..core.thread_manager import thread_manager
 from ..formatting import format_duration, format_names
 from ..language import init_translation
 from ..ui.base_dialog import AccessifyDialog
-from ..utils import copy_link
+from ..utils import copy_link, safe_text
 
 if TYPE_CHECKING:
 	from ..spotify_client import SpotifyClient
@@ -29,9 +29,9 @@ class AlbumTracksDialog(AccessifyDialog):
 	"""An album's tracks."""
 
 	def __init__(
-		self, parent: wx.Window, client: SpotifyClient, album: Item, user_playlists: list[Item]
+		self, parent: wx.Window, client: SpotifyClient, album: Item, user_playlists: list[Item] | None
 	) -> None:
-		album_name = album.get("name", _("Unknown"))
+		album_name = safe_text(album.get("name"), _("Unknown"))
 		title = _("Tracks in {album}").format(album=album_name)
 		super().__init__(parent, title=title, size=(500, 400))
 		self.client = client

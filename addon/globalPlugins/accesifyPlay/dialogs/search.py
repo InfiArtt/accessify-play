@@ -273,7 +273,7 @@ class SearchDialog(AccessifyDialog):
 	def _format_item_for_display(self, item: Item) -> str:
 		"""Create a readable string for an item to be shown in the ListBox."""
 		display = safe_text(item.get("name"), _("Unknown"))
-		item_type = item.get("type")
+		item_type = item.get("type") or ""
 
 		if item_type == "track":
 			artists = format_names(item.get("artists"))
@@ -294,7 +294,7 @@ class SearchDialog(AccessifyDialog):
 
 	def _activate_item(self, item: Item) -> None:
 		"""Perform the default 'Enter' action based on the item type."""
-		item_type = item.get("type")
+		item_type = item.get("type") or ""
 
 		if item_type == "track":
 			# Play it in its album, so the album carries on after it.
@@ -370,7 +370,7 @@ class SearchDialog(AccessifyDialog):
 		if item.get("type") == "playlist" and not self._is_own_playlist(item):
 
 			def _check_and_show() -> None:
-				result = self.client.library_contains([item.get("id")], "playlist")
+				result = self.client.library_contains([item["id"]], "playlist")
 				is_followed = result[0] if isinstance(result, list) and result else False
 				wx.CallAfter(self._show_results_menu, item, is_followed=is_followed)
 
@@ -381,7 +381,7 @@ class SearchDialog(AccessifyDialog):
 	def _show_results_menu(self, item: Item, *, is_followed: bool | None = None) -> None:
 		"""Return the context menu for a result. is_followed matters only for others' playlists."""
 		menu = wx.Menu()
-		item_type = item.get("type")
+		item_type = item.get("type") or ""
 		if item.get("uri"):
 			self._append_action(menu, _("Play"), "keyPlay")
 		if item_type in ("track", "album", "playlist"):
@@ -438,7 +438,7 @@ class SearchDialog(AccessifyDialog):
 		self._append_menu_item(
 			menu,
 			label,
-			lambda _evt: self.on_toggle_follow_playlist(item, is_currently_followed=is_followed),
+			lambda _evt: self.on_toggle_follow_playlist(item, is_currently_followed=bool(is_followed)),
 		)
 
 	def _append_track_items(self, menu: wx.Menu, item: Item) -> None:
@@ -469,7 +469,7 @@ class SearchDialog(AccessifyDialog):
 			ui.message(_("No item selected."))
 			return
 
-		item_type = item.get("type")
+		item_type = item.get("type") or ""
 		uri = item.get("uri")
 		name = item.get("name")
 
@@ -518,8 +518,8 @@ class SearchDialog(AccessifyDialog):
 
 	def on_toggle_follow_playlist(self, playlist_item: Item, *, is_currently_followed: bool) -> None:
 		"""Follow the playlist, or unfollow it when followed."""
-		playlist_id = playlist_item.get("id")
-		playlist_name = playlist_item.get("name")
+		playlist_id = playlist_item["id"]
+		playlist_name = safe_text(playlist_item.get("name"), _("Unknown"))
 
 		def _thread_action() -> None:
 			if is_currently_followed:

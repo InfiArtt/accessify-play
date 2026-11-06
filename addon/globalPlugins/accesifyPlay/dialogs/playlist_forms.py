@@ -177,7 +177,7 @@ class PlaylistDetailsDialog(AccessifyDialog):
 
 	def _save_thread(self, name: str, description: str, *, public: bool, collaborative: bool) -> None:
 		result = self.client.update_playlist_details(
-			self.playlist_data.get("id"),
+			self.playlist_data["id"],
 			name=name,
 			public=public,
 			collaborative=collaborative,
@@ -266,7 +266,8 @@ class AddToPlaylistDialog(AccessifyDialog):
 
 	def on_add_to_playlist(self, _evt: wx.Event) -> None:
 		"""Add the track to the chosen playlist."""
-		if not self.current_track_uri or not self.selected_playlist_id:
+		playlist_id, track_uri = self.selected_playlist_id, self.current_track_uri
+		if not track_uri or not playlist_id:
 			ui.message(_("Please select a playlist and ensure a track is playing."))
 			return
 
@@ -274,7 +275,7 @@ class AddToPlaylistDialog(AccessifyDialog):
 		selected_playlist_name = self.playlist_combobox.GetValue()
 
 		def _add() -> None:
-			result = self.client.add_items_to_playlist(self.selected_playlist_id, self.current_track_uri)
+			result = self.client.add_items_to_playlist(playlist_id, track_uri)
 			if isinstance(result, str):
 				wx.CallAfter(ui.message, result)
 			else:

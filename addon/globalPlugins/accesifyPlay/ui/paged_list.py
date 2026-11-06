@@ -112,11 +112,11 @@ class PagedList:
 				self._show_only(self._failed or page)
 			ui.message(page)
 			return
-		page = page or {}
-		entries = page.get("items") or []
+		reply: Item = page or {}
+		entries = reply.get("items") or []
 		self._offset += len(entries)
-		total = page.get("total")
-		more = self._offset < total if total is not None else bool(page.get("next"))
+		total = reply.get("total")
+		more = self._offset < total if total is not None else bool(reply.get("next"))
 		self._has_more = bool(entries) and more
 		new_items = [item for item in entries if item]
 		if new_items and not self.items:

@@ -107,3 +107,25 @@ def test_changing_and_resetting_keys() -> None:
 	manager.reset_to_defaults()
 	assert manager.get_script_config("playMyTopTracks")["gestures"] == ["kb:g"]
 	assert manager.should_keep_open("noSuchCommand") is False
+
+
+def test_malformed_entries_get_their_defaults() -> None:
+	"""A hand-edited entry that is not a list of keys and a yes or no gets the default back."""
+	paths.get_data_path(paths.LAYER_CONFIG_FILE).write_text(
+		json.dumps(
+			{
+				"playPause": "space",
+				"nextTrack": {"gestures": "kb:x", "keep_open": True},
+				"previousTrack": {"gestures": ["kb:b"], "keep_open": "yes"},
+				"playMyTopTracks": {"gestures": ["kb:t", 3], "keep_open": False},
+			}
+		),
+		encoding="utf-8",
+	)
+	manager = LayerConfigManager()
+	assert stored()["playPause"] == {"gestures": ["kb:p"], "keep_open": False}
+	assert stored()["nextTrack"] == {"gestures": ["kb:n"], "keep_open": True}
+	assert manager.get_script_config("previousTrack") == {"gestures": ["kb:b"], "keep_open": True}
+	assert manager.get_script_config("playMyTopTracks")["gestures"] == ["kb:g"]
+	paths.get_data_path(paths.LAYER_CONFIG_FILE).write_text("[]", encoding="utf-8")
+	assert LayerConfigManager().get_script_config("playPause")["gestures"] == ["kb:p"]

@@ -50,6 +50,8 @@ New in Accessify Play's settings (NVDA menu, Preferences, Settings, Accessify Pl
 - **One table of commands** (`commands.py`) for the command layer's keys, names and descriptions, which used to be listed three times. `layerConfig.json` now keeps only your keys and whether the layer stays open.
 - **One test suite**: the older test scripts are ported to pytest or removed, including the checks of the translations, the user guides and the bundled libraries. `installTasks.py` is now tested and measured too.
 - Removed code that never ran: an install-time clean-up for an NVDA function that does not exist.
+- **Links to the source, releases and issues point to this fork** (aradix85/accessify-play): in the add-on's manifest, the readme and the user guide.
+- **Type checking with pyright** runs with the other checks, and found a few places where missing details from Spotify could stop a window (a playlist or artist without a name, a song without an id).
 - **One way to give a window its shortcuts** (`_bind_shortcuts`), instead of an accelerator table written out in each window; the keys come from the settings, and menus show them.
 - **Browse Categories and Featured Playlists use the same paged list** as the other windows, and playing from any window goes through one helper that reports failures.
 - Lyrics requests name the add-on's homepage from its manifest (`addon_url` in `buildVars.py`) instead of a fixed address, and the donation link is written once.

@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 from functools import wraps
-from typing import TYPE_CHECKING, Literal, ParamSpec
+from typing import TYPE_CHECKING, Literal, ParamSpec, Protocol, cast
 
 import api
 import ui
@@ -19,6 +19,7 @@ from .core.thread_manager import thread_manager
 from .language import init_translation
 
 if TYPE_CHECKING:
+	import threading
 	from collections.abc import Callable
 
 	from .spotify_types import Item
@@ -26,6 +27,12 @@ if TYPE_CHECKING:
 init_translation()
 
 P = ParamSpec("P")
+
+
+class _Player(Protocol):
+	"""What one_at_a_time needs of the object whose method it wraps."""
+
+	playback_lock: threading.Lock
 
 
 def run_in_thread(func: Callable[P, object]) -> Callable[P, None]:
@@ -67,7 +74,7 @@ def one_at_a_time(func: Callable[P, str | None]) -> Callable[P, str | None]:
 
 	@wraps(func)
 	def wrapper(*args: P.args, **kwargs: P.kwargs) -> str | None:
-		lock = args[0].playback_lock  # args[0] is the plugin
+		lock = cast("_Player", args[0]).playback_lock  # args[0] is the plugin
 		if not lock.acquire(blocking=False):
 			return _("Please wait...")
 		try:
@@ -106,7 +113,7 @@ def _copy_result(text: str) -> None:
 		ui.message(text)
 
 
-def copy_link(link: str) -> None:
+def copy_link(link: str | None) -> None:
 	"""Put a Spotify link on the clipboard and say whether that worked."""
 	if not link:
 		ui.message(_("Link not available."))

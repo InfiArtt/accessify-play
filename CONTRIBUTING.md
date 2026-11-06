@@ -70,7 +70,7 @@ Once your changes are ready, it's time to create a PR.
     ```bash
     git push -u origin feature/your-new-feature
     ```
-3.  Go to the main `InfiArtt/accessify-play` repository and you will see a prompt to **"Open a Pull Request"**.
+3.  Go to the main `aradix85/accessify-play` repository and you will see a prompt to **"Open a Pull Request"**.
 4.  Fill out the PR template, explaining *what* you changed and *why*. If your PR addresses an existing issue, please link it (e.g., `Closes #123`).
 
 ### ✅ PR Requirements
@@ -103,7 +103,7 @@ Please add an appropriate label to your Pull Request (e.g., `feature`, `bug`, `d
 
 ## 🤔 Need Help?
 
-If you have any questions or get stuck, feel free to [create a new issue](https://github.com/InfiArtt/accessify-play/issues/new/choose).
+If you have any questions or get stuck, feel free to [create a new issue](https://github.com/aradix85/accessify-play/issues/new/choose).
 
 ---
 

@@ -1,7 +1,7 @@
 name: Build & Release Addon
 
 on:
-  # Auto-release when dev is merged into main
+  # Build every push to main; a new version is also released (see version-check)
   push:
     branches: [main, master]
 
@@ -51,6 +51,12 @@ jobs:
           pip install pre-commit
           export SKIP=no-commit-to-branch
           pre-commit run --all-files
+
+      # Type checking of the add-on's code, set up in pyproject.toml.
+      - name: Type check (pyright)
+        run: |
+          pip install pyright==1.1.414
+          pyright
 
       # The tests stub out NVDA and wx, so they run on any OS. A failure stops
       # the build here, before anything can be released.
@@ -130,7 +136,8 @@ jobs:
             exit 0
           fi
 
-          # A new version must come with release notes. CHANGELOG.md uses CRLF.
+          # A new version must come with release notes. tr drops carriage
+          # returns, in case the file ever arrives with Windows line endings.
           # No `grep -q`: it exits at the first match, and under pipefail the
           # resulting SIGPIPE in `tr` would fail the check at random.
           if ! tr -d '\r' < CHANGELOG.md | grep -Fx "## Version $VERSION" > /dev/null; then
@@ -165,30 +172,30 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: packaged_addon
-          path: .   # <-- extract langsung ke root, bukan subfolder
+          path: .   # straight into the root, not a subfolder
 
       - name: Extract changelog for this version
         id: changelog
         run: |
           VERSION="${{ needs.version-check.outputs.version }}"
 
-          # Ambil section versi ini dari CHANGELOG.md saja (bukan semua versi)
+          # Only this version's section of CHANGELOG.md, not every version
           NOTES=$(awk -v ver="## Version $VERSION" '
             /^## /   { if (found) exit; found=0 }
             $0 ~ ver { found=1; next }
             found    { print }
           ' CHANGELOG.md)
 
-          # Hapus baris kosong di awal dan akhir
+          # Drop blank lines at the start and the end
           NOTES=$(echo "$NOTES" | sed -e '/./,$!d' -e 's/[[:space:]]*$//')
 
-          # Hitung SHA256 checksum file addon
+          # The SHA256 checksum of the add-on file
           CHECKSUM=$(sha256sum *.nvda-addon | awk '{print $1, $2}')
 
-          # Gabungkan notes + footer checksum
+          # The notes, with the checksum below them
           BODY="${NOTES}"$'\n\n---\n**SHA256 Checksum:**\n```\n'"${CHECKSUM}"$'\n```'
 
-          # Tulis multiline output dengan aman
+          # Write the multi-line output safely
           {
             echo "body<<EOF"
             echo "$BODY"
@@ -206,7 +213,7 @@ jobs:
             *.nvda-addon
             *.pot
           fail_on_unmatched_files: true
-          # Versi yang ada tanda '-' (misal 1.8.0-beta) otomatis jadi pre-release
+          # A version with a '-' (such as 1.8.0-beta) becomes a pre-release
           prerelease: ${{ contains(needs.version-check.outputs.version, '-') }}
           # Second line of defence: never replace a file on a published release.
           overwrite_files: false

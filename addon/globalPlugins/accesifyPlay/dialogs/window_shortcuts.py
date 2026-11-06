@@ -147,5 +147,5 @@ class WindowShortcutsDialog(AccessifyDialog):
 			self,
 		)
 		if answer == wx.YES:
-			self.values = {setting: SETTINGS[setting].default for setting in self.rows}
+			self.values = {setting: str(SETTINGS[setting].default) for setting in self.rows}
 			self._fill()

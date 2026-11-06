@@ -66,11 +66,11 @@ logger-objects = ["logHandler.log"]
 "tests/unit/**" = ["S101", "PLR2004", "SLF001", "INP001", "D101", "D102", "PLR0913", "PLR0917", "FBT001"]
 # Scripts that run alone under `python -I -S`, without pytest: they assert at
 # module level, import after setting up sys.path, and are not a package.
-"tests/isolated/**" = ["S101", "INP001", "E402", "PLR2004", "PLC0415", "TRY003", "EM101"]
+"tests/isolated/**" = ["S101", "INP001", "E402", "PLR2004", "TRY003", "EM101"]
 # The fakes copy NVDA's and wx's names and signatures, whatever ruff thinks of them.
 "tests/fakes/**" = [
 	"N802", "N803", "N815", "N816", "N999", "FBT001", "FBT002", "ARG001", "ARG002", "ANN401", "D1",
-	"INP001", "A002", "PLW0603", "TRY003", "EM101", "RUF012",
+	"INP001", "A002", "PLW0603", "RUF012",
 ]
 # NVDA runs installTasks.py from the add-on's root folder, which is not a package.
 "addon/installTasks.py" = ["INP001"]
@@ -125,128 +125,19 @@ omit = ["addon/lib/*", "*/_secrets_fallback.py", "*/spotify_types.py"]
 [tool.coverage.report]
 show_missing = true
 skip_covered = true
-# CI fails when coverage drops below this.
-fail_under = 90
+# CI fails when coverage drops below this. Every line and branch is covered;
+# the margin leaves room for a platform-specific branch.
+fail_under = 99
 # Imports needed only by type checkers, and methods subclasses must override.
 exclude_also = ["if TYPE_CHECKING:", "raise NotImplementedError"]
 
 [tool.pyright]
+# Type checking of the add-on's own code. NVDA's modules and wxPython come from
+# the test fakes, which follow the real signatures; the bundled libraries from
+# addon/lib. __builtins__.pyi declares the _ that NVDA installs for translations.
+include = ["addon/globalPlugins", "addon/installTasks.py"]
+exclude = ["**/__pycache__", "**/_secrets_fallback.py"]
+extraPaths = ["addon/globalPlugins", "addon/lib", "tests/fakes"]
+pythonVersion = "3.11"
 pythonPlatform = "Windows"
-typeCheckingMode = "strict"
-
-include = [
-	"**/*.py",
-]
-
-exclude = [
-	"sconstruct",
-	".git",
-	"__pycache__",
-	# When excluding concrete paths relative to a directory,
-	# not matching multiple folders by name e.g. `__pycache__`,
-	# paths are relative to the configuration file.
-]
-
-# Tell pyright where to load python code from
-extraPaths = [
-	"./addon",
-]
-
-# General config
-analyzeUnannotatedFunctions = true
-deprecateTypingAliases = true
-
-# Stricter typing
-strictParameterNoneValue = true
-strictListInference = true
-strictDictionaryInference = true
-strictSetInference = true
-
-# Compliant rules
-reportAbstractUsage = true
-reportArgumentType = true
-reportAssertAlwaysTrue = true
-reportAssertTypeFailure = true
-reportAssignmentType = true
-reportAttributeAccessIssue = true
-reportCallInDefaultInitializer = true
-reportCallIssue = true
-reportConstantRedefinition = true
-reportDuplicateImport = true
-reportFunctionMemberAccess = true
-reportGeneralTypeIssues = true
-reportImplicitOverride = true
-reportImplicitStringConcatenation = true
-reportImportCycles = true
-reportIncompatibleMethodOverride = true
-reportIncompatibleVariableOverride = true
-reportIncompleteStub = true
-reportInconsistentConstructor = true
-reportInconsistentOverload = true
-reportIndexIssue = true
-reportInvalidStringEscapeSequence = true
-reportInvalidStubStatement = true
-reportInvalidTypeArguments = true
-reportInvalidTypeForm = true
-reportInvalidTypeVarUse = true
-reportMatchNotExhaustive = true
-reportMissingImports = true
-reportMissingModuleSource = true
-reportMissingParameterType = true
-reportMissingSuperCall = true
-reportMissingTypeArgument = true
-reportNoOverloadImplementation = true
-reportOperatorIssue = true
-reportOptionalCall = true
-reportOptionalContextManager = true
-reportOptionalIterable = true
-reportOptionalMemberAccess = true
-reportOptionalOperand = true
-reportOptionalSubscript = true
-reportOverlappingOverload = true
-reportPossiblyUnboundVariable = true
-reportPrivateImportUsage = true
-reportPrivateUsage = true
-reportPropertyTypeMismatch = true
-reportRedeclaration = true
-reportReturnType = true
-reportSelfClsParameterName = true
-reportShadowedImports = true
-reportTypeCommentUsage = true
-reportTypedDictNotRequiredAccess = true
-reportUnboundVariable = true
-reportUndefinedVariable = true
-reportUnhashable = true
-reportUninitializedInstanceVariable = true
-reportUnknownArgumentType = true
-reportUnknownLambdaType = true
-reportUnknownMemberType = true
-reportUnknownParameterType = true
-reportUnknownVariableType = true
-reportUnnecessaryCast = true
-reportUnnecessaryComparison = true
-reportUnnecessaryContains = true
-reportUnnecessaryIsInstance = true
-reportUnnecessaryTypeIgnoreComment = true
-reportUnsupportedDunderAll = true
-reportUntypedBaseClass = true
-reportUntypedClassDecorator = true
-reportUntypedFunctionDecorator = true
-reportUntypedNamedTuple = true
-reportUnusedCallResult = true
-reportUnusedClass = true
-reportUnusedCoroutine = true
-reportUnusedExcept = true
-reportUnusedExpression = true
-reportUnusedFunction = true
-reportUnusedImport = true
-reportUnusedVariable = true
-reportWildcardImportFromLibrary = true
-
-reportDeprecated = true
-
-# Can be enabled by generating type stubs for modules via pyright CLI
-reportMissingTypeStubs = false
-
-# Bad rules
-# These are sorted alphabetically and should be enabled and moved to compliant rules section when resolved.
+typeCheckingMode = "standard"

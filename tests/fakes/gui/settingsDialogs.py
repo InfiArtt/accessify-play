@@ -16,7 +16,7 @@ class SettingsPanel(wx.Panel):
 		self.settingsSizer = wx.BoxSizer(wx.VERTICAL)
 		self.makeSettings(self.settingsSizer)
 
-	def makeSettings(self, settings_sizer: object) -> None:
+	def makeSettings(self, settings_sizer: wx.BoxSizer) -> None:
 		raise NotImplementedError
 
 	def isValid(self) -> bool:

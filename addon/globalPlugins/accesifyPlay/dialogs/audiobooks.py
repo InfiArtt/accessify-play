@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 
 from ..formatting import format_duration
 from ..language import init_translation
+from ..utils import safe_text
 from .play_in_order import PlayInOrderDialog, Texts
 
 if TYPE_CHECKING:
@@ -32,10 +33,12 @@ class AudiobookChaptersDialog(PlayInOrderDialog):
 	CONTEXT = "audiobook"
 
 	def __init__(
-		self, parent: wx.Window, client: SpotifyClient, audiobook_id: str, audiobook_name: str
+		self, parent: wx.Window, client: SpotifyClient, audiobook_id: str, audiobook_name: str | None
 	) -> None:
 		texts = Texts(
-			title=_("Chapters for {audiobook_name}").format(audiobook_name=audiobook_name),
+			title=_("Chapters for {audiobook_name}").format(
+				audiobook_name=safe_text(audiobook_name, _("Audiobook"))
+			),
 			# Translators: Label of a list or text field, read by screen readers.
 			list_label=_("Chapters:"),
 			play_button=_("&Play Chapter"),

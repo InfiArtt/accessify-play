@@ -41,10 +41,11 @@ def test_friendly_error(error: Exception, message: str) -> None:
 
 
 @pytest.mark.parametrize(
-	("value", "expected"), [("30", "about 30 seconds"), (0, "about 1 seconds"), ("x", None)]
+	("value", "expected"),
+	[(30, "about 30 seconds"), (0, "about 1 seconds"), (600, "about 10 minutes"), (None, None)],
 )
-def test_retry_delay(value: object, expected: str | None) -> None:
-	"""Retry-After is said in seconds or minutes; nonsense says nothing."""
+def test_retry_delay(value: int | None, expected: str | None) -> None:
+	"""Retry-After is said in seconds or minutes; without one, nothing."""
 	assert sc._format_retry_delay(value) == expected
 
 

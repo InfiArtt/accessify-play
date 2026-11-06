@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import inspect
+from typing import Any
 
 
 class AddonError(Exception):
@@ -24,7 +25,7 @@ def initTranslation() -> None:
 	caller.f_globals["_"] = str
 
 
-def getCodeAddon(*_args: object, **_kwargs: object) -> object:
+def getCodeAddon(*_args: object, **_kwargs: object) -> Any:
 	if code_addon is None:
 		msg = "Code does not belong to an addon package."
 		raise AddonError(msg)

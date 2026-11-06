@@ -8,21 +8,40 @@
 from __future__ import annotations
 
 import json
+from typing import TypedDict
 
 from logHandler import log
 
 from . import paths
 from .commands import BY_SCRIPT, COMMANDS
 
-#: What layerConfig.json keeps for each command: only the user's own choices.
-#: Names and descriptions come from commands.py, so they follow the code and
-#: the add-on's language instead of staying as they were when the file was written.
-_STORED_KEYS = ("gestures", "keep_open")
+
+class LayerEntry(TypedDict):
+	"""What layerConfig.json keeps for each command: only the user's own choices.
+
+	Names and descriptions come from commands.py, so they follow the code and
+	the add-on's language instead of staying as they were when the file was written.
+	"""
+
+	gestures: list[str]
+	keep_open: bool
 
 
-def _default_entry(script: str) -> dict[str, object]:
+def _default_entry(script: str) -> LayerEntry:
 	command = BY_SCRIPT[script]
 	return {"gestures": [command.key], "keep_open": command.keep_open}
+
+
+def _stored_entry(entry: object) -> LayerEntry | None:
+	"""Return a command's entry from the file with only the stored keys; None if it is malformed."""
+	if not isinstance(entry, dict):
+		return None
+	gestures, keep_open = entry.get("gestures"), entry.get("keep_open")
+	if not isinstance(gestures, list) or not all(isinstance(g, str) for g in gestures):
+		return None
+	if not isinstance(keep_open, bool):
+		return None
+	return {"gestures": gestures, "keep_open": keep_open}
 
 
 class LayerConfigManager:
@@ -30,48 +49,40 @@ class LayerConfigManager:
 
 	def __init__(self) -> None:
 		self.config_file = paths.get_data_path(paths.LAYER_CONFIG_FILE)
-		self.config = {}
+		self.config: dict[str, LayerEntry] = {}
 		self.load()
 
 	def load(self) -> None:
 		"""Load the user's keys, bringing the file up to date with the commands there are now."""
 		try:
 			if self.config_file.exists():
-				self.config = json.loads(self.config_file.read_text(encoding="utf-8"))
-				self._tidy()
+				self._tidy(json.loads(self.config_file.read_text(encoding="utf-8")))
 			else:
 				self.reset_to_defaults()
 		except Exception:
 			log.exception("Error loading layer config")
 			self.reset_to_defaults()
 
-	def _tidy(self) -> None:
-		"""Bring a loaded file up to date, keeping every key the user chose.
+	def _tidy(self, loaded: object) -> None:
+		"""Take the keys of a loaded file, bringing it up to date and keeping every key the user chose.
 
 		Commands added since the file was written get their default key;
 		commands that no longer exist are dropped; so are the names and
-		descriptions older versions stored. Saves only if anything changed.
+		descriptions older versions stored, and an entry that is not a list of
+		keys and a yes or no (a hand-edited file). Saves only if anything changed.
 		"""
-		changed = False
-		for script in list(self.config):
+		stored = loaded if isinstance(loaded, dict) else {}
+		for script in stored:
 			if script not in BY_SCRIPT:
-				del self.config[script]
-				changed = True
 				log.info("AccessifyPlay: dropped unknown command '%s' from the layer config.", script)
-				continue
-			entry = self.config[script]
-			stale = [key for key in entry if key not in _STORED_KEYS]
-			for key in stale:
-				del entry[key]
-			changed = changed or bool(stale)
+		self.config = {}
 		for command in COMMANDS:
-			if command.script not in self.config:
-				self.config[command.script] = _default_entry(command.script)
-				changed = True
-				log.info(
-					"AccessifyPlay: injected new default command '%s' into layer config.", command.script
-				)
-		if changed:
+			entry = _stored_entry(stored.get(command.script))
+			if entry is None:
+				log.info("AccessifyPlay: default key for command '%s' in the layer config.", command.script)
+				entry = _default_entry(command.script)
+			self.config[command.script] = entry
+		if self.config != stored:
 			self.save()
 
 	def save(self) -> None:
@@ -86,7 +97,7 @@ class LayerConfigManager:
 		self.config = {command.script: _default_entry(command.script) for command in COMMANDS}
 		self.save()
 
-	def get_script_config(self, script_name: str) -> dict[str, object] | None:
+	def get_script_config(self, script_name: str) -> LayerEntry | None:
 		"""Return a command's keys and settings, or None."""
 		return self.config.get(script_name)
 
@@ -97,7 +108,7 @@ class LayerConfigManager:
 			self.config[script_name]["keep_open"] = keep_open
 			self.save()
 
-	def get_all_configs(self) -> list[tuple[str, dict[str, object]]]:
+	def get_all_configs(self) -> list[tuple[str, LayerEntry]]:
 		"""Return (script, its keys and settings) for every command, in the order of commands.py."""
 		return [
 			(command.script, self.config[command.script])
@@ -107,12 +118,9 @@ class LayerConfigManager:
 
 	def get_gesture_map(self) -> dict[str, str]:
 		"""Return a dict of gesture -> script_name for binding."""
-		gesture_map = {}
-		for script, data in self.config.items():
-			for gesture in data.get("gestures", []):
-				gesture_map[gesture] = script
-		return gesture_map
+		return {gesture: script for script, data in self.config.items() for gesture in data["gestures"]}
 
 	def should_keep_open(self, script_name: str) -> bool:
 		"""Return whether the layer stays open after this command."""
-		return self.config.get(script_name, {}).get("keep_open", False)
+		entry = self.config.get(script_name)
+		return bool(entry and entry["keep_open"])

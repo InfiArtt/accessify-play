@@ -45,7 +45,8 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 		setting = SETTINGS[key]
 		minimum = conf_get("keepAliveMinSeconds") if key == "keepAliveInterval" else setting.minimum
 		ctrl = helper.addLabeledControl(label.format(minimum=minimum, maximum=setting.maximum), wx.SpinCtrl)
-		ctrl.SetRange(setting.minimum, setting.maximum)
+		# Every numeric setting in the panel has both limits.
+		ctrl.SetRange(int(setting.minimum or 0), int(setting.maximum or 0))
 		ctrl.SetValue(conf_get(key))
 		self._spins[key] = ctrl
 		return ctrl
@@ -167,7 +168,9 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 		self.newPlaylistPublicCheck.SetValue(conf_get("newPlaylistPublic"))
 
 		#: Each shortcut setting's keys, as the Window Shortcuts dialog left them; saved with the panel.
-		self._shortcuts = {key: conf_get(key) for key, setting in SETTINGS.items() if setting.shortcut}
+		self._shortcuts: dict[str, str] = {
+			key: conf_get(key) for key, setting in SETTINGS.items() if setting.shortcut
+		}
 		# Translators: A button in the settings panel that opens the list of
 		# shortcuts inside Accessify Play's windows, to change them.
 		self.windowShortcutsButton = s_helper.addItem(wx.Button(self, label=_("Window Shortcuts...")))

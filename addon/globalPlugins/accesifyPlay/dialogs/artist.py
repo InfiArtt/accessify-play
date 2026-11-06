@@ -17,7 +17,7 @@ from ..formatting import format_followers, format_names
 from ..language import init_translation
 from ..ui.base_dialog import AccessifyDialog
 from ..ui.paged_list import PagedList
-from ..utils import copy_link, playlist_with_owner
+from ..utils import copy_link, playlist_with_owner, safe_text
 from .album import AlbumTracksDialog
 from .playlist import PlaylistTracksDialog
 
@@ -36,10 +36,11 @@ class ArtistDiscographyDialog(AccessifyDialog):
 		parent: wx.Window,
 		client: SpotifyClient,
 		artist_id: str,
-		artist_name: str,
-		user_playlists: list[Item],
+		artist_name: str | None,
+		user_playlists: list[Item] | None,
 	) -> None:
-		title = _("Discography for {artist_name}").format(artist_name=artist_name)
+		"""Show an artist's page; without a name, Spotify is asked for it."""
+		title = _("Discography for {artist_name}").format(artist_name=safe_text(artist_name, _("Unknown")))
 		super().__init__(parent, title=title, size=(600, 500))
 		self.client = client
 		self.artist_id = artist_id

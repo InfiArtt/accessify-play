@@ -96,9 +96,11 @@ class LyricsDialog(AccessifyDialog):
 		# Only when this window follows playback. A lyrics preview opened
 		# from a track list has no current position to jump to.
 		self._jump_btn = None
-		if self._jump_callback:
+		jump = self._jump_callback
+		if jump:
 			self._jump_btn = wx.Button(self, label=_("&Jump to Current"))
-			self._jump_btn.Bind(wx.EVT_BUTTON, self._on_jump_to_current)
+			# Ask __init__.py for the current Spotify position, which scrolls there.
+			self._jump_btn.Bind(wx.EVT_BUTTON, lambda _evt: jump())
 			btn_sizer.Add(self._jump_btn, 0, wx.RIGHT, 6)
 
 		btn_sizer.AddStretchSpacer()
@@ -116,8 +118,9 @@ class LyricsDialog(AccessifyDialog):
 		"""Offer Enter-to-seek and the timestamp buttons only while the lines are timed."""
 		timed = bool(self._display_lines)
 		self.lyrics_ctrl.Unbind(wx.EVT_KEY_DOWN)
-		if timed and self._seek_callback:
-			self.lyrics_ctrl.Bind(wx.EVT_KEY_DOWN, self._on_key_down)
+		seek = self._seek_callback
+		if timed and seek:
+			self.lyrics_ctrl.Bind(wx.EVT_KEY_DOWN, lambda evt: self._on_key_down(evt, seek))
 		self._copy_ts_btn.Show(timed)
 		if self._jump_btn:
 			self._jump_btn.Show(timed)
@@ -126,7 +129,9 @@ class LyricsDialog(AccessifyDialog):
 	# Data helpers
 	# ------------------------------------------------------------------
 
-	def _prepare_display(self, plain_lyrics: str, track_name: str, synced_lines: TimedLines) -> str:
+	def _prepare_display(
+		self, plain_lyrics: str | None, track_name: str, synced_lines: TimedLines | None
+	) -> str:
 		"""Build display text and populate all internal lookup maps."""
 		self._line_timestamps = {}
 		self._ms_to_line = {}
@@ -186,7 +191,7 @@ class LyricsDialog(AccessifyDialog):
 	# Event handlers
 	# ------------------------------------------------------------------
 
-	def _on_key_down(self, evt: wx.KeyEvent) -> None:
+	def _on_key_down(self, evt: wx.KeyEvent, seek: Callable[[int], object]) -> None:
 		"""Enter: seek Spotify to the timestamp of the focused line.
 
 		Bound only when every line shown has a time and there is somewhere to seek.
@@ -198,7 +203,7 @@ class LyricsDialog(AccessifyDialog):
 			# in wxPython Phoenix — xy[1] is the column, not the row!
 			text_before = self.lyrics_ctrl.GetValue()[:pos]
 			row = text_before.count("\n")
-			self._seek_callback(self._line_timestamps[row])
+			seek(self._line_timestamps[row])
 		else:
 			evt.Skip()
 
@@ -214,13 +219,6 @@ class LyricsDialog(AccessifyDialog):
 		"""Copy lyrics in LRC [mm:ss.cs] format to clipboard."""
 		lines = [f"{self._ms_to_lrc(ms)} {text}" for ms, text in self._display_lines]
 		api.copyToClip("\n".join(lines), notify=True)
-
-	def _on_jump_to_current(self, _evt: wx.Event) -> None:
-		"""Ask __init__.py for the current Spotify position, then scroll there.
-
-		The button exists only when there is a jump callback.
-		"""
-		self._jump_callback()
 
 	# ------------------------------------------------------------------
 	# In-place update when song changes

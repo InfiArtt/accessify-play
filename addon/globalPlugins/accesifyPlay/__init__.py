@@ -319,7 +319,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		None means lrclib could not be reached. That is not cached, so the next
 		try asks again.
 		"""
-		track_id = item.get("id")
+		track_id = item.get("id") or ""
 		if track_id not in self._lyrics_cache:
 			lyrics = lyrics_for_track(item)
 			if lyrics is None:
@@ -695,9 +695,9 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	)
 	@utils.speak_in_thread
 	def script_toggleFollowArtist(self, _gesture: inputCore.InputGesture) -> str | None:
-		artist, problem = self._playing_artist()
-		if problem:
-			return problem
+		artist = self._playing_artist()
+		if isinstance(artist, str):
+			return artist
 		now = self.client.library_toggle(artist["id"], "artist")
 		if isinstance(now, str):
 			return now
@@ -705,21 +705,21 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			return _("Now following artist: {artist_name}.").format(artist_name=artist["name"])
 		return _("Unfollowed artist: {artist_name}.").format(artist_name=artist["name"])
 
-	def _playing_artist(self) -> tuple[Item, None] | tuple[None, str]:
-		"""Return (the playing track's first artist, None), or (None, what to say instead)."""
+	def _playing_artist(self) -> Item | str:
+		"""Return the playing track's first artist, or what to say instead."""
 		playback = self.client.run_on_device("current_playback")
 		if isinstance(playback, str):
-			return None, playback
+			return playback
 		if not playback or not playback.get("item"):
-			return None, _("Nothing is currently playing.")
+			return _("Nothing is currently playing.")
 		if playback.get("currently_playing_type") != "track":
-			return None, _("This action is only available for music tracks.")
+			return _("This action is only available for music tracks.")
 		artists = playback["item"].get("artists") or []
 		if not artists:
-			return None, _("Could not find artist information for this track.")
+			return _("Could not find artist information for this track.")
 		if not artists[0].get("id") or not artists[0].get("name"):
-			return None, _("Could not identify the artist.")
-		return artists[0], None
+			return _("Could not identify the artist.")
+		return artists[0]
 
 	def _open_dialog(
 		self, dialog_class: type[wx.Dialog], dialog_attr: str, *args: object, **kwargs: object
@@ -1026,12 +1026,13 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			self.sleepTimerDialog.Raise()
 			return
 
-		self.sleepTimerDialog = SleepTimerDialog(gui.mainFrame, callback=self._handle_sleep_timer)
+		dialog = SleepTimerDialog(gui.mainFrame, callback=self._handle_sleep_timer)
+		self.sleepTimerDialog = dialog
 
 		def on_close(evt: wx.Event) -> None:
-			self.sleepTimerDialog.Destroy()
+			dialog.Destroy()
 			self.sleepTimerDialog = None
 			evt.Skip()
 
-		self.sleepTimerDialog.Bind(wx.EVT_CLOSE, on_close)
-		self.sleepTimerDialog.Show()
+		dialog.Bind(wx.EVT_CLOSE, on_close)
+		dialog.Show()

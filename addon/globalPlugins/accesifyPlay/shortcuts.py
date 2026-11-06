@@ -139,7 +139,7 @@ def keys_of(setting: str) -> list[Key]:
 		log.warning(
 			"Accessify Play: %s = %r cannot be a shortcut (%s); using the default.", setting, value, error
 		)
-		return parse(SETTINGS[setting].default, kind)
+		return parse(str(SETTINGS[setting].default), kind)
 
 
 def number_keys(count: int) -> list[Key]:

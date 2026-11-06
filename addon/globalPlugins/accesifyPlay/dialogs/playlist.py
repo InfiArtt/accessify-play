@@ -16,7 +16,7 @@ from ..formatting import format_duration, format_names
 from ..language import init_translation
 from ..ui.base_dialog import AccessifyDialog
 from ..ui.paged_list import PagedList
-from ..utils import copy_link
+from ..utils import copy_link, safe_text
 
 if TYPE_CHECKING:
 	from ..spotify_client import SpotifyClient
@@ -29,7 +29,7 @@ class PlaylistTracksDialog(AccessifyDialog):
 	"""A playlist's tracks, loaded page by page."""
 
 	def __init__(self, parent: wx.Window, client: SpotifyClient, playlist: Item) -> None:
-		playlist_name = playlist.get("name", _("Unknown"))
+		playlist_name = safe_text(playlist.get("name"), _("Unknown"))
 		title = _("Tracks in Playlist {name}").format(name=playlist_name)
 		super().__init__(parent, title=title, size=(520, 420))
 		self.client = client

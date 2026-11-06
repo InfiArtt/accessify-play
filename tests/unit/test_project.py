@@ -281,7 +281,7 @@ def test_modules_that_load_first_stay_simple() -> None:
 		if isinstance(node, (ast.Import, ast.ImportFrom))
 		for alias in node.names
 	}
-	assert imported == {"__future__", "dataclasses", "config", "logHandler"}
+	assert imported == {"__future__", "dataclasses", "typing", "config", "logHandler"}
 	assert "config.conf" not in read(PKG / "core" / "thread_manager.py")
 
 

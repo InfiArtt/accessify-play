@@ -7,6 +7,11 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+	from collections.abc import Callable
+
 
 class InputGesture:
 	def __init__(self, identifier: str = "kb:a", *, isModifier: bool = False) -> None:
@@ -16,7 +21,7 @@ class InputGesture:
 
 class _Manager:
 	def __init__(self) -> None:
-		self._captureFunc = None
+		self._captureFunc: Callable[..., object] | None = None
 
 
 manager = _Manager()

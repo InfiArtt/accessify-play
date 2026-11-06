@@ -12,8 +12,9 @@ from typing import Any
 #: One object from Spotify's Web API (a track, an album, a page of results ...), as decoded JSON.
 Item = dict[str, Any]
 
-#: What spotipy returns for a request: decoded JSON, or None for an empty answer.
-Reply = Item | list[Any] | None
+#: What spotipy returns for a request: decoded JSON, whose shape depends on the
+#: request (mostly an Item), or None for an empty answer.
+Reply = Any
 
 #: Lyric lines with their start time: [(milliseconds, line)].
 TimedLines = list[tuple[int, str]]

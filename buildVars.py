@@ -46,9 +46,9 @@ addon_info = AddonInfo(
 	# Authors
 	addon_author="Rafli I .<rafli08523717409@gmail.com>, Rexya <rexya2017@gmail.com>",
 	# URL for the add-on documentation support
-	addon_url="https://github.com/InfiArtt/accessify-play",
+	addon_url="https://github.com/aradix85/accessify-play",
 	# URL for the add-on repository where the source code can be found
-	addon_sourceURL="https://github.com/InfiArtt/accessify-play",
+	addon_sourceURL="https://github.com/aradix85/accessify-play",
 	# Documentation file name
 	addon_docFileName="readme.html",
 	# Minimum NVDA version supported (e.g. "2019.3.0", minor version is optional)

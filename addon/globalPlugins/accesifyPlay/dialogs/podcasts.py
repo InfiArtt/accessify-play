@@ -10,6 +10,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from ..language import init_translation
+from ..utils import safe_text
 from .play_in_order import PlayInOrderDialog, Texts
 
 if TYPE_CHECKING:
@@ -28,9 +29,9 @@ class PodcastEpisodesDialog(PlayInOrderDialog):
 
 	CONTEXT = "show"
 
-	def __init__(self, parent: wx.Window, client: SpotifyClient, show_id: str, show_name: str) -> None:
+	def __init__(self, parent: wx.Window, client: SpotifyClient, show_id: str, show_name: str | None) -> None:
 		texts = Texts(
-			title=_("Episodes for {show_name}").format(show_name=show_name),
+			title=_("Episodes for {show_name}").format(show_name=safe_text(show_name, _("Podcast"))),
 			# Translators: Label of a list or text field, read by screen readers.
 			list_label=_("Episodes:"),
 			play_button=_("&Play Episode"),

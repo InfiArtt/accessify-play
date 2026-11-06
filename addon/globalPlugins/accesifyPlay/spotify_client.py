@@ -11,7 +11,6 @@ import functools
 import math
 import re
 import time
-import webbrowser
 from http import HTTPStatus
 from typing import TYPE_CHECKING
 from urllib.parse import urlparse
@@ -136,11 +135,9 @@ def _get_cache_path() -> Path:
 SECONDS_PER_MINUTE = 60
 
 
-def _format_retry_delay(seconds: int) -> str | None:
-	"""'about 30 seconds' / 'about 9 minutes', for a Retry-After value."""
-	try:
-		seconds = int(seconds)
-	except (TypeError, ValueError):
+def _format_retry_delay(seconds: int | None) -> str | None:
+	"""'about 30 seconds' / 'about 9 minutes', for a Retry-After value; None without one."""
+	if seconds is None:
 		return None
 	if seconds < SECONDS_PER_MINUTE:
 		# Translators: how long to wait before retrying, in seconds.
@@ -183,7 +180,7 @@ def _friendly_error(e: Exception) -> str:
 	if status == HTTPStatus.TOO_MANY_REQUESTS:
 		return _rate_limit_message(_retry_after(e))
 
-	status_messages = {
+	status_messages: dict[int, str] = {
 		HTTPStatus.BAD_REQUEST: _("Spotify could not handle that request. Please try again."),
 		HTTPStatus.FORBIDDEN: _("Spotify would not allow that. Some actions require Spotify Premium."),
 		HTTPStatus.NOT_FOUND: _(
@@ -210,7 +207,7 @@ def _retry_after(e: Exception) -> int | None:
 		return None
 
 
-def _rate_limit_message(seconds: int) -> str:
+def _rate_limit_message(seconds: int | None) -> str:
 	delay = _format_retry_delay(seconds)
 	if delay:
 		return _("Spotify is limiting requests at the moment. Please try again in {delay}.").format(
@@ -229,7 +226,7 @@ def _new_spotify(auth_manager: SpotifyPKCE) -> spotipy.Spotify:
 	"""
 	return spotipy.Spotify(
 		auth_manager=auth_manager,
-		requests_session=_retrying_session(),
+		requests_session=_retrying_session(),  # pyright: ignore[reportArgumentType] - spotipy takes a session too
 		requests_timeout=conf_get("requestTimeoutSeconds"),
 	)
 
@@ -273,7 +270,7 @@ def get_client() -> SpotifyClient:
 	return SpotifyClient()
 
 
-def _describe_playing(item: Item, item_type: str, *, playing: bool) -> str:
+def _describe_playing(item: Item, item_type: str | None, *, playing: bool) -> str:
 	"""Say what is playing (or paused): a track, an episode, or anything else."""
 	if item_type == "episode":
 		if playing:
@@ -319,7 +316,7 @@ class SpotifyClient:
 			redirect_uri=REDIRECT_URI,
 			scope=" ".join(SCOPES),
 			cache_handler=self._get_cache_handler(),
-			open_browser=webbrowser.open if open_browser else False,
+			open_browser=open_browser,
 		)
 
 	def initialize(self) -> None:
@@ -414,7 +411,9 @@ class SpotifyClient:
 			return _("Spotify client not ready. Please validate your credentials.")
 		return self.rate_limit_message()
 
-	def _prepare(self, command: str | Callable[..., Reply], kwargs: object) -> Callable[..., Reply]:
+	def _prepare(
+		self, command: str | Callable[..., Reply], kwargs: dict[str, object]
+	) -> Callable[..., Reply]:
 		"""Return the bound spotipy method for command, with the arguments every call of it needs."""
 		command = self._resolve_command(command)
 		if command.__name__ == "current_playback":
@@ -439,7 +438,7 @@ class SpotifyClient:
 		log.error("Spotify command failed with an unexpected error: %s", e, exc_info=e)
 		return _("Something went wrong while talking to Spotify. Please try again.")
 
-	def _spotify_error_message(self, e: Exception, status_messages: dict[int, str]) -> str:
+	def _spotify_error_message(self, e: SpotifyException, status_messages: dict[int, str] | None) -> str:
 		"""Return what to say for an error answer from Spotify itself."""
 		if status_messages and e.http_status in status_messages:
 			log.debug("Spotify returned %s: %s", e.http_status, e)
@@ -548,10 +547,13 @@ class SpotifyClient:
 
 	def _fetch_devices(self) -> Reply:
 		"""Return the device list; a dropped connection gets one retry."""
+		client = self.client
+		if client is None:
+			return None
 		try:
-			return self.client.devices()
+			return client.devices()
 		except requests.exceptions.ConnectionError:
-			return self.client.devices()
+			return client.devices()
 
 	def _ensure_device(self) -> bool:
 		"""Make sure a device is active: the active one, else wake the last known or the first."""
@@ -566,23 +568,23 @@ class SpotifyClient:
 
 		known_ids = [d["id"] for d in devices]
 		target = self.device_id if self.device_id in known_ids else known_ids[0]
-		woke = self._try(
-			"wake up the device", lambda: self.client.transfer_playback(target, force_play=False) or True
+		client = self.client
+		woke = client is not None and self._try(
+			"wake up the device", lambda: client.transfer_playback(target, force_play=False) or True
 		)
 		self.device_id = target if woke else None
 		return bool(woke)
 
 	def get_current_track_info(self, playback: Item | None = None) -> str:
 		"""Say what is playing, or paused."""
-		if playback is None:
-			playback = self.run_on_device("current_playback")
-		if isinstance(playback, str):
-			return playback
-		if not playback or not playback.get("item"):
+		answer = self.run_on_device("current_playback") if playback is None else playback
+		if isinstance(answer, str):
+			return answer
+		if not answer or not answer.get("item"):
 			return _("Nothing is currently playing.")
 
 		return _describe_playing(
-			playback["item"], playback.get("currently_playing_type"), playing=bool(playback.get("is_playing"))
+			answer["item"], answer.get("currently_playing_type"), playing=bool(answer.get("is_playing"))
 		)
 
 	def get_simple_track_string(self, item: Item) -> str:
@@ -604,20 +606,20 @@ class SpotifyClient:
 
 		return item.get("name", "")
 
-	def _playing_now(self) -> tuple[Item, None] | tuple[None, str]:
-		"""(playback, None) when a track or episode is loaded, else (None, the message to say)."""
+	def _playing_now(self) -> Item | str:
+		"""Return the playback when a track or episode is loaded, else the message to say."""
 		playback = self.run_on_device("current_playback")
 		if isinstance(playback, str):
-			return None, playback
+			return playback
 		if not playback or not playback.get("item"):
-			return None, _("Nothing is currently playing.")
-		return playback, None
+			return _("Nothing is currently playing.")
+		return playback
 
 	def get_current_track_url(self) -> str:
 		"""Return the playing item's Spotify link, or a message."""
-		playback, message = self._playing_now()
-		if message:
-			return message
+		playback = self._playing_now()
+		if isinstance(playback, str):
+			return playback
 		url = (playback["item"].get("external_urls") or {}).get("spotify")
 		if not url:
 			return _("Could not find URL for the current track.")
@@ -625,12 +627,12 @@ class SpotifyClient:
 
 	def get_playback_time_info(self) -> str:
 		"""Say how far into the current track playback is, and how long it is."""
-		playback, message = self._playing_now()
-		if message:
-			return message
+		playback = self._playing_now()
+		if isinstance(playback, str):
+			return playback
 
-		progress_ms = playback.get("progress_ms", 0)
-		duration_ms = playback["item"].get("duration_ms", 0)
+		progress_ms = playback.get("progress_ms") or 0
+		duration_ms = playback["item"].get("duration_ms") or 0
 
 		current_min, current_sec = divmod(progress_ms // 1000, 60)
 		total_min, total_sec = divmod(duration_ms // 1000, 60)
@@ -769,7 +771,7 @@ class SpotifyClient:
 
 		return full_queue
 
-	def _format_queue_item(self, item: Item, entry_type: str) -> Item | None:
+	def _format_queue_item(self, item: Item | None, entry_type: str) -> Item | None:
 		if not item:
 			return None
 		item_type = item.get("type")
@@ -887,14 +889,14 @@ class SpotifyClient:
 
 	def seek_track(self, offset_ms: int) -> Reply | str:
 		"""Seeks the current track forward or backward by offset_ms."""
-		playback, message = self._playing_now()
-		if message:
-			return message
-		return self._seek_within(playback, playback.get("progress_ms", 0) + offset_ms)
+		playback = self._playing_now()
+		if isinstance(playback, str):
+			return playback
+		return self._seek_within(playback, (playback.get("progress_ms") or 0) + offset_ms)
 
 	def _seek_within(self, playback: Item, position_ms: int) -> Reply | str:
 		"""Seek to position_ms, kept within the loaded item."""
-		duration_ms = playback["item"].get("duration_ms", 0)
+		duration_ms = playback["item"].get("duration_ms") or 0
 		return self.run_on_device("seek_track", position_ms=max(0, min(position_ms, duration_ms)))
 
 	def smart_seek(self, time_input: str) -> Reply | str:
@@ -904,9 +906,9 @@ class SpotifyClient:
 		- "30" -> Relative forward (Jump 30s).
 		- "-10" -> Relative backward (Rewind 10s).
 		"""
-		playback, message = self._playing_now()
-		if message:
-			return message
+		playback = self._playing_now()
+		if isinstance(playback, str):
+			return playback
 		try:
 			if ":" in time_input:
 				seconds = 0
@@ -914,12 +916,12 @@ class SpotifyClient:
 					seconds = seconds * 60 + int(part)
 				target_ms = seconds * 1000
 			else:
-				target_ms = playback.get("progress_ms", 0) + int(time_input) * 1000
+				target_ms = (playback.get("progress_ms") or 0) + int(time_input) * 1000
 		except ValueError:
 			return _("Invalid time format. Use 'mm:ss' or just a number.")
 		return self._seek_within(playback, target_ms)
 
-	def _change_mode(self, command: str, pick: Callable[[Item], object]) -> str:
+	def _change_mode(self, command: str, pick: Callable[[Item], tuple[object, str]]) -> str:
 		"""Set shuffle or repeat to what pick(playback) returns as (state, message to say)."""
 		playback = self.run_on_device("current_playback")
 		if isinstance(playback, str):
@@ -1214,8 +1216,11 @@ class SpotifyClient:
 	#     library_save([album_id], "album")    library_contains([uri])
 
 	@staticmethod
-	def _uris(kind: str, ids: list[str]) -> list[str]:
-		"""Spotify URIs for ids of one kind; ids that are already URIs pass through."""
+	def _uris(kind: str | None, ids: list[str]) -> list[str]:
+		"""Spotify URIs for ids of one kind; ids that are already URIs pass through.
+
+		Without a kind, every id must be a URI already.
+		"""
 		return [i if str(i).startswith("spotify:") else f"spotify:{kind}:{i}" for i in ids]
 
 	def _library_batches(self, verb: str, path: str, uris: str | list[str]) -> list[Reply] | str:
@@ -1267,7 +1272,9 @@ class SpotifyClient:
 		items = []
 		offset = 0
 		while True:
-			results = self.run_request(command, *args, limit=limit, offset=offset, **kwargs)
+			results = self.run_request(
+				command, *args, limit=limit, offset=offset, status_messages=None, **kwargs
+			)
 			if isinstance(results, str):
 				return results  # Error message
 			if not results or not results.get("items"):

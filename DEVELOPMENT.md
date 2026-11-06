@@ -8,7 +8,7 @@ Accessify Play is an NVDA add-on: Python that runs inside NVDA (NVDA 2025.1 and 
 
 ```
 pip install -r requirements.txt -r tests/requirements.txt
-pip install pre-commit ruff==0.16.9
+pip install pre-commit ruff==0.16.9 pyright==1.1.414
 pre-commit install
 ```
 
@@ -16,7 +16,8 @@ The checks CI runs, in the same order:
 
 ```
 pre-commit run --all-files            # ruff check and ruff format, plus a few file checks
-python -m pytest --cov                # the test suite; fails below 90% coverage
+pyright                               # type checking of the add-on's code
+python -m pytest --cov                # the test suite; fails below 99% coverage
 scons && scons pot                    # build the .nvda-addon and the translation template
 ```
 
@@ -57,6 +58,7 @@ Bundled libraries are in `addon/lib` (see `addon/thirdPartyNotices.md`). User gu
 ## Conventions
 
 * **Tabs** for indentation, lines up to 110 characters, double quotes. `ruff format` takes care of it.
+* **pyright** checks the types of the add-on's code (`[tool.pyright]` in `pyproject.toml`). NVDA's modules and wx come from the fakes in `tests/fakes`, so a fake's signature should match the real one; `__builtins__.pyi` declares the `_` NVDA installs. Spotify's answers are `Item` (`dict[str, Any]`), so `.get()` gives `Any | None`: pass it on to parameters that accept `None`, or index (`item["id"]`) where the value is certain.
 * **Every ruff rule is on** (`select = ["ALL"]` in `pyproject.toml`). The few exceptions are listed there with the reason for each; NVDA's own names (`script_*`, `event_*`, `makeSettings`, ...) are allowed. Fix a finding rather than silencing it; a `# noqa` needs a reason after it.
 * **Every module starts** with the licence header and `from __future__ import annotations` (ruff adds the import).
 * **Annotations and docstrings** on everything public. Docstrings say what a thing is for, in plain words.
@@ -75,7 +77,7 @@ Bundled libraries are in `addon/lib` (see `addon/thirdPartyNotices.md`). User gu
   * `server` and `client`: a real `SpotifyClient` and spotipy, whose HTTP calls go to `SpotifyServer` instead of Spotify. Set `server.routes["GET", "me/playlists"] = {...}` (an answer, an exception from `spotify_error(status)`, or a function of params and payload); `server.requests` records what was asked.
   * `choose(window, menu, label)` picks a context menu item; `last_menu()` is the menu that popped up; `accelerate(window, wx.ACCEL_ALT, "P")` presses a shortcut; `record_windows(monkeypatch, module, "AlbumTracksDialog", ...)` replaces windows a dialog opens with recorders.
   * Fake widgets have test-only helpers: `button.press()`, `control.fire(wx.EVT_CHAR_HOOK, wx.KeyEvent(wx.WXK_RETURN))`, `combobox.select(row, wx.EVT_COMBOBOX)`, `listctrl.activate(row)`.
-* Test behaviour through the window, as a user would: press keys and buttons, open menus, and check what is spoken, shown and sent to Spotify. Coverage must stay at 90% or more (`fail_under` in `pyproject.toml`); it is about 98%.
+* Test behaviour through the window, as a user would: press keys and buttons, open menus, and check what is spoken, shown and sent to Spotify. Coverage must stay at 99% or more (`fail_under` in `pyproject.toml`); every line and branch is covered now. `# pragma: no cover` needs a reason after it, like `# noqa`.
 * Some tests check the project rather than the code. `test_project.py`: the Indonesian and English catalogues against the code's strings, the user guides (pages, links, the key tables against `commands.py`), the import order, that every setting in `settings_spec.py` is used, and the bundled libraries' notices. `test_settings_spec.py`: the config spec, the settings panel and `configuration.md` against the table of settings. `test_isolated.py` runs the scripts in `tests/isolated` with `python -I -S`, so the bundled libraries and the secrets fallback are tried with the standard library alone, as inside NVDA.
 * Changing or adding a user-facing text means updating `addon/locale/id/LC_MESSAGES/nvda.po` (translated) and `addon/locale/en/LC_MESSAGES/nvda.po` (untranslated) in the same change; `test_project.py` fails until both match the code.
 

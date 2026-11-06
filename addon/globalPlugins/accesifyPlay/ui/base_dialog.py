@@ -164,7 +164,7 @@ class AccessifyDialog(wx.Dialog):
 		if isinstance(result, str):
 			wx.CallAfter(ui.message, result)
 
-	def _queue_add_track(self, uri: str, name: str) -> None:
+	def _queue_add_track(self, uri: str | None, name: str | None) -> None:
 		if self._is_queuing:
 			ui.message(_("Please wait, another item is being added to the queue."))
 			return
@@ -174,7 +174,9 @@ class AccessifyDialog(wx.Dialog):
 
 		self._is_queuing = True
 		ui.message(_("Adding to queue..."))
-		thread_manager.submit_task(self._queue_add_track_thread, uri, name, name="QueueTrackTask")
+		thread_manager.submit_task(
+			self._queue_add_track_thread, uri, safe_text(name, _("This item")), name="QueueTrackTask"
+		)
 
 	def _queue_add_track_thread(self, uri: str, name: str) -> None:
 		try:
@@ -186,7 +188,8 @@ class AccessifyDialog(wx.Dialog):
 		finally:
 			self._is_queuing = False
 
-	def _queue_add_context(self, uri: str, item_type: str, name: str) -> None:
+	def _queue_add_context(self, uri: str | None, item_type: str, name: str | None) -> None:
+		name = safe_text(name, _("This item"))
 		if self._is_queuing:
 			ui.message(_("Please wait..."))
 			return
@@ -254,7 +257,7 @@ class AccessifyDialog(wx.Dialog):
 		thread_manager.submit_task(self._save_album_thread, album, name="SaveAlbumTask")
 
 	def _save_album_thread(self, album: Item) -> None:
-		result = self.client.library_save([album.get("id")], "album")
+		result = self.client.library_save([album["id"]], "album")
 		if isinstance(result, str):
 			wx.CallAfter(ui.message, result)
 		else:
@@ -262,7 +265,7 @@ class AccessifyDialog(wx.Dialog):
 				ui.message, _("Album '{album_name}' saved successfully.").format(album_name=album.get("name"))
 			)
 
-	def _toggle_saved(self, kind: str, item: Item) -> None:
+	def _toggle_saved(self, kind: str, item: Item | None) -> None:
 		"""Save the item if it is not in the library, otherwise remove it; say which.
 
 		kind is the Spotify type: "episode", "show", "audiobook", ...
@@ -303,7 +306,7 @@ class AccessifyDialog(wx.Dialog):
 		name = safe_text((owner or {}).get("display_name"), (owner or {}).get("id") or _("owner"))
 		return _("Follow/Unfollow Owner: {name}").format(name=name)
 
-	def _toggle_follow_user(self, user: Item) -> None:
+	def _toggle_follow_user(self, user: Item | None) -> None:
 		"""Follow the user if not already following them, otherwise unfollow.
 
 		Same model as Save/Unsave: ask Spotify for the current state, flip it,
@@ -382,7 +385,7 @@ class AccessifyDialog(wx.Dialog):
 		menu.Bind(wx.EVT_MENU, handler, item)
 
 	def _playlist_submenu(
-		self, playlists: list[Item], on_pick: Callable[[Item], object], empty_label: str
+		self, playlists: list[Item] | None, on_pick: Callable[[Item], object], empty_label: str
 	) -> wx.Menu:
 		"""Return a submenu of playlists; choosing one calls on_pick(playlist).
 
@@ -398,7 +401,7 @@ class AccessifyDialog(wx.Dialog):
 			self.Bind(wx.EVT_MENU, lambda _evt, playlist=playlist: on_pick(playlist), menu_item)
 		return submenu
 
-	def _append_add_to_playlist(self, menu: wx.Menu, item: Item, playlists: list[Item]) -> None:
+	def _append_add_to_playlist(self, menu: wx.Menu, item: Item, playlists: list[Item] | None) -> None:
 		"""Add the "Add to Playlist" submenu for a track, or "Add Album to Playlist"."""
 		if item.get("type") == "album":
 			submenu = self._playlist_submenu(
@@ -443,14 +446,14 @@ class AccessifyDialog(wx.Dialog):
 		)
 
 		def _add() -> None:
-			result = self.client.add_album_to_playlist(playlist.get("id"), album.get("id"))
+			result = self.client.add_album_to_playlist(playlist["id"], album["id"])
 			wx.CallAfter(
 				ui.message, _("Album added to playlist successfully.") if result is True else str(result)
 			)
 
 		thread_manager.submit_task(_add, name="AddAlbumToPlaylist", daemon=True)
 
-	def _append_go_to_options_for_track(self, menu: wx.Menu, track_item: Item) -> None:
+	def _append_go_to_options_for_track(self, menu: wx.Menu, track_item: Item | None) -> None:
 		if not track_item or track_item.get("type") != "track":
 			return
 		menu.AppendSeparator()
@@ -461,23 +464,28 @@ class AccessifyDialog(wx.Dialog):
 		album = track_item.get("album")
 		if album and album.get("uri"):
 			go_to_album_item = menu.Append(
-				wx.ID_ANY, _("Go to Album: {album_name}").format(album_name=album.get("name"))
+				wx.ID_ANY,
+				_("Go to Album: {album_name}").format(album_name=safe_text(album.get("name"), _("Unknown"))),
 			)
 			self.Bind(wx.EVT_MENU, lambda evt, a=album: self._handle_go_to_album(evt, a), go_to_album_item)
 
-		artists = track_item.get("artists")
+		# Artists without an id (local files) have no page to go to.
+		artists = [artist for artist in track_item.get("artists") or () if artist and artist.get("id")]
 		if not artists:
 			return
 		if len(artists) == 1:
 			artist = artists[0]
 			go_to_artist_item = menu.Append(
-				wx.ID_ANY, _("Go to Artist: {artist_name}").format(artist_name=artist.get("name"))
+				wx.ID_ANY,
+				_("Go to Artist: {artist_name}").format(
+					artist_name=safe_text(artist.get("name"), _("Unknown"))
+				),
 			)
 			self.Bind(wx.EVT_MENU, lambda evt, a=artist: self._handle_go_to_artist(evt, a), go_to_artist_item)
 		else:
 			artist_submenu = wx.Menu()
 			for artist in artists:
-				artist_item = artist_submenu.Append(wx.ID_ANY, artist.get("name"))
+				artist_item = artist_submenu.Append(wx.ID_ANY, safe_text(artist.get("name"), _("Unknown")))
 				self.Bind(wx.EVT_MENU, lambda evt, a=artist: self._handle_go_to_artist(evt, a), artist_item)
 			menu.AppendSubMenu(artist_submenu, _("Go to Artist"))
 
@@ -491,6 +499,6 @@ class AccessifyDialog(wx.Dialog):
 		from ..dialogs.artist import ArtistDiscographyDialog  # noqa: PLC0415 - circular import
 
 		dialog = ArtistDiscographyDialog(
-			self, self.client, artist.get("id"), artist.get("name"), self._addable_playlists()
+			self, self.client, artist["id"], artist.get("name"), self._addable_playlists()
 		)
 		dialog.Show()

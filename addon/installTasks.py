@@ -38,7 +38,7 @@ class InstallInfoDialog(wx.Dialog):
 		parent: wx.Window,
 		addon_name: str,
 		addon_version: str,
-		donate_callback: Callable[[], object],
+		donate_callback: Callable[[], object] | None,
 	) -> None:
 		title = _("Accessify Play Installation")
 		super().__init__(parent, title=title)

@@ -58,7 +58,7 @@ class PlayInOrderDialog(AccessifyDialog):
 		"""Return a page of parts, or a message to say."""
 		raise NotImplementedError
 
-	def row(self, part: Item, number: int) -> str:
+	def row(self, part: Item, number: int, /) -> str:
 		"""Return the text of a part's row."""
 		raise NotImplementedError
 
