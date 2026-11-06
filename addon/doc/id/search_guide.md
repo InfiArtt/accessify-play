@@ -8,7 +8,7 @@ Buka Pencarian dengan `NVDA+Alt+G` lalu `S`.
 2. Di **Search for**, ketik pencarian Anda lalu tekan `Enter` (atau tombol **Search**).
 3. Telusuri daftar **Results** dengan tombol panah.
 
-Jika masih ada hasil lain, item terakhir adalah "Load More". Tekan `Enter` padanya untuk menambahkan halaman berikutnya. Ukuran halaman mengikuti pengaturan Search Results Limit.
+Jika masih ada hasil lain, item terakhir adalah "Load More". Tekan `Enter` padanya untuk menambahkan halaman berikutnya; Anda langsung berada di hasil pertamanya. Ukuran halaman mengikuti pengaturan Search Results Limit. Jika pencarian gagal, daftar hasil menyebutkan alasannya.
 
 Kolom pencarian mendapat fokus saat Pencarian dibuka, dan juga saat Anda membuka Pencarian yang sudah terbuka.
 

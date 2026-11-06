@@ -6,6 +6,8 @@
 * `Alt+L` copies the item's Spotify link.
 * **Refresh** (`Alt+R`) reloads the list.
 
+These are the default keys; see [Customizing commands and shortcuts](customizing_commands.html) to change them.
+
 `NVDA+Alt+G` then `E` announces only the next item, without opening the window.
 
 To add to the queue, use Add to Queue (`Alt+Q`) in Search, the Library or any track list. For a whole album or playlist, Accessify Play queues the tracks one by one, at most 100 of them (see **Most tracks to queue from an album or playlist** in the settings), and says so when it stops early.

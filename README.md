@@ -57,7 +57,7 @@ Powered by [lrclib.net](https://lrclib.net), a free, community-driven lyrics dat
 ### Library Management
 
 *   **Playlists:** Create, edit, delete or unfollow playlists; reorder tracks, remove a single copy of a track, remove duplicates, or clear a playlist.
-*   **Everything you save:** Liked Songs, albums, podcasts, individual episodes and audiobooks, each in its own Library tab, with one command to save or unsave.
+*   **Everything you save:** Liked Songs, albums, podcasts, individual episodes and audiobooks, each in its own Library tab that loads a page at a time, with one command to save or unsave.
 *   **Follow:** Artists, playlists, and the people who make the playlists you like.
 *   **Your stats:** Top tracks and artists from the last 4 weeks, 6 months or all time, and recently played.
 
@@ -71,7 +71,7 @@ Powered by [lrclib.net](https://lrclib.net), a free, community-driven lyrics dat
 
 Accessify Play has one default shortcut, **`NVDA+Alt+G`**, which opens the command layer. Press one more key to run a command, for example `NVDA+Alt+G` then `P` to play or pause. `F1` in the layer lists every key, and `Escape` closes it.
 
-Every key can be changed in the layer's editor (`F2`), and every command can also be given its own shortcut in NVDA's **Input Gestures** dialog, under "Accessify Play".
+Every key can be changed in the layer's editor (`F2`), and every command can also be given its own shortcut in NVDA's **Input Gestures** dialog, under "Accessify Play". The shortcuts inside the windows, such as `Alt+P` to play or `Alt+W` for a song's lyrics, can be changed with **Window Shortcuts...** in Accessify Play's settings.
 
 | Key | Action | Key | Action |
 | :-- | :----- | :-- | :----- |

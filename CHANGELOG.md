@@ -21,7 +21,7 @@ New in Accessify Play's settings (NVDA menu, Preferences, Settings, Accessify Pl
 ### 🎉 Long lists come a page at a time
 
 - **The Library's tabs** (saved tracks, albums, shows, episodes, audiobooks, new releases) load a page at a time with a "Load More" row, instead of fetching everything before showing anything. A large library opens much faster and sends far fewer requests.
-- **Search** uses the same lists: after Load More the cursor is on the first new result.
+- **Search** uses the same lists: after Load More the cursor is on the first new result, and a search that fails says why in the results list as well as aloud.
 
 ### 🎉 Browse Categories and Featured Playlists
 
@@ -49,6 +49,7 @@ New in Accessify Play's settings (NVDA menu, Preferences, Settings, Accessify Pl
 - **The lyrics window had no timestamp buttons** when the first song it showed had plain lyrics only, so later songs with synced lyrics had none either.
 - **All Tracks in the artist window named the artist on every line.** Like Top Tracks, it now names the artists only when someone else is on the song.
 - **A list could stay on "Loading..." for good** after an unexpected error. It now says the list could not be loaded.
+- **A hand-edited `layerConfig.json` with a malformed entry** gave that command odd keys. Such an entry now gets the command's default key.
 - **Items Spotify sends with missing details** (a playlist without an owner, a song without artists, a queue without a current song) could stop a window from filling its list. They are now shown with what is known.
 
 ### 🧹 Under the hood
@@ -60,7 +61,7 @@ New in Accessify Play's settings (NVDA menu, Preferences, Settings, Accessify Pl
 - **Links to the source, releases and issues point to this fork** (aradix85/accessify-play): in the add-on's manifest, the readme and the user guide.
 - **Type checking with pyright** runs with the other checks, and found a few places where missing details from Spotify could stop a window (a playlist or artist without a name, a song without an id).
 - **One way to give a window its shortcuts** (`_bind_shortcuts`), instead of an accelerator table written out in each window; the keys come from the settings, and menus show them.
-- **Browse Categories and Featured Playlists use the same paged list** as the other windows, and playing from any window goes through one helper that reports failures.
+- **Every long list uses one paged list** (Search, the Library's tabs, Browse Categories and Featured Playlists included), and playing from any window goes through one helper that reports failures.
 - Lyrics requests name the add-on's homepage from its manifest (`addon_url` in `buildVars.py`) instead of a fixed address, and the donation link is written once.
 
 ## Version 2026.11.0

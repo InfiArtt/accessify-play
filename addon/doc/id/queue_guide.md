@@ -6,6 +6,8 @@
 * `Alt+L` menyalin tautan Spotify item itu.
 * **Refresh** (`Alt+R`) memuat ulang daftar.
 
+Ini adalah tombol bawaan; lihat [Mengubah perintah dan pintasan](customizing_commands.html) untuk mengubahnya.
+
 `NVDA+Alt+G` lalu `E` hanya mengumumkan item berikutnya, tanpa membuka jendela.
 
 Untuk menambahkan ke antrean, gunakan Add to Queue (`Alt+Q`) di Pencarian, Pustaka, atau daftar lagu mana pun. Untuk seluruh album atau playlist, Accessify Play memasukkan lagunya satu per satu, paling banyak 100 (lihat **Most tracks to queue from an album or playlist** di pengaturan), dan memberi tahu bila berhenti lebih awal.

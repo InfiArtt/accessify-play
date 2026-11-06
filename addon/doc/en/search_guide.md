@@ -8,7 +8,7 @@ Open Search with `NVDA+Alt+G` then `S`.
 2. In **Search for**, type your search and press `Enter` (or the **Search** button).
 3. Move through the **Results** list with the arrow keys.
 
-If there are more results, the last item is "Load More". Press `Enter` on it to add the next page. The page size is the Search Results Limit setting.
+If there are more results, the last item is "Load More". Press `Enter` on it to add the next page; you land on its first result. The page size is the Search Results Limit setting. If the search fails, the results list says why.
 
 The search field has the focus when Search opens, and again when you open Search while it is already open.
 
