@@ -24,7 +24,6 @@ New in Accessify Play's settings (NVDA menu, Preferences, Settings, Accessify Pl
 - **A playlist whose tracks could not be loaded**, in the Library, left an empty list; so did the artist window's albums. The list now says what went wrong, and an artist without albums says so.
 - **Some list rows were always in English**: "by" in playlist rows in Search and the artist window, and in the queue window.
 - **Browse Categories and Featured Playlists loaded 50 items at a time** whatever the Search Results Limit said. They now follow it, like every other list.
-- **Lyrics requests named the original add-on's homepage**; they now name the homepage of the version installed.
 
 ### 🧹 Under the hood
 
@@ -32,6 +31,7 @@ New in Accessify Play's settings (NVDA menu, Preferences, Settings, Accessify Pl
 - **One table of commands** (`commands.py`) for the command layer's keys, names and descriptions, which used to be listed three times. `layerConfig.json` now keeps only your keys and whether the layer stays open.
 - **One test suite**: the older test scripts are ported to pytest or removed, including the checks of the translations, the user guides and the bundled libraries. `installTasks.py` is now tested and measured too.
 - Removed code that never ran: an install-time clean-up for an NVDA function that does not exist.
+- Lyrics requests name the add-on's homepage from its manifest (`addon_url` in `buildVars.py`) instead of a fixed address, and the donation link is written once.
 
 ## Version 2026.11.0
 
