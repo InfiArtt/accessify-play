@@ -284,6 +284,9 @@ def _describe_playing(item: Item, item_type: str, *, playing: bool) -> str:
 class SpotifyClient:
 	"""The add-on's connection to Spotify; get_client() returns the shared one."""
 
+	#: The most items Spotify takes in one request that adds to or removes from a playlist.
+	PLAYLIST_BATCH = 100
+
 	def __init__(self) -> None:
 		self.client = None
 		self.device_id = None
@@ -956,9 +959,11 @@ class SpotifyClient:
 			if len(uris) == 1:
 				return _("This track is already in the playlist.")
 			return _("All these tracks are already in the playlist.")
-		result = self.run_request("playlist_add_items", playlist_id=playlist_id, items=uris_to_add)
-		if isinstance(result, str):
-			return result
+		for start in range(0, len(uris_to_add), self.PLAYLIST_BATCH):
+			batch = uris_to_add[start : start + self.PLAYLIST_BATCH]
+			result = self.run_request("playlist_add_items", playlist_id=playlist_id, items=batch)
+			if isinstance(result, str):
+				return result
 		skipped_count = len(uris) - len(uris_to_add)
 		if skipped_count > 0:
 			return _("Added {added} tracks ({skipped} duplicates skipped).").format(
@@ -975,13 +980,7 @@ class SpotifyClient:
 		uris = [t["uri"] for t in tracks if t.get("uri")]
 		if not uris:
 			return _("No tracks found in this album.")
-		for i in range(0, len(uris), 100):
-			chunk = uris[i : i + 100]
-			result = self.add_items_to_playlist(playlist_id, chunk)
-			if isinstance(result, str):
-				return result
-
-		return True
+		return self.add_items_to_playlist(playlist_id, uris)
 
 	def create_playlist(
 		self, name: str, *, public: bool = True, collaborative: bool = False, description: str = ""
@@ -1082,8 +1081,8 @@ class SpotifyClient:
 		still to be sent, and no later position is shifted by an earlier call.
 		"""
 		by_position = sorted(occurrences, key=lambda o: o[1], reverse=True)
-		for start in range(0, len(by_position), 100):
-			chunk = by_position[start : start + 100]
+		for start in range(0, len(by_position), self.PLAYLIST_BATCH):
+			chunk = by_position[start : start + self.PLAYLIST_BATCH]
 			items = [{"uri": uri, "positions": [pos]} for uri, pos in chunk]
 			result = self.run_request(
 				"playlist_remove_specific_occurrences_of_items",

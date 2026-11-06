@@ -14,10 +14,12 @@ fresh temporary one, and background tasks run at once.
 
 from __future__ import annotations
 
+import copy
 import re
 import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
+from urllib.parse import parse_qsl
 
 import pytest
 
@@ -33,10 +35,13 @@ import globalVars  # noqa: E402
 import gui  # noqa: E402
 import inputCore  # noqa: E402
 import scriptHandler  # noqa: E402
+import spotipy  # noqa: E402
 import tones  # noqa: E402
 import ui  # noqa: E402
 import wx  # noqa: E402
+from accesifyPlay import spotify_client  # noqa: E402
 from accesifyPlay.core import thread_manager as thread_manager_module  # noqa: E402
+from spotipy.exceptions import SpotifyException  # noqa: E402
 
 if TYPE_CHECKING:
 	from collections.abc import Callable
@@ -117,3 +122,56 @@ def spoken() -> list[str]:
 
 
 __all__ = ["accesifyPlay"]
+
+
+class SpotifyServer:
+	"""Answers spotipy's requests instead of Spotify.
+
+	routes maps (HTTP method, path) to the JSON to return, an exception to
+	raise, or a function of (params, payload) that returns either. Every
+	request is kept in `requests` as (method, path, params, payload).
+	"""
+
+	PREFIX = "https://api.spotify.com/v1/"
+
+	def __init__(self) -> None:
+		self.routes: dict[tuple[str, str], object] = {}
+		self.requests: list[tuple[str, str, dict, object]] = []
+
+	def __call__(self, method: str, url: str, payload: object, params: dict) -> object:
+		path, _, query = url.removeprefix(self.PREFIX).partition("?")
+		path = path.rstrip("/")
+		params = {**dict(parse_qsl(query)), **(params or {})}
+		self.requests.append((method, path, params, payload))
+		answer = self.routes.get((method, path))
+		if callable(answer) and not isinstance(answer, BaseException):
+			answer = answer(params, payload)
+		if isinstance(answer, BaseException):
+			raise answer
+		return copy.deepcopy(answer)
+
+	def paths(self, method: str | None = None) -> list[str]:
+		"""Return the paths requested, optionally only for one HTTP method."""
+		return [path for m, path, _params, _payload in self.requests if method in (None, m)]
+
+
+@pytest.fixture
+def server() -> SpotifyServer:
+	"""Return the stand-in for Spotify's Web API."""
+	return SpotifyServer()
+
+
+@pytest.fixture
+def client(server: SpotifyServer) -> spotify_client.SpotifyClient:
+	"""Return the add-on's shared client, signed in, talking to the stand-in server."""
+	spotify_client.get_client.cache_clear()
+	shared = spotify_client.get_client()
+	sp = spotipy.Spotify(auth="test-token")
+	sp._internal_call = server
+	shared.client = sp
+	return shared
+
+
+def spotify_error(status: int, reason: str | None = None, headers: dict | None = None) -> SpotifyException:
+	"""Return the exception spotipy raises for an error answer."""
+	return SpotifyException(status, -1, f"error {status}", reason=reason, headers=headers)
