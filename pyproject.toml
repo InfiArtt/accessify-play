@@ -112,6 +112,8 @@ max-complexity = 15
 [tool.pytest.ini_options]
 testpaths = ["tests/unit"]
 addopts = "--strict-markers --strict-config"
+# spotipy warns about the endpoints Spotify retired; the add-on handles them.
+filterwarnings = ["ignore::DeprecationWarning:spotipy"]
 
 [tool.coverage.run]
 branch = true

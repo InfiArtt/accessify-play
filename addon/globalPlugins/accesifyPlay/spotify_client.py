@@ -1255,7 +1255,7 @@ class SpotifyClient:
 		results = self._library_batches("_delete", "me/library", self._uris(kind, items))
 		return results if isinstance(results, str) else None
 
-	def library_toggle(self, item: Item, kind: str | None = None) -> bool | str:
+	def library_toggle(self, item: str, kind: str | None = None) -> bool | str:
 		"""Save (or follow) one item if it is not yet, otherwise remove (or unfollow) it.
 
 		The model of Like/Unlike (L): ask Spotify for the state and flip it, so
