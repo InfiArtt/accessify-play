@@ -163,6 +163,20 @@ def matches(setting: str, event: wx.KeyEvent) -> bool:
 	return Key(flags, event.GetKeyCode(), "") in keys_of(setting)
 
 
+def letter_key(label: str) -> Key | None:
+	"""Return the Alt+letter of a control's underlined letter ("&Close" has Alt+C); None without one."""
+	match = re.search(r"&([^&])", label.replace("&&", ""))
+	if not match:
+		return None
+	letter = match.group(1).upper()
+	return Key(wx.ACCEL_ALT, ord(letter), f"Alt+{letter}")
+
+
+def without_letter(label: str) -> str:
+	"""Return a control's label without its underlined letter ("&&", a written &, stays)."""
+	return "&&".join(part.replace("&", "") for part in label.split("&&"))
+
+
 def shortcut_settings() -> list[str]:
 	"""Return every shortcut setting, in the order of the table."""
 	return [key for key, setting in SETTINGS.items() if setting.shortcut]

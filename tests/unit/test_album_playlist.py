@@ -182,8 +182,9 @@ def playlist_window(client: SpotifyClient, server: SpotifyServer, pages: list) -
 
 
 def page(tracks: list, total: int | None = None, next_url: str | None = None) -> dict:
-	"""Return one page of playlist entries."""
-	return {"items": [{"track": t} for t in tracks], "total": total, "next": next_url}
+	"""Return one page of playlist entries; with a next link only when one is given."""
+	answer = {"items": [{"track": t} for t in tracks], "total": total}
+	return {**answer, "next": next_url} if next_url else answer
 
 
 def test_playlist_loads_page_by_page(client: SpotifyClient, ready: SpotifyServer) -> None:

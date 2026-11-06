@@ -27,7 +27,7 @@ Spotify's own rules for developer apps apply to an app you create. To go back to
 
 ## Settings
 
-* **Search Results Limit (1 to 50)**: how many results Search shows at a time, 20 by default. Lists of episodes, chapters and playlist tracks load in pages of the same size, with a "Load More" item at the end.
+* **Search Results Limit (1 to 50)**: how many results Search shows at a time, 20 by default. Every other long list (playlist tracks, episodes, chapters, the Library's tabs, Browse Categories and Featured Playlists) loads in pages of the same size, with a "Load More" item at the end.
 * **Seek Duration (seconds, 1 to 60)**: how far Seek Forward and Seek Backward jump, 15 seconds by default.
 * **Volume Step (1 to 100)**: how much Volume Up and Volume Down change the volume, 5% by default.
 * **Keep Alive Interval (seconds, 0 = Off, Min = 5)**: how often Accessify Play checks in with Spotify in the background, so the first command after a quiet period responds quickly, up to 3600 seconds. Off (0) by default, since every check counts against the request limit Accessify Play shares with everyone who uses it; turn it on only if the first command after a pause is noticeably slow for you. Values from 1 to 4 are raised to 5.

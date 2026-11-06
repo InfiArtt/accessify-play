@@ -88,9 +88,9 @@ class PlayInOrderDialog(AccessifyDialog):
 		self.parts_list.Bind(wx.EVT_CONTEXT_MENU, self.on_context_menu)
 
 		buttons_sizer = wx.StdDialogButtonSizer()
-		play_button = wx.Button(panel, wx.ID_OK, label=self.texts.play_button)
-		play_button.Bind(wx.EVT_BUTTON, self.on_play)
-		buttons_sizer.AddButton(play_button)
+		self.play_button = wx.Button(panel, wx.ID_OK, label=self.texts.play_button)
+		self.play_button.Bind(wx.EVT_BUTTON, self.on_play)
+		buttons_sizer.AddButton(self.play_button)
 		close_button = wx.Button(panel, wx.ID_CANCEL, label=_("&Close"))
 		self.bind_close_button(close_button)
 		buttons_sizer.AddButton(close_button)
@@ -99,7 +99,10 @@ class PlayInOrderDialog(AccessifyDialog):
 		panel.SetSizer(sizer)
 
 	def _create_accelerators(self) -> None:
-		self._bind_shortcuts({setting: handler for setting, _label, handler in self.actions()})
+		self._bind_shortcuts(
+			{setting: handler for setting, _label, handler in self.actions()},
+			buttons={"keyPlay": [self.play_button]},
+		)
 
 	def on_context_menu(self, _evt: wx.Event) -> None:
 		"""Show the actions for the selected part."""

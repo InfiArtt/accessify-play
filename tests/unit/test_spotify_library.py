@@ -188,6 +188,20 @@ def test_library_failures(client: SpotifyClient, server: SpotifyServer) -> None:
 	assert "would not allow" in client.library_save(["t1"], "track")
 
 
+def test_playlists_are_read_whole(client: SpotifyClient, server: SpotifyServer) -> None:
+	"""The user's playlists are read page by page, 50 at a time, to the end."""
+
+	def listing(params: dict, _payload: object) -> dict:
+		return page([{"n": i} for i in range(50)] if int(params["offset"]) == 0 else [{"n": "last"}])
+
+	server.routes["GET", "me/playlists"] = listing
+	assert len(client.get_user_playlists()) == 51
+	server.routes["GET", "me/playlists"] = page([])
+	assert client.get_user_playlists() == []
+	server.routes["GET", "me/playlists"] = spotify_error(500)
+	assert "having trouble" in client.get_user_playlists()
+
+
 @pytest.mark.parametrize(
 	("method", "path"),
 	[
@@ -196,23 +210,16 @@ def test_library_failures(client: SpotifyClient, server: SpotifyServer) -> None:
 		("get_saved_episodes", "me/episodes"),
 		("get_saved_audiobooks", "me/audiobooks"),
 		("get_saved_albums", "me/albums"),
-		("get_user_playlists", "me/playlists"),
+		("get_new_releases", "browse/new-releases"),
 	],
 )
-def test_saved_lists_are_read_whole(
+def test_library_lists_come_a_page_at_a_time(
 	client: SpotifyClient, server: SpotifyServer, method: str, path: str
 ) -> None:
-	"""The library's lists are read page by page, 50 at a time, to the end."""
-
-	def listing(params: dict, _payload: object) -> dict:
-		return page([{"n": i} for i in range(50)] if int(params["offset"]) == 0 else [{"n": "last"}])
-
-	server.routes["GET", path] = listing
-	assert len(getattr(client, method)()) == 51
-	server.routes["GET", path] = page([])
-	assert getattr(client, method)() == []
-	server.routes["GET", path] = spotify_error(500)
-	assert "having trouble" in getattr(client, method)()
+	"""The Library's lists are asked for one page at a time, from an offset."""
+	server.routes["GET", path] = page([{"n": 1}])
+	assert getattr(client, method)(offset=40, limit=20) == page([{"n": 1}])
+	assert (server.requests[-1][2]["offset"], server.requests[-1][2]["limit"]) == (40, 20)
 
 
 def test_followed_artists_use_a_cursor(client: SpotifyClient, server: SpotifyServer) -> None:

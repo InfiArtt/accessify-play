@@ -22,7 +22,7 @@ from ..settings_spec import conf_get
 from ..utils import safe_text
 
 if TYPE_CHECKING:
-	from collections.abc import Callable, Sequence
+	from collections.abc import Callable, Iterator, Sequence
 
 	from ..lyrics import Lyrics
 	from ..spotify_client import SpotifyClient
@@ -47,6 +47,8 @@ class AccessifyDialog(wx.Dialog):
 		self._parentDialog = parent if isinstance(parent, wx.Dialog) else None
 		#: Shortcut setting -> the command id of its action (see _bind_shortcuts).
 		self.shortcut_ids: dict[str, int] = {}
+		self._shortcut_owners: dict[shortcuts.Key, str] = {}
+		self._same_as_shortcut: dict[int, str] = {}
 
 		self.Bind(wx.EVT_CHAR_HOOK, self._on_char_hook)
 		self.Bind(wx.EVT_CLOSE, self._on_dialog_close, self)
@@ -57,6 +59,7 @@ class AccessifyDialog(wx.Dialog):
 		self,
 		actions: dict[str, Callable[[wx.Event], object]],
 		numbered: Sequence[Callable[[], object]] = (),
+		buttons: dict[str, Sequence[wx.Window]] | None = None,
 	) -> None:
 		"""Give the window its shortcuts, with the keys of each action's shortcut setting.
 
@@ -64,28 +67,63 @@ class AccessifyDialog(wx.Dialog):
 		numbered are what the number keys do (with the keyTabNumber modifiers),
 		from 1. Each action gets one command id, kept in shortcut_ids, which its
 		menu item shares (see _append_action).
+
+		A shortcut wins over a button's underlined letter, so a button whose
+		Alt+letter is a shortcut for something else loses the letter: otherwise
+		NVDA would announce a key that does not press it. buttons maps an action
+		to the buttons that do the same; they keep their letter.
 		"""
 		self._shortcut_refs = []
 		entries = []
-		taken: set[shortcuts.Key] = set()
+		#: Each key of the window's shortcuts, with the setting it belongs to.
+		self._shortcut_owners: dict[shortcuts.Key, str] = {}
+		#: Buttons that do what a shortcut does: id(button) -> that shortcut's setting.
+		self._same_as_shortcut = {
+			id(button): setting for setting, same in (buttons or {}).items() for button in same
+		}
 
-		def add(keys: list[shortcuts.Key], handler: Callable[[wx.Event], object]) -> int:
+		def add(setting: str, keys: list[shortcuts.Key], handler: Callable[[wx.Event], object]) -> int:
 			ref = wx.NewIdRef()
 			self._shortcut_refs.append(ref)  # wx frees an id whose reference is gone
 			self.Bind(wx.EVT_MENU, handler, id=ref.GetId())
 			for key in keys:
-				if key in taken:
+				if key in self._shortcut_owners:
 					log.warning("Accessify Play: %s is set for two actions in one window.", key.text)
 					continue
-				taken.add(key)
+				self._shortcut_owners[key] = setting
 				entries.append((key.flags, key.code, ref.GetId()))
 			return ref.GetId()
 
 		for setting, handler in actions.items():
-			self.shortcut_ids[setting] = add(shortcuts.keys_of(setting), handler)
+			self.shortcut_ids[setting] = add(setting, shortcuts.keys_of(setting), handler)
 		for key, go in zip(shortcuts.number_keys(len(numbered)), numbered, strict=False):
-			add([key], lambda _evt, go=go: go())
+			add("keyTabNumber", [key], lambda _evt, go=go: go())
 		self.SetAcceleratorTable(wx.AcceleratorTable(entries))
+		for control in self._labelled_controls(self):
+			control.SetLabel(self._usable_label(control, control.GetLabel()))
+
+	@classmethod
+	def _labelled_controls(cls, window: wx.Window) -> Iterator[wx.Window]:
+		"""Yield the buttons, check boxes and labels inside window, which can have an underlined letter."""
+		for child in window.GetChildren():
+			if isinstance(child, (wx.Button, wx.CheckBox, wx.StaticText)):
+				yield child
+			yield from cls._labelled_controls(child)
+
+	def _usable_label(self, control: wx.Window, label: str) -> str:
+		"""Return label for control; without its underlined letter if a window shortcut has that key."""
+		key = shortcuts.letter_key(label)
+		if key is None:
+			return label
+		owner = self._shortcut_owners.get(key)
+		if owner is None or self._same_as_shortcut.get(id(control)) == owner:
+			return label
+		log.info("Accessify Play: %s is a shortcut here, so %r loses that letter.", key.text, label)
+		return shortcuts.without_letter(label)
+
+	def _set_button_label(self, button: wx.Window, label: str) -> None:
+		"""Change a button's label, keeping its underlined letter only if no shortcut has that key."""
+		button.SetLabel(self._usable_label(button, label))
 
 	def _append_action(self, menu: wx.Menu, label: str, setting: str) -> None:
 		"""Add the menu item of one of the window's shortcut actions, showing its keys."""

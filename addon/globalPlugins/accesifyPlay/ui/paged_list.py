@@ -29,16 +29,24 @@ class PagedList:
 	"""Shows a paged Spotify listing in a list box, one page at a time.
 
 	While Spotify has more, the last row is Load More; Enter on it fetches the
-	next page. Until the first page arrives the list says it is loading, and
-	if there is nothing, or it failed, the list says that instead.
+	next page, and the cursor moves to its first row. Until the first page
+	arrives the list says it is loading, and if there is nothing, or it
+	failed, the list says that instead.
 
-	fetch(offset, limit) returns a page ({"items": [...], "total" or "next"})
+	fetch(offset, limit) returns a page ({"items": [...], "next" or "total"})
 	or a message to say; empty items (None) are skipped but still counted
 	for the offset. row(item, number) is the text of an item's row, where
 	number counts from 1. A page holds as many items as the "results per
 	page" setting says. When the first page fails, the list shows failed, or
 	without it the reason itself; the reason is said either way.
+
+	Set focus_results for a list the focus is not on when it fills, as in
+	Search: the focus moves to the first row once the first page is in, and
+	an empty list is also said.
 	"""
+
+	#: Move the focus to the results once the first page is in; say an empty list.
+	focus_results = False
 
 	def __init__(
 		self,
@@ -55,17 +63,20 @@ class PagedList:
 		self._row = row
 		self._empty = empty
 		self._failed = failed
-		self._page_size = conf_get("searchLimit")
 		self._offset = 0
 		self._loading = False
 		self._has_more = True
+		#: Counts reloads, so a page asked for before the last one is dropped.
+		self._generation = 0
 		self._load_more_label = "--- {} ---".format(_("Load More"))
 
 	def reload(self) -> None:
-		"""Start again from the first page."""
+		"""Start again from the first page; a page still on its way is dropped."""
+		self._generation += 1
 		self.items = []
 		self._offset = 0
 		self._has_more = True
+		self._loading = False
 		self.load_more()
 
 	def load_more(self) -> None:
@@ -75,7 +86,7 @@ class PagedList:
 		self._loading = True
 		if not self.items:
 			self._show_only(_("Loading..."))
-		thread_manager.submit_task(self._fetch_page, name="DialogTask", daemon=True)
+		thread_manager.submit_task(self._fetch_page, self._generation, name="DialogTask", daemon=True)
 
 	def selected(self) -> Item | None:
 		"""Return the item on the selected row; None on any other row or without a selection."""
@@ -94,16 +105,18 @@ class PagedList:
 		else:
 			play()
 
-	def _fetch_page(self) -> None:
+	def _fetch_page(self, generation: int) -> None:
 		try:
-			page = self._fetch(self._offset, self._page_size)
+			page = self._fetch(self._offset, conf_get("searchLimit"))
 		except Exception:
 			# Never leave the list saying Loading, nor refusing to load again.
 			log.exception("Loading a page of a list failed")
 			page = _("Could not load this list. Please try again.")
-		wx.CallAfter(self._show_page, page)
+		wx.CallAfter(self._show_page, page, generation)
 
-	def _show_page(self, page: Reply | str) -> None:
+	def _show_page(self, page: Reply | str, generation: int) -> None:
+		if generation != self._generation:
+			return  # asked for before a reload
 		self._loading = False
 		if not self.control:
 			return  # the window closed while the page was on its way
@@ -115,11 +128,14 @@ class PagedList:
 		reply: Item = page or {}
 		entries = reply.get("items") or []
 		self._offset += len(entries)
-		total = reply.get("total")
-		more = self._offset < total if total is not None else bool(reply.get("next"))
-		self._has_more = bool(entries) and more
-		new_items = [item for item in entries if item]
-		if new_items and not self.items:
+		self._has_more = bool(entries) and self._more_after(reply)
+		new_items = [item for item in entries if item is not None]
+		first_page = not self.items
+		# Load More moves on to the first new row, where the Load More row was.
+		move_to = len(self.items) if self.on_load_more_row() else None
+		if first_page and self.focus_results:
+			move_to = 0
+		if new_items and first_page:
 			self.control.Clear()  # the Loading row
 		first_number = len(self.items) + 1
 		self.items.extend(new_items)
@@ -128,10 +144,27 @@ class PagedList:
 			self.control.Append(self._row(item, number))
 		if self.items:
 			self._show_load_more_row()
+			if move_to is not None and new_items:
+				self._move_to(move_to)
 		elif self._has_more:
 			self.load_more()  # a page with nothing to show (only empty entries): on to the next
 		else:
 			self._show_only(self._empty)
+			if self.focus_results:
+				ui.message(self._empty)  # the focus stays where it is, so say it
+
+	def _more_after(self, reply: Item) -> bool:
+		"""Return whether Spotify has more after this page: its next link, or else its total."""
+		if "next" in reply:
+			return bool(reply["next"])
+		total = reply.get("total")
+		return total is not None and self._offset < total
+
+	def _move_to(self, row: int) -> None:
+		self.control.SetSelection(row)
+		self.control.EnsureVisible(row)
+		if self.focus_results:
+			self.control.SetFocus()
 
 	def _show_only(self, text: str) -> None:
 		self.control.Clear()

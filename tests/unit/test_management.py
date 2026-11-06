@@ -276,7 +276,6 @@ def test_answers_after_closing_are_dropped(client: SpotifyClient) -> None:
 	library.load_playlists()
 	library._populate_playlists_combobox([])
 	library._finish_playlist_tracks([], token=None, keep_row=0)
-	library._finish_top_items([], token=library._top_items_request)
 	assert library.playlist_tracks_list.GetStrings() == rows
 
 
@@ -635,6 +634,26 @@ def test_tabs_load_when_first_shown(client: SpotifyClient, ready: SpotifyServer,
 	assert library.tabs_config[key]["control"].GetStrings() == ROWS[key]
 
 
+def test_a_long_list_comes_a_page_at_a_time(client: SpotifyClient, ready: SpotifyServer) -> None:
+	"""Saved tracks come a page at a time; Load More fetches the next, from where the list ends."""
+
+	def saved(params: dict, _payload: object) -> dict:
+		if int(params["offset"]) == 0:
+			return {"items": [{"track": track(1)}], "next": "more"}
+		return {"items": [{"track": track(2)}], "next": None}
+
+	ready.routes["GET", "me/tracks"] = saved
+	library = open_library(client)
+	library.notebook.SetSelection(1)
+	control = library.tabs_config["saved_tracks"]["control"]
+	assert control.GetStrings() == ["Song 1 - A", "--- Load More ---"]
+	control.SetSelection(1)
+	control.fire(wx.EVT_CHAR_HOOK, wx.KeyEvent(wx.WXK_RETURN))
+	assert control.GetStrings() == ["Song 1 - A", "Song 2 - A"]
+	assert control.GetSelection() == 1
+	assert [r[2]["offset"] for r in ready.requests if r[1] == "me/tracks"] == [0, 1]
+
+
 def test_a_tab_that_fails_or_is_empty(client: SpotifyClient, ready: SpotifyServer, spoken: list[str]) -> None:
 	"""A retired endpoint's message shows in the list; an empty list says so."""
 	ready.routes["GET", "browse/new-releases"] = spotify_error(404)
@@ -644,8 +663,6 @@ def test_a_tab_that_fails_or_is_empty(client: SpotifyClient, ready: SpotifyServe
 	library.notebook.SetSelection(1)
 	assert library.tabs_config["new_releases"]["control"].GetStrings() == [spoken[-1]]
 	assert library.tabs_config["saved_tracks"]["control"].GetStrings() == ["No items found."]
-	library.Destroy()
-	library._populate_generic_list("saved_tracks", [])
 
 
 def test_top_items_follow_the_choices(client: SpotifyClient, ready: SpotifyServer, spoken: list[str]) -> None:
@@ -662,8 +679,14 @@ def test_top_items_follow_the_choices(client: SpotifyClient, ready: SpotifyServe
 	assert ready.requests[-1][1] == "me/top/artists"
 	assert ready.requests[-1][2]["time_range"] == "long_term"
 	assert control.GetStrings() == [spoken[-1]]
-	library._finish_top_items([track(5)], token=0)
-	assert control.GetStrings() == [spoken[-1]]
+
+	def choose_again_first(_params: object, _payload: object) -> dict:
+		library.top_item_type_box.select(0, wx.EVT_COMBOBOX)  # moved on while this was on its way
+		return {"items": [ARTIST]}
+
+	ready.routes["GET", "me/top/artists"] = choose_again_first
+	library.top_item_type_box.select(1, wx.EVT_COMBOBOX)
+	assert control.GetStrings() == ["Song 4 - A"]
 
 
 def test_top_items_open_on_the_period_from_the_settings(client: SpotifyClient, ready: SpotifyServer) -> None:
@@ -849,7 +872,7 @@ def test_nothing_selected(full: ManagementDialog, spoken: list[str]) -> None:
 	assert spoken == ["Please select an item from the active tab first."] * 3
 	tab(full, "saved_tracks").SetSelection(wx.NOT_FOUND)
 	full._on_list_context_menu(None)
-	full.saved_tracks = []
+	full.tabs_config["saved_tracks"]["paged"].items = []
 	tab(full, "saved_tracks")
 	assert full._get_selected_item() is None
 	full.playlist_tracks_list.SetFocus()
@@ -869,3 +892,19 @@ def test_refresh_shortcut(full: ManagementDialog, ready: SpotifyServer) -> None:
 	assert "me/playlists" in ready.paths()
 	full.notebook.ChangeSelection(wx.NOT_FOUND)
 	accelerate(full, wx.ACCEL_ALT, "R")
+
+
+def test_shortcuts_on_the_playlists_tab_act_on_the_playlist(
+	client: SpotifyClient, ready: SpotifyServer, spoken: list[str]
+) -> None:
+	"""With the focus on the playlist chooser, Play, Add to Queue and Copy Link act on that playlist."""
+	library = open_library(client)
+	library.playlist_choices.SetFocus()
+	accelerate(library, wx.ACCEL_ALT, "P")
+	assert ready.requests[-1][3] == {"context_uri": "spotify:playlist:p1"}
+	accelerate(library, wx.ACCEL_ALT, "L")
+	assert spoken[-1] == "Link not available."
+	library.playlist_choices.SetSelection(wx.NOT_FOUND)
+	sent = len(ready.requests)
+	accelerate(library, wx.ACCEL_ALT, "P")
+	assert len(ready.requests) == sent

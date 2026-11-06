@@ -1173,9 +1173,9 @@ class SpotifyClient:
 		info["typeLabel"] = self._get_type_label(entity_type)
 		return info
 
-	def get_saved_tracks(self) -> list[Item] | str:
-		"""Fetch all saved tracks from the user's library."""
-		return self._paginate("current_user_saved_tracks")
+	def get_saved_tracks(self, offset: int = 0, limit: int = MAX_PAGE) -> Reply | str:
+		"""Return a page of the saved tracks."""
+		return self.run_request("current_user_saved_tracks", limit=limit, offset=offset)
 
 	def get_followed_artists(self) -> list[Item] | str:
 		"""Fetch all artists followed by the user."""
@@ -1204,9 +1204,9 @@ class SpotifyClient:
 			return self.run_request("current_user_top_artists", limit=limit, time_range=time_range)
 		return None
 
-	def get_saved_shows(self) -> list[Item] | str:
-		"""Fetch all saved shows from the user's library."""
-		return self._paginate("current_user_saved_shows")
+	def get_saved_shows(self, offset: int = 0, limit: int = MAX_PAGE) -> Reply | str:
+		"""Return a page of the saved shows."""
+		return self.run_request("current_user_saved_shows", limit=limit, offset=offset)
 
 	# --- Unified library: /me/library ---------------------------------------
 	# Spotify replaced its per-type save, follow and "contains" endpoints with
@@ -1285,22 +1285,24 @@ class SpotifyClient:
 			offset += limit
 		return items
 
-	def get_saved_episodes(self) -> list[Item] | str:
-		"""Fetch all saved podcast episodes from the user's library."""
-		return self._paginate("current_user_saved_episodes")
+	def get_saved_episodes(self, offset: int = 0, limit: int = MAX_PAGE) -> Reply | str:
+		"""Return a page of the saved podcast episodes."""
+		return self.run_request("current_user_saved_episodes", limit=limit, offset=offset)
 
 	# --- Saved audiobooks -------------------------------------------------
 	# Listing uses GET /me/audiobooks, which spotipy has no binding for. Saving,
 	# removing and checking go through the /me/library functions above.
 
-	def get_saved_audiobooks(self) -> list[Item] | str:
-		"""Fetch all saved audiobooks from the user's library."""
-		return self._paginate("_get", "me/audiobooks")
+	def get_saved_audiobooks(self, offset: int = 0, limit: int = MAX_PAGE) -> Reply | str:
+		"""Return a page of the saved audiobooks."""
+		return self.run_request("_get", "me/audiobooks", limit=limit, offset=offset)
 
-	def get_new_releases(self) -> Reply | str:
-		"""Fetch new album releases."""
+	def get_new_releases(self, offset: int = 0, limit: int = MAX_PAGE) -> Reply | str:
+		"""Return a page of new album releases, as {"albums": page}."""
 		retired = self._retired_endpoint_message()
-		return self.run_request("new_releases", limit=MAX_PAGE, status_messages={404: retired, 403: retired})
+		return self.run_request(
+			"new_releases", limit=limit, offset=offset, status_messages={404: retired, 403: retired}
+		)
 
 	def get_recently_played(self) -> Reply | str:
 		"""Fetch the user's recently played tracks."""
@@ -1429,9 +1431,9 @@ class SpotifyClient:
 			"user", user_id, status_messages={404: _("That Spotify user could not be found.")}
 		)
 
-	def get_saved_albums(self) -> list[Item] | str:
-		"""Fetch all saved albums from the user's library."""
-		return self._paginate("current_user_saved_albums")
+	def get_saved_albums(self, offset: int = 0, limit: int = MAX_PAGE) -> Reply | str:
+		"""Return a page of the saved albums."""
+		return self.run_request("current_user_saved_albums", limit=limit, offset=offset)
 
 	def _get_type_label(self, entity_type: str) -> str:
 		labels = {

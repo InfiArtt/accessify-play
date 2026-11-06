@@ -43,7 +43,7 @@ Beberapa aturan menjaga agar tombol tidak saling mengganggu:
 * Tombol untuk memindahkan dan menghapus trek di Pustaka hanya berlaku di daftar treknya, jadi boleh tombol apa saja, seperti `delete`.
 * Untuk berpindah ke jenis pencarian atau tab dengan angka, ketik hanya tombol yang ditahan bersama angka, seperti `ctrl` (untuk `Ctrl+1`, `Ctrl+2`, dan seterusnya) atau `alt+shift`.
 * Satu tombol hanya bisa dimiliki satu tindakan. Jika Anda memilih tombol yang sudah dimiliki tindakan lain, Anda diberi tahu tindakan mana.
-* Huruf bergaris bawah pada tombol (seperti `Alt+C` untuk Close) bukan pengaturan. Hindari memakainya untuk pintasan, karena pintasannya yang akan menang.
+* Huruf bergaris bawah pada tombol (seperti `Alt+C` untuk Close) bukan pengaturan. Jika Anda memberi pintasan huruf sebuah tombol, pintasannya yang menang di jendela itu dan tombol tersebut tidak lagi menampilkan huruf itu, sehingga NVDA tidak mengumumkan tombol yang tidak akan menekannya. Tombol yang melakukan hal yang sama dengan pintasan, seperti Play Selected untuk `Alt+P`, tetap memiliki hurufnya.
 
 **Reset to Defaults** mengembalikan semua pintasan, setelah bertanya kepada Anda.
 

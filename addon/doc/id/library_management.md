@@ -19,6 +19,8 @@ Pintasan ini berlaku di semua tab:
 
 Ini adalah tombol bawaan. Anda bisa mengubahnya, juga tombol di jendela lain: lihat [Mengubah perintah dan pintasan](customizing_commands.html).
 
+Daftar di setiap tab dimuat per halaman, sebanyak pengaturan Search Results Limit. Jika masih ada lagi, item terakhir adalah "Load More": tekan `Enter` padanya untuk menambahkan halaman berikutnya.
+
 ## Tab
 
 ### Manage Playlists
@@ -26,7 +28,7 @@ Ini adalah tombol bawaan. Anda bisa mengubahnya, juga tombol di jendela lain: li
 Pilih playlist di kotak **Playlist**; lagu-lagunya muncul di daftar di bawahnya. Setiap playlist ditandai "Owned by You" atau dengan nama pemiliknya.
 
 * `Enter` pada sebuah lagu memutar playlist mulai dari lagu itu.
-* **Play Playlist** memutar seluruh playlist.
+* **Play Playlist**, atau `Alt+P` di mana saja pada tab ini di luar daftar lagu, memutar seluruh playlist. Di sana, `Alt+Q` dan `Alt+L` memasukkan playlist ke antrean dan menyalin tautannya.
 * **Refresh Playlists** memuat ulang playlist Anda dan tetap berada di playlist dan lagu yang sedang Anda buka.
 * **Edit Playlist Details**: mengubah nama, deskripsi, dan apakah playlist publik atau kolaboratif.
 * **Delete Playlist** (milik Anda) atau **Unfollow Playlist** (milik orang lain), setelah bertanya kepada Anda.

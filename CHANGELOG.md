@@ -18,6 +18,11 @@ New in Accessify Play's settings (NVDA menu, Preferences, Settings, Accessify Pl
 - **New Window Shortcuts... button** in Accessify Play's settings: every shortcut inside the windows can be changed, such as `Alt+P` to play, the keys that switch search types and tabs, `Ctrl+N` for a new playlist, and the keys that move and remove tracks in the Library. Several keys per action are possible, or none. Keys that would get in the way of typing, or that another action already has, are refused with the reason. Menus show the keys you chose. They are in `nvda.ini` too; the user guide (Customizing commands and shortcuts) lists them.
 - **`Alt+W` shows a song's lyrics in every list of songs**: albums, playlists, the artist window and the Library, not only in Search.
 
+### 🎉 Long lists come a page at a time
+
+- **The Library's tabs** (saved tracks, albums, shows, episodes, audiobooks, new releases) load a page at a time with a "Load More" row, instead of fetching everything before showing anything. A large library opens much faster and sends far fewer requests.
+- **Search** uses the same lists: after Load More the cursor is on the first new result.
+
 ### 🎉 Browse Categories and Featured Playlists
 
 - **They load a page at a time with a "Load More" row**, like every other list, instead of loading more when you reach the end.
@@ -35,6 +40,8 @@ New in Accessify Play's settings (NVDA menu, Preferences, Settings, Accessify Pl
 - **A playlist whose tracks could not be loaded**, in the Library, left an empty list; so did the artist window's albums. The list now says what went wrong, and an artist without albums says so.
 - **Some list rows were always in English**: "by" in playlist rows in Search and the artist window, and in the queue window.
 - **Browse Categories and Featured Playlists loaded 50 items at a time** whatever the Search Results Limit said. They now follow it, like every other list.
+- **A button could announce a shortcut that did something else**: the Library's Play Playlist button said `Alt+P`, while `Alt+P` played the selected track. Now `Alt+P` on the playlists tab, outside the track list, plays the chosen playlist; and a button whose letter you give to another shortcut no longer shows that letter.
+- **Reloading a list while a page was still on its way** (searching again quickly, changing Top Items' choices) could leave the list without results. The late page is now dropped and the new one loads.
 - **Playing from a window said nothing when Spotify refused**: "Playing..." was spoken, and then nothing, when for instance no device was active or the account has no Premium. Albums, playlists, Search, the Library, episodes and chapters now say why it failed, as the command layer already did.
 - **Show Queue failed with an error while nothing was playing.**
 - **Add to Playlist in the Library offered other people's playlists**, which Spotify does not let you change. It now offers only your own.

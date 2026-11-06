@@ -42,7 +42,7 @@ A few rules keep the keys from getting in each other's way:
 * The keys for moving and removing tracks in the Library work only in its track list, so they may be any key, such as `delete`.
 * For going to a search type or tab by number, type only the keys to hold with the number, such as `ctrl` (for `Ctrl+1`, `Ctrl+2` and so on) or `alt+shift`.
 * A key can belong to only one action. If you choose a key another action already has, you are told which one.
-* The underlined letters of buttons (such as `Alt+C` for Close) are not settings. Avoid choosing them for a shortcut, as the shortcut would win.
+* The underlined letters of buttons (such as `Alt+C` for Close) are not settings. If you give a shortcut a button's letter, the shortcut wins in that window and the button no longer shows that letter, so NVDA does not announce a key that would not press it. A button that does the same as the shortcut, such as Play Selected for `Alt+P`, keeps its letter.
 
 **Reset to Defaults** puts every shortcut back, after asking you.
 

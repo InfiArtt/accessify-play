@@ -73,9 +73,9 @@ class PlaylistTracksDialog(AccessifyDialog):
 		main_sizer.Add(self.tracks_list, 1, wx.EXPAND | wx.ALL, 5)
 
 		buttons_sizer = wx.StdDialogButtonSizer()
-		play_button = wx.Button(panel, wx.ID_OK, label=_("&Play Selected"))
-		play_button.Bind(wx.EVT_BUTTON, self.on_play_selected)
-		buttons_sizer.AddButton(play_button)
+		self.play_button = wx.Button(panel, wx.ID_OK, label=_("&Play Selected"))
+		self.play_button.Bind(wx.EVT_BUTTON, self.on_play_selected)
+		buttons_sizer.AddButton(self.play_button)
 
 		close_button = wx.Button(panel, wx.ID_CANCEL, label=_("&Close"))
 		self.bind_close_button(close_button)
@@ -92,7 +92,8 @@ class PlaylistTracksDialog(AccessifyDialog):
 				"keyQueue": self.on_add_to_queue,
 				"keyCopyLink": self.on_copy_link,
 				"keyLyrics": lambda _evt: self._show_lyrics_of(self._get_selected_track()),
-			}
+			},
+			buttons={"keyPlay": [self.play_button]},
 		)
 
 	def _fetch_page(self, offset: int, limit: int) -> Item | str:

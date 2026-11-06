@@ -27,7 +27,7 @@ Aplikasi yang Anda buat tunduk pada aturan Spotify sendiri untuk aplikasi develo
 
 ## Pengaturan
 
-* **Search Results Limit (1 to 50)**: berapa hasil yang ditampilkan Pencarian sekaligus, bawaannya 20. Daftar episode, bab, dan lagu playlist dimuat per halaman dengan ukuran yang sama, dengan item "Load More" di akhir.
+* **Search Results Limit (1 to 50)**: berapa hasil yang ditampilkan Pencarian sekaligus, bawaannya 20. Setiap daftar panjang lainnya (lagu playlist, episode, bab, tab Pustaka, Browse Categories, dan Featured Playlists) dimuat per halaman dengan ukuran yang sama, dengan item "Load More" di akhir.
 * **Seek Duration (seconds, 1 to 60)**: seberapa jauh Seek Forward dan Seek Backward melompat, bawaannya 15 detik.
 * **Volume Step (1 to 100)**: seberapa besar Volume Up dan Volume Down mengubah volume, bawaannya 5%.
 * **Keep Alive Interval (seconds, 0 = Off, Min = 5)**: seberapa sering Accessify Play menghubungi Spotify di latar belakang, supaya perintah pertama setelah lama diam tetap cepat, paling lama 3600 detik. Bawaannya mati (0), karena setiap pemeriksaan ikut menghabiskan batas permintaan yang dipakai bersama oleh semua pengguna Accessify Play; nyalakan hanya jika perintah pertama setelah jeda terasa lambat. Nilai 1 sampai 4 dinaikkan menjadi 5.

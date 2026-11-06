@@ -48,9 +48,9 @@ class QueueListDialog(AccessifyDialog):
 		main_sizer.Add(self.noticeLabel, flag=wx.LEFT | wx.RIGHT | wx.BOTTOM, border=5)
 
 		buttons_sizer = wx.StdDialogButtonSizer()
-		refresh_button = wx.Button(self, label=_("&Refresh"))
-		refresh_button.Bind(wx.EVT_BUTTON, lambda _evt: self.refresh_queue_data())
-		buttons_sizer.AddButton(refresh_button)
+		self.refresh_button = wx.Button(self, label=_("&Refresh"))
+		self.refresh_button.Bind(wx.EVT_BUTTON, lambda _evt: self.refresh_queue_data())
+		buttons_sizer.AddButton(self.refresh_button)
 		cancel_button = wx.Button(self, wx.ID_CANCEL, label=_("&Close"))
 		self.bind_close_button(cancel_button)
 		buttons_sizer.AddButton(cancel_button)
@@ -67,7 +67,8 @@ class QueueListDialog(AccessifyDialog):
 				"keyPlay": self.play_selected_queue_item,
 				"keyCopyLink": self.copy_selected_queue_link,
 				"keyRefresh": lambda _evt: self.refresh_queue_data(),
-			}
+			},
+			buttons={"keyRefresh": [self.refresh_button]},
 		)
 
 	def update_queue_list(self, queue_data: list[Item] | str) -> None:

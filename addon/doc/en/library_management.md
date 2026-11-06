@@ -19,6 +19,8 @@ These work in every tab:
 
 These are the default keys. You can change them, and those of every other window: see [Customizing commands and shortcuts](customizing_commands.html).
 
+The lists in the tabs come a page at a time, as many items as the Search Results Limit setting says. If there are more, the last item is "Load More": press `Enter` on it to add the next page.
+
 ## Tabs
 
 ### Manage Playlists
@@ -26,7 +28,7 @@ These are the default keys. You can change them, and those of every other window
 Choose a playlist in the **Playlist** box; its tracks appear in the list below. Each playlist is marked "Owned by You" or with the name of its owner.
 
 * `Enter` on a track plays the playlist from that track.
-* **Play Playlist** plays the whole playlist.
+* **Play Playlist**, or `Alt+P` anywhere on this tab outside the track list, plays the whole playlist. There, `Alt+Q` and `Alt+L` queue the playlist and copy its link.
 * **Refresh Playlists** reloads your playlists and stays on the playlist and track you were on.
 * **Edit Playlist Details**: change the name, description, and whether it is public or collaborative.
 * **Delete Playlist** (your own) or **Unfollow Playlist** (someone else's), after asking you.

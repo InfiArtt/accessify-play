@@ -222,11 +222,13 @@ def test_lyrics_shortcut_in_every_track_window(
 			"search": lambda: SearchDialog(None, client),
 		}[window_kind]()
 		monkeypatch.setattr(window, "_get_selected_item", lambda: SONG, raising=False)
-		monkeypatch.setattr(window, "_get_item_at_index", lambda _index: SONG, raising=False)
+		if window_kind == "search":
+			monkeypatch.setattr(window.results, "selected", lambda: SONG)
 	accelerate(window, ALT, "W")
 	assert opened == ["t1"]
 	monkeypatch.setattr(window, "_get_selected_item", lambda: {"type": "album"}, raising=False)
-	monkeypatch.setattr(window, "_get_item_at_index", lambda _index: None, raising=False)
+	if window_kind == "search":
+		monkeypatch.setattr(window.results, "selected", lambda: None)
 	monkeypatch.setattr(window, "_get_selected_track", lambda: None, raising=False)
 	accelerate(window, ALT, "W")
 	assert spoken[-1] == "Lyrics are only available for songs."
@@ -399,3 +401,47 @@ def test_the_settings_panel_saves_the_shortcuts(monkeypatch: pytest.MonkeyPatch)
 	monkeypatch.setattr(WindowShortcutsDialog, "ShowModal", lambda _self: wx.ID_CANCEL)
 	panel.windowShortcutsButton.press()
 	assert panel._shortcuts["keyPlay"] == "f9"
+
+
+# --- Shortcuts and the underlined letters of buttons ------------------------------------------
+
+
+@pytest.mark.parametrize(
+	("label", "key", "plain"),
+	[
+		("&Close", "Alt+C", "Close"),
+		("Fea&tured Playlists", "Alt+T", "Featured Playlists"),
+		("Rock && &Roll", "Alt+R", "Rock && Roll"),
+		("Rock && Roll", None, "Rock && Roll"),
+		("Close", None, "Close"),
+	],
+)
+def test_underlined_letters(label: str, key: str | None, plain: str) -> None:
+	"""A label's underlined letter gives its Alt key; a written & (&&) is not one."""
+	found = shortcuts.letter_key(label)
+	assert (found.text if found else None) == key
+	assert shortcuts.without_letter(label) == plain
+
+
+def test_a_shortcut_takes_a_buttons_letter(client: SpotifyClient, ready: SpotifyServer) -> None:
+	"""A button whose letter is another action's shortcut loses the letter; one doing the same keeps it."""
+	window = album(client, ready)
+	assert window.play_button.GetLabel() == "&Play Selected"
+	config.conf["spotify"]["keyLyrics"] = "alt+c"
+	config.conf["spotify"]["keyPlay"] = "f5"
+	config.conf["spotify"]["keyQueue"] = "alt+p"
+	window = album(client, ready)
+	labels = [c.GetLabel() for c in window._labelled_controls(window) if isinstance(c, wx.Button)]
+	assert labels == ["Play Selected", "Close"]
+
+
+def test_the_library_keeps_its_buttons_letters_in_step(client: SpotifyClient, ready: SpotifyServer) -> None:
+	"""A label that changes later (Delete or Unfollow Playlist) also gives up a letter a shortcut has."""
+	config.conf["spotify"]["keyNewPlaylist"] = "alt+u"
+	ready.routes["GET", "me/playlists"] = {"items": [{"id": "p2", "name": "Theirs", "owner": {"id": "bob"}}]}
+	ready.routes["GET", "playlists/p2/items"] = {"items": []}
+	client.current_user_id = "me"
+	window = ManagementDialog(None, client)
+	assert window.delete_unfollow_button.GetLabel() == "Unfollow Playlist"
+	assert window.play_playlist_button.GetLabel() == "&Play Playlist"
+	assert all(button.GetLabel().startswith("&R") for button in window._refresh_buttons)

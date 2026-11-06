@@ -118,7 +118,7 @@ def test_results_after_closing_are_dropped(
 		return page("track", [TRACK])
 
 	search_for(window, ready, "x", close_first)
-	assert window.resultsList.GetStrings() == []
+	assert window.resultsList.GetStrings() == ["Loading..."]
 	assert spoken[-1] == "Searching..."
 
 
@@ -146,13 +146,15 @@ def with_results(client: SpotifyClient, server: SpotifyServer, kind: str, *items
 
 
 def test_search_pages_through_results(client: SpotifyClient, ready: SpotifyServer, spoken: list[str]) -> None:
-	"""Results come a page at a time; Load More fetches the next and moves to its first row."""
+	"""Results come a page at a time, and the focus goes to them; Load More moves to the first new row."""
 	window = SearchDialog(None, client)
 	assert window.queryText.HasFocus()
 	assert window.user_playlists == [OWN]
 	search_for(window, ready, "song", page("track", [TRACK, None], more=True))
 	assert spoken[-1] == "Searching..."
 	assert window.resultsList.GetStrings() == ["Song - A", "--- Load More ---"]
+	assert window.resultsList.HasFocus()
+	assert window.resultsList.GetSelection() == 0
 	assert ready.requests[-1][2] == {"q": "song", "type": "track", "limit": 20, "offset": 0, "market": None}
 	ready.routes["GET", "search"] = page("track", [dict(TRACK, name="Two")], offset=2)
 	window.resultsList.SetSelection(1)
@@ -160,7 +162,7 @@ def test_search_pages_through_results(client: SpotifyClient, ready: SpotifyServe
 	assert ready.requests[-1][2]["offset"] == 2
 	assert window.resultsList.GetStrings() == ["Song - A", "Two - A"]
 	assert window.resultsList.GetSelection() == 1
-	window.perform_search()
+	window.results.load_more()
 	assert ready.paths().count("search") == 2
 
 
@@ -177,14 +179,19 @@ def test_nothing_found_or_a_failure(client: SpotifyClient, ready: SpotifyServer,
 
 
 def test_a_late_answer_is_dropped(client: SpotifyClient, ready: SpotifyServer) -> None:
-	"""Results of a search that was replaced by a newer one are thrown away."""
+	"""Results of a search replaced by a newer one (a quick type switch) are thrown away."""
 	window = SearchDialog(None, client)
-	search_for(window, ready, "new", page("track", [TRACK]))
-	ready.routes["GET", "search"] = page("track", [dict(TRACK, name="Old")])
-	window._search_thread(0, generation=0)
+	answers = [page("track", [dict(TRACK, name="Old")]), page("track", [TRACK])]
+
+	def search_again_first(_params: object, _payload: object) -> dict:
+		if len(answers) == 2:
+			old = answers.pop(0)
+			window.on_search()  # the user searches again while the first answer is on its way
+			return old
+		return answers.pop(0)
+
+	search_for(window, ready, "new", search_again_first)
 	assert window.resultsList.GetStrings() == ["Song - A"]
-	window.Destroy()
-	window._update_results_list(0)
 
 
 def test_switching_type(client: SpotifyClient, ready: SpotifyServer, spoken: list[str]) -> None:

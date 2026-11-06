@@ -18,6 +18,7 @@ from ..labels import search_type_labels
 from ..language import init_translation
 from ..settings_spec import conf_get
 from ..ui.base_dialog import AccessifyDialog
+from ..ui.paged_list import PagedList
 from ..utils import copy_link, playlist_with_owner, safe_text
 from .album import AlbumTracksDialog
 from .artist import ArtistDiscographyDialog
@@ -28,7 +29,7 @@ from .podcasts import PodcastEpisodesDialog
 
 if TYPE_CHECKING:
 	from ..spotify_client import SpotifyClient
-	from ..spotify_types import Item
+	from ..spotify_types import Item, Reply
 
 init_translation()
 
@@ -43,17 +44,9 @@ class SearchDialog(AccessifyDialog):
 		super().__init__(parent, title=_("Search Spotify"))
 		self.client = client
 
-		# --- State Management ---
-		self._raw_results = []
-		self._rendered_items = []
-
+		# What the results are of; a search sets both before loading its first page.
 		self.current_query = ""
 		self.current_type = conf_get("searchType")
-		self.next_offset = 0
-		self.can_load_more = False
-		# Bumped on every new search, so results of an older search that
-		# arrive late (after a quick type switch) are thrown away.
-		self._search_generation = 0
 
 		self.user_playlists = None
 		self._current_user_id = None
@@ -107,6 +100,14 @@ class SearchDialog(AccessifyDialog):
 		results_label = wx.StaticText(self, label=_("Results:"))
 		main_sizer.Add(results_label, flag=wx.LEFT | wx.TOP, border=5)
 		self.resultsList = wx.ListBox(self)
+		self.results = PagedList(
+			self.resultsList,
+			self._fetch_results,
+			lambda item, _number: self._format_item_for_display(item),
+			empty=_("No results found."),
+		)
+		# The focus is in the search field while the results come in.
+		self.results.focus_results = True
 		self._bind_list_activation(self.resultsList, self._on_item_activated)
 		self.resultsList.Bind(wx.EVT_CONTEXT_MENU, self.on_results_context_menu)
 		main_sizer.Add(self.resultsList, proportion=1, flag=wx.EXPAND | wx.ALL, border=5)
@@ -176,99 +177,29 @@ class SearchDialog(AccessifyDialog):
 
 		self.current_query = query
 		self.current_type = self.search_types[self.typeBox.GetValue()]
-		self.next_offset = 0
-		self.can_load_more = False
-		self._search_generation += 1
-		self._raw_results.clear()
-		self._rendered_items.clear()
-		self.resultsList.Clear()
-
 		ui.message(announce or _("Searching..."))
-		self.perform_search()
+		self.results.reload()
+
+	def _fetch_results(self, offset: int, _limit: int) -> Reply | str:
+		"""Return a page of results of the current search (the client applies the page size)."""
+		result = self.client.search(self.current_query, self.current_type, offset=offset)
+		return result if isinstance(result, str) else (result or {}).get(self.current_type + "s")
 
 	def _on_item_activated(self) -> None:
-		"""Handle Enter key press or double-click on a list item."""
-		selection = self.resultsList.GetSelection()
+		"""Do what Enter or a double click does: open or play the result, or load more."""
 
-		item = self._get_item_at_index(selection)
-		if not item:
-			if self.can_load_more and selection == len(self._rendered_items):
-				self.perform_search()
-			return
+		def activate() -> None:
+			item = self.results.selected()
+			if item:
+				self._activate_item(item)
 
-		self._activate_item(item)
+		self.results.activate(activate)
 
 	def on_play(self, _evt: wx.Event | None = None) -> None:
 		"""Play the selected result (the Play shortcut or menu item)."""
-		item = self._get_item_at_index(self.resultsList.GetSelection())
+		item = self.results.selected()
 		if item and item.get("uri"):
 			self._play_uri(item.get("uri"))
-
-	def perform_search(self) -> None:
-		"""Start the background thread to fetch search results."""
-		if not self.can_load_more and self.next_offset > 0:
-			return
-
-		index_to_focus = len(self._rendered_items)
-		generation = self._search_generation
-		thread_manager.submit_task(
-			self._search_thread, index_to_focus, generation, name="DialogTask", daemon=True
-		)
-
-	def _search_thread(self, index_to_focus: int, generation: int) -> None:
-		"""Fetch data from the Spotify client in a background thread."""
-		search_type = self.current_type
-		result_data = self.client.search(self.current_query, search_type, offset=self.next_offset)
-
-		# A newer search started while this one was waiting for Spotify.
-		if generation != self._search_generation:
-			return
-
-		if isinstance(result_data, str):
-			wx.CallAfter(ui.message, result_data)
-			return
-
-		key = search_type + "s"
-		search_results = result_data.get(key, {})
-		new_items = search_results.get("items") or []
-
-		self._raw_results.extend(new_items)
-
-		if search_results.get("next"):
-			self.can_load_more = True
-			# The page size Spotify actually used, which an own Client ID caps.
-			limit = search_results.get("limit") or len(new_items)
-			self.next_offset = search_results.get("offset", 0) + limit
-		else:
-			self.can_load_more = False
-
-		wx.CallAfter(self._update_results_list, index_to_focus)
-
-	def _update_results_list(self, focus_index: int) -> None:
-		"""Show the results gathered so far, with a Load More row when there are more."""
-		if not self.resultsList:
-			return
-		self.resultsList.Clear()
-		self._rendered_items.clear()
-
-		for item in self._raw_results:
-			if item:
-				self._rendered_items.append(item)
-				display_string = self._format_item_for_display(item)
-				self.resultsList.Append(display_string)
-
-		if not self._rendered_items:
-			self.resultsList.Append(_("No results found."))
-			# The focus stays where it is, so say it as well.
-			ui.message(_("No results found."))
-			return
-
-		if self.can_load_more:
-			self.resultsList.Append("--- {} ---".format(_("Load More")))
-
-		self.resultsList.SetSelection(focus_index)
-		self.resultsList.EnsureVisible(focus_index)
-		self.resultsList.SetFocus()
 
 	def _format_item_for_display(self, item: Item) -> str:
 		"""Create a readable string for an item to be shown in the ListBox."""
@@ -452,19 +383,19 @@ class SearchDialog(AccessifyDialog):
 
 	def on_save_album(self, _evt: wx.Event | None = None) -> None:
 		"""Save the selected album to the library."""
-		item = self._get_item_at_index(self.resultsList.GetSelection())
+		item = self.results.selected()
 		if item:
 			self._save_album_to_library(item)
 
 	def on_save_show(self, _evt: wx.Event | None = None) -> None:
 		"""Save the selected show, or remove it when saved."""
-		item = self._get_item_at_index(self.resultsList.GetSelection())
+		item = self.results.selected()
 		if item:
 			self._toggle_saved("show", item)
 
 	def on_add_to_queue(self, _evt: wx.Event | None = None) -> None:
 		"""Add the selected result to the queue."""
-		item = self._get_item_at_index(self.resultsList.GetSelection())
+		item = self.results.selected()
 		if not item:
 			ui.message(_("No item selected."))
 			return
@@ -482,7 +413,7 @@ class SearchDialog(AccessifyDialog):
 
 	def on_follow_artist(self, _evt: wx.Event | None = None) -> None:
 		"""Follow or unfollow the selected artist."""
-		item = self._get_item_at_index(self.resultsList.GetSelection())
+		item = self.results.selected()
 		if not item or item.get("type") != "artist":
 			return
 
@@ -502,17 +433,17 @@ class SearchDialog(AccessifyDialog):
 
 	def on_view_discography(self, _evt: wx.Event | None = None) -> None:
 		"""Open the selected artist's window."""
-		item = self._get_item_at_index(self.resultsList.GetSelection())
+		item = self.results.selected()
 		if item and item.get("type") == "artist":
 			self._open_artist_discography(item)
 
 	def on_show_lyrics(self, _evt: wx.Event | None = None) -> None:
 		"""Show the lyrics of the selected song."""
-		self._show_lyrics_of(self._get_item_at_index(self.resultsList.GetSelection()))
+		self._show_lyrics_of(self.results.selected())
 
 	def copy_selected_link(self, _evt: wx.Event | None = None) -> None:
 		"""Copy the selected result's Spotify link."""
-		item = self._get_item_at_index(self.resultsList.GetSelection())
+		item = self.results.selected()
 		if item:
 			copy_link((item.get("external_urls") or {}).get("spotify"))
 
@@ -536,7 +467,5 @@ class SearchDialog(AccessifyDialog):
 		thread_manager.submit_task(_thread_action, name="DialogTask", daemon=True)
 
 	def _get_item_at_index(self, index: int) -> Item | None:
-		"""Return the result shown at index, or None for an empty or stale row."""
-		if index is None or index == wx.NOT_FOUND or index >= len(self._rendered_items):
-			return None
-		return self._rendered_items[index]
+		"""Return the result shown at index; None for the Load More row or a message row."""
+		return self.results.items[index] if 0 <= index < len(self.results.items) else None

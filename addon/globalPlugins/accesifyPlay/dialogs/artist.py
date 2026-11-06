@@ -130,9 +130,9 @@ class ArtistDiscographyDialog(AccessifyDialog):
 			list_control.Bind(wx.EVT_CONTEXT_MENU, self.on_context_menu)
 
 		buttons_sizer = wx.StdDialogButtonSizer()
-		play_button = wx.Button(panel, wx.ID_OK, label=_("&Play Selected"))
-		play_button.Bind(wx.EVT_BUTTON, self.on_play_selected)
-		buttons_sizer.AddButton(play_button)
+		self.play_button = wx.Button(panel, wx.ID_OK, label=_("&Play Selected"))
+		self.play_button.Bind(wx.EVT_BUTTON, self.on_play_selected)
+		buttons_sizer.AddButton(self.play_button)
 
 		close_button = wx.Button(panel, wx.ID_CANCEL, label=_("&Close"))
 		self.bind_close_button(close_button)
@@ -154,6 +154,7 @@ class ArtistDiscographyDialog(AccessifyDialog):
 				"keyPreviousTab": lambda _evt: self.show_page(self._current_position() - 1),
 			},
 			numbered=[lambda p=position: self.show_page(p) for position in range(len(self._pages))],
+			buttons={"keyPlay": [self.play_button]},
 		)
 
 	def _current_position(self) -> int:

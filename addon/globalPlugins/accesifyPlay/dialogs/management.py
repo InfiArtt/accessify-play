@@ -21,6 +21,7 @@ from ..labels import time_range_labels
 from ..language import init_translation
 from ..settings_spec import TIME_RANGES, conf_get
 from ..ui.base_dialog import AccessifyDialog
+from ..ui.paged_list import PagedList
 from ..utils import copy_link, duplicate_occurrences, playlist_rows, positions_after_move, safe_text
 from .album import AlbumTracksDialog
 from .artist import ArtistDiscographyDialog
@@ -49,12 +50,13 @@ class _ListTab(NamedTuple):
 
 	key: str
 	title: str
-	loader: Callable
-	formatter: Callable
+	#: fetch(offset, limit) returns a page of the list, or the message to say.
+	fetch: Callable[[int, int], Reply | str]
+	formatter: Callable[[Item], str]
 	#: Picks the item out of what Spotify lists (a saved track wraps its track).
-	item_parser: Callable = lambda item: item
+	item_parser: Callable[[Item], Item] = lambda item: item
 	#: What Enter does; plays the item when None.
-	activate: Callable | None = None
+	activate: Callable[[], object] | None = None
 
 
 class ManagementDialog(AccessifyDialog):
@@ -71,6 +73,8 @@ class ManagementDialog(AccessifyDialog):
 		self._playlistDetailsDialog = None
 		self.is_current_playlist_owned = False
 		self.tabs_config = {}
+		#: Every tab's Refresh button: they do what the Refresh shortcut does.
+		self._refresh_buttons: list[wx.Button] = []
 		#: notebook page -> (loader, list to show "Loading..." in); removed once run.
 		self._page_loaders = {}
 
@@ -101,33 +105,29 @@ class ManagementDialog(AccessifyDialog):
 		control.Append(_("Loading..."))
 		loader()
 
-	# The selected item in whichever tab's list has focus.
 	def _get_selected_item(self) -> Item | None:
-		focused_control = self.FindFocus()
-		if focused_control == self.playlist_tracks_list:
-			selection = self.playlist_tracks_list.GetSelection()
-			if selection != wx.NOT_FOUND and selection < len(self.current_playlist_tracks):
-				return self.current_playlist_tracks[selection]
-			return None
+		"""Return the selected item in whichever tab's list has the focus.
 
+		On the playlists tab, outside its track list, that is the chosen playlist,
+		so Play, Add to Queue and Copy Link act on it.
+		"""
+		focused = self.FindFocus()
+		if focused == self.playlist_tracks_list:
+			return self._selected_in(self.playlist_tracks_list, self.current_playlist_tracks)
+		if focused is not None and focused.GetParent() is self.playlist_choices.GetParent():
+			return self._selected_in(self.playlist_choices, self.playlists)
 		for tab_cfg in self.tabs_config.values():
-			if tab_cfg["control"] == focused_control:
-				list_control = tab_cfg["control"]
-				data_source_attr = tab_cfg["data_attr"]
-				item_parser = tab_cfg.get("item_parser", lambda item: item)
-
-				selection = list_control.GetSelection()
-				if selection == wx.NOT_FOUND:
-					return None
-
-				data_source = getattr(self, data_source_attr, [])
-				if not data_source or selection >= len(data_source):
-					return None
-
-				return item_parser(data_source[selection])
-
+			if tab_cfg["control"] == focused:
+				item = tab_cfg["paged"].selected()
+				return None if item is None else tab_cfg["item_parser"](item)
 		ui.message(_("Please select an item from the active tab first."))
 		return None
+
+	@staticmethod
+	def _selected_in(control: wx.ListBox | wx.ComboBox, items: list[Item]) -> Item | None:
+		"""Return the item on control's selected row; None without a selection, or on a row past the items."""
+		selection = control.GetSelection()
+		return items[selection] if 0 <= selection < len(items) else None
 
 	def _handle_play(self, _evt: wx.Event | None = None) -> None:
 		item = self._get_selected_item()
@@ -185,14 +185,14 @@ class ManagementDialog(AccessifyDialog):
 			_ListTab(
 				"saved_tracks",
 				_("Saved Tracks"),
-				self.load_saved_tracks,
+				self.client.get_saved_tracks,
 				_name_and_artists,
 				item_parser=lambda item: item["track"],
 			),
 			_ListTab(
 				"saved_albums",
 				_("Saved Albums"),
-				self.load_saved_albums,
+				self.client.get_saved_albums,
 				_name_and_artists,
 				item_parser=lambda item: item["album"],
 				activate=self.on_view_album_tracks,
@@ -200,7 +200,7 @@ class ManagementDialog(AccessifyDialog):
 			_ListTab(
 				"followed_artists",
 				_("Followed Artists"),
-				self.load_followed_artists,
+				self._followed_artists_page,
 				lambda a: a["name"],
 				activate=self.on_view_discography,
 			),
@@ -211,7 +211,7 @@ class ManagementDialog(AccessifyDialog):
 			_ListTab(
 				"saved_shows",
 				_("Saved Shows"),
-				self.load_saved_shows,
+				self.client.get_saved_shows,
 				lambda s: f"{s['name']} - {s['publisher']}",
 				item_parser=lambda item: item["show"],
 				activate=self.on_view_episodes,
@@ -219,23 +219,23 @@ class ManagementDialog(AccessifyDialog):
 			_ListTab(
 				"saved_episodes",
 				_("Saved Episodes"),
-				self.load_saved_episodes,
+				self.client.get_saved_episodes,
 				self._format_saved_episode,
 				item_parser=lambda item: item["episode"],
 			),
 			_ListTab(
 				"saved_audiobooks",
 				_("Saved Audiobooks"),
-				self.load_saved_audiobooks,
+				self.client.get_saved_audiobooks,
 				self._format_saved_audiobook,
 				item_parser=lambda item: item.get("audiobook", item),
 				activate=lambda: self.on_view_chapters(None),
 			),
-			_ListTab("new_releases", _("New Releases"), self.load_new_releases, _name_and_artists),
+			_ListTab("new_releases", _("New Releases"), self._new_releases_page, _name_and_artists),
 			_ListTab(
 				"recently_played",
 				_("Recently Played"),
-				self.load_recently_played,
+				self._recently_played_page,
 				_name_and_artists,
 				item_parser=lambda item: item["track"],
 			),
@@ -261,110 +261,55 @@ class ManagementDialog(AccessifyDialog):
 
 		list_control = wx.ListBox(panel)
 		sizer.Add(list_control, 1, wx.EXPAND | wx.ALL, 5)
-
+		paged = PagedList(
+			list_control,
+			tab.fetch,
+			lambda item, _number: tab.formatter(tab.item_parser(item)),
+			empty=_("No items found."),
+		)
 		self.tabs_config[key] = {
 			"control": list_control,
-			"data_attr": key,
-			"loader": tab.loader,
-			"formatter": tab.formatter,
+			"paged": paged,
 			"item_parser": tab.item_parser,
+			"loader": paged.reload,
 		}
 
-		self._bind_list_activation(list_control, tab.activate or self._handle_play)
+		self._bind_list_activation(list_control, lambda: paged.activate(tab.activate or self._handle_play))
 		list_control.Bind(wx.EVT_CONTEXT_MENU, self._on_list_context_menu)
 
 		refresh_button = wx.Button(panel, label=_("&Refresh"))
-		refresh_button.Bind(wx.EVT_BUTTON, lambda _evt: tab.loader())
+		refresh_button.Bind(wx.EVT_BUTTON, lambda _evt: paged.reload())
 		sizer.Add(refresh_button, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
+		self._refresh_buttons.append(refresh_button)
 
-		self._register_page(panel, tab.loader, list_control)
+		self._register_page(panel, paged.reload, list_control)
 
-	def _populate_generic_list(self, key: str, data: list[Item] | str) -> None:
-		if not self:
-			return  # closed while this tab was loading
-		tab_cfg = self.tabs_config[key]
-		tab_cfg["control"].Clear()
-		if isinstance(data, str):
-			# A message rather than data, e.g. an endpoint Spotify has retired.
-			# Show it in the list, where the user will look for the items.
-			setattr(self, tab_cfg["data_attr"], [])
-			tab_cfg["control"].Append(data)
-			return
+	def _reload(self, key: str) -> None:
+		"""Load a tab's list again from the first page."""
+		self.tabs_config[key]["paged"].reload()
 
-		setattr(self, tab_cfg["data_attr"], data)
+	# --- Pages of the lists that Spotify does not page by offset ---
 
-		if not data:
-			tab_cfg["control"].Append(_("No items found."))
-			return
+	def _followed_artists_page(self, _offset: int, _limit: int) -> Reply | str:
+		"""Return every followed artist as one page; Spotify pages them by a cursor, not an offset."""
+		artists = self.client.get_followed_artists()
+		return artists if isinstance(artists, str) else {"items": artists}
 
-		for item in data:
-			parsed_item = tab_cfg["item_parser"](item)
-			display_string = tab_cfg["formatter"](parsed_item)
-			tab_cfg["control"].Append(display_string)
+	def _recently_played_page(self, _offset: int, _limit: int) -> Reply | str:
+		"""Return the recently played tracks as one page."""
+		played = self.client.get_recently_played()
+		return played if isinstance(played, str) else {"items": (played or {}).get("items") or []}
 
-	def _load_list(
-		self,
-		key: str,
-		fetch: Callable[[], Reply | str],
-		unwrap: Callable[[Item], list[Item]] | None = None,
-	) -> None:
-		"""Fetch a tab's list in the background and show it.
+	def _new_releases_page(self, offset: int, limit: int) -> Reply | str:
+		"""Return a page of new releases, which Spotify wraps in {"albums": ...}."""
+		releases = self.client.get_new_releases(offset, limit)
+		return releases if isinstance(releases, str) else (releases or {}).get("albums")
 
-		unwrap picks the list out of an answer that wraps it in a page.
-		"""
-
-		def prepared(data: Reply | str) -> list[Item] | str:
-			return unwrap(data) if unwrap and isinstance(data, dict) else data
-
-		def _load() -> None:
-			data = prepared(fetch())
-			if isinstance(data, str):
-				wx.CallAfter(ui.message, data)
-			wx.CallAfter(self._populate_generic_list, key, data)
-
-		thread_manager.submit_task(_load, name=f"Load_{key}", daemon=True)
-
-	# --- Tab loaders ---
-
-	def load_saved_tracks(self) -> None:
-		"""Fetch the saved tracks and show them."""
-		self._load_list("saved_tracks", self.client.get_saved_tracks)
-
-	def load_saved_albums(self) -> None:
-		"""Fetch the saved albums and show them."""
-		self._load_list("saved_albums", self.client.get_saved_albums)
-
-	def load_followed_artists(self) -> None:
-		"""Fetch the followed artists and show them."""
-		self._load_list("followed_artists", self.client.get_followed_artists)
-
-	def load_saved_shows(self) -> None:
-		"""Fetch the saved shows and show them."""
-		self._load_list("saved_shows", self.client.get_saved_shows)
-
-	def load_saved_episodes(self) -> None:
-		"""Fetch the saved episodes and show them."""
-		self._load_list("saved_episodes", self.client.get_saved_episodes)
-
-	def load_saved_audiobooks(self) -> None:
-		"""Fetch the saved audiobooks and show them."""
-		self._load_list("saved_audiobooks", self.client.get_saved_audiobooks)
-
-	def load_new_releases(self) -> None:
-		"""Fetch the new releases and show them."""
-		self._load_list(
-			"new_releases",
-			self.client.get_new_releases,
-			unwrap=lambda page: (page.get("albums") or {}).get("items") or [],
-		)
-
-	def load_recently_played(self) -> None:
-		"""Fetch the recently played tracks and show them."""
-		self._load_list(
-			"recently_played",
-			self.client.get_recently_played,
-			unwrap=lambda page: page.get("items") or [],
-		)
+	def _top_items_page(self, _offset: int, _limit: int) -> Reply | str:
+		"""Return the top tracks or artists chosen when the tab was last loaded, as one page."""
+		item_type, time_range = self._top_items_choice
+		top = self.client.get_top_items(item_type=item_type, time_range=time_range)
+		return top if isinstance(top, str) else {"items": (top or {}).get("items") or []}
 
 	def _format_saved_episode(self, episode: Item) -> str:
 		name = safe_text(episode.get("name"), _("Unknown Episode"))
@@ -423,6 +368,7 @@ class ManagementDialog(AccessifyDialog):
 		refresh_button = wx.Button(panel, label=_("&Refresh Playlists"))
 		refresh_button.Bind(wx.EVT_BUTTON, self.on_refresh_playlists)
 		buttons_sizer.Add(refresh_button, 0, wx.ALL, 5)
+		self._refresh_buttons.append(refresh_button)
 
 		self.edit_playlist_button = wx.Button(panel, label=_("&Edit Playlist Details"))
 		self.edit_playlist_button.Bind(wx.EVT_BUTTON, self.on_update_playlist)
@@ -655,9 +601,9 @@ class ManagementDialog(AccessifyDialog):
 		self.remove_duplicates_button.Enable(is_owned)
 		self.clear_playlist_button.Enable(is_owned)
 		if is_owned:
-			self.delete_unfollow_button.SetLabel(_("&Delete Playlist"))
+			self._set_button_label(self.delete_unfollow_button, _("&Delete Playlist"))
 		else:
-			self.delete_unfollow_button.SetLabel(_("&Unfollow Playlist"))
+			self._set_button_label(self.delete_unfollow_button, _("&Unfollow Playlist"))
 			self.delete_unfollow_button.Enable(self.playlist_choices.GetSelection() != wx.NOT_FOUND)
 
 	def on_delete_or_unfollow_playlist(self, evt: wx.Event) -> None:
@@ -968,8 +914,9 @@ class ManagementDialog(AccessifyDialog):
 			_("Time Range:"), wx.ComboBox, choices=list(self.time_range_choices.keys()), style=wx.CB_READONLY
 		)
 		self.time_range_box.SetSelection(TIME_RANGES.index(conf_get("topItemsTimeRange")))
-		self._top_items_request = 0
 		self._top_items_timer = None
+		#: (type, time range) of the top items being shown, read when the tab loads.
+		self._top_items_choice = ("tracks", conf_get("topItemsTimeRange"))
 		self.top_item_type_box.Bind(wx.EVT_COMBOBOX, self._on_top_items_choice)
 		self.time_range_box.Bind(wx.EVT_COMBOBOX, self._on_top_items_choice)
 
@@ -978,24 +925,31 @@ class ManagementDialog(AccessifyDialog):
 		list_control = wx.ListBox(panel)
 		sizer.Add(list_control, 1, wx.EXPAND | wx.ALL, 5)
 
-		self.tabs_config["top_items"] = {
-			"control": list_control,
-			"data_attr": "top_items",
-			"loader": self.load_top_items,
-			"formatter": lambda item: (
+		paged = PagedList(
+			list_control,
+			self._top_items_page,
+			lambda item, _number: (
 				_name_and_artists(item)
 				if item.get("type") == "track"
 				else safe_text(item.get("name"), _("Unknown"))
 			),
+			empty=_("No items found."),
+		)
+		self.tabs_config["top_items"] = {
+			"control": list_control,
+			"paged": paged,
 			"item_parser": lambda item: item,
+			# Reads the Show and Time Range choices first.
+			"loader": self.load_top_items,
 		}
 
-		self._bind_list_activation(list_control, self._handle_play)
+		self._bind_list_activation(list_control, lambda: paged.activate(self._handle_play))
 		list_control.Bind(wx.EVT_CONTEXT_MENU, self._on_list_context_menu)
 
 		refresh_button = wx.Button(panel, label=_("&Refresh"))
 		refresh_button.Bind(wx.EVT_BUTTON, self.load_top_items)
 		sizer.Add(refresh_button, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
+		self._refresh_buttons.append(refresh_button)
 
 		self._register_page(panel, self.load_top_items, list_control)
 
@@ -1007,36 +961,16 @@ class ManagementDialog(AccessifyDialog):
 		self._top_items_timer = wx.CallLater(conf_get("listLoadDelayMs"), self.load_top_items)
 
 	def load_top_items(self, _evt: wx.Event | None = None) -> None:
-		"""Fetch the top tracks or artists for the chosen time range, and show them."""
+		"""Load the top tracks or artists for the chosen time range."""
 		if self._top_items_timer is not None:
 			self._top_items_timer.Stop()
 			self._top_items_timer = None
-		item_type = self.top_item_type_choices[self.top_item_type_box.GetValue()]
-		time_range = self.time_range_choices[self.time_range_box.GetValue()]
-		self._top_items_request += 1
-		token = self._top_items_request
-		control = self.tabs_config["top_items"]["control"]
-		control.Clear()
-		control.Append(_("Loading..."))
-
-		def _load() -> None:
-			data = self.client.get_top_items(item_type=item_type, time_range=time_range)
-			if isinstance(data, dict):
-				data = data.get("items") or []
-			wx.CallAfter(self._finish_top_items, data, token)
-
-		thread_manager.submit_task(_load, name="DialogTask", daemon=True)
-
-	def _finish_top_items(self, data: list[Item] | str, token: int) -> None:
-		if not self:
-			return  # closed while loading
-		# A slower answer for a choice the user has already moved past must
-		# not replace the list for the current one.
-		if token != self._top_items_request:
-			return
-		if isinstance(data, str):
-			ui.message(data)
-		self._populate_generic_list("top_items", data)
+		# Read the choices here: wx controls must not be touched from the thread that fetches.
+		self._top_items_choice = (
+			self.top_item_type_choices[self.top_item_type_box.GetValue()],
+			self.time_range_choices[self.time_range_box.GetValue()],
+		)
+		self._reload("top_items")
 
 	# --- Shortcuts and context menus ---
 	def _init_shortcuts(self) -> None:
@@ -1048,7 +982,9 @@ class ManagementDialog(AccessifyDialog):
 				"keyLyrics": lambda _evt: self._show_lyrics_of(self._get_selected_item()),
 				"keyRefresh": self._handle_refresh,
 				"keyNewPlaylist": self._open_create_playlist_dialog,
-			}
+			},
+			# On the playlists tab, Play plays the chosen playlist, as the button does.
+			buttons={"keyPlay": [self.play_playlist_button], "keyRefresh": self._refresh_buttons},
 		)
 
 	def _on_list_context_menu(self, _evt: wx.Event) -> None:
@@ -1153,13 +1089,13 @@ class ManagementDialog(AccessifyDialog):
 		ask and done turn the item's name into the question and the message
 		said afterwards. The tab is reloaded once Spotify has done it.
 		"""
-		reload = {
-			"track": self.load_saved_tracks,
-			"episode": self.load_saved_episodes,
-			"audiobook": self.load_saved_audiobooks,
-			"album": self.load_saved_albums,
-			"show": self.load_saved_shows,
-			"artist": self.load_followed_artists,
+		tab_key = {
+			"track": "saved_tracks",
+			"episode": "saved_episodes",
+			"audiobook": "saved_audiobooks",
+			"album": "saved_albums",
+			"show": "saved_shows",
+			"artist": "followed_artists",
 		}[kind]
 		item = self._get_selected_item()
 		if not item or not item.get("id"):
@@ -1174,7 +1110,7 @@ class ManagementDialog(AccessifyDialog):
 				wx.CallAfter(ui.message, result)
 			else:
 				wx.CallAfter(ui.message, done(name))
-				wx.CallAfter(reload)
+				wx.CallAfter(self._reload, tab_key)
 
 		thread_manager.submit_task(_run, name="DialogTask", daemon=True)
 
