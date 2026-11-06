@@ -116,9 +116,10 @@ timeout(p)
 check("...but not when pausing failed", SPOKEN == [])
 
 # ------------------------------------------------ 6. Lists and fields have names
-for parts, text in ((("dialogs", "audiobooks.py"), "Chapters:"), (("dialogs", "devices.py"), "Devices:"),
+# Chapters: and Episodes: are checked in tests/unit/test_episodes_chapters.py.
+for parts, text in ((("dialogs", "devices.py"), "Devices:"),
                     (("dialogs", "layer_editor.py"), "Commands:"), (("dialogs", "lyrics_window.py"), "Lyrics:"),
-                    (("dialogs", "podcasts.py"), "Episodes:"), (("dialogs", "management.py"), "Tracks:"),
+                    (("dialogs", "management.py"), "Tracks:"),
                     (("dialogs", "management.py"), "Items:"), (("dialogs", "queue_list.py"), "Queue:")):
     src = source(*parts)
     i = src.find(f'label=_("{text}")')

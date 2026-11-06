@@ -16,7 +16,8 @@ from ..core.thread_manager import thread_manager
 from ..formatting import format_duration
 from ..language import init_translation
 from ..ui.base_dialog import AccessifyDialog
-from ..utils import conf_get, copy_link
+from ..ui.paged_list import PagedList
+from ..utils import copy_link
 
 if TYPE_CHECKING:
 	from ..spotify_client import SpotifyClient
@@ -31,7 +32,6 @@ class PlaylistTracksDialog(AccessifyDialog):
 	MENU_PLAY = wx.NewIdRef()
 	MENU_ADD_QUEUE = wx.NewIdRef()
 	MENU_COPY_LINK = wx.NewIdRef()
-	DEFAULT_PLAYLIST_PAGE_SIZE = 40
 
 	def __init__(self, parent: wx.Window, client: SpotifyClient, playlist: Item) -> None:
 		playlist_name = playlist.get("name", _("Unknown"))
@@ -39,16 +39,14 @@ class PlaylistTracksDialog(AccessifyDialog):
 		super().__init__(parent, title=title, size=(520, 420))
 		self.client = client
 		self.playlist = playlist
-		self.tracks = []
-		self._tracks_offset = 0
-		self._tracks_loading = False
-		self._tracks_has_more = True
-		self._tracks_load_more_label = "--- {} ---".format(_("Load More"))
-		self._tracks_page_size = conf_get("searchLimit", self.DEFAULT_PLAYLIST_PAGE_SIZE)
-
 		self._init_ui()
 		self._create_accelerators()
-		self._load_tracks()
+		if playlist.get("id"):
+			self.paged.reload()
+		else:
+			message = _("Playlist information incomplete.")
+			self.tracks_list.Append(message)
+			ui.message(message)
 
 	def _init_ui(self) -> None:
 		panel = wx.Panel(self)
@@ -68,7 +66,14 @@ class PlaylistTracksDialog(AccessifyDialog):
 		main_sizer.Add(summary_ctrl, 0, wx.ALL, 5)
 
 		self.tracks_list = wx.ListBox(panel)
-		self._bind_list_activation(self.tracks_list, self._on_tracks_activate)
+		self.paged = PagedList(
+			self.tracks_list,
+			self._fetch_page,
+			self._format_track_display,
+			empty=_("No tracks available."),
+			failed=_("Unable to load playlist tracks."),
+		)
+		self._bind_list_activation(self.tracks_list, lambda: self.paged.activate(self.on_play_selected))
 		self.tracks_list.Bind(wx.EVT_CONTEXT_MENU, self.on_context_menu)
 		main_sizer.Add(self.tracks_list, 1, wx.EXPAND | wx.ALL, 5)
 
@@ -96,103 +101,14 @@ class PlaylistTracksDialog(AccessifyDialog):
 		self.Bind(wx.EVT_MENU, self.on_add_to_queue, id=self.MENU_ADD_QUEUE.GetId())
 		self.Bind(wx.EVT_MENU, self.on_copy_link, id=self.MENU_COPY_LINK.GetId())
 
-	def _load_tracks(self) -> None:
-		self.tracks = []
-		self._tracks_offset = 0
-		self._tracks_has_more = True
-		self.tracks_list.Clear()
-		self._load_more_tracks()
+	def _fetch_page(self, offset: int, limit: int) -> Item | str:
+		"""Return a page of the playlist, its entries reduced to their tracks."""
+		page = self.client.get_playlist_tracks_page(self.playlist["id"], limit=limit, offset=offset)
+		if isinstance(page, dict):
+			page["items"] = [(e.get("track") if isinstance(e, dict) else e) for e in page.get("items") or []]
+		return page
 
-	def _load_more_tracks(self) -> None:
-		if self._tracks_loading or not self._tracks_has_more:
-			return
-		self._tracks_loading = True
-		if not self.tracks:
-			self.tracks_list.Clear()
-			self.tracks_list.Append(_("Loading..."))
-		thread_manager.submit_task(self._load_more_tracks_thread, name="DialogTask", daemon=True)
-
-	def _load_more_tracks_thread(self) -> None:
-		playlist_id = self.playlist.get("id")
-		if not playlist_id:
-			wx.CallAfter(self._handle_error, _("Playlist information incomplete."))
-			return
-		results = self.client.get_playlist_tracks_page(
-			playlist_id, limit=self._tracks_page_size, offset=self._tracks_offset
-		)
-		wx.CallAfter(self._finish_load_tracks, results)
-
-	def _handle_error(self, message: str) -> None:
-		self._tracks_loading = False
-		self.tracks_list.Clear()
-		self.tracks_list.Append(message)
-		ui.message(message)
-
-	def _finish_load_tracks(self, results: Item | str | None) -> None:
-		self._tracks_loading = False
-		if isinstance(results, str):
-			if not self.tracks:
-				self.tracks_list.Clear()
-				self.tracks_list.Append(_("Unable to load playlist tracks."))
-			ui.message(results)
-			return
-
-		items = results.get("items", []) if results else []
-		if not items and not self.tracks:
-			self.tracks_list.Clear()
-			self.tracks_list.Append(_("No tracks available."))
-			self._tracks_has_more = False
-			return
-
-		if not items:
-			self._tracks_has_more = False
-			self._refresh_tracks_placeholder()
-			return
-
-		if not self.tracks:
-			self.tracks_list.Clear()
-
-		parsed = []
-		for entry in items:
-			track = entry.get("track") if isinstance(entry, dict) else entry
-			if track:
-				parsed.append(track)
-
-		start_index = len(self.tracks)
-		self.tracks.extend(parsed)
-		self._tracks_offset += len(items)
-
-		total = results.get("total") if isinstance(results, dict) else None
-		if total is not None:
-			self._tracks_has_more = self._tracks_offset < total
-		else:
-			self._tracks_has_more = bool(results.get("next"))
-
-		self._append_tracks_to_list(parsed, start_index)
-
-	def _append_tracks_to_list(self, new_tracks: list[Item], start_index: int) -> None:
-		if self._has_tracks_placeholder():
-			self.tracks_list.Delete(self.tracks_list.GetCount() - 1)
-
-		for idx, track in enumerate(new_tracks, start=start_index + 1):
-			display = self._format_track_display(idx, track)
-			self.tracks_list.Append(display)
-
-		self._refresh_tracks_placeholder()
-
-	def _refresh_tracks_placeholder(self) -> None:
-		if self._has_tracks_placeholder():
-			self.tracks_list.Delete(self.tracks_list.GetCount() - 1)
-		if self._tracks_has_more:
-			self.tracks_list.Append(self._tracks_load_more_label)
-
-	def _has_tracks_placeholder(self) -> bool:
-		count = self.tracks_list.GetCount()
-		if count == 0:
-			return False
-		return self.tracks_list.GetString(count - 1) == self._tracks_load_more_label
-
-	def _format_track_display(self, index: int, track: Item) -> str:
+	def _format_track_display(self, track: Item, index: int) -> str:
 		name = track.get("name", _("Unknown"))
 		artists = ", ".join([a.get("name", _("Unknown")) for a in track.get("artists", [])])
 		duration = format_duration(track.get("duration_ms"))
@@ -204,47 +120,29 @@ class PlaylistTracksDialog(AccessifyDialog):
 		return display
 
 	def _get_selected_track(self) -> Item | None:
-		selection = self.tracks_list.GetSelection()
-		if selection == wx.NOT_FOUND:
+		"""Return the selected track; on the Load More row, load more instead."""
+		track = self.paged.selected()
+		if track:
+			return track
+		if self.paged.on_load_more_row():
+			self.paged.load_more()
+		else:
 			ui.message(_("Please select a track first."))
-			return None
-		if self._is_tracks_load_more(selection):
-			self._load_more_tracks()
-			return None
-		if selection >= len(self.tracks):
-			ui.message(_("Please select a track first."))
-			return None
-		return self.tracks[selection]
-
-	def _is_tracks_load_more(self, selection: int) -> bool:
-		if selection == wx.NOT_FOUND:
-			return False
-		return (
-			self._tracks_has_more
-			and self._has_tracks_placeholder()
-			and selection == self.tracks_list.GetCount() - 1
-		)
-
-	def _on_tracks_activate(self) -> None:
-		selection = self.tracks_list.GetSelection()
-		if self._is_tracks_load_more(selection):
-			self._load_more_tracks()
-			return
-		self.on_play_selected()
+		return None
 
 	def on_context_menu(self, _evt: wx.Event) -> None:
 		"""Show the actions for the selected track."""
-		if not self.tracks:
+		if not self.paged.items:
 			return
 		menu = wx.Menu()
 		menu.Append(self.MENU_PLAY.GetId(), _("Play\tAlt+P"))
 		menu.Append(self.MENU_ADD_QUEUE.GetId(), _("Add to Queue\tAlt+Q"))
 		menu.Append(self.MENU_COPY_LINK.GetId(), _("Copy Link\tAlt+L"))
-		# Read the row directly: _get_selected_track loads more on the
-		# Load More row, which opening a menu must not do.
-		selection = self.tracks_list.GetSelection()
-		if selection != wx.NOT_FOUND and selection < len(self.tracks):
-			self._append_go_to_options_for_track(menu, self.tracks[selection])
+		# Not _get_selected_track: that loads more on the Load More row,
+		# which opening a menu must not do.
+		track = self.paged.selected()
+		if track:
+			self._append_go_to_options_for_track(menu, track)
 		self.PopupMenu(menu)
 		menu.Destroy()
 

@@ -9,154 +9,48 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import ui
-import wx
-
-from ..core.thread_manager import thread_manager
 from ..formatting import format_duration
 from ..language import init_translation
-from ..ui.base_dialog import AccessifyDialog
-from ..utils import conf_get, copy_link
+from .play_in_order import PlayInOrderDialog, Texts
 
 if TYPE_CHECKING:
+	import wx
+
 	from ..spotify_client import SpotifyClient
-	from ..spotify_types import Item
+	from ..spotify_types import Item, Reply
 
 init_translation()
 
 
-class AudiobookChaptersDialog(AccessifyDialog):
-	"""Lists the chapters of an audiobook in order, newest page loaded on demand."""
+class AudiobookChaptersDialog(PlayInOrderDialog):
+	"""An audiobook's chapters in order, loaded page by page.
 
-	MENU_PLAY_CHAPTER = wx.NewIdRef()
-	MENU_ADD_QUEUE = wx.NewIdRef()
-	MENU_COPY_LINK = wx.NewIdRef()
-	DEFAULT_CHAPTERS_PAGE_SIZE = 30
+	Playing a chapter plays the book from there, so listening carries on into
+	the chapters after it.
+	"""
+
+	CONTEXT = "audiobook"
 
 	def __init__(
 		self, parent: wx.Window, client: SpotifyClient, audiobook_id: str, audiobook_name: str
 	) -> None:
-		title = _("Chapters for {audiobook_name}").format(audiobook_name=audiobook_name)
-		super().__init__(parent, title=title, size=(500, 400))
-		self.client = client
-		self.audiobook_id = audiobook_id
-		self.audiobook_name = audiobook_name
-		self.chapters = []
-		self._chapters_offset = 0
-		self._chapters_loading = False
-		self._chapters_has_more = True
-		self._chapters_load_more_label = "--- {} ---".format(_("Load More"))
-		self._chapters_page_size = conf_get("searchLimit", self.DEFAULT_CHAPTERS_PAGE_SIZE)
-		self.init_ui()
-		self.load_chapters()
-		self._create_accelerators()
-
-	def init_ui(self) -> None:
-		"""Build the chapter list and buttons."""
-		panel = wx.Panel(self)
-		sizer = wx.BoxSizer(wx.VERTICAL)
-
-		# Translators: Label of a list or text field, read by screen readers.
-		sizer.Add(wx.StaticText(panel, label=_("Chapters:")), 0, wx.LEFT | wx.TOP, 5)
-		self.chapters_list = wx.ListBox(panel)
-		sizer.Add(self.chapters_list, 1, wx.EXPAND | wx.ALL, 5)
-
-		self._bind_list_activation(self.chapters_list, self._on_chapter_activate)
-		self.chapters_list.Bind(wx.EVT_CONTEXT_MENU, self.on_context_menu)
-
-		buttons_sizer = wx.StdDialogButtonSizer()
-		play_button = wx.Button(panel, wx.ID_OK, label=_("&Play Chapter"))
-		play_button.Bind(wx.EVT_BUTTON, self.on_play_chapter)
-		buttons_sizer.AddButton(play_button)
-
-		close_button = wx.Button(panel, wx.ID_CANCEL, label=_("&Close"))
-		self.bind_close_button(close_button)
-		buttons_sizer.AddButton(close_button)
-		buttons_sizer.Realize()
-
-		sizer.Add(buttons_sizer, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
-		panel.SetSizer(sizer)
-
-	def _create_accelerators(self) -> None:
-		accel_entries = [
-			(wx.ACCEL_ALT, ord("P"), self.MENU_PLAY_CHAPTER.GetId()),
-			(wx.ACCEL_ALT, ord("Q"), self.MENU_ADD_QUEUE.GetId()),
-			(wx.ACCEL_ALT, ord("L"), self.MENU_COPY_LINK.GetId()),
-		]
-		self.SetAcceleratorTable(wx.AcceleratorTable(accel_entries))
-
-		self.Bind(wx.EVT_MENU, self.on_play_chapter, id=self.MENU_PLAY_CHAPTER.GetId())
-		self.Bind(wx.EVT_MENU, self.on_add_to_queue, id=self.MENU_ADD_QUEUE.GetId())
-		self.Bind(wx.EVT_MENU, self.on_copy_link, id=self.MENU_COPY_LINK.GetId())
-
-	def load_chapters(self) -> None:
-		"""Load the chapters from the start."""
-		self.chapters = []
-		self._chapters_offset = 0
-		self._chapters_has_more = True
-		self.chapters_list.Clear()
-		self._load_more_chapters()
-
-	def _load_more_chapters(self) -> None:
-		if self._chapters_loading or not self._chapters_has_more:
-			return
-		self._chapters_loading = True
-		if not self.chapters:
-			self.chapters_list.Clear()
-			self.chapters_list.Append(_("Loading..."))
-		thread_manager.submit_task(self._load_more_chapters_thread, name="DialogTask", daemon=True)
-
-	def _load_more_chapters_thread(self) -> None:
-		results = self.client.get_audiobook_chapters(
-			self.audiobook_id, limit=self._chapters_page_size, offset=self._chapters_offset
+		texts = Texts(
+			title=_("Chapters for {audiobook_name}").format(audiobook_name=audiobook_name),
+			# Translators: Label of a list or text field, read by screen readers.
+			list_label=_("Chapters:"),
+			play_button=_("&Play Chapter"),
+			play_menu=_("Play Chapter\tAlt+P"),
+			empty=_("No chapters found for this audiobook."),
+			failed=_("Unable to load chapters."),
 		)
-		wx.CallAfter(self._finish_load_chapters, results)
+		super().__init__(parent, client, audiobook_id, texts)
 
-	def _finish_load_chapters(self, results: Item | str) -> None:
-		self._chapters_loading = False
-		if isinstance(results, str):
-			if not self.chapters:
-				self.chapters_list.Clear()
-				self.chapters_list.Append(_("Unable to load chapters."))
-			ui.message(results)
-			return
+	def fetch(self, offset: int, limit: int) -> Reply | str:
+		"""Return a page of the book's chapters."""
+		return self.client.get_audiobook_chapters(self.context_id, limit=limit, offset=offset)
 
-		items = [item for item in results.get("items", []) if item]
-		if not items and not self.chapters:
-			self.chapters_list.Clear()
-			self.chapters_list.Append(_("No chapters found for this audiobook."))
-			self._chapters_has_more = False
-			return
-
-		if not items:
-			self._chapters_has_more = False
-			self._refresh_chapters_placeholder()
-			return
-
-		if not self.chapters:
-			self.chapters_list.Clear()
-
-		self.chapters.extend(items)
-		self._chapters_offset += len(items)
-
-		total = results.get("total")
-		if total is not None:
-			self._chapters_has_more = self._chapters_offset < total
-		else:
-			self._chapters_has_more = bool(results.get("next"))
-
-		self._append_chapters_to_list(items)
-
-	def _append_chapters_to_list(self, new_items: list[Item]) -> None:
-		if self._has_chapters_placeholder():
-			self.chapters_list.Delete(self.chapters_list.GetCount() - 1)
-
-		for chapter in new_items:
-			self.chapters_list.Append(self._format_chapter(chapter))
-
-		self._refresh_chapters_placeholder()
-
-	def _format_chapter(self, chapter: Item) -> str:
+	def row(self, chapter: Item, _number: int) -> str:
+		"""Return a chapter's number, name and length."""
 		display = chapter.get("name", _("Unknown Chapter"))
 		number = chapter.get("chapter_number")
 		if number:
@@ -165,88 +59,3 @@ class AudiobookChaptersDialog(AccessifyDialog):
 		if duration:
 			display = f"{display} ({format_duration(duration)})"
 		return display
-
-	def _refresh_chapters_placeholder(self) -> None:
-		if self._has_chapters_placeholder():
-			self.chapters_list.Delete(self.chapters_list.GetCount() - 1)
-		if self._chapters_has_more:
-			self.chapters_list.Append(self._chapters_load_more_label)
-
-	def _has_chapters_placeholder(self) -> bool:
-		count = self.chapters_list.GetCount()
-		if count == 0:
-			return False
-		return self.chapters_list.GetString(count - 1) == self._chapters_load_more_label
-
-	def _is_chapter_load_more(self, selection: int) -> bool:
-		if selection == wx.NOT_FOUND:
-			return False
-		return (
-			self._chapters_has_more
-			and self._has_chapters_placeholder()
-			and selection == self.chapters_list.GetCount() - 1
-		)
-
-	def _on_chapter_activate(self) -> None:
-		selection = self.chapters_list.GetSelection()
-		if self._is_chapter_load_more(selection):
-			self._load_more_chapters()
-			return
-		self.on_play_chapter()
-
-	def _get_selected_chapter(self) -> Item | None:
-		selection = self.chapters_list.GetSelection()
-		if (
-			selection == wx.NOT_FOUND
-			or not self.chapters
-			or selection >= len(self.chapters)
-			or self._is_chapter_load_more(selection)
-		):
-			return None
-		return self.chapters[selection]
-
-	def on_context_menu(self, _evt: wx.Event) -> None:
-		"""Show the actions for the selected chapter."""
-		if not self._get_selected_chapter():
-			return
-
-		menu = wx.Menu()
-		menu.Append(self.MENU_PLAY_CHAPTER.GetId(), _("Play Chapter\tAlt+P"))
-		menu.Append(self.MENU_ADD_QUEUE.GetId(), _("Add to Queue\tAlt+Q"))
-		menu.Append(self.MENU_COPY_LINK.GetId(), _("Copy Link\tAlt+L"))
-
-		self.PopupMenu(menu)
-		menu.Destroy()
-
-	def on_play_chapter(self, _evt: wx.Event | None = None) -> None:
-		"""Play the selected chapter."""
-		chapter = self._get_selected_chapter()
-		if not chapter:
-			return
-		chapter_uri = chapter.get("uri")
-		audiobook_uri = f"spotify:audiobook:{self.audiobook_id}"
-
-		if audiobook_uri and chapter_uri:
-			# Play within the book so listening carries on into later chapters.
-			ui.message(_("Playing."))
-			thread_manager.submit_task(
-				self.client.play_context_with_offset,
-				audiobook_uri,
-				chapter_uri,
-				name="DialogTask",
-				daemon=True,
-			)
-		else:
-			self._play_uri(chapter_uri)
-
-	def on_add_to_queue(self, _evt: wx.Event | None = None) -> None:
-		"""Add the selected chapter to the queue."""
-		chapter = self._get_selected_chapter()
-		if chapter:
-			self._queue_add_track(chapter.get("uri"), chapter.get("name"))
-
-	def on_copy_link(self, _evt: wx.Event | None = None) -> None:
-		"""Copy the selected chapter's Spotify link."""
-		chapter = self._get_selected_chapter()
-		if chapter:
-			copy_link(chapter.get("external_urls", {}).get("spotify"))

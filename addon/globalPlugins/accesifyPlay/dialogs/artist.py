@@ -16,7 +16,8 @@ from ..core.thread_manager import thread_manager
 from ..formatting import format_followers
 from ..language import init_translation
 from ..ui.base_dialog import AccessifyDialog
-from ..utils import conf_get, copy_link
+from ..ui.paged_list import PagedList
+from ..utils import copy_link
 from .album import AlbumTracksDialog
 from .playlist import PlaylistTracksDialog
 
@@ -30,7 +31,6 @@ init_translation()
 class ArtistDiscographyDialog(AccessifyDialog):
 	"""An artist's popular songs, albums, playlists, all tracks and info, one tab each."""
 
-	DEFAULT_ALL_TRACKS_BATCH_SIZE = 40
 	MENU_PLAY = wx.NewIdRef()
 	MENU_ADD_QUEUE = wx.NewIdRef()
 	MENU_COPY_LINK = wx.NewIdRef()
@@ -54,18 +54,13 @@ class ArtistDiscographyDialog(AccessifyDialog):
 		self.client = client
 		self.artist_id = artist_id
 		self.artist_name = artist_name
-		self.all_tracks_batch_size = conf_get("searchLimit", self.DEFAULT_ALL_TRACKS_BATCH_SIZE)
 		self.top_tracks = []
 		self.albums = []
 		self.playlists = []
-		self.all_tracks = []
 		self.artist_info = None
 		self._all_tracks_seen_ids = set()
 		self._all_tracks_album_index = 0
 		self._current_album_tracks = []
-		self._all_tracks_loading = False
-		self._all_tracks_can_load_more = False
-		self._all_tracks_load_more_label = "--- {} ---".format(_("Load More"))
 		self._user_playlists = user_playlists
 		self.init_ui()
 		# Open on the popular songs; the focus moves into that list once it is loaded.
@@ -99,6 +94,13 @@ class ArtistDiscographyDialog(AccessifyDialog):
 		self.albums_list, self.albums_page_index = self._add_list_page(_("Albums and Singles"))
 		self.playlists_list, self.playlists_page_index = self._add_list_page(_("Playlists"))
 		self.all_tracks_list, self.all_tracks_page_index = self._add_list_page(_("All Tracks"))
+		self.all_tracks = PagedList(
+			self.all_tracks_list,
+			self._next_all_tracks,
+			lambda track, _number: self._format_all_track_display(track),
+			empty=_("No tracks available."),
+			failed=_("Unable to load tracks."),
+		)
 
 		panel_info = wx.Panel(self.notebook)
 		sizer_info = wx.BoxSizer(wx.VERTICAL)
@@ -125,7 +127,9 @@ class ArtistDiscographyDialog(AccessifyDialog):
 		self._bind_list_activation(self.top_tracks_list, self.on_play_selected)
 		self._bind_list_activation(self.albums_list, self._on_album_activate)
 		self._bind_list_activation(self.playlists_list, self._on_playlist_activate)
-		self._bind_list_activation(self.all_tracks_list, self._on_all_tracks_activate)
+		self._bind_list_activation(
+			self.all_tracks_list, lambda: self.all_tracks.activate(self.on_play_selected)
+		)
 		for list_control in [
 			self.top_tracks_list,
 			self.albums_list,
@@ -194,19 +198,13 @@ class ArtistDiscographyDialog(AccessifyDialog):
 
 	def _focus_top_tracks(self) -> None:
 		"""Land on the first popular song once loaded, unless the user has already moved on."""
-		try:
-			if self.notebook.GetSelection() != self.top_tracks_page_index:
-				return
-			focus = wx.Window.FindFocus()
-			# Focus in another window, or on one of this window's buttons: leave it.
-			if focus is not None and (
-				wx.GetTopLevelParent(focus) is not self or isinstance(focus, wx.Button)
-			):
-				return
-			self.show_page(0)
-		except RuntimeError:
-			# The dialog was closed before the songs arrived.
-			pass
+		if self.notebook.GetSelection() != self.top_tracks_page_index:
+			return
+		focus = wx.Window.FindFocus()
+		# Focus in another window, or on one of this window's buttons: leave it.
+		if focus is not None and (wx.GetTopLevelParent(focus) is not self or isinstance(focus, wx.Button)):
+			return
+		self.show_page(0)
 
 	def load_data(self) -> None:
 		"""Load the artist's tabs in the background."""
@@ -229,14 +227,14 @@ class ArtistDiscographyDialog(AccessifyDialog):
 			wx.CallAfter(self._update_info_tab, artist_info)
 
 		albums_results = self.client.get_artist_albums(self.artist_id)
-		if not isinstance(albums_results, str):
+		if isinstance(albums_results, str):
+			wx.CallAfter(ui.message, albums_results)
+		else:
 			self.albums = albums_results.get("items", [])
 			for album in self.albums:
 				display = f"{album['name']} ({album['release_date']})"
 				wx.CallAfter(self.albums_list.Append, display)
-			wx.CallAfter(self._prepare_all_tracks_loader)
-		else:
-			wx.CallAfter(ui.message, albums_results)
+		wx.CallAfter(self._load_all_tracks)
 
 		# Spotify has no "playlists of this artist", so search playlists by the artist's name.
 		playlist_results = self.client.search(self.artist_name, "playlist") if self.artist_name else None
@@ -248,10 +246,9 @@ class ArtistDiscographyDialog(AccessifyDialog):
 		wx.CallAfter(self._fill_playlists_list)
 
 	def _fill_top_tracks_list(self) -> None:
-		try:
-			self.top_tracks_list.Clear()
-		except RuntimeError:
-			return
+		if not self:
+			return  # closed before the songs arrived
+		self.top_tracks_list.Clear()
 		for track in self.top_tracks:
 			name = track.get("name", _("Unknown"))
 			artists = [a.get("name") for a in track.get("artists", []) if a.get("name")]
@@ -265,10 +262,9 @@ class ArtistDiscographyDialog(AccessifyDialog):
 		self._focus_top_tracks()
 
 	def _fill_playlists_list(self) -> None:
-		try:
-			self.playlists_list.Clear()
-		except RuntimeError:
-			return
+		if not self:
+			return  # closed before the playlists arrived
+		self.playlists_list.Clear()
 		for playlist in self.playlists:
 			name = playlist.get("name") or _("Unknown")
 			owner = (playlist.get("owner") or {}).get("display_name")
@@ -284,103 +280,45 @@ class ArtistDiscographyDialog(AccessifyDialog):
 		dialog = PlaylistTracksDialog(self, self.client, self.playlists[selection])
 		dialog.Show()
 
-	def _prepare_all_tracks_loader(self) -> None:
-		"""Reset state and start batched loading for the All Tracks tab."""
-		self.all_tracks = []
+	def _load_all_tracks(self) -> None:
+		"""Fill All Tracks from the first album on."""
 		self._all_tracks_seen_ids = set()
 		self._all_tracks_album_index = 0
 		self._current_album_tracks = []
-		self._all_tracks_loading = False
-		self._all_tracks_can_load_more = bool(self.albums)
-		self.all_tracks_list.Clear()
+		self.all_tracks.reload()
 
-		if not self.albums:
-			self.all_tracks_list.Append(_("No tracks available."))
-			return
-		self._load_more_all_tracks()
+	def _next_all_tracks(self, _offset: int, limit: int) -> Item | str:
+		"""Return the next limit tracks, album by album, each track only once.
 
-	def _load_more_all_tracks(self) -> None:
-		if self._all_tracks_loading or not self._all_tracks_can_load_more:
-			return
-		self._all_tracks_loading = True
-		thread_manager.submit_task(self._load_more_all_tracks_thread, name="DialogTask", daemon=True)
-
-	def _load_more_all_tracks_thread(self) -> None:
+		Answers as a page, {"items": [...], "next": ...}, for the paged list. If an
+		album fails, the tracks gathered so far are kept and Load More tries
+		that album again.
+		"""
 		batch = []
-		while len(batch) < self.all_tracks_batch_size and (
+		while len(batch) < limit and (
 			self._current_album_tracks or self._all_tracks_album_index < len(self.albums)
 		):
 			if not self._current_album_tracks:
-				if self._all_tracks_album_index >= len(self.albums):
-					break
 				album = self.albums[self._all_tracks_album_index]
-				album_id = album.get("id")
-				if not album_id:
-					self._all_tracks_album_index += 1
-					continue
-				album_tracks = self.client.get_album_tracks(album_id)
-				if isinstance(album_tracks, str):
-					wx.CallAfter(self._handle_all_tracks_error, album_tracks)
-					return
-				prepared = []
-				for track in album_tracks:
-					track_id = track.get("id")
-					if track_id and track_id in self._all_tracks_seen_ids:
-						continue
-					prepared.append(self._prepare_track_entry(track, album))
-				self._current_album_tracks = prepared
+				if album.get("id"):
+					album_tracks = self.client.get_album_tracks(album["id"])
+					if isinstance(album_tracks, str):
+						if batch:
+							break
+						return album_tracks
+					self._current_album_tracks = [
+						self._prepare_track_entry(track, album)
+						for track in album_tracks
+						if not track.get("id") or track["id"] not in self._all_tracks_seen_ids
+					]
 				self._all_tracks_album_index += 1
 				continue
-
-			track_entry = self._current_album_tracks.pop(0)
-			track_id = track_entry.get("id")
-			if track_id:
-				self._all_tracks_seen_ids.add(track_id)
-			batch.append(track_entry)
-
-		has_more = bool(self._current_album_tracks) or (self._all_tracks_album_index < len(self.albums))
-		wx.CallAfter(self._finish_loading_all_tracks, batch, has_more=has_more)
-
-	def _handle_all_tracks_error(self, message: str) -> None:
-		self._all_tracks_loading = False
-		self._all_tracks_can_load_more = False
-		ui.message(message)
-		self._refresh_all_tracks_placeholder()
-
-	def _finish_loading_all_tracks(self, new_tracks: list[Item], *, has_more: bool) -> None:
-		self._all_tracks_loading = False
-		self._all_tracks_can_load_more = has_more
-
-		if new_tracks:
-			self.all_tracks.extend(new_tracks)
-			self._append_all_tracks_to_list(new_tracks)
-		elif not self.all_tracks:
-			self.all_tracks_list.Clear()
-			self.all_tracks_list.Append(_("No tracks available."))
-		else:
-			# No new tracks but still update placeholder if necessary
-			self._refresh_all_tracks_placeholder()
-
-	def _append_all_tracks_to_list(self, new_tracks: list[Item]) -> None:
-		if self._has_all_tracks_placeholder():
-			self.all_tracks_list.Delete(self.all_tracks_list.GetCount() - 1)
-
-		for track in new_tracks:
-			self.all_tracks_list.Append(self._format_all_track_display(track))
-
-		self._refresh_all_tracks_placeholder()
-
-	def _refresh_all_tracks_placeholder(self) -> None:
-		if self._has_all_tracks_placeholder():
-			self.all_tracks_list.Delete(self.all_tracks_list.GetCount() - 1)
-		if self._all_tracks_can_load_more:
-			self.all_tracks_list.Append(self._all_tracks_load_more_label)
-
-	def _has_all_tracks_placeholder(self) -> bool:
-		count = self.all_tracks_list.GetCount()
-		if count == 0:
-			return False
-		return self.all_tracks_list.GetString(count - 1) == self._all_tracks_load_more_label
+			track = self._current_album_tracks.pop(0)
+			if track.get("id"):
+				self._all_tracks_seen_ids.add(track["id"])
+			batch.append(track)
+		more = bool(self._current_album_tracks) or self._all_tracks_album_index < len(self.albums)
+		return {"items": batch, "next": "more" if more else None}
 
 	def _format_all_track_display(self, track: Item) -> str:
 		display = track.get("name", _("Unknown"))
@@ -406,10 +344,7 @@ class ArtistDiscographyDialog(AccessifyDialog):
 
 	def _update_info_tab(self, info: Item) -> None:
 		"""Render a brief artist profile summary."""
-		followers_total = (info.get("followers") or {}).get("total")
-		followers_text = ""
-		if self.client:
-			followers_text = format_followers(followers_total)
+		followers_text = format_followers((info.get("followers") or {}).get("total"))
 		popularity = info.get("popularity")
 		genres = info.get("genres") or []
 		info_lines = [
@@ -445,33 +380,17 @@ class ArtistDiscographyDialog(AccessifyDialog):
 
 	def _selected_all_tracks_item(self) -> Item | None:
 		"""Return the selected track on the All Tracks tab; on its Load More row, load more."""
-		selection = self.all_tracks_list.GetSelection()
-		if 0 <= selection < len(self.all_tracks):
-			return self.all_tracks[selection]
-		if self._is_all_tracks_load_more(selection):
+		track = self.all_tracks.selected()
+		if track:
+			return track
+		if self.all_tracks.on_load_more_row():
 			ui.message(_("Loading more tracks..."))
-			self._load_more_all_tracks()
-		elif selection != wx.NOT_FOUND:
+			self.all_tracks.load_more()
+		elif self.all_tracks_list.GetSelection() != wx.NOT_FOUND:
 			ui.message(_("Please select a track, or load more items."))
 		else:
 			ui.message(_("Please select an item from the active tab first."))
 		return None
-
-	def _is_all_tracks_load_more(self, selection: int) -> bool:
-		if selection == wx.NOT_FOUND:
-			return False
-		return (
-			self._all_tracks_can_load_more
-			and self._has_all_tracks_placeholder()
-			and selection == self.all_tracks_list.GetCount() - 1
-		)
-
-	def _on_all_tracks_activate(self) -> None:
-		selection = self.all_tracks_list.GetSelection()
-		if self._is_all_tracks_load_more(selection):
-			self._load_more_all_tracks()
-			return
-		self.on_play_selected()
 
 	def _on_album_activate(self) -> None:
 		selection = self.albums_list.GetSelection()

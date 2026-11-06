@@ -170,7 +170,7 @@ def test_playlist_loads_page_by_page(client: SpotifyClient, ready: SpotifyServer
 	window = playlist_window(client, ready, [page([track(1), None], total=3), page([track(2)], total=3)])
 	assert window.tracks_list.GetStrings() == ["1. Song 1 — A (1:01)", "--- Load More ---"]
 	window.tracks_list.SetSelection(1)
-	window._on_tracks_activate()
+	window.tracks_list.fire(wx.EVT_CHAR_HOOK, wx.KeyEvent(wx.WXK_RETURN))
 	assert window.tracks_list.GetStrings() == ["1. Song 1 — A (1:01)", "2. Song 2 — A (1:01)"]
 	assert [r[2]["offset"] for r in ready.requests] == [0, 2]
 
@@ -199,7 +199,7 @@ def test_playlist_error_after_the_first_page(
 	"""A failed later page keeps what is listed and says what went wrong."""
 	window = playlist_window(client, ready, [page([track(1)], total=2), spotify_error(502)])
 	window.tracks_list.SetSelection(1)
-	window._on_tracks_activate()
+	window.tracks_list.fire(wx.EVT_CHAR_HOOK, wx.KeyEvent(wx.WXK_RETURN))
 	assert window.tracks_list.GetString(0).startswith("1. Song 1")
 	assert "having trouble" in spoken[-1]
 
@@ -209,7 +209,7 @@ def test_playlist_actions(client: SpotifyClient, ready: SpotifyServer, spoken: l
 	window = playlist_window(client, ready, [page([track(1)], total=1)])
 	window.on_play_selected()
 	window.tracks_list.SetSelection(0)
-	window._on_tracks_activate()
+	window.tracks_list.fire(wx.EVT_CHAR_HOOK, wx.KeyEvent(wx.WXK_RETURN))
 	assert ready.requests[-1][3] == {
 		"context_uri": "spotify:playlist:p1",
 		"offset": {"uri": "spotify:track:t1"},
@@ -243,6 +243,6 @@ def test_playlist_without_a_uri_plays_the_track(client: SpotifyClient, ready: Sp
 	window.tracks_list.SetSelection(0)
 	window.on_play_selected()
 	assert ready.requests[-1][3] == {"uris": ["spotify:track:t1"]}
-	empty = PlaylistTracksDialog(None, client, {"id": "p2", "name": "Bare"})
-	empty.tracks = []
-	empty.on_context_menu(None)
+	ready.routes["GET", "playlists/p2/items"] = page([])
+	PlaylistTracksDialog(None, client, {"id": "p2", "name": "Bare"}).on_context_menu(None)
+	assert len(wx.popped_menus) == 0
