@@ -33,15 +33,15 @@ addon_info = AddonInfo(
 		"""Accessify Play provides comprehensive NVDA control for Spotify playback on any Connect-enabled device. A Spotify Premium subscription is required for full functionality."""
 	),
 	# version
-	addon_version="2026.11.0",
+	addon_version="2026.11.1",
 	# Brief changelog for this version
 	# Translators: what's new content for the add-on version to be shown in the add-on store
 	addon_changelog=_("""
-- Search: Ctrl+1 to Ctrl+6 and Ctrl+Tab switch the type and search again at once; Ctrl+F returns to the search field.
-- Artist window: opens on Top Tracks, has a new Playlists tab, and switches tabs with the same keys as Search.
-- Playback commands now say why they failed instead of claiming success.
-- Fixed: adding an album to a playlist stopped after 100 songs; songs without lyrics were reported as a connection problem; shared links with a country in them were misread.
-- Under the hood: a large clean-up and a test suite covering nearly all of the code.
+- Every list works the same way: one context menu per kind of item, the same Enter, the same rows ("Song - Artist (3:21)"), and the same tab keys in Search, the artist window and the Library.
+- Every shortcut inside the windows can be changed (Window Shortcuts... in the settings), and there are new settings for the sleep timer, queueing, Top Items and Search.
+- Long lists, the Library's tabs included, load a page at a time with Load More.
+- Playing from a window now says why when Spotify refuses.
+- Fixed: the artist window could stay empty; the Library offered other people's playlists to add to; Show Queue failed while nothing played; and more, listed in the changelog.
 	"""),
 	# Authors
 	addon_author="Rafli I .<rafli08523717409@gmail.com>, Rexya <rexya2017@gmail.com>",

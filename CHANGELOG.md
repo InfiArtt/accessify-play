@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## Version 2026.11.1
+
+Changes since 2026.11.0.
 
 ### 🎉 The same lists, menus and keys in every window
 

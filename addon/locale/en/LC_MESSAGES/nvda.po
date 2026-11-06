@@ -36,19 +36,6 @@ msgid ""
 "full functionality."
 msgstr ""
 
-#. Translators: what's new content for the add-on version to be shown in the
-#. add-on store
-#: buildVars.py:29
-msgid ""
-"\n"
-"- Search: Ctrl+1 to Ctrl+6 and Ctrl+Tab switch the type and search again at once; Ctrl+F returns to the search field.\n"
-"- Artist window: opens on Top Tracks, has a new Playlists tab, and switches tabs with the same keys as Search.\n"
-"- Playback commands now say why they failed instead of claiming success.\n"
-"- Fixed: adding an album to a playlist stopped after 100 songs; songs without lyrics were reported as a connection problem; shared links with a country in them were misread.\n"
-"- Under the hood: a large clean-up and a test suite covering nearly all of the code.\n"
-"\t"
-msgstr ""
-
 #: addon/installTasks.py:32
 msgid "Accessify Play Installation"
 msgstr ""
@@ -2917,4 +2904,23 @@ msgstr ""
 #: addon/globalPlugins/accesifyPlay/ui/base_dialog.py:719
 #: addon/globalPlugins/accesifyPlay/ui/base_dialog.py:720
 msgid "View Tracks"
+msgstr ""
+
+#. Translators: what's new content for the add-on version to be shown in the add-on store
+#: buildVars.py:39
+msgid ""
+"\n"
+"- Every list works the same way: one context menu per kind of item, the "
+"same Enter, the same rows (\"Song - Artist (3:21)\"), and the same tab "
+"keys in Search, the artist window and the Library.\n"
+"- Every shortcut inside the windows can be changed (Window Shortcuts... "
+"in the settings), and there are new settings for the sleep timer, "
+"queueing, Top Items and Search.\n"
+"- Long lists, the Library's tabs included, load a page at a time with "
+"Load More.\n"
+"- Playing from a window now says why when Spotify refuses.\n"
+"- Fixed: the artist window could stay empty; the Library offered other "
+"people's playlists to add to; Show Queue failed while nothing played; and"
+" more, listed in the changelog.\n"
+"\t"
 msgstr ""
