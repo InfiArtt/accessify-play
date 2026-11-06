@@ -59,6 +59,7 @@ class PKCE:
 		self, *, client_id: str, redirect_uri: str, scope: str, cache_handler: object, open_browser: object
 	) -> None:
 		self.client_id = client_id
+		self.redirect_uri = redirect_uri
 		self.cache_handler = cache_handler
 		PKCE.opened.append(bool(open_browser))
 		assert "user-modify-playback-state" in scope
@@ -141,6 +142,20 @@ def test_own_client_id_signs_in_with_it() -> None:
 	sc.config.conf["spotify"]["ownClientID"] = "0123456789abcdef0123456789abcdef"
 	auth = sc.SpotifyClient()._get_auth_manager()
 	assert auth.client_id == "0123456789abcdef0123456789abcdef"
+	# The redirect URI the user guide tells people to register on their own app.
+	assert auth.redirect_uri == "http://127.0.0.1:5588/login"
+
+
+@pytest.mark.usefixtures("pkce")
+def test_shared_client_id_uses_its_registered_redirect_uri() -> None:
+	"""The shared client ID signs in with the path registered on it, which ncspot 1.5.0 changed.
+
+	Any other path makes Spotify refuse with "redirect_uri: Not matching configuration".
+	"""
+	sc.config.conf["spotify"]["ownClientID"] = ""
+	auth = sc.SpotifyClient()._get_auth_manager()
+	assert auth.client_id == sc.SHARED_CLIENT_ID
+	assert auth.redirect_uri == "http://127.0.0.1:5588/ncspot_login"
 
 
 def test_clearing_credentials(client: SpotifyClient) -> None:
