@@ -52,6 +52,8 @@ class PKCE:
 
 	token: object = {"access_token": "t"}
 	opened: ClassVar[list[bool]] = []
+	#: check_cache of each get_access_token call.
+	checked: ClassVar[list[bool]] = []
 
 	def __init__(
 		self, *, client_id: str, redirect_uri: str, scope: str, cache_handler: object, open_browser: object
@@ -63,7 +65,7 @@ class PKCE:
 		assert redirect_uri.startswith("http://127.0.0.1")
 
 	def get_access_token(self, *, check_cache: bool) -> object:
-		self.checked_cache = check_cache
+		PKCE.checked.append(check_cache)
 		if isinstance(self.token, BaseException):
 			raise self.token
 		return self.token
@@ -72,7 +74,7 @@ class PKCE:
 @pytest.fixture
 def pkce(monkeypatch: pytest.MonkeyPatch, server: SpotifyServer) -> type[PKCE]:
 	"""Sign in without a browser; the new spotipy client talks to the stand-in server."""
-	PKCE.token, PKCE.opened = {"access_token": "t"}, []
+	PKCE.token, PKCE.opened, PKCE.checked = {"access_token": "t"}, [], []
 	monkeypatch.setattr(sc, "SpotifyPKCE", PKCE)
 
 	def new_spotify(_auth: object) -> spotipy.Spotify:
@@ -90,6 +92,7 @@ def test_silent_sign_in_from_the_cache(pkce: type[PKCE]) -> None:
 	fresh.initialize()
 	assert fresh.client is not None
 	assert pkce.opened == [False]
+	assert pkce.checked == [True]
 
 
 @pytest.mark.parametrize(
@@ -109,6 +112,8 @@ def test_validate(pkce: type[PKCE], server: SpotifyServer) -> None:
 	fresh = sc.SpotifyClient()
 	assert fresh.validate() is True
 	assert pkce.opened == [True]
+	# A fresh sign-in, not the token in the cache.
+	assert pkce.checked == [False]
 	assert fresh.client is not None
 
 
@@ -308,6 +313,13 @@ def test_links_and_time(client: SpotifyClient, now: SpotifyServer) -> None:
 	now.routes["GET", "me/player"] = playing(EPISODE)
 	assert client.get_current_track_url() == "Could not find URL for the current track."
 	assert client.get_current_songlink_url() == "Could not find URL for the current track."
+	now.routes["GET", "me/player"] = {"is_playing": False, "item": None}
+	assert client.get_current_track_url() == "Nothing is currently playing."
+	now.routes["GET", "me/player"] = spotify_error(500)
+	assert (
+		client.get_current_track_info()
+		== "Spotify is having trouble right now. Please try again in a moment."
+	)
 	now.routes["GET", "me/player"] = None
 	now.routes["GET", "me/player/devices"] = spotify_error(401)
 	assert "No active Spotify device" in client.get_playback_time_info()
@@ -404,6 +416,9 @@ def test_playback_refused_is_said(client: SpotifyClient, now: SpotifyServer) -> 
 		("https://open.spotify.com/intl-nl/track/7?si=x", {"uris": ["spotify:track:7"]}),
 		("https://open.spotify.com/playlist/8", {"context_uri": "spotify:playlist:8"}),
 		("https://open.spotify.com/", {"context_uri": "https://open.spotify.com/"}),
+		("spotify:user:bob:playlist:9", {"context_uri": "spotify:playlist:9"}),
+		("spotify:", {"context_uri": "spotify:"}),
+		("https://example.com/track/1", {"context_uri": "https://example.com/track/1"}),
 	],
 )
 def test_play_item(client: SpotifyClient, now: SpotifyServer, what: str | list, payload: dict) -> None:
@@ -448,6 +463,10 @@ def test_full_queue(client: SpotifyClient, server: SpotifyServer) -> None:
 		("queue_item", "Ep", "Show"),
 	]
 	assert queue[0]["link"] == "https://open.spotify.com/track/t1"
+	# Between items Spotify reports nothing playing; the queue still lists what follows.
+	server.routes["GET", "me/player/queue"] = dict(QUEUE, currently_playing=None)
+	assert [q["name"] for q in client.get_full_queue()] == ["Next", "Ep", "Song", "Later"]
+	assert client.get_next_track_in_queue().startswith("Next in queue: Next by C")
 
 
 def test_next_in_queue(client: SpotifyClient, server: SpotifyServer) -> None:

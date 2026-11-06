@@ -18,7 +18,7 @@ from accesifyPlay.dialogs.queue_list import QueueListDialog
 from accesifyPlay.dialogs.seek import SeekDialog
 from accesifyPlay.dialogs.sleeptimer import SleepTimerDialog
 from accesifyPlay.dialogs.volume import SetVolumeDialog
-from conftest import choose, last_menu
+from conftest import accelerate, choose, last_menu
 
 if TYPE_CHECKING:
 	from accesifyPlay.spotify_client import SpotifyClient
@@ -106,6 +106,11 @@ def test_queue_menu_and_copy(client: SpotifyClient, calls: Calls) -> None:
 	choose(window, last_menu(), "Play")
 	assert api.clipboard == ["https://x/t1"]
 	assert calls.made == [("skip_to_queue_index", 1)]
+	window.queueList.SetSelection(wx.NOT_FOUND)
+	accelerate(window, wx.ACCEL_ALT, "L")
+	window.on_queue_context_menu(None)
+	assert api.clipboard == ["https://x/t1"]
+	assert len(wx.popped_menus) == 1
 
 
 def test_refreshing_the_queue(client: SpotifyClient, calls: Calls, spoken: list[str]) -> None:

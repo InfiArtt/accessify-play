@@ -287,6 +287,13 @@ def test_modules_that_load_first_stay_simple() -> None:
 
 def _setting_names(node: ast.AST) -> set[str]:
 	"""Return the setting named by one node, if it names one: conf_get("x"), spotify["x"], ..."""
+	# Shortcut settings (keyPlay, ...) are named wherever a window binds or shows one.
+	if (
+		isinstance(node, ast.Constant)
+		and isinstance(node.value, str)
+		and re.fullmatch(r"key[A-Z]\w*", node.value)
+	):
+		return {node.value}
 	if isinstance(node, ast.Call):
 		called = getattr(node.func, "id", getattr(node.func, "attr", None))
 		position = {"conf_get": 0, "_add_spin": 1, "_add_choice": 1}.get(called)
@@ -308,9 +315,11 @@ def _setting_names(node: ast.AST) -> set[str]:
 
 def settings_read() -> set[str]:
 	"""Return every setting the add-on reads or writes by name."""
+	# Not the table itself, which names every setting.
 	return {
 		name
 		for path in package_sources()
+		if path.name != "settings_spec.py"
 		for node in ast.walk(ast.parse(read(path)))
 		for name in _setting_names(node)
 	}

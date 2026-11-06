@@ -5,7 +5,7 @@ Press **`NVDA+Alt+G`** to open the command layer, then press one of the keys bel
 * `F1` lists every key, so you don't need to memorize them.
 * `Escape` closes the layer without doing anything.
 * A key that isn't in the layer closes it with a low beep.
-* Some commands keep the layer open, so you can press them again straight away (for example `N` several times to skip several tracks). These are marked "stays open" below. Press `Escape` when you are done. You can choose which commands stay open: see [Customizing the command layer](customizing_commands.html).
+* Some commands keep the layer open, so you can press them again straight away (for example `N` several times to skip several tracks). These are marked "stays open" below. Press `Escape` when you are done. You can choose which commands stay open: see [Customizing commands and shortcuts](customizing_commands.html).
 * If you leave the layer open and don't press anything for 30 seconds, the next key you press closes it and works as normal instead.
 
 ## Playback

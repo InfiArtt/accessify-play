@@ -202,6 +202,11 @@ def test_reader_schedules_the_remaining_lines(timers: list[Timer], spoken: list[
 	timers[0].fire()
 	assert spoken == ["Two"]
 	assert heard == [5000]
+	# Without the lyrics window, nothing follows the line; it is still spoken.
+	reader.set_line_callback(None)
+	timers[1].fire()
+	assert spoken == ["Two", "Three"]
+	assert heard == [5000]
 
 
 def test_reader_with_nothing_left(timers: list[Timer]) -> None:

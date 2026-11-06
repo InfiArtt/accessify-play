@@ -19,7 +19,7 @@ import ui
 import wx
 from logHandler import log
 
-from .commands import BY_SCRIPT
+from .commands import BY_SCRIPT, LAYER_KEYS
 from .dialogs.layer_editor import LayerEditorDialog
 from .language import init_translation
 from .layer_config import LayerConfigManager
@@ -114,11 +114,7 @@ class CommandLayerManager:
 		self._help_entries = self._build_help_entries()
 
 	def _build_layer_gestures(self) -> dict[str, str]:
-		gestures = dict(self.config_manager.get_gesture_map())
-		# System commands
-		gestures["kb:f1"] = "commandLayerHelp"
-		gestures["kb:escape"] = "commandLayerCancel"
-		gestures["kb:f2"] = "showLayerEditor"
+		gestures = {**self.config_manager.get_gesture_map(), **LAYER_KEYS}
 
 		# NVDA matches gestures on their normalized identifier, so normalize the
 		# identifiers coming from layer_config.json the same way bindGesture does.
@@ -265,10 +261,8 @@ class CommandLayerManager:
 				try:
 					evt.Skip()
 				finally:
-					dialog = self._help_dialog
+					self._help_dialog.Destroy()
 					self._help_dialog = None
-					if dialog:
-						dialog.Destroy()
 
 			self._help_dialog.Bind(wx.EVT_CLOSE, _on_close)
 			self._help_dialog.Show()

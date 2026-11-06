@@ -117,6 +117,13 @@ COMMANDS = (
 #: Every command by its script name, in the order of the table.
 BY_SCRIPT: dict[str, Command] = {command.script: command for command in COMMANDS}
 
+#: Keys the layer keeps for itself, with the script each runs; they cannot be given to a command.
+LAYER_KEYS = {
+	"kb:f1": "commandLayerHelp",
+	"kb:f2": "showLayerEditor",
+	"kb:escape": "commandLayerCancel",
+}
+
 
 def description(script: str) -> str:
 	"""Return what a command does, for its @script decorator."""

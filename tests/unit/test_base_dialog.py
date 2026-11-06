@@ -39,18 +39,15 @@ def dialog(client: SpotifyClient, server: SpotifyServer) -> AccessifyDialog:
 	client.device_id = "laptop"
 	server.routes["PUT", "me/player/play"] = None
 	server.routes["POST", "me/player/queue"] = None
-	return AccessifyDialog(None, client)
-
-
-def test_client_can_be_passed_by_name(client: SpotifyClient) -> None:
-	"""A window gets the client positionally or as a keyword."""
-	assert AccessifyDialog(None, client=client).client is client
+	window = AccessifyDialog(None)
+	window.client = client
+	return window
 
 
 def test_escape_and_close(dialog: AccessifyDialog) -> None:
 	"""Escape closes the window, which then destroys itself and raises its parent."""
 	parent = wx.Dialog(None)
-	child = AccessifyDialog(parent, dialog.client)
+	child = AccessifyDialog(parent)
 	other = child.fire(wx.EVT_CHAR_HOOK, wx.KeyEvent(ord("a")))
 	assert other.skipped
 	child.fire(wx.EVT_CHAR_HOOK, wx.KeyEvent(wx.WXK_ESCAPE))

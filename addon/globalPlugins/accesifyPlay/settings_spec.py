@@ -14,6 +14,10 @@ add-on works (how often it asks Spotify what is playing, how long it waits for
 an answer) and can be changed in nvda.ini, under [spotify]. A value outside
 its range is ignored in favour of the default.
 
+Shortcut settings hold the keys of the shortcuts inside the windows (shortcuts.py
+reads them); the Window Shortcuts dialog, opened from the settings panel,
+changes them.
+
 This module must not translate anything: __init__ registers the spec from it
 before any other add-on module is imported.
 """
@@ -33,6 +37,12 @@ TIME_RANGES = ("short_term", "medium_term", "long_term")
 #: What Search can look for, in the order of its Type list.
 SEARCH_TYPES = ("track", "album", "artist", "playlist", "show", "audiobook")
 
+#: The kinds of shortcut settings. A window shortcut works anywhere in its window,
+#: so it needs Alt or Ctrl (or is a function key) to stay out of the way of typing.
+#: A list key works only in its list and may be any key. Modifiers are the keys
+#: held with a number from 1 to go to a tab or search type.
+WINDOW, LIST_KEY, MODIFIERS = "window", "list", "modifiers"
+
 
 @dataclass(frozen=True)
 class Setting:
@@ -46,6 +56,9 @@ class Setting:
 	choices: tuple[str, ...] = ()
 	#: Hidden settings are only in nvda.ini, not in the settings panel.
 	hidden: bool = False
+	#: For the keys of a shortcut: WINDOW, LIST_KEY or MODIFIERS. Written like NVDA's
+	#: gestures ("alt+p"), several separated by spaces.
+	shortcut: str = ""
 
 	@property
 	def spec(self) -> str:
@@ -93,6 +106,31 @@ _TABLE = (
 	Setting("queueTrackLimit", 100, 1, 1000),
 	# Whether Create Playlist starts with Public playlist checked.
 	Setting("newPlaylistPublic", default=True),
+	# --- In the Window Shortcuts dialog ---
+	# Play, queue and copy the link of the selected item, in every window with a list.
+	Setting("keyPlay", "alt+p", shortcut=WINDOW),
+	Setting("keyQueue", "alt+q", shortcut=WINDOW),
+	Setting("keyCopyLink", "alt+l", shortcut=WINDOW),
+	# Open the lyrics of the selected song.
+	Setting("keyLyrics", "alt+w", shortcut=WINDOW),
+	# Load the list again: the Library and the queue.
+	Setting("keyRefresh", "alt+r", shortcut=WINDOW),
+	# Search: follow or unfollow the selected artist, and open their discography.
+	Setting("keyFollow", "alt+f", shortcut=WINDOW),
+	Setting("keyDiscography", "alt+d", shortcut=WINDOW),
+	# Search: back to the search field.
+	Setting("keySearchField", "ctrl+f", shortcut=WINDOW),
+	# Search types and the artist window's tabs: next, previous, and by number.
+	Setting("keyNextTab", "ctrl+tab ctrl+pageDown", shortcut=WINDOW),
+	Setting("keyPreviousTab", "ctrl+shift+tab ctrl+pageUp", shortcut=WINDOW),
+	Setting("keyTabNumber", "ctrl", shortcut=MODIFIERS),
+	# A show's episodes: save or unsave the selected one.
+	Setting("keySaveEpisode", "alt+s", shortcut=WINDOW),
+	# The Library: a new playlist, and moving or removing a track of your own playlist.
+	Setting("keyNewPlaylist", "ctrl+n", shortcut=WINDOW),
+	Setting("keyMoveTrackUp", "alt+upArrow", shortcut=LIST_KEY),
+	Setting("keyMoveTrackDown", "alt+downArrow", shortcut=LIST_KEY),
+	Setting("keyRemoveTrack", "delete", shortcut=LIST_KEY),
 	# --- Only in nvda.ini ---
 	# How often the track poller asks Spotify what is playing, in seconds: while
 	# something plays, while it is paused, and while nothing plays or Spotify is unreachable.

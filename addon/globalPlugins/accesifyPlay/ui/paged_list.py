@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 
 import ui
 import wx
+from logHandler import log
 
 from ..core.thread_manager import thread_manager
 from ..language import init_translation
@@ -35,7 +36,8 @@ class PagedList:
 	or a message to say; empty items (None) are skipped but still counted
 	for the offset. row(item, number) is the text of an item's row, where
 	number counts from 1. A page holds as many items as the "results per
-	page" setting says.
+	page" setting says. When the first page fails, the list shows failed, or
+	without it the reason itself; the reason is said either way.
 	"""
 
 	def __init__(
@@ -45,7 +47,7 @@ class PagedList:
 		row: Callable[[Item, int], str],
 		*,
 		empty: str,
-		failed: str,
+		failed: str | None = None,
 	) -> None:
 		self.control = control
 		self.items: list[Item] = []
@@ -93,7 +95,13 @@ class PagedList:
 			play()
 
 	def _fetch_page(self) -> None:
-		wx.CallAfter(self._show_page, self._fetch(self._offset, self._page_size))
+		try:
+			page = self._fetch(self._offset, self._page_size)
+		except Exception:
+			# Never leave the list saying Loading, nor refusing to load again.
+			log.exception("Loading a page of a list failed")
+			page = _("Could not load this list. Please try again.")
+		wx.CallAfter(self._show_page, page)
 
 	def _show_page(self, page: Reply | str) -> None:
 		self._loading = False
@@ -101,29 +109,29 @@ class PagedList:
 			return  # the window closed while the page was on its way
 		if isinstance(page, str):
 			if not self.items:
-				self._show_only(self._failed)
+				self._show_only(self._failed or page)
 			ui.message(page)
 			return
-		entries = (page or {}).get("items") or []
-		if not entries:
-			self._has_more = False
-			if self.items:
-				self._show_load_more_row()
-			else:
-				self._show_only(self._empty)
-			return
-		if not self.items:
-			self.control.Clear()
-		first_number = len(self.items) + 1
-		new_items = [item for item in entries if item]
-		self.items.extend(new_items)
+		page = page or {}
+		entries = page.get("items") or []
 		self._offset += len(entries)
 		total = page.get("total")
-		self._has_more = self._offset < total if total is not None else bool(page.get("next"))
+		more = self._offset < total if total is not None else bool(page.get("next"))
+		self._has_more = bool(entries) and more
+		new_items = [item for item in entries if item]
+		if new_items and not self.items:
+			self.control.Clear()  # the Loading row
+		first_number = len(self.items) + 1
+		self.items.extend(new_items)
 		self._remove_load_more_row()
 		for number, item in enumerate(new_items, start=first_number):
 			self.control.Append(self._row(item, number))
-		self._show_load_more_row()
+		if self.items:
+			self._show_load_more_row()
+		elif self._has_more:
+			self.load_more()  # a page with nothing to show (only empty entries): on to the next
+		else:
+			self._show_only(self._empty)
 
 	def _show_only(self, text: str) -> None:
 		self.control.Clear()

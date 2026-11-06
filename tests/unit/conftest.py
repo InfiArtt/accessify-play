@@ -29,7 +29,6 @@ import accesifyPlay  # noqa: E402
 import addonHandler  # noqa: E402
 import api  # noqa: E402
 import config  # noqa: E402
-import core  # noqa: E402
 import globalVars  # noqa: E402
 import gui  # noqa: E402
 import inputCore  # noqa: E402
@@ -76,9 +75,6 @@ class Tasks:
 	) -> None:
 		self.pollers.append((name, target, interval_seconds))
 
-	def shutdown(self, *_args: object, **_kwargs: object) -> None:
-		pass
-
 
 @pytest.fixture(autouse=True)
 def nvda(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Tasks:
@@ -93,7 +89,6 @@ def nvda(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Tasks:
 	gui.message_box_answer = wx.YES
 	gui.message_boxes.clear()
 	gui.mainFrame.settings_opened.clear()
-	core.restarts = 0
 	inputCore.manager._captureFunc = None
 	addonHandler.code_addon = None
 	config.conf.clear()

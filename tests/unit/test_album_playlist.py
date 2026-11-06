@@ -113,6 +113,27 @@ def test_album_actions(client: SpotifyClient, ready: SpotifyServer, spoken: list
 	accelerate(window, wx.ACCEL_ALT, "L")
 	assert api.clipboard == ["https://x/t1"]
 	assert spoken == ["Playing from album...", "Adding to queue...", "Song 1 added to queue.", "Link copied"]
+	# Without a selection the shortcuts ask for one and copy nothing.
+	window.tracks_list.SetSelection(wx.NOT_FOUND)
+	accelerate(window, wx.ACCEL_ALT, "Q")
+	accelerate(window, wx.ACCEL_ALT, "L")
+	assert spoken[-2:] == ["Please select a track first."] * 2
+	assert api.clipboard == ["https://x/t1"]
+
+
+def test_a_refused_play_is_said(client: SpotifyClient, ready: SpotifyServer, spoken: list[str]) -> None:
+	"""When Spotify refuses to play (no Premium, no device), the window says why."""
+	ready.routes["PUT", "me/player/play"] = spotify_error(403)
+	window = album_window(client, ready, [track(1), track(2, uri=None)])
+	window.tracks_list.SetSelection(0)
+	window.tracks_list.fire(wx.EVT_CHAR_HOOK, wx.KeyEvent(wx.WXK_RETURN))
+	assert spoken[0] == "Playing from album..."
+	assert len(spoken) == 2
+	ready.routes["PUT", "me/player/play"] = None
+	# A track without a URI cannot be played in the album either; it says so.
+	window.tracks_list.SetSelection(1)
+	window.tracks_list.fire(wx.EVT_CHAR_HOOK, wx.KeyEvent(wx.WXK_RETURN))
+	assert spoken[-1] == "Unable to play selection. URI not found."
 
 
 def test_album_without_a_uri_plays_the_track(
@@ -193,6 +214,21 @@ def test_playlist_problems(client: SpotifyClient, ready: SpotifyServer, spoken: 
 	assert bare.tracks_list.GetStrings() == ["Playlist information incomplete."]
 
 
+def test_a_page_after_closing_is_dropped(client: SpotifyClient, ready: SpotifyServer) -> None:
+	"""A page that arrives after the window closed is not put in the list."""
+	window = playlist_window(client, ready, [page([track(1)], total=2)])
+	answers = [page([track(2)], total=2)]
+
+	def close_first(_params: object, _payload: object) -> dict:
+		window.Destroy()
+		return answers.pop(0)
+
+	ready.routes["GET", "playlists/p1/items"] = close_first
+	window.tracks_list.SetSelection(1)
+	window.paged.load_more()
+	assert window.tracks_list.GetStrings() == ["1. Song 1 — A (1:01)", "--- Load More ---"]
+
+
 def test_playlist_error_after_the_first_page(
 	client: SpotifyClient, ready: SpotifyServer, spoken: list[str]
 ) -> None:
@@ -218,6 +254,10 @@ def test_playlist_actions(client: SpotifyClient, ready: SpotifyServer, spoken: l
 	accelerate(window, wx.ACCEL_ALT, "L")
 	assert spoken[0] == "Please select a track first."
 	assert spoken[-1] == "Link copied"
+	window.tracks_list.SetSelection(wx.NOT_FOUND)
+	accelerate(window, wx.ACCEL_ALT, "Q")
+	accelerate(window, wx.ACCEL_ALT, "L")
+	assert spoken[-2:] == ["Please select a track first."] * 2
 
 
 def test_playlist_track_menu(client: SpotifyClient, ready: SpotifyServer) -> None:

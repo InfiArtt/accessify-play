@@ -48,6 +48,7 @@ Spotify's own rules for developer apps apply to an app you create. To go back to
 * **Clear Credentials**: sign out of Spotify on this computer.
 * **Spotify Developer Dashboard**: opens Spotify's developer website, for creating your own Client ID.
 * **Donate**: opens the page for supporting the add-on's development, after asking you.
+* **Window Shortcuts...**: change the shortcuts inside Accessify Play's windows, such as `Alt+P` to play; see [Customizing commands and shortcuts](customizing_commands.html).
 
 ## Advanced settings in nvda.ini
 

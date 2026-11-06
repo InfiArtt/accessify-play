@@ -14,6 +14,7 @@ import wx
 from gui import guiHelper
 
 from ..core.thread_manager import thread_manager
+from ..formatting import format_names
 from ..language import init_translation
 from ..settings_spec import conf_get
 from ..ui.base_dialog import AccessifyDialog
@@ -215,7 +216,7 @@ class AddToPlaylistDialog(AccessifyDialog):
 		sizer = wx.BoxSizer(wx.VERTICAL)
 
 		track_name = self.current_track.get("name", _("Unknown Track"))
-		artists = ", ".join([a["name"] for a in self.current_track.get("artists", [])])
+		artists = format_names(self.current_track.get("artists"))
 
 		# Translators: Label for the current track in the "Add to Playlist" dialog.
 		self.track_label = wx.StaticText(

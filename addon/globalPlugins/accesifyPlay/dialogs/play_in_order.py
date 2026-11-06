@@ -9,10 +9,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, NamedTuple
 
-import ui
 import wx
 
-from ..core.thread_manager import thread_manager
 from ..language import init_translation
 from ..ui.base_dialog import AccessifyDialog
 from ..ui.paged_list import PagedList
@@ -65,11 +63,11 @@ class PlayInOrderDialog(AccessifyDialog):
 		raise NotImplementedError
 
 	def actions(self) -> list[tuple[str, str, Callable[[wx.Event | None], object]]]:
-		"""Return (Alt+ letter, menu label, handler) for each action, in menu order."""
+		"""Return (shortcut setting, menu label, handler) for each action, in menu order."""
 		return [
-			("P", self.texts.play_menu, self.on_play),
-			("Q", _("Add to Queue\tAlt+Q"), self.on_add_to_queue),
-			("L", _("Copy Link\tAlt+L"), self.on_copy_link),
+			("keyPlay", self.texts.play_menu, self.on_play),
+			("keyQueue", _("Add to Queue"), self.on_add_to_queue),
+			("keyCopyLink", _("Copy Link"), self.on_copy_link),
 		]
 
 	def _init_ui(self) -> None:
@@ -101,23 +99,15 @@ class PlayInOrderDialog(AccessifyDialog):
 		panel.SetSizer(sizer)
 
 	def _create_accelerators(self) -> None:
-		# One id per action serves both its shortcut and its menu item.
-		self._action_ids = []
-		entries = []
-		for letter, _label, handler in self.actions():
-			action_id = wx.NewIdRef()
-			self._action_ids.append(action_id)
-			entries.append((wx.ACCEL_ALT, ord(letter), action_id.GetId()))
-			self.Bind(wx.EVT_MENU, handler, id=action_id.GetId())
-		self.SetAcceleratorTable(wx.AcceleratorTable(entries))
+		self._bind_shortcuts({setting: handler for setting, _label, handler in self.actions()})
 
 	def on_context_menu(self, _evt: wx.Event) -> None:
 		"""Show the actions for the selected part."""
 		if not self.parts.selected():
 			return
 		menu = wx.Menu()
-		for action_id, (_letter, label, _handler) in zip(self._action_ids, self.actions(), strict=True):
-			menu.Append(action_id.GetId(), label)
+		for setting, label, _handler in self.actions():
+			self._append_action(menu, label, setting)
 		self.PopupMenu(menu)
 		menu.Destroy()
 
@@ -126,18 +116,7 @@ class PlayInOrderDialog(AccessifyDialog):
 		part = self.parts.selected()
 		if not part:
 			return
-		uri = part.get("uri")
-		if not uri:
-			self._play_uri(uri)
-			return
-		ui.message(_("Playing."))
-		thread_manager.submit_task(
-			self.client.play_context_with_offset,
-			f"spotify:{self.CONTEXT}:{self.context_id}",
-			uri,
-			name="DialogTask",
-			daemon=True,
-		)
+		self._play_in_context(f"spotify:{self.CONTEXT}:{self.context_id}", part.get("uri"), _("Playing."))
 
 	def on_add_to_queue(self, _evt: wx.Event | None = None) -> None:
 		"""Add the selected part to the queue."""
@@ -149,4 +128,4 @@ class PlayInOrderDialog(AccessifyDialog):
 		"""Copy the selected part's Spotify link."""
 		part = self.parts.selected()
 		if part:
-			copy_link(part.get("external_urls", {}).get("spotify"))
+			copy_link((part.get("external_urls") or {}).get("spotify"))

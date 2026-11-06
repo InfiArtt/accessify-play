@@ -262,8 +262,8 @@ class LyricsAutoReader:
 				t.cancel()
 			self._timers.clear()
 
-	def _speak(self, text: str, ms: int | None = None) -> None:
+	def _speak(self, text: str, ms: int) -> None:
 		if self._active:
 			wx.CallAfter(nvda_ui.message, text)
-			if ms is not None and self._line_callback:
+			if self._line_callback:
 				wx.CallAfter(self._line_callback, ms)

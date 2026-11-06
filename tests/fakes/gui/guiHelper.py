@@ -24,14 +24,3 @@ class BoxSizerHelper:
 
 	def addItem(self, item: object, **_kwargs: object) -> object:
 		return item
-
-	def addDialogDismissButtons(self, buttons: object, *_args: object, **_kwargs: object) -> object:
-		return buttons
-
-
-class ButtonHelper:
-	def __init__(self, orientation: int = wx.HORIZONTAL) -> None:
-		self.sizer = wx.BoxSizer(orientation)
-
-	def addButton(self, parent: wx.Window, **kwargs: object) -> wx.Button:
-		return wx.Button(parent, **kwargs)

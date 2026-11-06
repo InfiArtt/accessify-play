@@ -25,7 +25,7 @@ Accessify Play has a single default shortcut: **`NVDA+Alt+G`**. It opens the *co
 You can change the keys in the layer, and you can also give any command a shortcut of its own in NVDA's Input Gestures dialog, under "Accessify Play".
 
 * [Command keys](keybindings.html): every key in the layer.
-* [Customizing the command layer](customizing_commands.html).
+* [Customizing commands and shortcuts](customizing_commands.html): the command layer's keys, and the shortcuts inside the windows.
 
 ## Guides
 

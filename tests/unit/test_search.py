@@ -107,6 +107,21 @@ def test_search_opens_on_the_type_from_the_settings(client: SpotifyClient, ready
 	assert window.resultsList.GetStrings() == ["A"]
 
 
+def test_results_after_closing_are_dropped(
+	client: SpotifyClient, ready: SpotifyServer, spoken: list[str]
+) -> None:
+	"""Results that arrive after Search closed are not shown, and nothing is said."""
+	window = SearchDialog(None, client)
+
+	def close_first(_params: object, _payload: object) -> dict:
+		window.Destroy()
+		return page("track", [TRACK])
+
+	search_for(window, ready, "x", close_first)
+	assert window.resultsList.GetStrings() == []
+	assert spoken[-1] == "Searching..."
+
+
 def test_rows_are_translatable(client: SpotifyClient, ready: SpotifyServer) -> None:
 	"""A playlist's row names its owner through a translatable text; a missing name is Unknown."""
 	window = SearchDialog(None, client)
@@ -134,7 +149,7 @@ def test_search_pages_through_results(client: SpotifyClient, ready: SpotifyServe
 	"""Results come a page at a time; Load More fetches the next and moves to its first row."""
 	window = SearchDialog(None, client)
 	assert window.queryText.HasFocus()
-	assert window._user_playlists == [OWN]
+	assert window.user_playlists == [OWN]
 	search_for(window, ready, "song", page("track", [TRACK, None], more=True))
 	assert spoken[-1] == "Searching..."
 	assert window.resultsList.GetStrings() == ["Song - A", "--- Load More ---"]
@@ -189,8 +204,11 @@ def test_switching_type(client: SpotifyClient, ready: SpotifyServer, spoken: lis
 	accelerate(window, wx.ACCEL_CTRL, wx.WXK_PAGEUP)
 	assert window.typeBox.GetValue() == "Audiobook"
 	window.resultsList.SetFocus()
+	window.queryText.SetValue("old words")
 	accelerate(window, wx.ACCEL_CTRL, "F")
 	assert window.queryText.HasFocus()
+	# The search text is selected, ready to type over.
+	assert window.queryText.selection == (0, len("old words"))
 
 
 @pytest.mark.parametrize(
@@ -214,13 +232,11 @@ def test_result_rows(client: SpotifyClient, ready: SpotifyServer, kind: str, ite
 def test_playlists_for_the_menus(client: SpotifyClient, server: SpotifyServer, spoken: list[str]) -> None:
 	"""Only the user's own playlists are offered; all when the user is unknown; none on failure."""
 	server.routes["GET", "me/playlists"] = {"items": [OWN, OTHER], "next": None}
-	assert SearchDialog(None, client)._user_playlists == [OWN, OTHER]
+	assert SearchDialog(None, client).user_playlists == [OWN, OTHER]
 	server.routes["GET", "me/playlists"] = spotify_error(500)
 	window = SearchDialog(None, client)
-	assert window._user_playlists == []
+	assert window.user_playlists == []
 	assert "trouble" in spoken[-1]
-	window._load_user_playlists()
-	assert server.paths().count("me/playlists") == 2
 
 
 @pytest.mark.parametrize(

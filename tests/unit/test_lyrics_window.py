@@ -16,8 +16,8 @@ SYNCED = Lyrics("Song", "A", "One\nTwo", [(1_000, "One"), (2_000, "  "), (65_430
 
 
 def buttons(window: LyricsDialog) -> dict[str, wx.Button]:
-	"""Return the window's buttons by label."""
-	return {c.GetLabel(): c for c in window.GetChildren() if isinstance(c, wx.Button)}
+	"""Return the window's buttons that are shown, by label."""
+	return {c.GetLabel(): c for c in window.GetChildren() if isinstance(c, wx.Button) and c.IsShown()}
 
 
 def test_synced_lyrics(spoken: list[str]) -> None:
@@ -79,9 +79,22 @@ def test_the_next_song_replaces_the_lyrics() -> None:
 	assert window.GetTitle() == "Lyrics: Next — B"
 	assert window.lyrics_ctrl.GetValue() == "Plain only"
 	assert window.lyrics_ctrl.handlers(wx.EVT_KEY_DOWN) == []
-	assert not buttons(window)["Copy with &Timestamps"].IsShown()
+	assert "Copy with &Timestamps" not in buttons(window)
 	window.update_content(SYNCED)
-	assert buttons(window)["&Jump to Current"].IsShown()
+	assert "&Jump to Current" in buttons(window)
 	window.lyrics_ctrl.fire(wx.EVT_KEY_DOWN, wx.KeyEvent(wx.WXK_RETURN))
 	assert seeks == [1_000]
-	LyricsDialog(None, Lyrics("Song", "A", "Words")).update_content(SYNCED)
+	# A window that opened on plain lyrics gets the timestamp buttons when a timed song follows.
+	plain_first = LyricsDialog(
+		None, Lyrics("Song", "A", "Words"), seek_callback=seeks.append, jump_callback=print
+	)
+	assert list(buttons(plain_first)) == ["Copy &Lyrics", "&Close"]
+	plain_first.update_content(SYNCED)
+	assert list(buttons(plain_first)) == [
+		"Copy &Lyrics",
+		"Copy with &Timestamps",
+		"&Jump to Current",
+		"&Close",
+	]
+	plain_first.lyrics_ctrl.fire(wx.EVT_KEY_DOWN, wx.KeyEvent(wx.WXK_RETURN))
+	assert seeks == [1_000, 1_000]

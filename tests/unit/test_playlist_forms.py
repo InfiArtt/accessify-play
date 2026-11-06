@@ -65,6 +65,15 @@ def test_create_a_playlist(client: SpotifyClient, server: SpotifyServer, spoken:
 	assert form.destroyed
 
 
+def test_create_without_the_library(client: SpotifyClient, spoken: list[str]) -> None:
+	"""Opened on its own, the form creates the playlist and closes; there is no list to reload."""
+	form = CreatePlaylistDialog(None, client)
+	form.nameCtrl.SetValue("Solo")
+	form.createButton.press()
+	assert spoken[-1] == "Playlist 'Solo' created successfully."
+	assert form.destroyed
+
+
 def test_new_playlists_are_public_as_set(client: SpotifyClient) -> None:
 	"""Public playlist starts checked or not, as the newPlaylistPublic setting says."""
 	assert CreatePlaylistDialog(None, client).publicCheck.GetValue() is True

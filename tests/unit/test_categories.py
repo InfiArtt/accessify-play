@@ -14,7 +14,7 @@ import pytest
 import wx
 from accesifyPlay.dialogs import categories
 from accesifyPlay.dialogs.categories import CategoriesDialog, FeaturedPlaylistsDialog
-from conftest import SpotifyServer, choose, last_menu, record_windows, spotify_error
+from conftest import SpotifyServer, accelerate, choose, last_menu, record_windows, spotify_error
 
 if TYPE_CHECKING:
 	from accesifyPlay.spotify_client import SpotifyClient
@@ -27,11 +27,6 @@ HITS = {
 	"external_urls": {"spotify": "https://x/p1"},
 }
 MIX = {"id": "p2", "name": None, "uri": "spotify:playlist:p2", "owner": {}}
-
-
-def rows(control: wx.ListCtrl) -> list[list[str]]:
-	"""Return a list control's rows, column by column."""
-	return [list(row) for row in control.rows]
 
 
 def pages(*answers: object) -> object:
@@ -53,59 +48,67 @@ def opened(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, tuple]]:
 	return record_windows(monkeypatch, categories, "CategoryPlaylistsDialog", "PlaylistTracksDialog")
 
 
-def scroll_down(control: wx.ListCtrl, row: int) -> wx.Event:
-	"""Arrow down onto row."""
-	control.Select(row)
-	return control.fire(wx.EVT_LIST_KEY_DOWN, wx.KeyEvent(wx.WXK_DOWN))
+def press_enter(control: wx.ListBox, row: int) -> None:
+	"""Select row and press Enter on it."""
+	control.SetSelection(row)
+	control.fire(wx.EVT_CHAR_HOOK, wx.KeyEvent(wx.WXK_RETURN))
 
 
 def test_categories_page_by_page(client: SpotifyClient, server: SpotifyServer, opened: list) -> None:
-	"""Categories load as the user nears the end; Enter opens one."""
+	"""Categories come a page at a time with a Load More row; Enter on a category opens it."""
 	server.routes["GET", "browse/categories"] = pages(
 		{"categories": {"items": [{"id": "c1", "name": "Pop"}, None, {"id": "c2"}], "next": "more"}},
 		{"categories": {"items": [{"id": "c3", "name": "Jazz"}], "next": None}},
 	)
 	window = CategoriesDialog(None, client)
-	assert rows(window.categoriesList) == [["Pop"], ["Unknown"]]
-	assert window.categoriesList.GetFirstSelected() == 0
-	assert scroll_down(window.categoriesList, 1).GetSkipped()
-	assert rows(window.categoriesList) == [["Pop"], ["Unknown"], ["Jazz"]]
-	scroll_down(window.categoriesList, 2)
-	assert server.paths().count("browse/categories") == 2
-	window.categoriesList.activate(2)
+	assert window.list.GetStrings() == ["Pop", "Unknown", "--- Load More ---"]
+	assert window.list.HasFocus()
+	press_enter(window.list, 2)
+	assert window.list.GetStrings() == ["Pop", "Unknown", "Jazz"]
+	# Pages as big as the Search Results Limit, like every other list; empty entries still count.
+	assert [(r[2]["offset"], r[2]["limit"]) for r in server.requests] == [(0, 20), (3, 20)]
+	press_enter(window.list, 2)
 	assert opened == [("CategoryPlaylistsDialog", ({"id": "c3", "name": "Jazz"},))]
-	window.on_category_activated(wx.ListEvent(-1))
+	window.list.SetSelection(wx.NOT_FOUND)
+	window.on_open()
 	assert len(opened) == 1
 
 
 @pytest.mark.parametrize(
 	("answer", "shown"),
-	[({"categories": {"items": [], "next": None}}, "No categories found."), (spotify_error(404), None)],
+	[
+		({"categories": {"items": [], "next": None}}, "No categories found."),
+		({}, "No categories found."),
+		(spotify_error(404), "Spotify has retired this feature, so it is no longer available."),
+	],
 )
 def test_no_categories(
-	client: SpotifyClient, server: SpotifyServer, spoken: list[str], answer: object, shown: str | None
+	client: SpotifyClient, server: SpotifyServer, spoken: list[str], answer: object, shown: str
 ) -> None:
-	"""Nothing to list, or a list Spotify retired, shows in the list."""
+	"""Nothing to list, or a list Spotify retired, shows in the list; a reason is also said."""
 	server.routes["GET", "browse/categories"] = pages(answer)
 	window = CategoriesDialog(None, client)
-	assert rows(window.categoriesList) == [[shown or spoken[-1]]]
+	assert window.list.GetStrings() == [shown]
+	assert spoken == ([shown] if isinstance(answer, BaseException) else [])
 
 
 def test_a_later_category_page_fails(
 	client: SpotifyClient, server: SpotifyServer, spoken: list[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-	"""A failed later page is said and the rows stay; a crash in the request removes Loading."""
+	"""A failed later page is said and the rows stay; a crash in the request does not leave Loading."""
 	server.routes["GET", "browse/categories"] = pages(
 		{"categories": {"items": [{"id": "c1", "name": "Pop"}], "next": "more"}}, spotify_error(500)
 	)
 	window = CategoriesDialog(None, client)
-	scroll_down(window.categoriesList, 0)
-	assert rows(window.categoriesList) == [["Pop"]]
+	press_enter(window.list, 1)
+	assert window.list.GetStrings() == ["Pop", "--- Load More ---"]
 	assert "trouble" in spoken[-1]
 	monkeypatch.setattr(client, "get_categories", lambda **_kwargs: 1 / 0)
-	window._load_categories()
-	assert rows(window.categoriesList) == [["Pop"]]
+	press_enter(window.list, 1)
+	assert window.list.GetStrings() == ["Pop", "--- Load More ---"]
 	assert spoken[-1] == "Could not load this list. Please try again."
+	window.paged.reload()
+	assert window.list.GetStrings() == ["Could not load this list. Please try again."]
 
 
 def test_category_playlists(client: SpotifyClient, server: SpotifyServer) -> None:
@@ -115,9 +118,19 @@ def test_category_playlists(client: SpotifyClient, server: SpotifyServer) -> Non
 	)
 	window = categories.CategoryPlaylistsDialog(None, client, {"id": "c1", "name": "Pop"})
 	assert window.GetTitle() == "Pop Playlists"
-	assert rows(window.playlistsList) == [["Hits", "Spotify"], ["Unknown", "Spotify"]]
-	# Pages as big as the Search Results Limit, like every other list.
-	assert (server.requests[-1][2]["offset"], server.requests[-1][2]["limit"]) == (0, 20)
+	assert window.list.GetStrings() == ["Hits - by Spotify", "Unknown - by Spotify"]
+	assert window.greetingLabel.GetLabel() == ""
+
+
+def test_a_page_of_only_stubs(client: SpotifyClient, server: SpotifyServer) -> None:
+	"""A page with nothing to show moves on to the next one, and says so if that was all."""
+	server.routes["GET", "browse/featured-playlists"] = pages(
+		{"playlists": {"items": [{"id": None}], "next": "more"}},
+		{"playlists": {"items": [HITS], "next": None}},
+	)
+	assert FeaturedPlaylistsDialog(None, client).list.GetStrings() == ["Hits - by Spotify"]
+	server.routes["GET", "browse/featured-playlists"] = pages({"playlists": {"items": [None]}})
+	assert FeaturedPlaylistsDialog(None, client).list.GetStrings() == ["No featured playlists found."]
 
 
 def test_featured_playlists(
@@ -131,39 +144,50 @@ def test_featured_playlists(
 	window = FeaturedPlaylistsDialog(None, client)
 	assert window.GetTitle() == "Featured Playlists"
 	assert window.greetingLabel.GetLabel() == "Good morning!"
-	assert rows(window.playlistsList) == [["Hits", "Spotify"]]
-	scroll_down(window.playlistsList, 0)
-	assert rows(window.playlistsList) == [["Hits", "Spotify"], ["Unknown", "Spotify"]]
+	assert window.list.GetStrings() == ["Hits - by Spotify", "--- Load More ---"]
+	press_enter(window.list, 1)
+	assert window.list.GetStrings() == ["Hits - by Spotify", "Unknown - by Spotify"]
 	assert spoken.count("Good morning!") == 1
-	window.playlistsList.activate(1)
+	press_enter(window.list, 1)
 	assert opened == [("PlaylistTracksDialog", (MIX,))]
+	window.list.SetSelection(wx.NOT_FOUND)
+	window.on_open()
+	assert len(opened) == 1
 
 
 @pytest.mark.parametrize(
 	("answer", "shown"),
-	[({"playlists": {"items": []}}, "No featured playlists found."), (spotify_error(500), None)],
+	[
+		({"playlists": {"items": []}}, "No featured playlists found."),
+		(spotify_error(500), None),
+	],
 )
 def test_no_featured_playlists(
 	client: SpotifyClient, server: SpotifyServer, spoken: list[str], answer: object, shown: str | None
 ) -> None:
-	"""Nothing to list, or a failure, shows in the list."""
+	"""Nothing to list, or a failure and its reason, shows in the list."""
 	server.routes["GET", "browse/featured-playlists"] = pages(answer)
 	window = FeaturedPlaylistsDialog(None, client)
-	assert rows(window.playlistsList) == [[shown or spoken[-1], ""]]
+	assert window.list.GetStrings() == [shown or spoken[-1]]
+	assert "trouble" in window.list.GetString(0) or shown
 
 
 def test_playlist_menu(client: SpotifyClient, server: SpotifyServer, spoken: list[str], opened: list) -> None:
-	"""The menu views, plays, copies, and follows the owner."""
+	"""The menu views, plays, queues, copies, and follows the owner."""
 	client.device_id = "laptop"
 	server.routes["PUT", "me/player/play"] = None
 	server.routes["GET", "me/library/contains"] = [False]
 	server.routes["PUT", "me/library"] = None
+	server.routes["GET", "playlists/p1/items"] = {"items": [{"track": {"uri": "spotify:track:t1"}}]}
+	server.routes["POST", "me/player/queue"] = None
 	server.routes["GET", "browse/featured-playlists"] = pages({"playlists": {"items": [HITS, MIX]}})
 	window = FeaturedPlaylistsDialog(None, client)
-	window.on_context_menu(None)
+	window.list.SetSelection(0)
+	window.list.fire(wx.EVT_CONTEXT_MENU, wx.CommandEvent())
 	assert last_menu().labels() == [
 		"View Tracks in Playlist",
 		"Play Entire Playlist",
+		"Add to Queue",
 		"Copy Playlist Link",
 		"Follow/Unfollow Owner: Spotify",
 	]
@@ -173,13 +197,32 @@ def test_playlist_menu(client: SpotifyClient, server: SpotifyServer, spoken: lis
 	assert {"context_uri": "spotify:playlist:p1"} in [
 		r[3] for r in server.requests if r[1] == "me/player/play"
 	]
+	assert ("POST", "me/player/queue") in [(r[0], r[1]) for r in server.requests]
 	assert api.clipboard == ["https://x/p1"]
 	assert spoken[-1] == "Now following Spotify."
-	window.playlistsList.Select(1)
+	window.list.SetSelection(1)
 	window.on_context_menu(None)
 	assert "Follow/Unfollow Owner: Spotify" not in last_menu().labels()
-	choose(window, last_menu(), "Play Entire Playlist")
-	window.playlistsList.Select(wx.NOT_FOUND)
+	popped = len(wx.popped_menus)
+	window.list.SetSelection(wx.NOT_FOUND)
 	window.on_context_menu(None)
-	window.on_menu_item(wx.CommandEvent(0))
-	assert len(wx.popped_menus) == 2
+	assert len(wx.popped_menus) == popped
+
+
+def test_playlist_shortcuts(client: SpotifyClient, server: SpotifyServer, spoken: list[str]) -> None:
+	"""Alt+P plays, Alt+L copies the link; a refused play is said; with nothing selected nothing happens."""
+	client.device_id = "laptop"
+	server.routes["PUT", "me/player/play"] = spotify_error(403)
+	server.routes["GET", "browse/featured-playlists"] = pages({"playlists": {"items": [HITS]}})
+	window = FeaturedPlaylistsDialog(None, client)
+	window.list.SetSelection(0)
+	accelerate(window, wx.ACCEL_ALT, "P")
+	assert spoken[-2] == "Playing..."
+	assert spoken[-1] != "Playing..."
+	accelerate(window, wx.ACCEL_ALT, "L")
+	assert api.clipboard == ["https://x/p1"]
+	window.list.SetSelection(wx.NOT_FOUND)
+	before = (len(spoken), len(server.requests))
+	for letter in "PQL":
+		accelerate(window, wx.ACCEL_ALT, letter)
+	assert (len(spoken), len(server.requests)) == before

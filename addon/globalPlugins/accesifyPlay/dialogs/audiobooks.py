@@ -39,7 +39,7 @@ class AudiobookChaptersDialog(PlayInOrderDialog):
 			# Translators: Label of a list or text field, read by screen readers.
 			list_label=_("Chapters:"),
 			play_button=_("&Play Chapter"),
-			play_menu=_("Play Chapter\tAlt+P"),
+			play_menu=_("Play Chapter"),
 			empty=_("No chapters found for this audiobook."),
 			failed=_("Unable to load chapters."),
 		)

@@ -24,9 +24,7 @@ addonHandler.initTranslation()
 
 def _load_donate_module() -> ModuleType | None:
 	try:
-		addon = addonHandler.getCodeAddon()
-		if addon:
-			return addon.loadModule("globalPlugins.accesifyPlay.donate")
+		return addonHandler.getCodeAddon().loadModule("globalPlugins.accesifyPlay.donate")
 	except Exception:
 		log.exception("AccessifyPlay installTasks: failed to load donate module")
 	return None

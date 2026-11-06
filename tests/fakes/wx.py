@@ -22,18 +22,19 @@ if TYPE_CHECKING:
 
 NOT_FOUND = -1
 ID_ANY = -1
-ID_OK, ID_CANCEL, ID_YES, ID_NO, ID_CLOSE = 5100, 5101, 5103, 5104, 5105
+ID_OK, ID_CANCEL, ID_CLOSE = 5100, 5101, 5105
 OK, YES, NO, CANCEL, YES_NO = 4, 2, 8, 16, 10
 ICON_ERROR = ICON_INFORMATION = ICON_QUESTION = ICON_WARNING = 0
 VERTICAL, HORIZONTAL = 8, 4
 ALL = EXPAND = LEFT = RIGHT = TOP = BOTTOM = ALIGN_RIGHT = ALIGN_CENTER = ALIGN_CENTER_VERTICAL = 0
 DEFAULT_DIALOG_STYLE = RESIZE_BORDER = CB_READONLY = HSCROLL = 0
-TE_MULTILINE = TE_READONLY = TE_RICH = TE_AUTO_URL = TE_PROCESS_ENTER = 0
+TE_MULTILINE = TE_READONLY = TE_AUTO_URL = TE_PROCESS_ENTER = 0
 LC_REPORT = LC_SINGLE_SEL = LC_HRULES = 0
 LIST_AUTOSIZE = LIST_AUTOSIZE_USEHEADER = -1
 ACCEL_NORMAL, ACCEL_ALT, ACCEL_CTRL, ACCEL_SHIFT = 0, 1, 2, 4
-WXK_TAB, WXK_RETURN, WXK_ESCAPE, WXK_DELETE = 9, 13, 27, 127
-WXK_END, WXK_UP, WXK_DOWN, WXK_PAGEUP, WXK_PAGEDOWN, WXK_NUMPAD_ENTER = 312, 315, 317, 366, 367, 370
+WXK_BACK, WXK_TAB, WXK_RETURN, WXK_ESCAPE, WXK_SPACE, WXK_DELETE = 8, 9, 13, 27, 32, 127
+WXK_END, WXK_HOME, WXK_LEFT, WXK_UP, WXK_RIGHT, WXK_DOWN, WXK_INSERT = 312, 313, 314, 315, 316, 317, 322
+WXK_F1, WXK_PAGEUP, WXK_PAGEDOWN, WXK_NUMPAD_ENTER = 340, 366, 367, 370
 MOD_NONE, MOD_ALT, MOD_CONTROL, MOD_SHIFT = 0, 1, 2, 4
 
 _ids = itertools.count(10000)
@@ -60,7 +61,6 @@ EVT_CLOSE = _EventType("EVT_CLOSE")
 EVT_COMBOBOX = _EventType("EVT_COMBOBOX")
 EVT_CONTEXT_MENU = _EventType("EVT_CONTEXT_MENU")
 EVT_KEY_DOWN = _EventType("EVT_KEY_DOWN")
-EVT_LISTBOX = _EventType("EVT_LISTBOX")
 EVT_LISTBOX_DCLICK = _EventType("EVT_LISTBOX_DCLICK")
 EVT_LIST_ITEM_ACTIVATED = _EventType("EVT_LIST_ITEM_ACTIVATED")
 EVT_LIST_ITEM_DESELECTED = _EventType("EVT_LIST_ITEM_DESELECTED")
@@ -70,9 +70,6 @@ EVT_MENU = _EventType("EVT_MENU")
 EVT_NOTEBOOK_PAGE_CHANGED = _EventType("EVT_NOTEBOOK_PAGE_CHANGED")
 EVT_TEXT = _EventType("EVT_TEXT")
 EVT_TEXT_ENTER = _EventType("EVT_TEXT_ENTER")
-EVT_CHAR = _EventType("EVT_CHAR")
-EVT_CHECKBOX = _EventType("EVT_CHECKBOX")
-EVT_SPINCTRL = _EventType("EVT_SPINCTRL")
 
 
 class IdRef(int):
@@ -97,14 +94,10 @@ class CallLater:
 	"""Runs at once; tests do not wait for timers."""
 
 	def __init__(self, _ms: int, func: Callable[..., Any], *args: Any, **kwargs: Any) -> None:
-		self.stopped = False
 		func(*args, **kwargs)
 
 	def Stop(self) -> None:
-		self.stopped = True
-
-	def IsRunning(self) -> bool:
-		return False
+		pass
 
 
 #: What MessageBox returns next; tests set it to answer a question.
@@ -123,14 +116,10 @@ def MessageBox(message: str, caption: str = "", style: int = 0, parent: Any = No
 class Event:
 	def __init__(self, id_: int = ID_ANY, obj: Any = None) -> None:
 		self._id = id_
-		self._obj = obj
 		self.skipped = False
 
 	def GetId(self) -> int:
 		return self._id
-
-	def GetEventObject(self) -> Any:
-		return self._obj
 
 	def Skip(self, skip: bool = True) -> None:
 		self.skipped = skip
@@ -153,9 +142,6 @@ class CommandEvent(Event):
 	def GetString(self) -> str:
 		return self._string
 
-	def GetInt(self) -> int:
-		return self._selection
-
 
 class KeyEvent(Event):
 	def __init__(self, key: int, modifiers: int = MOD_NONE, obj: Any = None) -> None:
@@ -166,22 +152,14 @@ class KeyEvent(Event):
 	def GetKeyCode(self) -> int:
 		return self._key
 
-	def GetUnicodeKey(self) -> int:
-		return self._key
-
-	def GetModifiers(self) -> int:
-		return self._modifiers
+	def AltDown(self) -> bool:
+		return bool(self._modifiers & MOD_ALT)
 
 	def ControlDown(self) -> bool:
 		return bool(self._modifiers & MOD_CONTROL)
 
-	CmdDown = ControlDown
-
 	def ShiftDown(self) -> bool:
 		return bool(self._modifiers & MOD_SHIFT)
-
-	def AltDown(self) -> bool:
-		return bool(self._modifiers & MOD_ALT)
 
 
 class ListEvent(CommandEvent):
@@ -202,16 +180,8 @@ class ContextMenuEvent(Event):
 
 
 class CloseEvent(Event):
-	def __init__(self, obj: Any = None, *, can_veto: bool = True) -> None:
+	def __init__(self, obj: Any = None) -> None:
 		super().__init__(ID_ANY, obj)
-		self.vetoed = False
-		self._can_veto = can_veto
-
-	def CanVeto(self) -> bool:
-		return self._can_veto
-
-	def Veto(self, veto: bool = True) -> None:
-		self.vetoed = veto
 
 
 # --- Windows --------------------------------------------------------------------------------
@@ -324,15 +294,19 @@ class Window:
 		return self.enabled
 
 	def Destroy(self) -> bool:
+		"""Destroy the window and, as wx does, everything in it."""
 		global _focus
 		self.destroyed = True
 		if _focus is self:
 			_focus = None
+		for child in self.children:
+			child.Destroy()
 		return True
 
 	def Close(self, force: bool = False) -> bool:
 		if self.handlers(EVT_CLOSE):
-			return not self.fire(EVT_CLOSE, CloseEvent(self, can_veto=not force)).vetoed
+			self.fire(EVT_CLOSE, CloseEvent(self))
+			return True
 		self.Destroy()
 		return True
 
@@ -345,20 +319,11 @@ class Window:
 	SetTitle = SetLabel
 	GetTitle = GetLabel
 
-	def SetName(self, name: str) -> None:
-		self.name = name
-
-	def GetName(self) -> str:
-		return self.name
-
 	def GetId(self) -> int:
 		return self.id
 
 	def SetSizer(self, sizer: Any, *_args: Any) -> None:
 		self.sizer = sizer
-
-	def GetSizer(self) -> Any:
-		return self.sizer
 
 	def SetAcceleratorTable(self, table: AcceleratorTable) -> None:
 		self.accelerators = table
@@ -378,18 +343,13 @@ class Dialog(Window):
 
 	def __init__(self, parent: Window | None = None, *args: Any, **kwargs: Any) -> None:
 		super().__init__(parent, *args, **kwargs)
-		self.modal_shown = False
 		self.end_code = None
 
 	def ShowModal(self) -> int:
-		self.modal_shown = True
 		return self.modal_result
 
 	def EndModal(self, code: int) -> None:
 		self.end_code = code
-
-	def IsModal(self) -> bool:
-		return self.modal_shown
 
 
 class Frame(Window):
@@ -453,13 +413,8 @@ class TextCtrl(Window):
 		self.value = value
 		self.insertion = 0
 
-	ChangeValue = SetValue
-
 	def Clear(self) -> None:
 		self.value = ""
-
-	def AppendText(self, text: str) -> None:
-		self.value += text
 
 	def SetInsertionPoint(self, position: int) -> None:
 		self.insertion = position
@@ -467,28 +422,12 @@ class TextCtrl(Window):
 	def GetInsertionPoint(self) -> int:
 		return self.insertion
 
-	def GetLastPosition(self) -> int:
-		return len(self.value)
-
-	def SetInsertionPointEnd(self) -> None:
-		self.insertion = len(self.value)
-
-	def GetNumberOfLines(self) -> int:
-		return len(self.value.split("\n"))
-
-	def GetLineText(self, line: int) -> str:
-		return self.value.split("\n")[line]
-
-	def PositionToXY(self, position: int) -> tuple[bool, int, int]:
-		before = self.value[:position].split("\n")
-		return True, len(before[-1]), len(before) - 1
-
 	def XYToPosition(self, x: int, y: int) -> int:
 		lines = self.value.split("\n")
 		return sum(len(line) + 1 for line in lines[:y]) + x
 
 	def SelectAll(self) -> None:
-		self.selected_all = True
+		self.selection = (0, len(self.value))
 
 	def SetSelection(self, start: int, end: int) -> None:
 		self.selection = (start, end)
@@ -512,15 +451,6 @@ class _ItemContainer(Window):
 			self.data[len(self.items) - 1] = data
 		return len(self.items) - 1
 
-	def AppendItems(self, items: list[str]) -> None:
-		self.items.extend(items)
-
-	def Set(self, items: list[str]) -> None:
-		self.items = list(items)
-		self.selection = NOT_FOUND
-
-	SetItems = Set
-
 	def Insert(self, item: str, position: int) -> int:
 		self.items.insert(position, item)
 		return position
@@ -538,23 +468,11 @@ class _ItemContainer(Window):
 	def GetCount(self) -> int:
 		return len(self.items)
 
-	def IsEmpty(self) -> bool:
-		return not self.items
-
 	def GetString(self, index: int) -> str:
 		return self.items[index]
 
-	def SetString(self, index: int, text: str) -> None:
-		self.items[index] = text
-
 	def GetStrings(self) -> list[str]:
 		return list(self.items)
-
-	def GetItems(self) -> list[str]:
-		return list(self.items)
-
-	def FindString(self, text: str, *_args: Any) -> int:
-		return self.items.index(text) if text in self.items else NOT_FOUND
 
 	def GetSelection(self) -> int:
 		return self.selection
@@ -564,21 +482,6 @@ class _ItemContainer(Window):
 
 	def Select(self, index: int) -> None:
 		self.selection = index
-
-	def SetStringSelection(self, text: str) -> bool:
-		index = self.FindString(text)
-		if index != NOT_FOUND:
-			self.selection = index
-		return index != NOT_FOUND
-
-	def GetStringSelection(self) -> str:
-		return self.items[self.selection] if 0 <= self.selection < len(self.items) else ""
-
-	def GetClientData(self, index: int) -> Any:
-		return self.data.get(index)
-
-	def SetClientData(self, index: int, data: Any) -> None:
-		self.data[index] = data
 
 	def EnsureVisible(self, _index: int) -> None:
 		pass
@@ -596,10 +499,6 @@ class ListBox(_ItemContainer):
 
 	def HitTest(self, _point: Any) -> int:
 		return self.hit
-
-
-class Choice(_ItemContainer):
-	pass
 
 
 class ComboBox(_ItemContainer):
@@ -654,9 +553,6 @@ class ListCtrl(Window):
 		row = self.rows[index]
 		return row[col] if col < len(row) else ""
 
-	def SetItemText(self, index: int, label: str) -> None:
-		self.rows[index][0] = label
-
 	def GetItemCount(self) -> int:
 		return len(self.rows)
 
@@ -687,18 +583,6 @@ class ListCtrl(Window):
 
 	def GetFirstSelected(self, *_args: Any) -> int:
 		return self.selected
-
-	def GetFocusedItem(self) -> int:
-		return self.focused
-
-	def GetNextSelected(self, _item: int) -> int:
-		return NOT_FOUND
-
-	def GetSelectedItemCount(self) -> int:
-		return 0 if self.selected == NOT_FOUND else 1
-
-	def IsSelected(self, index: int) -> bool:
-		return self.selected == index
 
 	def EnsureVisible(self, _index: int) -> None:
 		pass
@@ -736,9 +620,6 @@ class Notebook(Window):
 
 	def GetPageCount(self) -> int:
 		return len(self.pages)
-
-	def GetPage(self, index: int) -> Window:
-		return self.pages[index][0]
 
 	def GetPageText(self, index: int) -> str:
 		return self.pages[index][1]
@@ -784,8 +665,6 @@ class MenuItem:
 
 	def GetItemLabelText(self) -> str:
 		return self.label.split("\t")[0]
-
-	GetItemLabel = GetItemLabelText
 
 
 class Menu:
@@ -864,7 +743,7 @@ class Sizer:
 		raise AttributeError(name)
 
 
-BoxSizer = StdDialogButtonSizer = StaticBoxSizer = GridSizer = FlexGridSizer = Sizer
+BoxSizer = StdDialogButtonSizer = Sizer
 
 
 class AcceleratorTable:
@@ -878,14 +757,6 @@ class AcceleratorTable:
 
 def GetTopLevelParent(window: Window) -> Window:
 	return window.GetTopLevelParent()
-
-
-class Point(tuple):
-	__slots__ = ()
-
-
-DefaultPosition = Point((-1, -1))
-DefaultSize = (-1, -1)
 
 
 def reset() -> None:

@@ -62,20 +62,13 @@ class QueueListDialog(AccessifyDialog):
 		self._init_shortcuts()
 
 	def _init_shortcuts(self) -> None:
-		self._queuePlayId = wx.NewIdRef()
-		self._queueCopyId = wx.NewIdRef()
-		self._queueRefreshId = wx.NewIdRef()
-		accel = wx.AcceleratorTable(
-			[
-				(wx.ACCEL_ALT, ord("P"), self._queuePlayId.GetId()),
-				(wx.ACCEL_ALT, ord("L"), self._queueCopyId.GetId()),
-				(wx.ACCEL_ALT, ord("R"), self._queueRefreshId.GetId()),
-			]
+		self._bind_shortcuts(
+			{
+				"keyPlay": self.play_selected_queue_item,
+				"keyCopyLink": self.copy_selected_queue_link,
+				"keyRefresh": lambda _evt: self.refresh_queue_data(),
+			}
 		)
-		self.SetAcceleratorTable(accel)
-		self.Bind(wx.EVT_MENU, self.play_selected_queue_item, id=self._queuePlayId.GetId())
-		self.Bind(wx.EVT_MENU, self.copy_selected_queue_link, id=self._queueCopyId.GetId())
-		self.Bind(wx.EVT_MENU, lambda _evt: self.refresh_queue_data(), id=self._queueRefreshId.GetId())
 
 	def update_queue_list(self, queue_data: list[Item] | str) -> None:
 		"""Show a fresh copy of the queue."""

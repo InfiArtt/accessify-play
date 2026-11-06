@@ -555,28 +555,6 @@ msgstr ""
 msgid "Unknown Chapter"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/audiobooks.py:207
-msgid "Play Chapter\tAlt+P"
-msgstr ""
-
-#: addon/globalPlugins/accesifyPlay/dialogs/audiobooks.py:208
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:440
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:813
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1051
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1337
-#: addon/globalPlugins/accesifyPlay/dialogs/search.py:359
-msgid "Add to Queue\tAlt+Q"
-msgstr ""
-
-#: addon/globalPlugins/accesifyPlay/dialogs/audiobooks.py:209
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:441
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:816
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1052
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1338
-#: addon/globalPlugins/accesifyPlay/dialogs/search.py:362
-msgid "Copy Link\tAlt+L"
-msgstr ""
-
 #: addon/globalPlugins/accesifyPlay/dialogs/audiobooks.py:223
 #: addon/globalPlugins/accesifyPlay/dialogs/management.py:455
 #: addon/globalPlugins/accesifyPlay/dialogs/management.py:1464
@@ -586,10 +564,6 @@ msgstr ""
 
 #: addon/globalPlugins/accesifyPlay/dialogs/categories.py:17
 msgid "Browse Categories"
-msgstr ""
-
-#: addon/globalPlugins/accesifyPlay/dialogs/categories.py:34
-msgid "Category"
 msgstr ""
 
 #: addon/globalPlugins/accesifyPlay/dialogs/categories.py:97
@@ -639,11 +613,6 @@ msgstr ""
 msgid "Playlist"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/categories.py:178
-#: addon/globalPlugins/accesifyPlay/dialogs/categories.py:391
-msgid "Owner"
-msgstr ""
-
 #: addon/globalPlugins/accesifyPlay/dialogs/categories.py:255
 #: addon/globalPlugins/accesifyPlay/dialogs/management.py:834
 #: addon/globalPlugins/accesifyPlay/dialogs/search.py:385
@@ -663,11 +632,6 @@ msgstr ""
 #: addon/globalPlugins/accesifyPlay/dialogs/categories.py:300
 #: addon/globalPlugins/accesifyPlay/dialogs/categories.py:532
 msgid "Copy Playlist Link"
-msgstr ""
-
-#: addon/globalPlugins/accesifyPlay/dialogs/categories.py:345
-#: addon/globalPlugins/accesifyPlay/dialogs/categories.py:566
-msgid "Playing playlist..."
 msgstr ""
 
 #: addon/globalPlugins/accesifyPlay/dialogs/categories.py:368
@@ -1076,14 +1040,6 @@ msgstr ""
 msgid "Unknown Episode"
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:439
-msgid "Play Episode\tAlt+P"
-msgstr ""
-
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:442
-msgid "Save/Unsave Episode\tAlt+S"
-msgstr ""
-
 #: addon/globalPlugins/accesifyPlay/dialogs/management.py:482
 #, python-brace-format
 msgid "Discography for {artist_name}"
@@ -1178,13 +1134,6 @@ msgstr ""
 
 #: addon/globalPlugins/accesifyPlay/dialogs/management.py:796
 msgid "Please select an album first."
-msgstr ""
-
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:811
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1050
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1336
-#: addon/globalPlugins/accesifyPlay/dialogs/search.py:357
-msgid "Play\tAlt+P"
 msgstr ""
 
 #: addon/globalPlugins/accesifyPlay/dialogs/management.py:820
@@ -1927,14 +1876,6 @@ msgstr ""
 
 #: addon/globalPlugins/accesifyPlay/dialogs/search.py:229
 msgid "No results found."
-msgstr ""
-
-#: addon/globalPlugins/accesifyPlay/dialogs/search.py:366
-msgid "Follow/Unfollow Artist\tAlt+F"
-msgstr ""
-
-#: addon/globalPlugins/accesifyPlay/dialogs/search.py:367
-msgid "View Discography\tAlt+D"
 msgstr ""
 
 #: addon/globalPlugins/accesifyPlay/dialogs/search.py:371
@@ -2883,4 +2824,183 @@ msgstr ""
 #: addon/globalPlugins/accesifyPlay/utils.py:122
 #, python-brace-format
 msgid "{name} - by {owner}"
+msgstr ""
+
+#. Translators: Label of the list in the Browse Categories window, read by screen readers.
+#: addon/globalPlugins/accesifyPlay/dialogs/categories.py:72
+msgid "Categories:"
+msgstr ""
+
+#. Translators: Label of the list of playlists in a browse window, read by screen readers.
+#: addon/globalPlugins/accesifyPlay/dialogs/categories.py:111
+msgid "Playlists:"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/dialogs/layer_editor.py:93
+msgid "Choose Another Key"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/dialogs/layer_editor.py:104
+msgid "F1, F2 and Escape always keep their meaning in the command layer."
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/dialogs/layer_editor.py:107
+#, python-brace-format
+msgid ""
+"That key already runs {command}. Change that command first, or choose "
+"another key."
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/dialogs/audiobooks.py:42
+msgid "Play Chapter"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/dialogs/podcasts.py:37
+msgid "Play Episode"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/dialogs/podcasts.py:55
+msgid "Save/Unsave Episode"
+msgstr ""
+
+#. Translators: A button in the settings panel that opens the list of
+#. shortcuts inside Accessify Play's windows, to change them.
+#: addon/globalPlugins/accesifyPlay/dialogs/settings.py:173
+msgid "Window Shortcuts..."
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/dialogs/window_shortcuts.py:27
+#, python-brace-format
+msgid "Change Shortcut: {action}"
+msgstr ""
+
+#. Translators: Label of the field for the keys held with a number in the Window Shortcuts dialog.
+#: addon/globalPlugins/accesifyPlay/dialogs/window_shortcuts.py:35
+msgid "Keys to hold with the number, such as ctrl or alt+shift (empty for none):"
+msgstr ""
+
+#. Translators: Label of the field for a shortcut's keys in the Window Shortcuts dialog.
+#: addon/globalPlugins/accesifyPlay/dialogs/window_shortcuts.py:38
+msgid ""
+"Keys, such as alt+p or ctrl+pageDown; several separated by spaces (empty "
+"for none):"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/dialogs/window_shortcuts.py:78
+#, python-brace-format
+msgid ""
+"{key} is already the shortcut for: {action}. Change that one first, or "
+"choose another."
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/dialogs/window_shortcuts.py:88
+msgid "Window Shortcuts"
+msgstr ""
+
+#. Translators: Label of the list in the Window Shortcuts dialog, read by screen readers.
+#: addon/globalPlugins/accesifyPlay/dialogs/window_shortcuts.py:93
+msgid "Shortcuts:"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/dialogs/window_shortcuts.py:95
+msgid "Action"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/dialogs/window_shortcuts.py:96
+msgid "Keys"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/dialogs/window_shortcuts.py:99
+msgid "C&hange..."
+msgstr ""
+
+#. Translators: In the Window Shortcuts dialog, a shortcut without keys.
+#: addon/globalPlugins/accesifyPlay/dialogs/window_shortcuts.py:126
+msgid "None"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/labels.py:46
+msgid "Play the selected item"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/labels.py:47
+msgid "Add the selected item to the queue"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/labels.py:48
+msgid "Copy the link of the selected item"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/labels.py:49
+msgid "Show the lyrics of the selected song"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/labels.py:50
+msgid "Refresh the list (Library and queue)"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/labels.py:51
+msgid "Follow or unfollow the selected artist (Search)"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/labels.py:52
+msgid "View the selected artist's discography (Search)"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/labels.py:53
+msgid "Go to the search field (Search)"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/labels.py:54
+msgid "Next search type or tab"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/labels.py:55
+msgid "Previous search type or tab"
+msgstr ""
+
+#. Translators: In the Window Shortcuts dialog: the keys held together with
+#. a number, such as Ctrl for Ctrl+1, to go to the first search type or tab.
+#: addon/globalPlugins/accesifyPlay/labels.py:58
+msgid "Hold with a number to go to that search type or tab"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/labels.py:59
+msgid "Save or unsave the selected episode"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/labels.py:60
+msgid "New playlist (Library)"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/labels.py:61
+msgid "Move a track of your playlist up (Library)"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/labels.py:62
+msgid "Move a track of your playlist down (Library)"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/labels.py:63
+msgid "Remove a track from your playlist (Library)"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/shortcuts.py:83
+#, python-brace-format
+msgid ""
+"Accessify Play does not know the key {key}. Write keys the way NVDA does,"
+" for example alt+p, ctrl+shift+tab or f5."
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/shortcuts.py:104
+#, python-brace-format
+msgid ""
+"{key} needs Alt or Ctrl, or must be a function key, so it does not get in"
+" the way of typing in the window's fields."
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/shortcuts.py:124
+msgid ""
+"Write only the keys to hold with the number, such as ctrl or alt+shift. "
+"Alt or Ctrl must be among them."
 msgstr ""

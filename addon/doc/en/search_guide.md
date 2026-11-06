@@ -45,6 +45,8 @@ The artist window below uses the same keys for its tabs.
 | `Alt+F` | Follow or unfollow the artist |
 | `Alt+D` | Open the artist's discography |
 
+These are the default keys. You can change them, and those of every other window: see [Customizing commands and shortcuts](customizing_commands.html).
+
 ## Context menu
 
 Press the Applications key or `Shift+F10` on a result for more options. Besides Play, Add to Queue and Copy Link, depending on the item:
@@ -60,7 +62,7 @@ Press the Applications key or `Shift+F10` on a result for more options. Besides 
 
 ## Track lists, episodes and chapters
 
-The windows that open from a result (album tracks, playlist tracks, episodes, chapters) work the same way: `Enter` or **Play** plays the selected item in its album, playlist, show or book, so playback carries on from there. `Alt+P`, `Alt+Q` and `Alt+L` play, queue and copy the link, and the context menu has the same options as above. Long lists end with "Load More".
+The windows that open from a result (album tracks, playlist tracks, episodes, chapters) work the same way: `Enter` or **Play** plays the selected item in its album, playlist, show or book, so playback carries on from there. `Alt+P`, `Alt+Q` and `Alt+L` play, queue and copy the link, `Alt+W` shows a song's lyrics, and the context menu has the same options as above. Long lists end with "Load More".
 
 In an episode list, `Alt+S` (or Save/Unsave Episode in the context menu) saves the episode to your library or removes it.
 
@@ -84,10 +86,12 @@ The discography window opens on Top Tracks, with the focus on the first song onc
 
 ## Browse Categories and Featured Playlists
 
-* **Browse Categories** lists Spotify's moods and genres (such as Focus, Sleep, Workout or Pop). Press `Enter` on one to see its playlists. More load automatically as you reach the end of the list.
+* **Browse Categories** lists Spotify's moods and genres (such as Focus, Sleep, Workout or Pop). Press `Enter` on one to see its playlists.
 * **Featured Playlists** shows the playlists Spotify is currently featuring, with its greeting above the list.
 
-In both playlist lists, `Enter` opens the playlist's tracks, and the context menu offers View Tracks in Playlist, Play Entire Playlist, Copy Playlist Link and Follow/Unfollow Owner.
+In both playlist lists, `Enter` opens the playlist's tracks, and the context menu offers View Tracks in Playlist, Play Entire Playlist, Add to Queue, Copy Playlist Link and Follow/Unfollow Owner. `Alt+P`, `Alt+Q` and `Alt+L` play, queue and copy the link of the selected playlist.
+
+Like the search results, these lists come a page at a time: if there are more, the last item is "Load More".
 
 Spotify does not make its personalised mixes, such as Daily Mix, available to add-ons, so they don't appear here. Spotify has also announced that it will retire Browse Categories, Featured Playlists and New Releases. If it switches one off, the list says "Spotify has retired this feature, so it is no longer available."
 

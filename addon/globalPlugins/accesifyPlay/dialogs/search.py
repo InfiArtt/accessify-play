@@ -13,6 +13,7 @@ import ui
 import wx
 
 from ..core.thread_manager import thread_manager
+from ..formatting import format_names
 from ..labels import search_type_labels
 from ..language import init_translation
 from ..settings_spec import conf_get
@@ -38,20 +39,6 @@ class SearchDialog(AccessifyDialog):
 	The user's playlists load in the background, ready for the context menus.
 	"""
 
-	MENU_PLAY = wx.NewIdRef()
-	MENU_ADD_QUEUE = wx.NewIdRef()
-	MENU_FOLLOW = wx.NewIdRef()
-	MENU_DISCO = wx.NewIdRef()
-	MENU_COPY_LINK = wx.NewIdRef()
-	MENU_SHOW_LYRICS = wx.NewIdRef()
-	# Ctrl+1 to Ctrl+6 pick a search type; Ctrl+Tab and Ctrl+PageDown go to the
-	# next type, with Shift or PageUp to the previous one (the same keys as the
-	# tabs of the artist window); Ctrl+F jumps back to the search field.
-	MENU_TYPE_IDS = tuple(wx.NewIdRef() for _i in range(6))
-	MENU_NEXT_TYPE = wx.NewIdRef()
-	MENU_PREV_TYPE = wx.NewIdRef()
-	MENU_FOCUS_QUERY = wx.NewIdRef()
-
 	def __init__(self, parent: wx.Window, client: SpotifyClient) -> None:
 		super().__init__(parent, title=_("Search Spotify"))
 		self.client = client
@@ -68,8 +55,7 @@ class SearchDialog(AccessifyDialog):
 		# arrive late (after a quick type switch) are thrown away.
 		self._search_generation = 0
 
-		self._user_playlists = None
-		self._playlists_loading = False
+		self.user_playlists = None
 		self._current_user_id = None
 
 		self._init_ui()
@@ -110,7 +96,7 @@ class SearchDialog(AccessifyDialog):
 		self.categoriesButton.Bind(wx.EVT_BUTTON, self.on_browse_categories)
 		controls_sizer.Add(self.categoriesButton, flag=wx.LEFT, border=5)
 
-		# Mnemonic is T, not F: Alt+F is already the Follow Artist accelerator.
+		# Mnemonic is T, not F: Alt+F is the Follow Artist shortcut by default.
 		self.featuredButton = wx.Button(self, label=_("Fea&tured Playlists"))
 		self.featuredButton.Bind(wx.EVT_BUTTON, self.on_featured_playlists)
 		controls_sizer.Add(self.featuredButton, flag=wx.LEFT, border=5)
@@ -136,58 +122,35 @@ class SearchDialog(AccessifyDialog):
 		self.Fit()
 
 	def _create_accelerators(self) -> None:
-		"""Binds keyboard shortcuts to their respective actions."""
-		accel_entries = [
-			(wx.ACCEL_ALT, ord("P"), self.MENU_PLAY.GetId()),
-			(wx.ACCEL_ALT, ord("Q"), self.MENU_ADD_QUEUE.GetId()),
-			(wx.ACCEL_ALT, ord("F"), self.MENU_FOLLOW.GetId()),
-			(wx.ACCEL_ALT, ord("D"), self.MENU_DISCO.GetId()),
-			(wx.ACCEL_ALT, ord("L"), self.MENU_COPY_LINK.GetId()),
-			# W, as in the command layer's lyrics window.
-			(wx.ACCEL_ALT, ord("W"), self.MENU_SHOW_LYRICS.GetId()),
-			(wx.ACCEL_CTRL, wx.WXK_TAB, self.MENU_NEXT_TYPE.GetId()),
-			(wx.ACCEL_CTRL, wx.WXK_PAGEDOWN, self.MENU_NEXT_TYPE.GetId()),
-			(wx.ACCEL_CTRL | wx.ACCEL_SHIFT, wx.WXK_TAB, self.MENU_PREV_TYPE.GetId()),
-			(wx.ACCEL_CTRL, wx.WXK_PAGEUP, self.MENU_PREV_TYPE.GetId()),
-			(wx.ACCEL_CTRL, ord("F"), self.MENU_FOCUS_QUERY.GetId()),
-		]
-		for index, type_id in enumerate(self.MENU_TYPE_IDS):
-			accel_entries.append((wx.ACCEL_CTRL, ord(str(index + 1)), type_id.GetId()))
-			self.Bind(wx.EVT_MENU, lambda _evt, i=index: self.select_type(i), id=type_id.GetId())
-		self.Bind(
-			wx.EVT_MENU,
-			lambda _evt: self.select_type(self.typeBox.GetSelection() + 1),
-			id=self.MENU_NEXT_TYPE.GetId(),
+		"""Give the window its shortcuts; the types switch like the tabs of the artist window."""
+		self._bind_shortcuts(
+			{
+				"keyPlay": self.on_play,
+				"keyQueue": self.on_add_to_queue,
+				"keyCopyLink": self.copy_selected_link,
+				"keyLyrics": self.on_show_lyrics,
+				"keyFollow": self.on_follow_artist,
+				"keyDiscography": self.on_view_discography,
+				"keySearchField": lambda _evt: self.focus_query(),
+				"keyNextTab": lambda _evt: self.select_type(self.typeBox.GetSelection() + 1),
+				"keyPreviousTab": lambda _evt: self.select_type(self.typeBox.GetSelection() - 1),
+			},
+			numbered=[lambda i=index: self.select_type(i) for index in range(self.typeBox.GetCount())],
 		)
-		self.Bind(
-			wx.EVT_MENU,
-			lambda _evt: self.select_type(self.typeBox.GetSelection() - 1),
-			id=self.MENU_PREV_TYPE.GetId(),
-		)
-		self.Bind(wx.EVT_MENU, lambda _evt: self.focus_query(), id=self.MENU_FOCUS_QUERY.GetId())
-		self.SetAcceleratorTable(wx.AcceleratorTable(accel_entries))
-		self.Bind(wx.EVT_MENU, self.on_play, id=self.MENU_PLAY.GetId())
-		self.Bind(wx.EVT_MENU, self.on_add_to_queue, id=self.MENU_ADD_QUEUE.GetId())
-		self.Bind(wx.EVT_MENU, self.on_follow_artist, id=self.MENU_FOLLOW.GetId())
-		self.Bind(wx.EVT_MENU, self.on_view_discography, id=self.MENU_DISCO.GetId())
-		self.Bind(wx.EVT_MENU, self.copy_selected_link, id=self.MENU_COPY_LINK.GetId())
-		self.Bind(wx.EVT_MENU, self.on_show_lyrics, id=self.MENU_SHOW_LYRICS.GetId())
 
 	def on_browse_categories(self, _evt: wx.Event) -> None:
 		"""Open Spotify's browse categories."""
-		dlg = CategoriesDialog(self, self.client)
-		dlg.ShowModal()
+		CategoriesDialog(self, self.client).Show()
 
 	def on_featured_playlists(self, _evt: wx.Event) -> None:
 		"""Open Spotify's featured playlists."""
-		dlg = FeaturedPlaylistsDialog(self, self.client)
-		dlg.ShowModal()
+		FeaturedPlaylistsDialog(self, self.client).Show()
 
 	def select_type(self, index: int) -> None:
 		"""Switch the search type, and search again right away if there is a query.
 
-		Bound to Ctrl+1 to Ctrl+6, and to Ctrl+Tab/Ctrl+PageDown and
-		Ctrl+Shift+Tab/Ctrl+PageUp, which wrap around.
+		Bound to the number keys (keyTabNumber), and to the Next and Previous
+		Tab shortcuts, which wrap around.
 		"""
 		labels = list(self.search_types.keys())
 		index %= len(labels)
@@ -236,7 +199,7 @@ class SearchDialog(AccessifyDialog):
 		self._activate_item(item)
 
 	def on_play(self, _evt: wx.Event | None = None) -> None:
-		"""Handle the 'Play' action (Alt+P or context menu)."""
+		"""Play the selected result (the Play shortcut or menu item)."""
 		item = self._get_item_at_index(self.resultsList.GetSelection())
 		if item and item.get("uri"):
 			self._play_uri(item.get("uri"))
@@ -267,7 +230,7 @@ class SearchDialog(AccessifyDialog):
 
 		key = search_type + "s"
 		search_results = result_data.get(key, {})
-		new_items = search_results.get("items", [])
+		new_items = search_results.get("items") or []
 
 		self._raw_results.extend(new_items)
 
@@ -313,7 +276,7 @@ class SearchDialog(AccessifyDialog):
 		item_type = item.get("type")
 
 		if item_type == "track":
-			artists = ", ".join([a["name"] for a in item.get("artists", [])])
+			artists = format_names(item.get("artists"))
 			display = f"{display} - {artists}"
 		elif item_type == "playlist":
 			owner = safe_text((item.get("owner") or {}).get("display_name"), _("Unknown"))
@@ -322,7 +285,7 @@ class SearchDialog(AccessifyDialog):
 			publisher = item.get("publisher", "")
 			display = f"{display} - {publisher}"
 		elif item_type == "audiobook":
-			authors = ", ".join([a.get("name", "") for a in item.get("authors", []) if a.get("name")])
+			authors = format_names(item.get("authors"))
 			byline = authors or item.get("publisher", "")
 			if byline:
 				display = f"{display} - {byline}"
@@ -334,20 +297,8 @@ class SearchDialog(AccessifyDialog):
 		item_type = item.get("type")
 
 		if item_type == "track":
-			track_uri = item.get("uri")
-			album_info = item.get("album", {})
-			context_uri = album_info.get("uri")
-			if context_uri and track_uri:
-				ui.message(_("Playing."))
-				thread_manager.submit_task(
-					self.client.play_context_with_offset,
-					context_uri,
-					track_uri,
-					name="DialogTask",
-					daemon=True,
-				)
-			else:
-				self._play_uri(track_uri)
+			# Play it in its album, so the album carries on after it.
+			self._play_in_context((item.get("album") or {}).get("uri"), item.get("uri"), _("Playing."))
 			return
 
 		action_map = {
@@ -363,12 +314,12 @@ class SearchDialog(AccessifyDialog):
 
 	def _open_artist_discography(self, artist: Item) -> None:
 		dialog = ArtistDiscographyDialog(
-			self, self.client, artist["id"], artist.get("name"), self._user_playlists
+			self, self.client, artist["id"], artist.get("name"), self.user_playlists
 		)
 		dialog.Show()
 
 	def _open_album_tracks(self, album: Item) -> None:
-		dialog = AlbumTracksDialog(self, self.client, album, self._user_playlists)
+		dialog = AlbumTracksDialog(self, self.client, album, self.user_playlists)
 		dialog.Show()
 
 	def _open_podcast_episodes(self, show: Item) -> None:
@@ -387,28 +338,21 @@ class SearchDialog(AccessifyDialog):
 		dialog.Show()
 
 	def _load_user_playlists(self) -> None:
-		"""Fetch user's playlists in the background and caches them."""
-		if self._playlists_loading or self._user_playlists is not None:
-			return
-
-		self._playlists_loading = True
-
-		if not self._current_user_id:
-			profile = self.client.get_current_user_profile()
-			if isinstance(profile, dict):
-				self._current_user_id = profile.get("id")
+		"""Fetch the user's own playlists in the background, for the Add to Playlist menus."""
+		# Cached by the client, so a window opened later asks Spotify once.
+		self._current_user_id = self.client.get_current_user_id()
 
 		playlists = self.client.get_user_playlists()
 
 		if isinstance(playlists, str):
 			wx.CallAfter(ui.message, playlists)
-			self._user_playlists = []
+			self.user_playlists = []
 		elif self._current_user_id:
-			self._user_playlists = [
-				p for p in playlists if p.get("owner", {}).get("id") == self._current_user_id
+			self.user_playlists = [
+				p for p in playlists if (p.get("owner") or {}).get("id") == self._current_user_id
 			]
 		else:
-			self._user_playlists = playlists
+			self.user_playlists = playlists
 
 		self._playlists_loading = False
 
@@ -439,11 +383,11 @@ class SearchDialog(AccessifyDialog):
 		menu = wx.Menu()
 		item_type = item.get("type")
 		if item.get("uri"):
-			menu.Append(self.MENU_PLAY.GetId(), _("Play\tAlt+P"))
+			self._append_action(menu, _("Play"), "keyPlay")
 		if item_type in ("track", "album", "playlist"):
-			menu.Append(self.MENU_ADD_QUEUE.GetId(), _("Add to Queue\tAlt+Q"))
-		if item.get("external_urls", {}).get("spotify"):
-			menu.Append(self.MENU_COPY_LINK.GetId(), _("Copy Link\tAlt+L"))
+			self._append_action(menu, _("Add to Queue"), "keyQueue")
+		if (item.get("external_urls") or {}).get("spotify"):
+			self._append_action(menu, _("Copy Link"), "keyCopyLink")
 
 		append_type_items = {
 			"artist": self._append_artist_items,
@@ -461,13 +405,13 @@ class SearchDialog(AccessifyDialog):
 
 	def _append_artist_items(self, menu: wx.Menu, _item: Item) -> None:
 		menu.AppendSeparator()
-		menu.Append(self.MENU_FOLLOW.GetId(), _("Follow/Unfollow Artist\tAlt+F"))
-		menu.Append(self.MENU_DISCO.GetId(), _("View Discography\tAlt+D"))
+		self._append_action(menu, _("Follow/Unfollow Artist"), "keyFollow")
+		self._append_action(menu, _("View Discography"), "keyDiscography")
 
 	def _append_album_items(self, menu: wx.Menu, item: Item) -> None:
 		menu.AppendSeparator()
 		self._append_menu_item(menu, _("Save Album"), self.on_save_album)
-		self._append_add_to_playlist(menu, item, self._user_playlists or [])
+		self._append_add_to_playlist(menu, item, self.user_playlists or [])
 
 	def _append_show_items(self, menu: wx.Menu, item: Item) -> None:
 		menu.AppendSeparator()
@@ -490,22 +434,21 @@ class SearchDialog(AccessifyDialog):
 				self._follow_owner_label(item),
 				lambda _evt: self._toggle_follow_user(self._owner_of(item)),
 			)
-		if is_followed is not None:
-			label = _("Unfollow Playlist") if is_followed else _("Follow Playlist")
-			self._append_menu_item(
-				menu,
-				label,
-				lambda _evt: self.on_toggle_follow_playlist(item, is_currently_followed=is_followed),
-			)
+		label = _("Unfollow Playlist") if is_followed else _("Follow Playlist")
+		self._append_menu_item(
+			menu,
+			label,
+			lambda _evt: self.on_toggle_follow_playlist(item, is_currently_followed=is_followed),
+		)
 
 	def _append_track_items(self, menu: wx.Menu, item: Item) -> None:
 		menu.AppendSeparator()
 		# None while the playlists are still loading.
-		self._append_add_to_playlist(menu, item, self._user_playlists)
+		self._append_add_to_playlist(menu, item, self.user_playlists)
 		self._append_go_to_options_for_track(menu, item)
 
 	def _is_own_playlist(self, playlist: Item) -> bool:
-		return playlist.get("owner", {}).get("id") == self._current_user_id
+		return (playlist.get("owner") or {}).get("id") == self._current_user_id
 
 	def on_save_album(self, _evt: wx.Event | None = None) -> None:
 		"""Save the selected album to the library."""
@@ -565,17 +508,13 @@ class SearchDialog(AccessifyDialog):
 
 	def on_show_lyrics(self, _evt: wx.Event | None = None) -> None:
 		"""Show the lyrics of the selected song."""
-		item = self._get_item_at_index(self.resultsList.GetSelection())
-		if not item or item.get("type") != "track":
-			ui.message(_("Lyrics are only available for songs."))
-			return
-		self._show_lyrics_for_track(item)
+		self._show_lyrics_of(self._get_item_at_index(self.resultsList.GetSelection()))
 
 	def copy_selected_link(self, _evt: wx.Event | None = None) -> None:
 		"""Copy the selected result's Spotify link."""
 		item = self._get_item_at_index(self.resultsList.GetSelection())
 		if item:
-			copy_link(item.get("external_urls", {}).get("spotify"))
+			copy_link((item.get("external_urls") or {}).get("spotify"))
 
 	def on_toggle_follow_playlist(self, playlist_item: Item, *, is_currently_followed: bool) -> None:
 		"""Follow the playlist, or unfollow it when followed."""

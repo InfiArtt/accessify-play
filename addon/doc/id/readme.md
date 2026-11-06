@@ -27,7 +27,7 @@ Accessify Play hanya punya satu pintasan bawaan: **`NVDA+Alt+G`**. Pintasan ini 
 Anda bisa mengubah tombol-tombol di lapisan, dan juga memberi perintah mana pun pintasannya sendiri lewat dialog Input Gestures NVDA, di bawah "Accessify Play".
 
 * [Tombol perintah](keybindings.html): semua tombol di lapisan.
-* [Mengubah tombol lapisan perintah](customizing_commands.html).
+* [Mengubah perintah dan pintasan](customizing_commands.html): tombol lapisan perintah, dan pintasan di dalam jendela.
 
 ## Panduan
 

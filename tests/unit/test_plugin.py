@@ -217,6 +217,34 @@ def test_poller_keeps_lyrics_in_time(
 	assert len(timers) > made
 
 
+def test_resume_without_timed_lyrics_schedules_nothing(
+	plugin: accesifyPlay.GlobalPlugin, timers: list[Timer]
+) -> None:
+	"""Resuming while the reader has no timed lines (they are still loading) schedules no timers."""
+	plugin._last_is_playing = False
+	plugin._auto_reader_synced_lyrics = None
+	plugin._keep_lyrics_in_time(playing(), "t1", is_playing=True)
+	assert timers == []
+
+
+def test_an_item_without_an_id_is_not_announced(
+	plugin: accesifyPlay.GlobalPlugin, server: SpotifyServer, spoken: list[str]
+) -> None:
+	"""An ad or a local file (no id) is not announced as a new track, even with announcements on."""
+	accesifyPlay.config.conf["spotify"]["announceTrackChanges"] = True
+	plugin.track_change_poller()
+	server.routes["GET", "me/player"] = playing({"type": "ad", "name": "Advert"})
+	plugin.track_change_poller()
+	assert spoken == ["Song - A"]
+	assert plugin.last_track_id is None
+
+
+def test_jump_to_current_after_the_window_closed(plugin: accesifyPlay.GlobalPlugin) -> None:
+	"""Jump to Current, answered after the lyrics window closed, does nothing."""
+	plugin._jump_lyrics_to_current()
+	assert plugin.lyricsDialog is None
+
+
 def test_new_track_restarts_the_reader(
 	plugin: accesifyPlay.GlobalPlugin,
 	server: SpotifyServer,
@@ -233,6 +261,14 @@ def test_new_track_restarts_the_reader(
 	plugin.track_change_poller()
 	assert spoken[-1] == "No synced lyrics found for Silent."
 	assert not plugin._auto_reader.is_active
+
+
+def test_lyrics_window_opens_only_once(plugin: accesifyPlay.GlobalPlugin) -> None:
+	"""Two lyrics lookups finishing one after the other open one window, not two."""
+	plugin._open_lyrics_dialog(SONG)
+	first = plugin.lyricsDialog
+	plugin._open_lyrics_dialog(SONG)
+	assert plugin.lyricsDialog is first
 
 
 def test_new_track_refreshes_the_lyrics_window(
@@ -709,6 +745,7 @@ def test_sleep_timer(
 	plugin._handle_sleep_timer(10)
 	assert spoken[-1] == "Sleep timer set for 10 minutes."
 	assert timers[-1].delay == 600
+	assert timers[-1].started
 	assert timer_file()["end_time"] > time.time()
 	plugin._handle_sleep_timer(5)
 	assert timers[0].cancelled
@@ -733,6 +770,26 @@ def test_sleep_timer_minutes_are_settings(plugin: accesifyPlay.GlobalPlugin) -> 
 	plugin.script_showSleepTimerDialog(None)
 	ctrl = plugin.sleepTimerDialog.minutesCtrl
 	assert (ctrl.GetValue(), ctrl.max) == (60, 60)
+
+
+def test_sleep_timer_end_when_pausing_fails(
+	plugin: accesifyPlay.GlobalPlugin, server: SpotifyServer, spoken: list[str], timers: list[Timer]
+) -> None:
+	"""When the timer runs out but Spotify will not pause, it does not claim playback was paused."""
+	plugin._handle_sleep_timer(1)
+	server.routes["PUT", "me/player/pause"] = spotify_error(403, "ALREADY_PAUSED")
+	timers[-1].func()
+	assert spoken[-1] == "Sleep timer set for 1 minutes."
+	assert timer_file() == ""
+
+
+def test_cancelling_a_timer_left_from_before(plugin: accesifyPlay.GlobalPlugin, spoken: list[str]) -> None:
+	"""Entering 0 cancels a timer that is only saved, from before NVDA restarted."""
+	paths.get_data_path(paths.SLEEP_TIMER_FILE).write_text(json.dumps({"end_time": time.time() + 60}))
+	plugin._active_sleep_timer = None
+	plugin._handle_sleep_timer(0)
+	assert spoken[-1] == "Sleep timer cancelled."
+	assert timer_file() == ""
 
 
 def test_sleep_timer_resumes_after_a_restart(

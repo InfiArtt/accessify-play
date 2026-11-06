@@ -20,6 +20,7 @@ from ..core.thread_manager import thread_manager
 from ..labels import search_type_labels, time_range_labels
 from ..language import LANGUAGE_AUTO, init_translation, language_entries
 from ..settings_spec import SETTINGS, conf_get
+from .window_shortcuts import WindowShortcutsDialog
 
 init_translation()
 
@@ -165,6 +166,13 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 		)
 		self.newPlaylistPublicCheck.SetValue(conf_get("newPlaylistPublic"))
 
+		#: Each shortcut setting's keys, as the Window Shortcuts dialog left them; saved with the panel.
+		self._shortcuts = {key: conf_get(key) for key, setting in SETTINGS.items() if setting.shortcut}
+		# Translators: A button in the settings panel that opens the list of
+		# shortcuts inside Accessify Play's windows, to change them.
+		self.windowShortcutsButton = s_helper.addItem(wx.Button(self, label=_("Window Shortcuts...")))
+		self.windowShortcutsButton.Bind(wx.EVT_BUTTON, self.on_window_shortcuts)
+
 		# Translators: Label for an optional setting where users can enter the Client ID
 		# of a Spotify developer app of their own, instead of the shared one.
 		own_client_id_label = _("Your own Spotify Client ID (optional, leave blank to use the shared one):")
@@ -193,6 +201,13 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 
 		s_helper.addItem(buttons_sizer)
 		self.Layout()  # Ensure all elements are properly laid out
+
+	def on_window_shortcuts(self, _evt: wx.Event) -> None:
+		"""Open the Window Shortcuts dialog; its changes are saved with the panel."""
+		dialog = WindowShortcutsDialog(self, self._shortcuts)
+		if dialog.ShowModal() == wx.ID_OK:
+			self._shortcuts = dialog.values
+		dialog.Destroy()
 
 	def isValid(self) -> bool:
 		"""Refuse to save a client ID that is not 32 letters and digits."""
@@ -253,6 +268,8 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 			ui.message(
 				_("Keep Alive interval adjusted to minimum {seconds} seconds.").format(seconds=minimum)
 			)
+		for key, keys in self._shortcuts.items():
+			spotify[key] = keys
 		spotify["announceTrackChanges"] = self.announceTrackChanges.IsChecked()
 		spotify["newPlaylistPublic"] = self.newPlaylistPublicCheck.IsChecked()
 

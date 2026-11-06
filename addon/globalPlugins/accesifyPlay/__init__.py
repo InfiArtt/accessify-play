@@ -27,7 +27,7 @@ from .settings_spec import CONFSPEC, conf_get
 
 # Add the 'lib' folder to sys.path before other imports
 lib_path = str(Path(__file__).resolve().parents[2] / "lib")
-if lib_path not in sys.path:
+if lib_path not in sys.path:  # pragma: no branch - already there only after a plugin reload
 	sys.path.insert(0, lib_path)
 
 # The config spec must be registered before any other add-on module is
@@ -482,12 +482,13 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		return max(interval, minimum)
 
 	def _destroy_dialog(self, attr_name: str, evt: wx.Event) -> None:
-		dialog = getattr(self, attr_name, None)
-		if dialog:
-			setattr(self, attr_name, None)
-			dialog.Destroy()
-		if evt:
-			evt.Skip(skip=False)
+		"""Forget a closing dialog and destroy it.
+
+		Called once per dialog: its first close unbinds EVT_CLOSE (AccessifyDialog).
+		"""
+		getattr(self, attr_name).Destroy()
+		setattr(self, attr_name, None)
+		evt.Skip(skip=False)
 
 	# --- SCRIPT GESTURES ---
 
@@ -713,7 +714,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			return None, _("Nothing is currently playing.")
 		if playback.get("currently_playing_type") != "track":
 			return None, _("This action is only available for music tracks.")
-		artists = playback["item"].get("artists", [])
+		artists = playback["item"].get("artists") or []
 		if not artists:
 			return None, _("Could not find artist information for this track.")
 		if not artists[0].get("id") or not artists[0].get("name"):
@@ -852,7 +853,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 				return
 
 			user_id = profile["id"]
-			user_playlists = [p for p in playlists if p.get("owner", {}).get("id") == user_id]
+			user_playlists = [p for p in playlists if (p.get("owner") or {}).get("id") == user_id]
 
 			payload = {"track": playback["item"], "playlists": user_playlists}
 			wx.CallAfter(self._finish_add_to_playlist_dialog, payload)
@@ -1028,9 +1029,8 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		self.sleepTimerDialog = SleepTimerDialog(gui.mainFrame, callback=self._handle_sleep_timer)
 
 		def on_close(evt: wx.Event) -> None:
-			if self.sleepTimerDialog:
-				self.sleepTimerDialog.Destroy()
-				self.sleepTimerDialog = None
+			self.sleepTimerDialog.Destroy()
+			self.sleepTimerDialog = None
 			evt.Skip()
 
 		self.sleepTimerDialog.Bind(wx.EVT_CLOSE, on_close)

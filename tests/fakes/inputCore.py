@@ -11,18 +11,12 @@ from __future__ import annotations
 class InputGesture:
 	def __init__(self, identifier: str = "kb:a", *, isModifier: bool = False) -> None:
 		self.isModifier = isModifier
-		self.identifiers = [identifier]
 		self.normalizedIdentifiers = [normalizeGestureIdentifier(identifier)]
-		self.displayName = identifier.split(":", 1)[-1]
 
 
 class _Manager:
 	def __init__(self) -> None:
 		self._captureFunc = None
-
-
-class InputManager:
-	_inputHelpCaptor = None
 
 
 manager = _Manager()

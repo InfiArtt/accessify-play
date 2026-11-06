@@ -31,7 +31,3 @@ def script(
 def queueScript(func: Callable[..., object], gesture: object) -> None:
 	queued.append((func, gesture))
 	func(gesture)
-
-
-def getLastScriptRepeatCount() -> int:
-	return 0

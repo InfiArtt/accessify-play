@@ -14,6 +14,7 @@ import ui
 import wx
 from logHandler import log
 
+from .. import shortcuts
 from ..core.thread_manager import thread_manager
 from ..language import init_translation
 from ..lyrics import lyrics_for_track
@@ -21,9 +22,10 @@ from ..settings_spec import conf_get
 from ..utils import safe_text
 
 if TYPE_CHECKING:
-	from collections.abc import Callable
+	from collections.abc import Callable, Sequence
 
 	from ..lyrics import Lyrics
+	from ..spotify_client import SpotifyClient
 	from ..spotify_types import Item
 
 init_translation()
@@ -35,21 +37,71 @@ class AccessifyDialog(wx.Dialog):
 	Ensures Destroy() is always called on exit and background acts are managed.
 	"""
 
-	def __init__(self, *args: object, **kwargs: object) -> None:
-		parent = args[0] if args else kwargs.get("parent")
-		# Dialogs pass the client either as a keyword...
-		self.client = kwargs.pop("client", None)
-		if not self.client and len(args) > 1:
-			# ...or as the second positional argument.
-			self.client = args[1]
+	#: The user's playlists, for the Add to Playlist menus; None while they load.
+	user_playlists: list[Item] | None = None
+	#: Spotify, for the windows that talk to it; they set it right after creating the window.
+	client: SpotifyClient
 
-		super().__init__(*args, **kwargs)
+	def __init__(self, parent: wx.Window | None, **kwargs: object) -> None:
+		super().__init__(parent, **kwargs)
 		self._parentDialog = parent if isinstance(parent, wx.Dialog) else None
+		#: Shortcut setting -> the command id of its action (see _bind_shortcuts).
+		self.shortcut_ids: dict[str, int] = {}
 
 		self.Bind(wx.EVT_CHAR_HOOK, self._on_char_hook)
 		self.Bind(wx.EVT_CLOSE, self._on_dialog_close, self)
 
 		self._is_queuing = False
+
+	def _bind_shortcuts(
+		self,
+		actions: dict[str, Callable[[wx.Event], object]],
+		numbered: Sequence[Callable[[], object]] = (),
+	) -> None:
+		"""Give the window its shortcuts, with the keys of each action's shortcut setting.
+
+		actions maps a shortcut setting (keyPlay, ...) to what its keys do.
+		numbered are what the number keys do (with the keyTabNumber modifiers),
+		from 1. Each action gets one command id, kept in shortcut_ids, which its
+		menu item shares (see _append_action).
+		"""
+		self._shortcut_refs = []
+		entries = []
+		taken: set[shortcuts.Key] = set()
+
+		def add(keys: list[shortcuts.Key], handler: Callable[[wx.Event], object]) -> int:
+			ref = wx.NewIdRef()
+			self._shortcut_refs.append(ref)  # wx frees an id whose reference is gone
+			self.Bind(wx.EVT_MENU, handler, id=ref.GetId())
+			for key in keys:
+				if key in taken:
+					log.warning("Accessify Play: %s is set for two actions in one window.", key.text)
+					continue
+				taken.add(key)
+				entries.append((key.flags, key.code, ref.GetId()))
+			return ref.GetId()
+
+		for setting, handler in actions.items():
+			self.shortcut_ids[setting] = add(shortcuts.keys_of(setting), handler)
+		for key, go in zip(shortcuts.number_keys(len(numbered)), numbered, strict=False):
+			add([key], lambda _evt, go=go: go())
+		self.SetAcceleratorTable(wx.AcceleratorTable(entries))
+
+	def _append_action(self, menu: wx.Menu, label: str, setting: str) -> None:
+		"""Add the menu item of one of the window's shortcut actions, showing its keys."""
+		menu.Append(self.shortcut_ids[setting], self._menu_label(label, setting))
+
+	def _menu_label(self, label: str, setting: str) -> str:
+		"""Return a menu item's label followed by its shortcut, if the window has it."""
+		keys = shortcuts.shown(setting) if setting in self.shortcut_ids else ""
+		return f"{label}\t{keys}" if keys else label
+
+	def _show_lyrics_of(self, item: Item | None) -> None:
+		"""Open the lyrics of item (the Show Lyrics shortcut), or say why not."""
+		if not item or item.get("type") != "track":
+			ui.message(_("Lyrics are only available for songs."))
+			return
+		self._show_lyrics_for_track(item)
 
 	def bind_close_button(self, button: wx.Button) -> None:
 		"""Make button close the dialog."""
@@ -80,14 +132,37 @@ class AccessifyDialog(wx.Dialog):
 
 	# --- Spotify actions (run through the thread manager) ---
 
-	def _play_uri(self, uri: str) -> None:
-		if not self.client:
-			return
+	def _play_uri(self, uri: str | None) -> None:
+		"""Play a track, album, playlist, show or book by its URI; say why if Spotify refuses."""
 		if not uri:
 			ui.message(_("Unable to play selection. URI not found."))
 			return
 		ui.message(_("Playing..."))
-		thread_manager.submit_task(self.client.play_item, uri, name="PlayItemTask")
+		thread_manager.submit_task(self._say_if_refused, self.client.play_item, uri, name="PlayItemTask")
+
+	def _play_in_context(self, context_uri: str | None, track_uri: str | None, announce: str) -> None:
+		"""Play a track or part within its album, playlist, show or book, so the rest follows.
+
+		Without both URIs the track is played on its own. announce is said first.
+		"""
+		if not (context_uri and track_uri):
+			self._play_uri(track_uri)
+			return
+		ui.message(announce)
+		thread_manager.submit_task(
+			self._say_if_refused,
+			self.client.play_context_with_offset,
+			context_uri,
+			track_uri,
+			name="PlayInContextTask",
+		)
+
+	@staticmethod
+	def _say_if_refused(request: Callable[..., object], *args: object) -> None:
+		"""Send a playback request (in the background) and say Spotify's reason if it failed."""
+		result = request(*args)
+		if isinstance(result, str):
+			wx.CallAfter(ui.message, result)
 
 	def _queue_add_track(self, uri: str, name: str) -> None:
 		if self._is_queuing:
@@ -115,7 +190,7 @@ class AccessifyDialog(wx.Dialog):
 		if self._is_queuing:
 			ui.message(_("Please wait..."))
 			return
-		if not self.client or not uri:
+		if not uri:
 			ui.message(_("Unable to add {name} to queue.").format(name=name))
 			return
 
@@ -297,6 +372,10 @@ class AccessifyDialog(wx.Dialog):
 		dialog.Show()
 		ui.message(_("Lyrics for {track} opened.").format(track=lyrics.track))
 
+	def _addable_playlists(self) -> list[Item]:
+		"""Return the playlists tracks can be added to: the user's own."""
+		return self.user_playlists or []
+
 	def _append_menu_item(self, menu: wx.Menu, label: str, handler: Callable[[wx.Event], object]) -> None:
 		"""Add an item to a popup menu; choosing it calls handler(event)."""
 		item = menu.Append(wx.ID_ANY, label)
@@ -377,7 +456,7 @@ class AccessifyDialog(wx.Dialog):
 		menu.AppendSeparator()
 		# Every track list builds its menu through here, so Show Lyrics is
 		# available wherever a track is: search, albums, playlists, library.
-		lyrics_item = menu.Append(wx.ID_ANY, _("Show Lyrics"))
+		lyrics_item = menu.Append(wx.ID_ANY, self._menu_label(_("Show Lyrics"), "keyLyrics"))
 		self.Bind(wx.EVT_MENU, lambda _evt, t=track_item: self._show_lyrics_for_track(t), lyrics_item)
 		album = track_item.get("album")
 		if album and album.get("uri"):
@@ -403,17 +482,15 @@ class AccessifyDialog(wx.Dialog):
 			menu.AppendSubMenu(artist_submenu, _("Go to Artist"))
 
 	def _handle_go_to_album(self, _event: wx.Event, album: Item) -> None:
-		user_playlists = getattr(self, "_user_playlists", []) or getattr(self, "user_playlists", [])
 		from ..dialogs.album import AlbumTracksDialog  # noqa: PLC0415 - circular import
 
-		dialog = AlbumTracksDialog(self, self.client, album, user_playlists)
+		dialog = AlbumTracksDialog(self, self.client, album, self._addable_playlists())
 		dialog.Show()
 
 	def _handle_go_to_artist(self, _event: wx.Event, artist: Item) -> None:
-		user_playlists = getattr(self, "_user_playlists", []) or getattr(self, "user_playlists", [])
 		from ..dialogs.artist import ArtistDiscographyDialog  # noqa: PLC0415 - circular import
 
 		dialog = ArtistDiscographyDialog(
-			self, self.client, artist.get("id"), artist.get("name"), user_playlists
+			self, self.client, artist.get("id"), artist.get("name"), self._addable_playlists()
 		)
 		dialog.Show()

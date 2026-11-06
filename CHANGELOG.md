@@ -13,6 +13,17 @@ New in Accessify Play's settings (NVDA menu, Preferences, Settings, Accessify Pl
 - **Search opens on**: the type the Search window starts with.
 - **New playlists are public**: whether Create Playlist starts with Public playlist checked.
 
+### 🎉 Change the shortcuts inside the windows
+
+- **New Window Shortcuts... button** in Accessify Play's settings: every shortcut inside the windows can be changed, such as `Alt+P` to play, the keys that switch search types and tabs, `Ctrl+N` for a new playlist, and the keys that move and remove tracks in the Library. Several keys per action are possible, or none. Keys that would get in the way of typing, or that another action already has, are refused with the reason. Menus show the keys you chose. They are in `nvda.ini` too; the user guide (Customizing commands and shortcuts) lists them.
+- **`Alt+W` shows a song's lyrics in every list of songs**: albums, playlists, the artist window and the Library, not only in Search.
+
+### 🎉 Browse Categories and Featured Playlists
+
+- **They load a page at a time with a "Load More" row**, like every other list, instead of loading more when you reach the end.
+- **Playlists can be queued**: Add to Queue in the context menu, and `Alt+P`, `Alt+Q` and `Alt+L` play, queue and copy the selected playlist.
+- They no longer block the Search window while they are open.
+
 ### 🎉 Advanced settings in nvda.ini
 
 - **Timings and limits that were fixed in the code are now settings**: how often Accessify Play asks Spotify what is playing, how long a request may take and how often it is retried, the lyrics server, the command layer's timeout and beeps, and more. They are not in the settings panel; the user guide (Sign-in and settings) lists each one with its default and how to change it in `nvda.ini`.
@@ -24,6 +35,14 @@ New in Accessify Play's settings (NVDA menu, Preferences, Settings, Accessify Pl
 - **A playlist whose tracks could not be loaded**, in the Library, left an empty list; so did the artist window's albums. The list now says what went wrong, and an artist without albums says so.
 - **Some list rows were always in English**: "by" in playlist rows in Search and the artist window, and in the queue window.
 - **Browse Categories and Featured Playlists loaded 50 items at a time** whatever the Search Results Limit said. They now follow it, like every other list.
+- **Playing from a window said nothing when Spotify refused**: "Playing..." was spoken, and then nothing, when for instance no device was active or the account has no Premium. Albums, playlists, Search, the Library, episodes and chapters now say why it failed, as the command layer already did.
+- **Show Queue failed with an error while nothing was playing.**
+- **Add to Playlist in the Library offered other people's playlists**, which Spotify does not let you change. It now offers only your own.
+- **The command layer editor took a key away from another command without saying so** when you gave a command a key that was already in use. It now says which command has that key and lets you choose another.
+- **The lyrics window had no timestamp buttons** when the first song it showed had plain lyrics only, so later songs with synced lyrics had none either.
+- **All Tracks in the artist window named the artist on every line.** Like Top Tracks, it now names the artists only when someone else is on the song.
+- **A list could stay on "Loading..." for good** after an unexpected error. It now says the list could not be loaded.
+- **Items Spotify sends with missing details** (a playlist without an owner, a song without artists, a queue without a current song) could stop a window from filling its list. They are now shown with what is known.
 
 ### 🧹 Under the hood
 
@@ -31,6 +50,8 @@ New in Accessify Play's settings (NVDA menu, Preferences, Settings, Accessify Pl
 - **One table of commands** (`commands.py`) for the command layer's keys, names and descriptions, which used to be listed three times. `layerConfig.json` now keeps only your keys and whether the layer stays open.
 - **One test suite**: the older test scripts are ported to pytest or removed, including the checks of the translations, the user guides and the bundled libraries. `installTasks.py` is now tested and measured too.
 - Removed code that never ran: an install-time clean-up for an NVDA function that does not exist.
+- **One way to give a window its shortcuts** (`_bind_shortcuts`), instead of an accelerator table written out in each window; the keys come from the settings, and menus show them.
+- **Browse Categories and Featured Playlists use the same paged list** as the other windows, and playing from any window goes through one helper that reports failures.
 - Lyrics requests name the add-on's homepage from its manifest (`addon_url` in `buildVars.py`) instead of a fixed address, and the donation link is written once.
 
 ## Version 2026.11.0

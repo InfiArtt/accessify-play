@@ -570,28 +570,6 @@ msgstr "Tidak ditemukan bab untuk buku audio ini."
 msgid "Unknown Chapter"
 msgstr "Bab Tidak Diketahui"
 
-#: addon/globalPlugins/accesifyPlay/dialogs/audiobooks.py:207
-msgid "Play Chapter\tAlt+P"
-msgstr "Putar Bab\tAlt+P"
-
-#: addon/globalPlugins/accesifyPlay/dialogs/audiobooks.py:208
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:440
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:813
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1051
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1337
-#: addon/globalPlugins/accesifyPlay/dialogs/search.py:359
-msgid "Add to Queue\tAlt+Q"
-msgstr "Tambahkan ke Antrean\tAlt+Q"
-
-#: addon/globalPlugins/accesifyPlay/dialogs/audiobooks.py:209
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:441
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:816
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1052
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1338
-#: addon/globalPlugins/accesifyPlay/dialogs/search.py:362
-msgid "Copy Link\tAlt+L"
-msgstr "Salin Tautan\tAlt+L"
-
 #: addon/globalPlugins/accesifyPlay/dialogs/audiobooks.py:223
 #: addon/globalPlugins/accesifyPlay/dialogs/management.py:455
 #: addon/globalPlugins/accesifyPlay/dialogs/management.py:1464
@@ -602,10 +580,6 @@ msgstr "Memutar."
 #: addon/globalPlugins/accesifyPlay/dialogs/categories.py:17
 msgid "Browse Categories"
 msgstr "Jelajahi Kategori"
-
-#: addon/globalPlugins/accesifyPlay/dialogs/categories.py:34
-msgid "Category"
-msgstr "Kategori"
 
 #: addon/globalPlugins/accesifyPlay/dialogs/categories.py:97
 #: addon/globalPlugins/accesifyPlay/dialogs/categories.py:160
@@ -654,11 +628,6 @@ msgstr "Daftar Putar {name}"
 msgid "Playlist"
 msgstr "Daftar putar"
 
-#: addon/globalPlugins/accesifyPlay/dialogs/categories.py:178
-#: addon/globalPlugins/accesifyPlay/dialogs/categories.py:391
-msgid "Owner"
-msgstr "Pemilik"
-
 #: addon/globalPlugins/accesifyPlay/dialogs/categories.py:255
 #: addon/globalPlugins/accesifyPlay/dialogs/management.py:834
 #: addon/globalPlugins/accesifyPlay/dialogs/search.py:385
@@ -679,11 +648,6 @@ msgstr "Putar Seluruh Daftar Putar"
 #: addon/globalPlugins/accesifyPlay/dialogs/categories.py:532
 msgid "Copy Playlist Link"
 msgstr "Salin Tautan Daftar Putar"
-
-#: addon/globalPlugins/accesifyPlay/dialogs/categories.py:345
-#: addon/globalPlugins/accesifyPlay/dialogs/categories.py:566
-msgid "Playing playlist..."
-msgstr "Memutar daftar putar..."
 
 #: addon/globalPlugins/accesifyPlay/dialogs/categories.py:368
 msgid "Featured Playlists"
@@ -1091,14 +1055,6 @@ msgstr "Tidak ada episode yang ditemukan untuk acara ini."
 msgid "Unknown Episode"
 msgstr "Episode Tidak Diketahui"
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:439
-msgid "Play Episode\tAlt+P"
-msgstr "Putar Episode\tAlt+P"
-
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:442
-msgid "Save/Unsave Episode\tAlt+S"
-msgstr "Simpan/Batal Simpan Episode\tAlt+S"
-
 #: addon/globalPlugins/accesifyPlay/dialogs/management.py:482
 #, python-brace-format
 msgid "Discography for {artist_name}"
@@ -1194,13 +1150,6 @@ msgstr "Silakan pilih item dari tab aktif terlebih dahulu."
 #: addon/globalPlugins/accesifyPlay/dialogs/management.py:796
 msgid "Please select an album first."
 msgstr "Silakan pilih album terlebih dahulu."
-
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:811
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1050
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:1336
-#: addon/globalPlugins/accesifyPlay/dialogs/search.py:357
-msgid "Play\tAlt+P"
-msgstr "Putar\tAlt+P"
 
 #: addon/globalPlugins/accesifyPlay/dialogs/management.py:820
 msgid "Save Album to Library"
@@ -1951,14 +1900,6 @@ msgstr "Mencari..."
 #: addon/globalPlugins/accesifyPlay/dialogs/search.py:229
 msgid "No results found."
 msgstr "Tidak ada hasil yang ditemukan."
-
-#: addon/globalPlugins/accesifyPlay/dialogs/search.py:366
-msgid "Follow/Unfollow Artist\tAlt+F"
-msgstr "Ikuti/Berhenti Mengikuti Artis\tAlt+F"
-
-#: addon/globalPlugins/accesifyPlay/dialogs/search.py:367
-msgid "View Discography\tAlt+D"
-msgstr "Lihat Diskografi\tAlt+D"
 
 #: addon/globalPlugins/accesifyPlay/dialogs/search.py:371
 msgid "Save Album"
@@ -2936,3 +2877,196 @@ msgstr "{count} trek pertama dari {total} trek dari {name} dimasukkan ke antrean
 #, python-brace-format
 msgid "{name} - by {owner}"
 msgstr "{name} - oleh {owner}"
+
+#. Translators: Label of the list in the Browse Categories window, read by screen readers.
+#: addon/globalPlugins/accesifyPlay/dialogs/categories.py:72
+msgid "Categories:"
+msgstr "Kategori:"
+
+#. Translators: Label of the list of playlists in a browse window, read by screen readers.
+#: addon/globalPlugins/accesifyPlay/dialogs/categories.py:111
+msgid "Playlists:"
+msgstr "Daftar Putar:"
+
+#: addon/globalPlugins/accesifyPlay/dialogs/layer_editor.py:93
+msgid "Choose Another Key"
+msgstr "Pilih Pintasan Lain"
+
+#: addon/globalPlugins/accesifyPlay/dialogs/layer_editor.py:104
+msgid "F1, F2 and Escape always keep their meaning in the command layer."
+msgstr "F1, F2 dan Escape selalu mempertahankan fungsinya di lapisan perintah."
+
+#: addon/globalPlugins/accesifyPlay/dialogs/layer_editor.py:107
+#, python-brace-format
+msgid ""
+"That key already runs {command}. Change that command first, or choose "
+"another key."
+msgstr ""
+"Pintasan itu sudah menjalankan {command}. Ubah perintah itu terlebih "
+"dahulu, atau pilih pintasan lain."
+
+#: addon/globalPlugins/accesifyPlay/dialogs/audiobooks.py:42
+msgid "Play Chapter"
+msgstr "Putar Bab"
+
+#: addon/globalPlugins/accesifyPlay/dialogs/podcasts.py:37
+msgid "Play Episode"
+msgstr "Putar Episode"
+
+#: addon/globalPlugins/accesifyPlay/dialogs/podcasts.py:55
+msgid "Save/Unsave Episode"
+msgstr "Simpan/Batal Simpan Episode"
+
+#. Translators: A button in the settings panel that opens the list of
+#. shortcuts inside Accessify Play's windows, to change them.
+#: addon/globalPlugins/accesifyPlay/dialogs/settings.py:173
+msgid "Window Shortcuts..."
+msgstr "Pintasan Jendela..."
+
+#: addon/globalPlugins/accesifyPlay/dialogs/window_shortcuts.py:27
+#, python-brace-format
+msgid "Change Shortcut: {action}"
+msgstr "Ubah Pintasan: {action}"
+
+#. Translators: Label of the field for the keys held with a number in the Window Shortcuts dialog.
+#: addon/globalPlugins/accesifyPlay/dialogs/window_shortcuts.py:35
+msgid "Keys to hold with the number, such as ctrl or alt+shift (empty for none):"
+msgstr ""
+"Tombol yang ditahan bersama angka, misalnya ctrl atau alt+shift "
+"(kosongkan untuk tidak ada):"
+
+#. Translators: Label of the field for a shortcut's keys in the Window Shortcuts dialog.
+#: addon/globalPlugins/accesifyPlay/dialogs/window_shortcuts.py:38
+msgid ""
+"Keys, such as alt+p or ctrl+pageDown; several separated by spaces (empty "
+"for none):"
+msgstr ""
+"Tombol, misalnya alt+p atau ctrl+pageDown; beberapa dipisahkan spasi "
+"(kosongkan untuk tidak ada):"
+
+#: addon/globalPlugins/accesifyPlay/dialogs/window_shortcuts.py:78
+#, python-brace-format
+msgid ""
+"{key} is already the shortcut for: {action}. Change that one first, or "
+"choose another."
+msgstr ""
+"{key} sudah menjadi pintasan untuk: {action}. Ubah pintasan itu terlebih "
+"dahulu, atau pilih yang lain."
+
+#: addon/globalPlugins/accesifyPlay/dialogs/window_shortcuts.py:88
+msgid "Window Shortcuts"
+msgstr "Pintasan Jendela"
+
+#. Translators: Label of the list in the Window Shortcuts dialog, read by screen readers.
+#: addon/globalPlugins/accesifyPlay/dialogs/window_shortcuts.py:93
+msgid "Shortcuts:"
+msgstr "Pintasan:"
+
+#: addon/globalPlugins/accesifyPlay/dialogs/window_shortcuts.py:95
+msgid "Action"
+msgstr "Tindakan"
+
+#: addon/globalPlugins/accesifyPlay/dialogs/window_shortcuts.py:96
+msgid "Keys"
+msgstr "Tombol"
+
+#: addon/globalPlugins/accesifyPlay/dialogs/window_shortcuts.py:99
+msgid "C&hange..."
+msgstr "U&bah..."
+
+#. Translators: In the Window Shortcuts dialog, a shortcut without keys.
+#: addon/globalPlugins/accesifyPlay/dialogs/window_shortcuts.py:126
+msgid "None"
+msgstr "Tidak ada"
+
+#: addon/globalPlugins/accesifyPlay/labels.py:46
+msgid "Play the selected item"
+msgstr "Putar item yang dipilih"
+
+#: addon/globalPlugins/accesifyPlay/labels.py:47
+msgid "Add the selected item to the queue"
+msgstr "Tambahkan item yang dipilih ke antrean"
+
+#: addon/globalPlugins/accesifyPlay/labels.py:48
+msgid "Copy the link of the selected item"
+msgstr "Salin tautan item yang dipilih"
+
+#: addon/globalPlugins/accesifyPlay/labels.py:49
+msgid "Show the lyrics of the selected song"
+msgstr "Tampilkan lirik lagu yang dipilih"
+
+#: addon/globalPlugins/accesifyPlay/labels.py:50
+msgid "Refresh the list (Library and queue)"
+msgstr "Segarkan daftar (Pustaka dan antrean)"
+
+#: addon/globalPlugins/accesifyPlay/labels.py:51
+msgid "Follow or unfollow the selected artist (Search)"
+msgstr "Ikuti atau berhenti mengikuti artis yang dipilih (Pencarian)"
+
+#: addon/globalPlugins/accesifyPlay/labels.py:52
+msgid "View the selected artist's discography (Search)"
+msgstr "Lihat diskografi artis yang dipilih (Pencarian)"
+
+#: addon/globalPlugins/accesifyPlay/labels.py:53
+msgid "Go to the search field (Search)"
+msgstr "Ke kolom pencarian (Pencarian)"
+
+#: addon/globalPlugins/accesifyPlay/labels.py:54
+msgid "Next search type or tab"
+msgstr "Jenis pencarian atau tab berikutnya"
+
+#: addon/globalPlugins/accesifyPlay/labels.py:55
+msgid "Previous search type or tab"
+msgstr "Jenis pencarian atau tab sebelumnya"
+
+#. Translators: In the Window Shortcuts dialog: the keys held together with
+#. a number, such as Ctrl for Ctrl+1, to go to the first search type or tab.
+#: addon/globalPlugins/accesifyPlay/labels.py:58
+msgid "Hold with a number to go to that search type or tab"
+msgstr "Tahan bersama angka untuk ke jenis pencarian atau tab tersebut"
+
+#: addon/globalPlugins/accesifyPlay/labels.py:59
+msgid "Save or unsave the selected episode"
+msgstr "Simpan atau batal simpan episode yang dipilih"
+
+#: addon/globalPlugins/accesifyPlay/labels.py:60
+msgid "New playlist (Library)"
+msgstr "Daftar putar baru (Pustaka)"
+
+#: addon/globalPlugins/accesifyPlay/labels.py:61
+msgid "Move a track of your playlist up (Library)"
+msgstr "Pindahkan trek daftar putar Anda ke atas (Pustaka)"
+
+#: addon/globalPlugins/accesifyPlay/labels.py:62
+msgid "Move a track of your playlist down (Library)"
+msgstr "Pindahkan trek daftar putar Anda ke bawah (Pustaka)"
+
+#: addon/globalPlugins/accesifyPlay/labels.py:63
+msgid "Remove a track from your playlist (Library)"
+msgstr "Hapus trek dari daftar putar Anda (Pustaka)"
+
+#: addon/globalPlugins/accesifyPlay/shortcuts.py:83
+#, python-brace-format
+msgid ""
+"Accessify Play does not know the key {key}. Write keys the way NVDA does,"
+" for example alt+p, ctrl+shift+tab or f5."
+msgstr ""
+"Accessify Play tidak mengenal tombol {key}. Tulis tombol seperti cara "
+"NVDA, misalnya alt+p, ctrl+shift+tab, atau f5."
+
+#: addon/globalPlugins/accesifyPlay/shortcuts.py:104
+#, python-brace-format
+msgid ""
+"{key} needs Alt or Ctrl, or must be a function key, so it does not get in"
+" the way of typing in the window's fields."
+msgstr ""
+"{key} memerlukan Alt atau Ctrl, atau harus berupa tombol fungsi, agar "
+"tidak mengganggu pengetikan di kolom jendela."
+
+#: addon/globalPlugins/accesifyPlay/shortcuts.py:124
+msgid ""
+"Write only the keys to hold with the number, such as ctrl or alt+shift. "
+"Alt or Ctrl must be among them."
+msgstr ""
+"Tulis hanya tombol yang ditahan bersama angka, misalnya ctrl atau "
+"alt+shift. Alt atau Ctrl harus termasuk di dalamnya."

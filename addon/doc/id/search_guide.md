@@ -45,6 +45,8 @@ Jendela artis di bawah memakai tombol yang sama untuk tab-tabnya.
 | `Alt+F` | Ikuti atau berhenti mengikuti artis |
 | `Alt+D` | Buka diskografi artis |
 
+Ini adalah tombol bawaan. Anda bisa mengubahnya, juga tombol di jendela lain: lihat [Mengubah perintah dan pintasan](customizing_commands.html).
+
 ## Menu konteks
 
 Tekan tombol Applications atau `Shift+F10` pada sebuah hasil untuk pilihan lainnya. Selain Play, Add to Queue, dan Copy Link, tergantung jenis itemnya:
@@ -60,7 +62,7 @@ Tekan tombol Applications atau `Shift+F10` pada sebuah hasil untuk pilihan lainn
 
 ## Daftar lagu, episode, dan bab
 
-Jendela yang terbuka dari sebuah hasil (lagu album, lagu playlist, episode, bab) bekerja dengan cara yang sama: `Enter` atau **Play** memutar item yang dipilih di dalam album, playlist, acara, atau bukunya, sehingga pemutaran berlanjut dari situ. `Alt+P`, `Alt+Q`, dan `Alt+L` untuk memutar, memasukkan ke antrean, dan menyalin tautan, dan menu konteksnya berisi pilihan yang sama seperti di atas. Daftar yang panjang diakhiri dengan "Load More".
+Jendela yang terbuka dari sebuah hasil (lagu album, lagu playlist, episode, bab) bekerja dengan cara yang sama: `Enter` atau **Play** memutar item yang dipilih di dalam album, playlist, acara, atau bukunya, sehingga pemutaran berlanjut dari situ. `Alt+P`, `Alt+Q`, dan `Alt+L` untuk memutar, memasukkan ke antrean, dan menyalin tautan, `Alt+W` menampilkan lirik lagu, dan menu konteksnya berisi pilihan yang sama seperti di atas. Daftar yang panjang diakhiri dengan "Load More".
 
 Di daftar episode, `Alt+S` (atau Save/Unsave Episode di menu konteks) menyimpan episode ke pustaka Anda atau menghapusnya.
 
@@ -84,10 +86,12 @@ Jendela diskografi terbuka di Top Tracks, dengan fokus pada lagu pertama setelah
 
 ## Browse Categories dan Featured Playlists
 
-* **Browse Categories** menampilkan suasana dan genre dari Spotify (seperti Focus, Sleep, Workout, atau Pop). Tekan `Enter` pada salah satunya untuk melihat playlist-nya. Daftar bertambah otomatis saat Anda mencapai bagian akhir.
+* **Browse Categories** menampilkan suasana dan genre dari Spotify (seperti Focus, Sleep, Workout, atau Pop). Tekan `Enter` pada salah satunya untuk melihat playlist-nya.
 * **Featured Playlists** menampilkan playlist yang sedang ditonjolkan Spotify, dengan sapaannya di atas daftar.
 
-Di kedua daftar playlist itu, `Enter` membuka lagu-lagu playlist, dan menu konteks menyediakan View Tracks in Playlist, Play Entire Playlist, Copy Playlist Link, dan Follow/Unfollow Owner.
+Di kedua daftar playlist itu, `Enter` membuka lagu-lagu playlist, dan menu konteks menyediakan View Tracks in Playlist, Play Entire Playlist, Add to Queue, Copy Playlist Link, dan Follow/Unfollow Owner. `Alt+P`, `Alt+Q`, dan `Alt+L` untuk memutar, memasukkan ke antrean, dan menyalin tautan playlist yang dipilih.
+
+Seperti hasil pencarian, daftar ini dimuat per halaman: jika masih ada lagi, item terakhir adalah "Load More".
 
 Spotify tidak menyediakan mix pribadi seperti Daily Mix untuk add-on, jadi mix itu tidak muncul di sini. Spotify juga sudah mengumumkan akan menghentikan Browse Categories, Featured Playlists, dan New Releases. Jika salah satunya dimatikan, daftarnya akan berisi "Spotify has retired this feature, so it is no longer available."
 

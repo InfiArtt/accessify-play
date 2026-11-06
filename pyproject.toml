@@ -127,8 +127,8 @@ show_missing = true
 skip_covered = true
 # CI fails when coverage drops below this.
 fail_under = 90
-# Imports needed only by type checkers.
-exclude_also = ["if TYPE_CHECKING:"]
+# Imports needed only by type checkers, and methods subclasses must override.
+exclude_also = ["if TYPE_CHECKING:", "raise NotImplementedError"]
 
 [tool.pyright]
 pythonPlatform = "Windows"

@@ -12,9 +12,12 @@ Pintasan ini berlaku di semua tab:
 | `Alt+P` | Putar |
 | `Alt+Q` | Tambahkan ke antrean |
 | `Alt+L` | Salin tautan Spotify |
+| `Alt+W` | Tampilkan lirik lagu yang dipilih |
 | `Alt+R` | Muat ulang tab yang sedang dibuka |
 | `Ctrl+N` | Buat playlist baru |
 | Tombol Applications atau `Shift+F10` | Menu konteks dengan pilihan lainnya |
+
+Ini adalah tombol bawaan. Anda bisa mengubahnya, juga tombol di jendela lain: lihat [Mengubah perintah dan pintasan](customizing_commands.html).
 
 ## Tab
 

@@ -50,7 +50,8 @@ def test_playlist_tracks_are_read_page_by_page(client: SpotifyClient, server: Sp
 def test_adding_skips_what_is_there(client: SpotifyClient, server: SpotifyServer) -> None:
 	"""Only tracks not yet in the playlist are added, and the skipped ones are counted."""
 	a, b, c = (f"spotify:track:{x}" for x in "abc")
-	server.routes["GET", "playlists/p1/items"] = page(entries(a))
+	# A removed song shows up as an entry without a track.
+	server.routes["GET", "playlists/p1/items"] = page([*entries(a), {"track": None}])
 	server.routes["POST", "playlists/p1/items"] = {"snapshot_id": "s"}
 	assert client.add_items_to_playlist("p1", b) is True
 	assert client.add_items_to_playlist("p1", a) == "This track is already in the playlist."
@@ -389,6 +390,13 @@ def test_current_user_id_is_cached(client: SpotifyClient, server: SpotifyServer)
 			"Title: One",
 		),
 		(
+			"spotify:chapter:c2",
+			"chapters/c2",
+			{"name": "Two", "chapter_number": 2},
+			"Chapter",
+			"Chapter 2",
+		),
+		(
 			"spotify:user:bob",
 			"users/bob",
 			{"id": "bob", "display_name": "Bob", "followers": {"total": 2}},
@@ -405,6 +413,50 @@ def test_link_details(
 	info = client.get_link_details(link)
 	assert info["typeLabel"] == label
 	assert any(line in text for text in info["lines"])
+
+
+@pytest.mark.parametrize(
+	("link", "route", "data", "lines"),
+	[
+		(
+			"spotify:album:a1",
+			"albums/a1",
+			{"name": "X", "artists": None},
+			["Type: Album", "Title: X", "Tracks: 0"],
+		),
+		(
+			"spotify:artist:r1",
+			"artists/r1",
+			{"name": "X", "followers": None, "genres": None},
+			["Type: Artist", "Name: X"],
+		),
+		(
+			"spotify:playlist:p1",
+			"playlists/p1",
+			{"name": "X", "owner": None, "tracks": None, "description": None},
+			["Type: Playlist", "Title: X", "Tracks: 0"],
+		),
+		("spotify:show:s1", "shows/s1", {"name": "X"}, ["Type: Show", "Title: X", "Episodes: 0"]),
+		(
+			"spotify:audiobook:b1",
+			"audiobooks/b1",
+			{"name": "X", "authors": [None, {"name": None}], "narrators": None},
+			["Type: Audiobook", "Title: X", "Chapters: 0"],
+		),
+		(
+			"spotify:episode:e1",
+			"episodes/e1",
+			{"name": "X", "show": None},
+			["Type: Episode", "Title: X", "Duration: 0:00"],
+		),
+	],
+)
+def test_link_details_with_little_information(
+	client: SpotifyClient, server: SpotifyServer, link: str, route: str, data: dict, lines: list[str]
+) -> None:
+	"""A link with missing or null fields still describes itself, leaving out what it lacks."""
+	server.routes["GET", route] = data
+	assert client.get_link_details(link)["lines"] == lines
 
 
 def test_link_details_problems(client: SpotifyClient, server: SpotifyServer) -> None:

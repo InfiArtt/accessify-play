@@ -12,9 +12,12 @@ These work in every tab:
 | `Alt+P` | Play |
 | `Alt+Q` | Add to queue |
 | `Alt+L` | Copy the Spotify link |
+| `Alt+W` | Show the selected song's lyrics |
 | `Alt+R` | Refresh the current tab |
 | `Ctrl+N` | Create a new playlist |
 | Applications key or `Shift+F10` | Context menu with more options |
+
+These are the default keys. You can change them, and those of every other window: see [Customizing commands and shortcuts](customizing_commands.html).
 
 ## Tabs
 

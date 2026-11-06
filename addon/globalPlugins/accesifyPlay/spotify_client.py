@@ -27,7 +27,7 @@ from spotipy.oauth2 import CacheFileHandler, SpotifyPKCE
 from urllib3.util.retry import Retry
 
 from . import paths
-from .formatting import format_duration, format_followers
+from .formatting import format_duration, format_followers, format_names
 from .language import init_translation
 from .settings_spec import conf_get
 
@@ -293,7 +293,7 @@ def _describe_playing(item: Item, item_type: str, *, playing: bool) -> str:
 		message = _("Currently playing: {track} by {artists}")
 	else:
 		message = _("Paused: {track} by {artists}")
-	artists = ", ".join(a["name"] for a in item.get("artists", []))
+	artists = format_names(item.get("artists"))
 	return message.format(track=item.get("name"), artists=artists, album=album)
 
 
@@ -594,12 +594,12 @@ class SpotifyClient:
 
 		if item_type == "track":
 			track = item.get("name")
-			artists = ", ".join([a["name"] for a in item.get("artists", [])])
+			artists = format_names(item.get("artists"))
 			return f"{track} - {artists}"
 
 		if item_type == "episode":
 			episode_name = item.get("name")
-			show_name = item.get("show", {}).get("name")
+			show_name = (item.get("show") or {}).get("name")
 			return f"{episode_name} - {show_name}"
 
 		return item.get("name", "")
@@ -618,7 +618,7 @@ class SpotifyClient:
 		playback, message = self._playing_now()
 		if message:
 			return message
-		url = playback["item"].get("external_urls", {}).get("spotify")
+		url = (playback["item"].get("external_urls") or {}).get("spotify")
 		if not url:
 			return _("Could not find URL for the current track.")
 		return url
@@ -711,21 +711,13 @@ class SpotifyClient:
 			return self.run_on_device("start_playback", uris=uris)
 
 		uri = uris or ""
-		entity_type = None
-		if uri.startswith("spotify:"):
-			parts = [p for p in uri.split(":") if p and p.lower() != "spotify"]
-			if len(parts) >= 1:
-				entity_type = parts[0]
-		elif "spotify.com" in uri:
-			parsed = self._parse_spotify_url(uri)
-			if parsed:
-				entity_type, entity_id = parsed
-				entity_type = (entity_type or "").lower()
-				if entity_type and entity_id:
-					uri = f"spotify:{entity_type}:{entity_id}"
-
-		if entity_type in ("track", "episode"):
-			return self.run_on_device("start_playback", uris=[uri])
+		# A link or URI Spotify understands is played by its URI; anything else is passed on as it is.
+		parsed = self._parse_spotify_url(uri)
+		if parsed:
+			entity_type, entity_id = parsed[0].lower(), parsed[1]
+			uri = f"spotify:{entity_type}:{entity_id}"
+			if entity_type in ("track", "episode"):
+				return self.run_on_device("start_playback", uris=[uri])
 
 		# Default to context playback (album, artist, playlist, show, etc.)
 		return self.run_on_device("start_playback", context_uri=uri)
@@ -769,10 +761,11 @@ class SpotifyClient:
 		if formatted_current:
 			full_queue.append(formatted_current)
 
-		for track in self._get_filtered_queue_items(queue_data):
-			formatted = self._format_queue_item(track, entry_type="queue_item")
-			if formatted:
-				full_queue.append(formatted)
+		# The filtered items are never empty, so each formats.
+		full_queue.extend(
+			self._format_queue_item(track, entry_type="queue_item")
+			for track in self._get_filtered_queue_items(queue_data)
+		)
 
 		return full_queue
 
@@ -781,16 +774,16 @@ class SpotifyClient:
 			return None
 		item_type = item.get("type")
 		if item_type == "episode":
-			artists = item.get("show", {}).get("name", "")
+			artists = (item.get("show") or {}).get("name", "")
 		else:
-			artists = ", ".join([a["name"] for a in item.get("artists", [])])
+			artists = format_names(item.get("artists"))
 		return {
 			"type": entry_type,
 			"item_type": item_type,
 			"name": item.get("name"),
 			"artists": artists,
 			"uri": item.get("uri"),
-			"link": item.get("external_urls", {}).get("spotify"),
+			"link": (item.get("external_urls") or {}).get("spotify"),
 		}
 
 	def get_current_songlink_url(self) -> str:
@@ -806,7 +799,7 @@ class SpotifyClient:
 		item_type = item.get("type")
 		if item_type == "episode":
 			episode_name = item.get("name")
-			show_name = item.get("show", {}).get("name")
+			show_name = (item.get("show") or {}).get("name")
 			if show_name:
 				return _("{prefix}: {episode} from {show}").format(
 					prefix=prefix, episode=episode_name, show=show_name
@@ -814,7 +807,7 @@ class SpotifyClient:
 			return _("{prefix}: {episode}").format(prefix=prefix, episode=episode_name)
 
 		track_name = item.get("name")
-		artists = ", ".join([a["name"] for a in item.get("artists", [])])
+		artists = format_names(item.get("artists"))
 		if artists:
 			return _("{prefix}: {track_name} by {artists}").format(
 				prefix=prefix, track_name=track_name, artists=artists
@@ -829,7 +822,8 @@ class SpotifyClient:
 		if not queue_items:
 			return []
 
-		current_uri = (queue_data or {}).get("currently_playing", {}).get("uri")
+		# Null between items, not just missing.
+		current_uri = ((queue_data or {}).get("currently_playing") or {}).get("uri")
 		has_non_current = any((item.get("uri") or "") != current_uri for item in queue_items if item)
 		filtered = []
 		for item in queue_items:
@@ -1138,47 +1132,40 @@ class SpotifyClient:
 			"users": "user",
 		}
 		entity_type = alias_map.get(entity_type, entity_type)
-		fetchers = {
-			"track": lambda: self.run_request("track", entity_id),
-			"album": lambda: self.run_request("album", entity_id),
-			"artist": lambda: self.run_request("artist", entity_id),
-			"playlist": lambda: self.run_request("playlist", entity_id),
-			"show": lambda: self.run_request("show", entity_id),
-			"episode": lambda: self.run_request("episode", entity_id),
-			"audiobook": lambda: self.run_request(
-				"get_audiobook",
-				entity_id,
-				status_messages={404: _("This audiobook is not available in your country.")},
+		# For each kind of link: how to fetch it, and how to describe what came back.
+		kinds = {
+			"track": (lambda: self.run_request("track", entity_id), self._build_track_link_details),
+			"album": (lambda: self.run_request("album", entity_id), self._build_album_link_details),
+			"artist": (lambda: self.run_request("artist", entity_id), self._build_artist_link_details),
+			"playlist": (lambda: self.run_request("playlist", entity_id), self._build_playlist_link_details),
+			"show": (lambda: self.run_request("show", entity_id), self._build_show_link_details),
+			"episode": (lambda: self.run_request("episode", entity_id), self._build_episode_link_details),
+			"audiobook": (
+				lambda: self.run_request(
+					"get_audiobook",
+					entity_id,
+					status_messages={404: _("This audiobook is not available in your country.")},
+				),
+				self._build_audiobook_link_details,
 			),
 			# spotipy has no binding for chapters; the endpoint itself is current.
-			"chapter": lambda: self.run_request(
-				"_get",
-				f"chapters/{entity_id}",
-				status_messages={404: _("This chapter is not available in your country.")},
+			"chapter": (
+				lambda: self.run_request(
+					"_get",
+					f"chapters/{entity_id}",
+					status_messages={404: _("This chapter is not available in your country.")},
+				),
+				self._build_chapter_link_details,
 			),
-			"user": lambda: self._user_link_data(entity_id),
+			"user": (lambda: self._user_link_data(entity_id), self._build_user_link_details),
 		}
-		fetcher = fetchers.get(entity_type)
-		if not fetcher:
+		if entity_type not in kinds:
 			return {"error": _("Links of this type are not supported yet.")}
-		data = fetcher()
+		fetch, build = kinds[entity_type]
+		data = fetch()
 		if isinstance(data, str):
 			return {"error": data}
-		builders = {
-			"track": self._build_track_link_details,
-			"album": self._build_album_link_details,
-			"artist": self._build_artist_link_details,
-			"playlist": self._build_playlist_link_details,
-			"show": self._build_show_link_details,
-			"episode": self._build_episode_link_details,
-			"audiobook": self._build_audiobook_link_details,
-			"chapter": self._build_chapter_link_details,
-			"user": self._build_user_link_details,
-		}
-		builder = builders.get(entity_type)
-		if not builder:
-			return {"error": _("Links of this type are not supported yet.")}
-		info = builder(data)
+		info = build(data)
 		info.setdefault("playable", True)
 		info["type"] = entity_type
 		info["typeLabel"] = self._get_type_label(entity_type)
@@ -1359,7 +1346,7 @@ class SpotifyClient:
 		results = self.run_request("search", q=f'artist:"{artist_name}"', limit=limit, type="track")
 		if isinstance(results, str):
 			return results
-		return {"tracks": (results.get("tracks") or {}).get("items") or []}
+		return {"tracks": ((results or {}).get("tracks") or {}).get("items") or []}
 
 	def get_artist_albums(self, artist_id: str) -> Item | str:
 		"""Get all albums and singles for an artist, as {"items": [...]}."""
@@ -1477,8 +1464,8 @@ class SpotifyClient:
 		return None
 
 	def _build_track_link_details(self, data: Item) -> Item:
-		artists = ", ".join([a["name"] for a in data.get("artists", [])])
-		album = data.get("album", {}).get("name", "")
+		artists = format_names(data.get("artists"))
+		album = (data.get("album") or {}).get("name", "")
 		duration = format_duration(data.get("duration_ms", 0))
 		lines = [
 			_("Type: Track"),
@@ -1501,7 +1488,7 @@ class SpotifyClient:
 		}
 
 	def _build_album_link_details(self, data: Item) -> Item:
-		artists = ", ".join([a["name"] for a in data.get("artists", [])])
+		artists = format_names(data.get("artists"))
 		release = data.get("release_date", "")
 		total_tracks = data.get("total_tracks", 0)
 		lines = [
@@ -1525,8 +1512,8 @@ class SpotifyClient:
 		}
 
 	def _build_artist_link_details(self, data: Item) -> Item:
-		genres = ", ".join(data.get("genres", []))
-		followers = format_followers(data.get("followers", {}).get("total"))
+		genres = ", ".join(data.get("genres") or [])
+		followers = format_followers((data.get("followers") or {}).get("total"))
 		popularity = data.get("popularity")
 		lines = [
 			_("Type: Artist"),
@@ -1549,8 +1536,8 @@ class SpotifyClient:
 		}
 
 	def _build_playlist_link_details(self, data: Item) -> Item:
-		owner = data.get("owner", {}).get("display_name") or data.get("owner", {}).get("id")
-		total = data.get("tracks", {}).get("total", 0)
+		owner = (data.get("owner") or {}).get("display_name") or (data.get("owner") or {}).get("id")
+		total = (data.get("tracks") or {}).get("total", 0)
 		public = data.get("public")
 		description = (data.get("description") or "").strip()
 		lines = [
@@ -1598,8 +1585,8 @@ class SpotifyClient:
 		}
 
 	def _build_audiobook_link_details(self, data: Item) -> Item:
-		authors = ", ".join(a.get("name") for a in (data.get("authors") or []) if a.get("name"))
-		narrators = ", ".join(n.get("name") for n in (data.get("narrators") or []) if n.get("name"))
+		authors = format_names(data.get("authors"))
+		narrators = format_names(data.get("narrators"))
 		lines = [
 			_("Type: Audiobook"),
 			_("Title: {name}").format(name=data.get("name") or ""),
@@ -1648,7 +1635,7 @@ class SpotifyClient:
 		}
 
 	def _build_episode_link_details(self, data: Item) -> Item:
-		show = data.get("show", {})
+		show = data.get("show") or {}
 		show_name = show.get("name")
 		release_date = data.get("release_date", "")
 		duration = format_duration(data.get("duration_ms", 0))
@@ -1676,7 +1663,7 @@ class SpotifyClient:
 		result = self.run_request("devices")
 		if isinstance(result, str):
 			return result
-		return result.get("devices", [])
+		return result.get("devices") or []
 
 	def transfer_playback_to_device(self, device_id: str) -> Reply | str:
 		"""Transfers playback to a specific device ID."""

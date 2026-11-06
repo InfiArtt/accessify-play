@@ -62,6 +62,40 @@ def test_pollers_repeat_until_stopped(manager: ThreadManager, caplog: pytest.Log
 	assert manager.submit_task(lambda: None) is None
 
 
+def test_a_poller_stops_while_it_waits(manager: ThreadManager, monkeypatch: pytest.MonkeyPatch) -> None:
+	"""A poller waiting out a long delay notices stop_all within a tenth of a second, not at the end."""
+	naps = []
+
+	def nap(seconds: float) -> None:
+		naps.append(seconds)
+		manager._is_running = False  # stop_all, as it lands during the wait
+
+	monkeypatch.setattr(module.time, "sleep", nap)
+	thread = manager.create_poller(lambda: 60, name="Slow")
+	thread.join(1)
+	assert not thread.is_alive()
+	assert naps == [0.1]
+
+
+def test_a_poller_stopped_by_its_target_ends(manager: ThreadManager) -> None:
+	"""A poller whose target stopped the manager, and asked for no wait, ends at once."""
+
+	def stop() -> float:
+		manager._is_running = False
+		return 0
+
+	thread = manager.create_poller(stop, name="Once")
+	thread.join(1)
+	assert not thread.is_alive()
+
+
+def test_stop_all_skips_finished_threads(manager: ThreadManager) -> None:
+	"""A thread that already finished is not waited for."""
+	manager.submit_task(lambda: None).join(1)
+	manager.stop_all()
+	assert manager._threads == []
+
+
 def test_stop_all_waits_and_survives_its_own_thread(manager: ThreadManager) -> None:
 	"""stop_all joins the threads; called from a managed thread, it skips that one."""
 	release = threading.Event()

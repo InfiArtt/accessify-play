@@ -13,7 +13,7 @@ import ui
 import wx
 
 from ..core.thread_manager import thread_manager
-from ..formatting import format_duration
+from ..formatting import format_duration, format_names
 from ..language import init_translation
 from ..ui.base_dialog import AccessifyDialog
 from ..utils import copy_link
@@ -28,10 +28,6 @@ init_translation()
 class AlbumTracksDialog(AccessifyDialog):
 	"""An album's tracks."""
 
-	MENU_PLAY = wx.NewIdRef()
-	MENU_ADD_QUEUE = wx.NewIdRef()
-	MENU_COPY_LINK = wx.NewIdRef()
-
 	def __init__(
 		self, parent: wx.Window, client: SpotifyClient, album: Item, user_playlists: list[Item]
 	) -> None:
@@ -41,7 +37,6 @@ class AlbumTracksDialog(AccessifyDialog):
 		self.client = client
 		self.album = album
 		self.tracks = []
-		self._loading = False
 		self.user_playlists = user_playlists
 
 		self._init_ui()
@@ -54,8 +49,7 @@ class AlbumTracksDialog(AccessifyDialog):
 
 		release = self.album.get("release_date")
 		subtitle = self.album.get("album_type", "").title()
-		info_text = self.album.get("artists", [])
-		artist_names = ", ".join([a.get("name", _("Unknown")) for a in info_text])
+		artist_names = format_names(self.album.get("artists"))
 		summary = _("Album: {name}").format(name=self.album.get("name", _("Unknown")))
 		if release:
 			summary += f" — {release}"
@@ -85,20 +79,16 @@ class AlbumTracksDialog(AccessifyDialog):
 		panel.SetSizer(main_sizer)
 
 	def _create_accelerators(self) -> None:
-		accel_entries = [
-			(wx.ACCEL_ALT, ord("P"), self.MENU_PLAY.GetId()),
-			(wx.ACCEL_ALT, ord("Q"), self.MENU_ADD_QUEUE.GetId()),
-			(wx.ACCEL_ALT, ord("L"), self.MENU_COPY_LINK.GetId()),
-		]
-		self.SetAcceleratorTable(wx.AcceleratorTable(accel_entries))
-		self.Bind(wx.EVT_MENU, self.on_play_selected, id=self.MENU_PLAY.GetId())
-		self.Bind(wx.EVT_MENU, self.on_add_to_queue, id=self.MENU_ADD_QUEUE.GetId())
-		self.Bind(wx.EVT_MENU, self.on_copy_link, id=self.MENU_COPY_LINK.GetId())
+		self._bind_shortcuts(
+			{
+				"keyPlay": self.on_play_selected,
+				"keyQueue": self.on_add_to_queue,
+				"keyCopyLink": self.on_copy_link,
+				"keyLyrics": lambda _evt: self._show_lyrics_of(self._get_selected_track()),
+			}
+		)
 
 	def _load_tracks(self) -> None:
-		if self._loading:
-			return
-		self._loading = True
 		self.tracks_list.Clear()
 		self.tracks_list.Append(_("Loading..."))
 		thread_manager.submit_task(self._load_tracks_thread, name="DialogTask", daemon=True)
@@ -112,13 +102,11 @@ class AlbumTracksDialog(AccessifyDialog):
 		wx.CallAfter(self._finish_load_tracks, tracks)
 
 	def _handle_tracks_error(self, message: str) -> None:
-		self._loading = False
 		self.tracks_list.Clear()
 		self.tracks_list.Append(message)
 		ui.message(message)
 
 	def _finish_load_tracks(self, result: list[Item] | str) -> None:
-		self._loading = False
 		self.tracks_list.Clear()
 		if isinstance(result, str):
 			self.tracks_list.Append(_("Unable to load tracks."))
@@ -130,13 +118,12 @@ class AlbumTracksDialog(AccessifyDialog):
 			return
 		for index, track in enumerate(self.tracks, start=1):
 			name = track.get("name", _("Unknown"))
-			artists = ", ".join([a.get("name", _("Unknown")) for a in track.get("artists", [])])
+			artists = format_names(track.get("artists"))
 			duration = format_duration(track.get("duration_ms"))
 			display = f"{index}. {name}"
 			if artists:
 				display = f"{display} — {artists}"
-			if duration:
-				display = f"{display} ({duration})"
+			display = f"{display} ({duration})"
 			self.tracks_list.Append(display)
 
 	def _get_selected_track(self) -> Item | None:
@@ -153,9 +140,9 @@ class AlbumTracksDialog(AccessifyDialog):
 			return
 
 		menu = wx.Menu()
-		menu.Append(self.MENU_PLAY.GetId(), _("Play\tAlt+P"))
-		menu.Append(self.MENU_ADD_QUEUE.GetId(), _("Add to Queue\tAlt+Q"))
-		menu.Append(self.MENU_COPY_LINK.GetId(), _("Copy Link\tAlt+L"))
+		self._append_action(menu, _("Play"), "keyPlay")
+		self._append_action(menu, _("Add to Queue"), "keyQueue")
+		self._append_action(menu, _("Copy Link"), "keyCopyLink")
 
 		menu.AppendSeparator()
 		self._append_add_to_playlist(menu, track, self.user_playlists)
@@ -170,16 +157,7 @@ class AlbumTracksDialog(AccessifyDialog):
 		if not track:
 			return
 
-		album_uri = self.album.get("uri")
-		track_uri = track.get("uri")
-
-		if album_uri and track_uri:
-			ui.message(_("Playing from album..."))
-			thread_manager.submit_task(
-				self.client.play_context_with_offset, album_uri, track_uri, name="DialogTask", daemon=True
-			)
-		else:
-			self._play_uri(track_uri)
+		self._play_in_context(self.album.get("uri"), track.get("uri"), _("Playing from album..."))
 
 	def on_add_to_queue(self, _evt: wx.Event | None = None) -> None:
 		"""Add the selected track to the queue."""
@@ -191,5 +169,5 @@ class AlbumTracksDialog(AccessifyDialog):
 		"""Copy the selected track's Spotify link."""
 		track = self._get_selected_track()
 		if track:
-			link = track.get("external_urls", {}).get("spotify")
+			link = (track.get("external_urls") or {}).get("spotify")
 			copy_link(link)

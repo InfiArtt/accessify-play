@@ -93,6 +93,12 @@ def test_the_new_settings(panel: SpotifySettingsPanel, sign_in: SignIn) -> None:
 	assert sign_in.calls == []
 
 
+def test_validate_with_the_same_client_id(panel: SpotifySettingsPanel, sign_in: SignIn) -> None:
+	"""Validating without changing the Client ID keeps the session and signs in."""
+	panel.validateButton.press()
+	assert sign_in.calls == ["validate"]
+
+
 def test_keep_alive_minimum_is_a_setting(panel: SpotifySettingsPanel, spoken: list[str]) -> None:
 	"""The shortest keep-alive interval comes from the hidden keepAliveMinSeconds setting."""
 	config.conf["spotify"]["keepAliveMinSeconds"] = 30

@@ -118,8 +118,8 @@ def test_every_tab_fills(client: SpotifyClient) -> None:
 	assert window.albums_list.GetStrings() == ["LP (1999)", "No id (2000)", "EP (2001)"]
 	assert window.playlists_list.GetStrings() == ["This Is A - by Spotify", "Unknown"]
 	assert window.all_tracks_list.GetStrings() == [
-		"Song 1 - A — LP (1999)",
-		"Song 3 - A — LP (1999)",
+		"Song 1 — LP (1999)",
+		"Song 3 — LP (1999)",
 		"Song 4 — EP (2001)",
 	]
 	assert window.info_text.GetValue().splitlines() == [
@@ -166,13 +166,13 @@ def test_an_artist_without_albums_or_details(client: SpotifyClient, server: Spot
 def test_all_tracks_in_batches(client: SpotifyClient, spoken: list[str]) -> None:
 	"""All Tracks loads a batch at a time, with a Load More row until every album is in."""
 	window = open_artist(client, batch=1)
-	assert window.all_tracks_list.GetStrings() == ["Song 1 - A — LP (1999)", "--- Load More ---"]
+	assert window.all_tracks_list.GetStrings() == ["Song 1 — LP (1999)", "--- Load More ---"]
 	window.show_page(3)
 	window.all_tracks_list.SetSelection(1)
 	window.all_tracks_list.fire(wx.EVT_CHAR_HOOK, wx.KeyEvent(wx.WXK_RETURN))
 	assert window.all_tracks_list.GetStrings() == [
-		"Song 1 - A — LP (1999)",
-		"Song 3 - A — LP (1999)",
+		"Song 1 — LP (1999)",
+		"Song 3 — LP (1999)",
 		"--- Load More ---",
 	]
 	window.all_tracks_list.SetSelection(2)
@@ -183,6 +183,37 @@ def test_all_tracks_in_batches(client: SpotifyClient, spoken: list[str]) -> None
 	assert window.all_tracks_list.GetCount() == 3
 
 
+def test_an_artist_without_a_name(client: SpotifyClient, ready: SpotifyServer) -> None:
+	"""Without a name there is nothing to search playlists by, so none are looked for."""
+	window = ArtistDiscographyDialog(None, client, "ar1", "", MINE)
+	assert window.playlists_list.GetStrings() == ["No playlists found."]
+	assert [r[2]["type"] for r in ready.requests if r[1] == "search"] == ["track"]
+
+
+def test_all_tracks_keeps_songs_without_an_id(client: SpotifyClient, ready: SpotifyServer) -> None:
+	"""A song without an id (a local file) is listed; only songs with an id are checked for repeats."""
+	ready.routes["GET", "albums/al1/tracks"] = {"items": [{"type": "track", "name": "Local", "artists": ME}]}
+	window = open_artist(client)
+	assert window.all_tracks_list.GetStrings()[0].startswith("Local")
+
+
+def test_all_tracks_names_guests_like_top_tracks(client: SpotifyClient, ready: SpotifyServer) -> None:
+	"""All Tracks names the artists only when someone else is on the song, as Top Tracks does."""
+	ready.routes["GET", "albums/al1/tracks"] = {"items": [track(7, [*ME, {"name": "B"}]), track(8, ME)]}
+	window = open_artist(client)
+	assert window.all_tracks_list.GetStrings()[:2] == ["Song 7 - A, B — LP (1999)", "Song 8 — LP (1999)"]
+
+
+@pytest.mark.usefixtures("ready")
+def test_menu_for_a_playlist_without_a_link(client: SpotifyClient) -> None:
+	"""A playlist Spotify sent without a URI cannot be played, so its menu has no Play."""
+	window = open_artist(client)
+	window.show_page(2)
+	window.playlists_list.SetSelection(1)
+	window.on_context_menu(None)
+	assert last_menu().labels()[0] == "Add to Queue"
+
+
 @pytest.mark.parametrize("batch", [2, 3])
 def test_all_tracks_failure(
 	client: SpotifyClient, ready: SpotifyServer, spoken: list[str], batch: int
@@ -190,7 +221,7 @@ def test_all_tracks_failure(
 	"""A failed album is said; the tracks so far stay, and Load More tries that album again."""
 	ready.routes["GET", "albums/al2/tracks"] = spotify_error(500)
 	window = open_artist(client, batch=batch)
-	first = ["Song 1 - A — LP (1999)", "Song 3 - A — LP (1999)", "--- Load More ---"]
+	first = ["Song 1 — LP (1999)", "Song 3 — LP (1999)", "--- Load More ---"]
 	assert window.all_tracks_list.GetStrings() == first
 	enter_row = 2
 	window.all_tracks_list.SetSelection(enter_row)
@@ -331,6 +362,10 @@ def test_menu_actions(client: SpotifyClient, ready: SpotifyServer, opened: list,
 	accelerate(window, wx.ACCEL_ALT, "Q")
 	accelerate(window, wx.ACCEL_ALT, "P")
 	assert spoken[-3:] == ["Adding to queue...", "Song 1 added to queue.", "Playing..."]
+	# Alt+Q on an album queues its tracks.
+	window.show_page(1)
+	accelerate(window, wx.ACCEL_ALT, "Q")
+	assert spoken[-1] == "Queued 2 tracks from LP."
 
 
 @pytest.mark.usefixtures("ready")

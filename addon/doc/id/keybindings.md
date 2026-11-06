@@ -5,7 +5,7 @@ Tekan **`NVDA+Alt+G`** untuk membuka lapisan perintah, lalu tekan salah satu tom
 * `F1` menampilkan semua tombol, jadi Anda tidak perlu menghafalnya.
 * `Escape` menutup lapisan tanpa melakukan apa pun.
 * Tombol yang tidak ada di lapisan akan menutupnya dengan bunyi bip rendah.
-* Beberapa perintah membiarkan lapisan tetap terbuka, supaya Anda bisa langsung menekannya lagi (misalnya `N` beberapa kali untuk melewati beberapa lagu). Perintah ini ditandai "tetap terbuka" di bawah. Tekan `Escape` bila sudah selesai. Anda bisa memilih perintah mana yang tetap terbuka: lihat [Mengubah tombol lapisan perintah](customizing_commands.html).
+* Beberapa perintah membiarkan lapisan tetap terbuka, supaya Anda bisa langsung menekannya lagi (misalnya `N` beberapa kali untuk melewati beberapa lagu). Perintah ini ditandai "tetap terbuka" di bawah. Tekan `Escape` bila sudah selesai. Anda bisa memilih perintah mana yang tetap terbuka: lihat [Mengubah perintah dan pintasan](customizing_commands.html).
 * Jika lapisan dibiarkan terbuka tanpa ada tombol yang ditekan selama 30 detik, tombol berikutnya yang Anda tekan akan menutup lapisan dan berfungsi seperti biasa.
 
 ## Pemutaran

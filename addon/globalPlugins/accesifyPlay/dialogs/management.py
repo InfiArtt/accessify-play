@@ -14,7 +14,9 @@ import ui
 import wx
 from gui import guiHelper
 
+from .. import shortcuts
 from ..core.thread_manager import thread_manager
+from ..formatting import format_names
 from ..labels import time_range_labels
 from ..language import init_translation
 from ..settings_spec import TIME_RANGES, conf_get
@@ -37,7 +39,9 @@ init_translation()
 
 def _name_and_artists(item: Item) -> str:
 	"""Return a track or album as "name - artist, artist"."""
-	return f"{item['name']} - {', '.join(a['name'] for a in item['artists'])}"
+	name = safe_text(item.get("name"), _("Unknown"))
+	artists = format_names(item.get("artists"))
+	return f"{name} - {artists}" if artists else name
 
 
 class _ListTab(NamedTuple):
@@ -89,7 +93,7 @@ class ManagementDialog(AccessifyDialog):
 		self,
 		page: wx.Window,
 		loader: Callable[..., object],
-		control: wx.ListBox | None = None,
+		control: wx.ListBox,
 		initial_data: object = None,
 	) -> None:
 		"""Load `page` on first view, unless its data was supplied up front."""
@@ -107,9 +111,8 @@ class ManagementDialog(AccessifyDialog):
 		if entry is None:
 			return
 		loader, control = entry
-		if control is not None:
-			control.Clear()
-			control.Append(_("Loading..."))
+		control.Clear()
+		control.Append(_("Loading..."))
 		loader()
 
 	# The selected item in whichever tab's list has focus.
@@ -144,25 +147,13 @@ class ManagementDialog(AccessifyDialog):
 		item = self._get_selected_item()
 		if not item:
 			return
-		focused_control = self.FindFocus()
-		if focused_control == self.playlist_tracks_list:
-			selection_index = self.playlist_choices.GetSelection()
-			if selection_index != wx.NOT_FOUND:
-				current_playlist = self.user_playlists[selection_index]
-				context_uri = current_playlist.get("uri")
-				track_uri = item.get("uri")
-				if context_uri and track_uri:
-					ui.message(_("Playing."))
-					thread_manager.submit_task(
-						self.client.play_context_with_offset,
-						context_uri,
-						track_uri,
-						name="DialogTask",
-						daemon=True,
-					)
-					return
-		uri = item.get("uri")
-		self._play_uri(uri)
+		selection_index = self.playlist_choices.GetSelection()
+		if self.FindFocus() == self.playlist_tracks_list and selection_index != wx.NOT_FOUND:
+			# Play the playlist from this track, so the rest of it follows.
+			context_uri = self.user_playlists[selection_index].get("uri")
+			self._play_in_context(context_uri, item.get("uri"), _("Playing."))
+			return
+		self._play_uri(item.get("uri"))
 
 	def _handle_add_to_queue(self, _evt: wx.Event | None = None) -> None:
 		item = self._get_selected_item()
@@ -182,33 +173,18 @@ class ManagementDialog(AccessifyDialog):
 		item = self._get_selected_item()
 		if not item:
 			return
-		link = item.get("external_urls", {}).get("spotify")
+		link = (item.get("external_urls") or {}).get("spotify")
 		copy_link(link)
 
 	def _handle_refresh(self, _evt: wx.Event | None = None) -> None:
-		focused_control = self.FindFocus()
-		if not isinstance(focused_control, (wx.ListBox, wx.TreeCtrl, wx.ComboBox)):
-			current_page = self.notebook.GetCurrentPage()
-			if not current_page or not current_page.GetChildren():
-				return
-			# Default to the page's first control, unless the page has a better one.
-			children = current_page.GetChildren()
-			if hasattr(self, "playlist_choices") and current_page == self.playlist_choices.GetParent():
-				focused_control = self.playlist_choices
-			else:
-				focused_control = children[0]
-
-		if (
-			hasattr(self, "playlist_choices")
-			and hasattr(self, "playlist_tracks_list")
-			and focused_control in (self.playlist_choices, self.playlist_tracks_list)
-		):
+		"""Reload the list of the tab on screen (the Refresh shortcut)."""
+		page = self.notebook.GetCurrentPage()
+		if page is self.playlist_choices.GetParent():
 			self.on_refresh_playlists()
 			return
-
 		for tab_cfg in self.tabs_config.values():
-			if tab_cfg["control"] == focused_control:
-				tab_cfg.get("loader", lambda: None)()
+			if tab_cfg["control"].GetParent() is page:
+				tab_cfg["loader"]()
 				return
 
 	def init_ui(self) -> None:
@@ -320,10 +296,7 @@ class ManagementDialog(AccessifyDialog):
 	def _populate_generic_list(self, key: str, data: list[Item] | str) -> None:
 		if not self:
 			return  # closed while this tab was loading
-		tab_cfg = self.tabs_config.get(key)
-		if not tab_cfg:
-			return
-
+		tab_cfg = self.tabs_config[key]
 		tab_cfg["control"].Clear()
 		if isinstance(data, str):
 			# A message rather than data, e.g. an endpoint Spotify has retired.
@@ -402,7 +375,7 @@ class ManagementDialog(AccessifyDialog):
 			"new_releases",
 			self.client.get_new_releases,
 			initial_data,
-			unwrap=lambda page: page.get("albums", {}).get("items", []),
+			unwrap=lambda page: (page.get("albums") or {}).get("items") or [],
 		)
 
 	def load_recently_played(self, initial_data: Item | list[Item] | None = None) -> None:
@@ -411,7 +384,7 @@ class ManagementDialog(AccessifyDialog):
 			"recently_played",
 			self.client.get_recently_played,
 			initial_data,
-			unwrap=lambda page: page.get("items", []),
+			unwrap=lambda page: page.get("items") or [],
 		)
 
 	def _format_saved_episode(self, episode: Item) -> str:
@@ -423,7 +396,7 @@ class ManagementDialog(AccessifyDialog):
 
 	def _format_saved_audiobook(self, audiobook: Item) -> str:
 		name = safe_text(audiobook.get("name"), _("Unknown Audiobook"))
-		authors = ", ".join(a.get("name") for a in (audiobook.get("authors") or []) if a.get("name"))
+		authors = format_names(audiobook.get("authors"))
 		byline = authors or safe_text(audiobook.get("publisher"), "")
 		return f"{name} - {byline}" if byline else name
 
@@ -474,9 +447,9 @@ class ManagementDialog(AccessifyDialog):
 		refresh_button.Bind(wx.EVT_BUTTON, self.on_refresh_playlists)
 		buttons_sizer.Add(refresh_button, 0, wx.ALL, 5)
 
-		edit_button = wx.Button(panel, label=_("&Edit Playlist Details"))
-		edit_button.Bind(wx.EVT_BUTTON, self.on_update_playlist)
-		buttons_sizer.Add(edit_button, 0, wx.ALL, 5)
+		self.edit_playlist_button = wx.Button(panel, label=_("&Edit Playlist Details"))
+		self.edit_playlist_button.Bind(wx.EVT_BUTTON, self.on_update_playlist)
+		buttons_sizer.Add(self.edit_playlist_button, 0, wx.ALL, 5)
 
 		self.delete_unfollow_button = wx.Button(panel, label=_("&Delete Playlist"))
 		self.delete_unfollow_button.Bind(wx.EVT_BUTTON, self.on_delete_or_unfollow_playlist)
@@ -581,7 +554,7 @@ class ManagementDialog(AccessifyDialog):
 			return
 
 		for p in self.user_playlists:
-			owner_obj = p.get("owner", {})
+			owner_obj = p.get("owner") or {}
 			owner_id = owner_obj.get("id")
 			owner_name = owner_obj.get("display_name") or owner_id or _("Unknown")
 
@@ -632,7 +605,7 @@ class ManagementDialog(AccessifyDialog):
 		self._update_playlist_controls_state()
 
 		# Drop the previous playlist's rows at once: until the new ones arrive,
-		# Delete or Alt+Up must not act on tracks from the playlist just left.
+		# Removing or moving must not act on tracks from the playlist just left.
 		self.current_playlist_tracks = []
 		self.current_playlist_positions = []
 		self.playlist_tracks_list.Clear()
@@ -693,9 +666,7 @@ class ManagementDialog(AccessifyDialog):
 		self.current_playlist_positions = [pos for _track, pos in rows]
 
 		for track in self.current_playlist_tracks:
-			artists = ", ".join(
-				safe_text(a.get("name"), "") for a in (track.get("artists") or []) if a.get("name")
-			)
+			artists = format_names(track.get("artists"))
 			name = safe_text(track.get("name"), _("Unknown Track"))
 			self.playlist_tracks_list.Append(f"{name} - {artists}" if artists else name)
 
@@ -709,15 +680,8 @@ class ManagementDialog(AccessifyDialog):
 	def _update_playlist_controls_state(self) -> None:
 		"""Enable or disables controls based on playlist ownership."""
 		is_owned = self.is_current_playlist_owned
-		panel = self.playlist_choices.GetParent()
-		edit_button = [
-			c
-			for c in panel.GetChildren()
-			if isinstance(c, wx.Button) and c.GetLabel() == _("&Edit Playlist Details")
-		]
-		if edit_button:
-			edit_button[0].Enable(is_owned)
-		# Only the owner may change a playlist's contents.
+		# Only the owner may change a playlist's details or contents.
+		self.edit_playlist_button.Enable(is_owned)
 		self.remove_duplicates_button.Enable(is_owned)
 		self.clear_playlist_button.Enable(is_owned)
 		if is_owned:
@@ -752,8 +716,7 @@ class ManagementDialog(AccessifyDialog):
 		dialog.Show()
 
 	def _on_playlist_details_dialog_close(self, evt: wx.Event) -> None:
-		if self._playlistDetailsDialog:
-			self._playlistDetailsDialog = None
+		self._playlistDetailsDialog = None
 		self.load_playlists()
 		evt.Skip()
 
@@ -828,9 +791,7 @@ class ManagementDialog(AccessifyDialog):
 		playlist_data = self.user_playlists[playlist_selection]
 
 		track_name = safe_text(track_data.get("name"), _("Unknown Track"))
-		artists = ", ".join(
-			safe_text(a.get("name"), "") for a in (track_data.get("artists") or []) if a.get("name")
-		)
+		artists = format_names(track_data.get("artists"))
 		confirmation_msg = _(
 			"Are you sure you want to remove '{track_name}' by {artists} from this playlist?"
 		).format(track_name=track_name, artists=artists)
@@ -1000,25 +961,23 @@ class ManagementDialog(AccessifyDialog):
 		else:
 			wx.CallAfter(ui.message, _("Track moved successfully."))
 
-	def on_key_down_in_playlist(self, event: wx.Event) -> None:
-		"""Handle key presses on the playlist tracks list."""
-		key_code = event.GetKeyCode()
-		is_alt_down = event.AltDown()
+	def on_key_down_in_playlist(self, event: wx.KeyEvent) -> None:
+		"""Move the selected track up or down, or remove it, in the user's own playlists.
 
-		if (is_alt_down and key_code in (wx.WXK_UP, wx.WXK_DOWN)) or key_code == wx.WXK_DELETE:
-			if not self.is_current_playlist_owned:
-				ui.message(_("You cannot modify a playlist you don't own."))
-				return
-			if is_alt_down:
-				if key_code == wx.WXK_UP:
-					self._handle_reorder_track("up")
-				elif key_code == wx.WXK_DOWN:
-					self._handle_reorder_track("down")
-				return
-			if key_code == wx.WXK_DELETE:
-				self.on_remove_track_from_playlist(None)
-				return
-		event.Skip()
+		The keys are the keyMoveTrackUp, keyMoveTrackDown and keyRemoveTrack settings.
+		"""
+		actions = {
+			"keyMoveTrackUp": lambda: self._handle_reorder_track("up"),
+			"keyMoveTrackDown": lambda: self._handle_reorder_track("down"),
+			"keyRemoveTrack": lambda: self.on_remove_track_from_playlist(None),
+		}
+		action = next((act for setting, act in actions.items() if shortcuts.matches(setting, event)), None)
+		if action is None:
+			event.Skip()
+		elif not self.is_current_playlist_owned:
+			ui.message(_("You cannot modify a playlist you don't own."))
+		else:
+			action()
 
 	def init_top_items_tab(self) -> None:
 		"""Build the Top Items tab."""
@@ -1054,9 +1013,9 @@ class ManagementDialog(AccessifyDialog):
 			"data_attr": "top_items",
 			"loader": self.load_top_items,
 			"formatter": lambda item: (
-				f"{item['name']} - {', '.join([a['name'] for a in item['artists']])}"
-				if item["type"] == "track"
-				else item["name"]
+				_name_and_artists(item)
+				if item.get("type") == "track"
+				else safe_text(item.get("name"), _("Unknown"))
 			),
 			"item_parser": lambda item: item,
 		}
@@ -1085,7 +1044,7 @@ class ManagementDialog(AccessifyDialog):
 		"""Show the top tracks or artists for the chosen time range."""
 		if initial_data:
 			if isinstance(initial_data, dict):
-				initial_data = initial_data.get("items", [])
+				initial_data = initial_data.get("items") or []
 			self._populate_generic_list("top_items", initial_data)
 			return
 		if self._top_items_timer is not None:
@@ -1102,7 +1061,7 @@ class ManagementDialog(AccessifyDialog):
 		def _load() -> None:
 			data = self.client.get_top_items(item_type=item_type, time_range=time_range)
 			if isinstance(data, dict):
-				data = data.get("items", [])
+				data = data.get("items") or []
 			wx.CallAfter(self._finish_top_items, data, token)
 
 		thread_manager.submit_task(_load, name="DialogTask", daemon=True)
@@ -1120,26 +1079,16 @@ class ManagementDialog(AccessifyDialog):
 
 	# --- Shortcuts and context menus ---
 	def _init_shortcuts(self) -> None:
-		self._shortcutPlayId = wx.NewIdRef()
-		self._shortcutAddId = wx.NewIdRef()
-		self._shortcutCopyId = wx.NewIdRef()
-		self._shortcutRefreshId = wx.NewIdRef()
-		self._shortcutNewPlaylistId = wx.NewIdRef()
-		accel = wx.AcceleratorTable(
-			[
-				(wx.ACCEL_ALT, ord("P"), self._shortcutPlayId.GetId()),
-				(wx.ACCEL_ALT, ord("Q"), self._shortcutAddId.GetId()),
-				(wx.ACCEL_ALT, ord("L"), self._shortcutCopyId.GetId()),
-				(wx.ACCEL_ALT, ord("R"), self._shortcutRefreshId.GetId()),
-				(wx.ACCEL_CTRL, ord("N"), self._shortcutNewPlaylistId.GetId()),
-			]
+		self._bind_shortcuts(
+			{
+				"keyPlay": self._handle_play,
+				"keyQueue": self._handle_add_to_queue,
+				"keyCopyLink": self._handle_copy_link,
+				"keyLyrics": lambda _evt: self._show_lyrics_of(self._get_selected_item()),
+				"keyRefresh": self._handle_refresh,
+				"keyNewPlaylist": self._open_create_playlist_dialog,
+			}
 		)
-		self.SetAcceleratorTable(accel)
-		self.Bind(wx.EVT_MENU, self._handle_play, id=self._shortcutPlayId.GetId())
-		self.Bind(wx.EVT_MENU, self._handle_add_to_queue, id=self._shortcutAddId.GetId())
-		self.Bind(wx.EVT_MENU, self._handle_copy_link, id=self._shortcutCopyId.GetId())
-		self.Bind(wx.EVT_MENU, self._handle_refresh, id=self._shortcutRefreshId.GetId())
-		self.Bind(wx.EVT_MENU, self._open_create_playlist_dialog, id=self._shortcutNewPlaylistId.GetId())
 
 	def _on_list_context_menu(self, _evt: wx.Event) -> None:
 		item = self._get_selected_item()
@@ -1150,7 +1099,7 @@ class ManagementDialog(AccessifyDialog):
 		if item.get("uri"):
 			self._append_menu_item(menu, _("Play"), self._handle_play)
 			self._append_menu_item(menu, _("Add to Queue"), self._handle_add_to_queue)
-		if item.get("external_urls", {}).get("spotify"):
+		if (item.get("external_urls") or {}).get("spotify"):
 			self._append_menu_item(menu, _("Copy Link"), self._handle_copy_link)
 
 		tab_items = self._tab_menu_items(item)
@@ -1161,11 +1110,10 @@ class ManagementDialog(AccessifyDialog):
 			if item.get("type") == "album":
 				self._append_menu_item(menu, _("View Album Tracks"), self.on_view_album_tracks)
 				menu.AppendSeparator()
-				owned = [p for p in self.user_playlists or () if self._is_owned(p)]
-				self._append_add_to_playlist(menu, item, owned)
+				self._append_add_to_playlist(menu, item, self._addable_playlists())
 		if item.get("type") == "track":
 			menu.AppendSeparator()
-			self._append_add_to_playlist(menu, item, self.user_playlists or [])
+			self._append_add_to_playlist(menu, item, self._addable_playlists())
 			self._append_go_to_options_for_track(menu, item)
 		if menu.GetMenuItemCount():
 			self.PopupMenu(menu)
@@ -1205,8 +1153,12 @@ class ManagementDialog(AccessifyDialog):
 		}
 		return items_by_tab.get(tab, [])
 
+	def _addable_playlists(self) -> list[Item]:
+		"""Return the playlists tracks can be added to: of all listed, only the user's own."""
+		return [p for p in self.user_playlists or () if self._is_owned(p)]
+
 	def _is_owned(self, playlist: Item) -> bool:
-		return playlist.get("owner", {}).get("id") == self.current_user_id
+		return (playlist.get("owner") or {}).get("id") == self.current_user_id
 
 	def on_playlist_context_menu(self, _evt: wx.Event) -> None:
 		"""Show the actions for the selected playlist track."""
@@ -1353,13 +1305,15 @@ class ManagementDialog(AccessifyDialog):
 			target_id = item["id"]
 			target_name = item["name"]
 		elif item.get("type") in ("album", "track"):
-			artists = item.get("artists", [])
+			artists = item.get("artists") or []
 			if artists:
 				primary_artist = artists[0]
 				target_id = primary_artist.get("id")
 				target_name = primary_artist.get("name")
 		if target_id and target_name:
-			dialog = ArtistDiscographyDialog(self, self.client, target_id, target_name, self.user_playlists)
+			dialog = ArtistDiscographyDialog(
+				self, self.client, target_id, target_name, self._addable_playlists()
+			)
 			dialog.Show()
 		else:
 			ui.message(_("Could not identify the artist for this item."))
@@ -1368,7 +1322,7 @@ class ManagementDialog(AccessifyDialog):
 		"""Open the selected album's tracks."""
 		album = self._get_selected_item()
 		if album and album.get("type") == "album":
-			dialog = AlbumTracksDialog(self, self.client, album, self.user_playlists)
+			dialog = AlbumTracksDialog(self, self.client, album, self._addable_playlists())
 			dialog.Show()
 		else:
 			ui.message(_("Please select an album to view its tracks."))

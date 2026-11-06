@@ -12,8 +12,7 @@ from typing import TYPE_CHECKING
 import ui
 import wx
 
-from ..core.thread_manager import thread_manager
-from ..formatting import format_duration
+from ..formatting import format_duration, format_names
 from ..language import init_translation
 from ..ui.base_dialog import AccessifyDialog
 from ..ui.paged_list import PagedList
@@ -28,10 +27,6 @@ init_translation()
 
 class PlaylistTracksDialog(AccessifyDialog):
 	"""A playlist's tracks, loaded page by page."""
-
-	MENU_PLAY = wx.NewIdRef()
-	MENU_ADD_QUEUE = wx.NewIdRef()
-	MENU_COPY_LINK = wx.NewIdRef()
 
 	def __init__(self, parent: wx.Window, client: SpotifyClient, playlist: Item) -> None:
 		playlist_name = playlist.get("name", _("Unknown"))
@@ -91,15 +86,14 @@ class PlaylistTracksDialog(AccessifyDialog):
 		panel.SetSizer(main_sizer)
 
 	def _create_accelerators(self) -> None:
-		accel_entries = [
-			(wx.ACCEL_ALT, ord("P"), self.MENU_PLAY.GetId()),
-			(wx.ACCEL_ALT, ord("Q"), self.MENU_ADD_QUEUE.GetId()),
-			(wx.ACCEL_ALT, ord("L"), self.MENU_COPY_LINK.GetId()),
-		]
-		self.SetAcceleratorTable(wx.AcceleratorTable(accel_entries))
-		self.Bind(wx.EVT_MENU, self.on_play_selected, id=self.MENU_PLAY.GetId())
-		self.Bind(wx.EVT_MENU, self.on_add_to_queue, id=self.MENU_ADD_QUEUE.GetId())
-		self.Bind(wx.EVT_MENU, self.on_copy_link, id=self.MENU_COPY_LINK.GetId())
+		self._bind_shortcuts(
+			{
+				"keyPlay": self.on_play_selected,
+				"keyQueue": self.on_add_to_queue,
+				"keyCopyLink": self.on_copy_link,
+				"keyLyrics": lambda _evt: self._show_lyrics_of(self._get_selected_track()),
+			}
+		)
 
 	def _fetch_page(self, offset: int, limit: int) -> Item | str:
 		"""Return a page of the playlist, its entries reduced to their tracks."""
@@ -110,14 +104,12 @@ class PlaylistTracksDialog(AccessifyDialog):
 
 	def _format_track_display(self, track: Item, index: int) -> str:
 		name = track.get("name", _("Unknown"))
-		artists = ", ".join([a.get("name", _("Unknown")) for a in track.get("artists", [])])
+		artists = format_names(track.get("artists"))
 		duration = format_duration(track.get("duration_ms"))
 		display = f"{index}. {name}"
 		if artists:
 			display = f"{display} — {artists}"
-		if duration:
-			display = f"{display} ({duration})"
-		return display
+		return f"{display} ({duration})"
 
 	def _get_selected_track(self) -> Item | None:
 		"""Return the selected track; on the Load More row, load more instead."""
@@ -135,9 +127,9 @@ class PlaylistTracksDialog(AccessifyDialog):
 		if not self.paged.items:
 			return
 		menu = wx.Menu()
-		menu.Append(self.MENU_PLAY.GetId(), _("Play\tAlt+P"))
-		menu.Append(self.MENU_ADD_QUEUE.GetId(), _("Add to Queue\tAlt+Q"))
-		menu.Append(self.MENU_COPY_LINK.GetId(), _("Copy Link\tAlt+L"))
+		self._append_action(menu, _("Play"), "keyPlay")
+		self._append_action(menu, _("Add to Queue"), "keyQueue")
+		self._append_action(menu, _("Copy Link"), "keyCopyLink")
 		# Not _get_selected_track: that loads more on the Load More row,
 		# which opening a menu must not do.
 		track = self.paged.selected()
@@ -152,16 +144,7 @@ class PlaylistTracksDialog(AccessifyDialog):
 		if not track:
 			return
 
-		playlist_uri = self.playlist.get("uri")
-		track_uri = track.get("uri")
-
-		if playlist_uri and track_uri:
-			ui.message(_("Playing from playlist..."))
-			thread_manager.submit_task(
-				self.client.play_context_with_offset, playlist_uri, track_uri, name="DialogTask", daemon=True
-			)
-		else:
-			self._play_uri(track_uri)
+		self._play_in_context(self.playlist.get("uri"), track.get("uri"), _("Playing from playlist..."))
 
 	def on_add_to_queue(self, _evt: wx.Event | None = None) -> None:
 		"""Add the selected track to the queue."""
@@ -173,5 +156,5 @@ class PlaylistTracksDialog(AccessifyDialog):
 		"""Copy the selected track's Spotify link."""
 		track = self._get_selected_track()
 		if track:
-			link = track.get("external_urls", {}).get("spotify")
+			link = (track.get("external_urls") or {}).get("spotify")
 			copy_link(link)

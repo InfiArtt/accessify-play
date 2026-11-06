@@ -48,6 +48,7 @@ Aplikasi yang Anda buat tunduk pada aturan Spotify sendiri untuk aplikasi develo
 * **Clear Credentials**: keluar dari Spotify di komputer ini.
 * **Spotify Developer Dashboard**: membuka situs developer Spotify, untuk membuat Client ID sendiri.
 * **Donate**: membuka halaman untuk mendukung pengembangan add-on, setelah bertanya kepada Anda.
+* **Window Shortcuts...**: mengubah pintasan di dalam jendela Accessify Play, seperti `Alt+P` untuk memutar; lihat [Mengubah perintah dan pintasan](customizing_commands.html).
 
 ## Pengaturan lanjutan di nvda.ini
 

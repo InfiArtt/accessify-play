@@ -220,6 +220,84 @@ def test_track_problems(client: SpotifyClient, ready: SpotifyServer, spoken: lis
 	assert library.playlist_tracks_list.GetStrings() == ["This playlist is empty."]
 
 
+def test_nothing_to_act_on(client: SpotifyClient, ready: SpotifyServer, spoken: list[str]) -> None:
+	"""Without a selection, or while tracks load, actions ask for a selection or wait; nothing is sent."""
+	library = open_library(client)
+	sent = len(ready.requests)
+	library.FindFocus = lambda: None  # the focus is on none of the lists
+	library.on_view_chapters()
+	library.on_view_discography(None)
+	library.on_remove_from_library()
+	assert spoken[-3:] == ["Please select an item from the active tab first."] * 3
+	assert gui.message_boxes == []
+	library._tracks_loading = True
+	library.playlist_tracks_list.SetSelection(1)
+	library._handle_reorder_track("down")
+	library._tracks_loading = False
+	library.playlist_choices.SetSelection(wx.NOT_FOUND)
+	library.on_playlist_selected()
+	assert len(ready.requests) == sent
+
+
+@pytest.mark.usefixtures("ready")
+def test_answers_after_closing_are_dropped(client: SpotifyClient) -> None:
+	"""Playlists, tracks and top items that arrive after the Library closed are not shown."""
+	library = open_library(client)
+	rows = library.playlist_tracks_list.GetStrings()
+	library.Destroy()
+	library.load_playlists()
+	library._populate_playlists_combobox([])
+	library._finish_playlist_tracks([], token=None, keep_row=0)
+	library._finish_top_items([], token=library._top_items_request)
+	assert library.playlist_tracks_list.GetStrings() == rows
+
+
+def test_playing_a_playlist_track_that_cannot_play_in_order(
+	client: SpotifyClient, ready: SpotifyServer, spoken: list[str]
+) -> None:
+	"""Without a playlist or a track URI to play from, the track is played alone, or that is explained."""
+	library = open_library(client)
+	library.playlist_tracks_list.SetFocus()
+	library.playlist_tracks_list.SetSelection(0)
+	library.playlist_choices.SetSelection(wx.NOT_FOUND)
+	library._handle_play()
+	assert ready.requests[-1][3] == {"uris": ["spotify:track:t1"]}
+	ready.routes["GET", "playlists/p1/items"] = entries({"type": "track", "name": "Local", "artists": []})
+	library.playlist_choices.SetSelection(0)
+	library.refresh_current_playlist()
+	library.playlist_tracks_list.SetSelection(0)
+	library._handle_play()
+	assert spoken[-1] == "Unable to play selection. URI not found."
+
+
+@pytest.mark.usefixtures("ready")
+def test_menus_for_unusual_items(client: SpotifyClient, spoken: list[str]) -> None:
+	"""Menus fit what the item is.
+
+	An artist in Top Items offers its discography; a song without a URI cannot be played or queued;
+	an item of an unknown kind gets no menu; an album without artists has no artist to open.
+	"""
+	library = open_library(
+		client,
+		top_items=[ARTIST, {"type": "x", "name": "?"}],
+		saved_tracks=[{"track": {"type": "track", "name": "Local", "artists": []}}],
+		saved_albums=[{"album": {"type": "album", "id": "a9", "name": "Lonely"}}],
+	)
+	top = tab(library, "top_items")
+	assert top.GetStrings() == ["A", "?"]
+	top.fire(wx.EVT_CONTEXT_MENU)
+	assert last_menu().labels() == ["Play", "Add to Queue", "View Discography"]
+	menus = len(wx.popped_menus)
+	top.SetSelection(1)
+	top.fire(wx.EVT_CONTEXT_MENU)
+	assert len(wx.popped_menus) == menus
+	tab(library, "saved_tracks").fire(wx.EVT_CONTEXT_MENU)
+	assert last_menu().labels()[0] == "Remove from Library"
+	tab(library, "saved_albums")
+	library.on_view_discography(None)
+	assert spoken[-1] == "Could not identify the artist for this item."
+
+
 def test_play_playlist(client: SpotifyClient, ready: SpotifyServer, spoken: list[str]) -> None:
 	"""Play Playlist plays the chosen one, and says so when it can't."""
 	library = open_library(client, playlists=[MINE, {"id": "p9", "name": "Odd", "owner": {}}])
@@ -541,7 +619,6 @@ def test_a_tab_that_fails_or_is_empty(client: SpotifyClient, ready: SpotifyServe
 	assert library.tabs_config["saved_tracks"]["control"].GetStrings() == ["No items found."]
 	library.Destroy()
 	library._populate_generic_list("saved_tracks", [])
-	library._populate_generic_list("unknown", [])
 
 
 def test_top_items_follow_the_choices(client: SpotifyClient, ready: SpotifyServer, spoken: list[str]) -> None:
@@ -615,6 +692,15 @@ def test_tab_menus(full: ManagementDialog, key: str, labels: list[str]) -> None:
 
 
 @pytest.mark.parametrize(
+	("key", "label"), [("saved_tracks", "Add to Playlist"), ("new_releases", "Add Album to Playlist")]
+)
+def test_only_own_playlists_can_be_added_to(full: ManagementDialog, key: str, label: str) -> None:
+	"""Add to Playlist offers only the user's own playlists: others' cannot be changed."""
+	tab(full, key).fire(wx.EVT_CONTEXT_MENU)
+	assert last_menu().find(label).submenu.labels() == ["Mine"]
+
+
+@pytest.mark.parametrize(
 	("key", "label", "kind_uri", "said"),
 	[
 		(
@@ -669,12 +755,12 @@ def test_removing_needs_a_yes(full: ManagementDialog, ready: SpotifyServer, spok
 
 
 def test_enter_opens_what_the_item_holds(full: ManagementDialog, ready: SpotifyServer, opened: list) -> None:
-	"""Enter on an album, artist, show or audiobook opens it; on a track it plays."""
+	"""Enter on an album, artist, show or audiobook opens it, offering only your own playlists to add to."""
 	for key in ("saved_albums", "followed_artists", "saved_shows", "saved_audiobooks", "saved_tracks"):
 		tab(full, key).fire(wx.EVT_CHAR_HOOK, wx.KeyEvent(wx.WXK_RETURN))
 	assert opened == [
-		("AlbumTracksDialog", (ALBUM, [MINE, THEIRS, NOBODYS])),
-		("ArtistDiscographyDialog", ("ar1", "A", [MINE, THEIRS, NOBODYS])),
+		("AlbumTracksDialog", (ALBUM, [MINE])),
+		("ArtistDiscographyDialog", ("ar1", "A", [MINE])),
 		("PodcastEpisodesDialog", ("s1", "Pod")),
 		("AudiobookChaptersDialog", ("b1", "Book")),
 	]
@@ -701,7 +787,7 @@ def test_opening_needs_the_right_item(full: ManagementDialog, opened: list, spok
 		"Please select an album to view its tracks.",
 		"Please select a show to view episodes.",
 	]
-	assert opened == [("ArtistDiscographyDialog", ("ar1", "A", [MINE, THEIRS, NOBODYS]))]
+	assert opened == [("ArtistDiscographyDialog", ("ar1", "A", [MINE]))]
 	tab(full, "saved_episodes")
 	full.on_view_discography(None)
 	assert spoken[-1] == "Could not identify the artist for this item."
@@ -745,18 +831,14 @@ def test_nothing_selected(full: ManagementDialog, spoken: list[str]) -> None:
 
 
 def test_refresh_shortcut(full: ManagementDialog, ready: SpotifyServer) -> None:
-	"""Alt+R reloads the focused tab, the playlists, or the current page's list."""
+	"""Alt+R reloads the list of the tab on screen: the playlists, or that tab's own list."""
 	ready.routes["GET", "me/tracks"] = {"items": [{"track": track(5)}]}
 	ready.routes["GET", "me/playlists"] = {"items": [MINE], "next": None}
-	tab(full, "saved_tracks")
+	full.notebook.ChangeSelection(1)
 	accelerate(full, wx.ACCEL_ALT, "R")
 	assert full.tabs_config["saved_tracks"]["control"].GetStrings() == ["Song 5 - A"]
-	full.notebook.SetFocus()
+	full.notebook.ChangeSelection(0)
 	accelerate(full, wx.ACCEL_ALT, "R")
 	assert "me/playlists" in ready.paths()
-	full.notebook.ChangeSelection(1)
-	ready.routes["GET", "me/tracks"] = {"items": []}
-	accelerate(full, wx.ACCEL_ALT, "R")
-	assert full.tabs_config["saved_tracks"]["control"].GetStrings() == ["No items found."]
 	full.notebook.ChangeSelection(wx.NOT_FOUND)
 	accelerate(full, wx.ACCEL_ALT, "R")

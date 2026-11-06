@@ -9,9 +9,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import inputCore
 import wx
 
-from ..commands import BY_SCRIPT
+from ..commands import BY_SCRIPT, LAYER_KEYS
 from ..language import init_translation
 from ..ui.base_dialog import AccessifyDialog
 
@@ -28,13 +29,16 @@ class EditCommandDialog(AccessifyDialog):
 		self,
 		parent: wx.Window,
 		script_name: str,
-		display_label: str,
 		current_gestures: list[str],
 		*,
 		keep_open: bool,
+		taken: dict[str, str] | None = None,
 	) -> None:
-		super().__init__(parent, title=_("Edit Command: {name}").format(name=display_label))
+		"""Edit script_name's key; taken maps the other commands' normalized keys to their names."""
+		name = BY_SCRIPT[script_name].name
+		super().__init__(parent, title=_("Edit Command: {name}").format(name=name))
 		self.script_name = script_name
+		self.taken = taken or {}
 		self.result_gestures = current_gestures
 		self.result_keep_open = keep_open
 		self._build_ui()
@@ -76,17 +80,33 @@ class EditCommandDialog(AccessifyDialog):
 			evt.Skip()
 
 	def on_ok(self, evt: wx.Event) -> None:
-		"""Store the key that was typed, adding the kb: prefix if needed."""
-		val = self.txt_gesture.GetValue().strip()
-		if val:
-			# Automatically prepend kb: if not present (though we stripped it for UI)
-			if not val.startswith("kb:"):
-				val = f"kb:{val}"
-			self.result_gestures = [val]
-		else:
-			self.result_gestures = []
+		"""Store the key that was typed, adding the kb: prefix if needed; refuse one that is not free.
+
+		F1, F2 and Escape belong to the layer, and a key another command has
+		would silently take it away from that command. Either is said, and the
+		dialog stays open to choose another key.
+		"""
+		value = self.txt_gesture.GetValue().strip()
+		gesture = value if not value or value.startswith("kb:") else f"kb:{value}"
+		problem = self._problem_with(gesture) if gesture else None
+		if problem:
+			wx.MessageBox(problem, _("Choose Another Key"), wx.OK | wx.ICON_WARNING, self)
+			self.txt_gesture.SetFocus()
+			return
+		self.result_gestures = [gesture] if gesture else []
 		self.result_keep_open = self.chk_keep_open.GetValue()
 		evt.Skip()
+
+	def _problem_with(self, gesture: str) -> str | None:
+		"""Return why gesture cannot be this command's key, or None when it can."""
+		normalized = inputCore.normalizeGestureIdentifier(gesture)
+		if normalized in LAYER_KEYS:
+			return _("F1, F2 and Escape always keep their meaning in the command layer.")
+		if normalized in self.taken:
+			return _(
+				"That key already runs {command}. Change that command first, or choose another key."
+			).format(command=self.taken[normalized])
+		return None
 
 
 class LayerEditorDialog(AccessifyDialog):
@@ -95,9 +115,8 @@ class LayerEditorDialog(AccessifyDialog):
 	def __init__(self, parent: wx.Window, config_manager: LayerConfigManager) -> None:
 		super().__init__(parent, title=_("Command Layer Editor"), size=(600, 400))
 		self.config_manager = config_manager
-
-		# Item data -> script id. SetItemData only stores integers.
-		self.item_data_map = {}
+		#: The script of each row, in the order of the list.
+		self.row_scripts: list[str] = []
 
 		self._build_ui()
 		self._populate_list()
@@ -142,27 +161,15 @@ class LayerEditorDialog(AccessifyDialog):
 
 	def _populate_list(self) -> None:
 		self.list_ctrl.DeleteAllItems()
-		self.item_data_map.clear()
-
 		configs = self.config_manager.get_all_configs()
-
-		for i, (script_id, data) in enumerate(configs):
-			command = BY_SCRIPT[script_id]
-
-			# Strip kb: prefix for display
-			gestures_list = [g.replace("kb:", "") for g in data.get("gestures", [])]
-			gestures = ", ".join(gestures_list)
-
-			keep_open = _("Yes") if data.get("keep_open") else _("No")
-
+		self.row_scripts = [script for script, _data in configs]
+		for script, data in configs:
+			command = BY_SCRIPT[script]
 			idx = self.list_ctrl.InsertItem(self.list_ctrl.GetItemCount(), command.name)
-			self.list_ctrl.SetItem(idx, 1, gestures)
-			self.list_ctrl.SetItem(idx, 2, keep_open)
+			# The keys without their kb: prefix.
+			self.list_ctrl.SetItem(idx, 1, ", ".join(g.replace("kb:", "") for g in data.get("gestures", [])))
+			self.list_ctrl.SetItem(idx, 2, _("Yes") if data.get("keep_open") else _("No"))
 			self.list_ctrl.SetItem(idx, 3, command.description)
-
-			# Remember which script this row is, for on_edit.
-			self.list_ctrl.SetItemData(idx, i)
-			self.item_data_map[i] = script_id
 
 	def on_selection(self, _evt: wx.Event) -> None:
 		"""Allow editing once a command is selected."""
@@ -177,37 +184,37 @@ class LayerEditorDialog(AccessifyDialog):
 		idx = self.list_ctrl.GetFirstSelected()
 		if idx == -1:
 			return
-
-		map_key = self.list_ctrl.GetItemData(idx)
-		script_name = self.item_data_map.get(map_key)
-
-		if not script_name:
-			return
-
-		display_label = self.list_ctrl.GetItemText(idx, 0)
-
+		script_name = self.row_scripts[idx]
 		config = self.config_manager.get_script_config(script_name)
-		if not config:
-			return
-
 		dlg = EditCommandDialog(
-			self, script_name, display_label, config["gestures"], keep_open=config["keep_open"]
+			self,
+			script_name,
+			config["gestures"],
+			keep_open=config["keep_open"],
+			taken=self._keys_of_other_commands(script_name),
 		)
 		if dlg.ShowModal() == wx.ID_OK:
 			self.config_manager.set_script_config(
 				script_name, dlg.result_gestures, keep_open=dlg.result_keep_open
 			)
 			self._populate_list()
-
-			# Reselect the edited script; the list was rebuilt.
-			for list_idx in range(self.list_ctrl.GetItemCount()):
-				key = self.list_ctrl.GetItemData(list_idx)
-				if self.item_data_map.get(key) == script_name:
-					self.list_ctrl.Select(list_idx)
-					self.list_ctrl.Focus(list_idx)
-					break
-
+			# The rows keep their order, so the edited command is on the same row.
+			self.list_ctrl.Select(idx)
+			self.list_ctrl.Focus(idx)
 		dlg.Destroy()
+
+	def _keys_of_other_commands(self, script_name: str) -> dict[str, str]:
+		"""Return the normalized keys of every command but script_name, with that command's name."""
+		taken = {}
+		for script, data in self.config_manager.get_all_configs():
+			if script == script_name:
+				continue
+			for gesture in data.get("gestures", []):
+				try:
+					taken[inputCore.normalizeGestureIdentifier(gesture)] = BY_SCRIPT[script].name
+				except ValueError:
+					continue  # a malformed key from a hand-edited file; the layer skips it too
+		return taken
 
 	def on_reset(self, _evt: wx.Event) -> None:
 		"""Put every key back to its default, after asking."""

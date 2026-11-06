@@ -11,7 +11,6 @@ from typing import TYPE_CHECKING
 
 import accesifyPlay
 import config
-import core
 import inputCore
 import pytest
 import scriptHandler
@@ -214,7 +213,6 @@ def test_editing_a_key(
 	assert layer.config_manager.get_script_config("playMyTopTracks")["gestures"] == ["kb:shift+t"]
 	assert editor.list_ctrl.GetFirstSelected() == row_of(editor, "Play My Top Tracks")
 	editor.Close()
-	assert core.restarts == 0
 	assert wx.message_boxes == []
 	assert layer._editor_dialog is None
 	assert layer._lookup(inputCore.InputGesture("kb:shift+t")) == "playMyTopTracks"
@@ -222,7 +220,7 @@ def test_editing_a_key(
 
 def test_edit_dialog_details() -> None:
 	"""An emptied key unbinds the command; kb: is shown without its prefix; Escape cancels."""
-	dialog = EditCommandDialog(None, "x", "X", ["kb:p"], keep_open=False)
+	dialog = EditCommandDialog(None, "playPause", ["kb:p"], keep_open=False)
 	assert dialog.txt_gesture.GetValue() == "p"
 	dialog.txt_gesture.SetValue("kb:q")
 	dialog.on_ok(wx.CommandEvent())
@@ -234,7 +232,39 @@ def test_edit_dialog_details() -> None:
 	dialog.fire(wx.EVT_CHAR_HOOK, wx.KeyEvent(wx.WXK_ESCAPE))
 	assert dialog.end_code == wx.ID_CANCEL
 	dialog._on_close_button(None)
-	assert EditCommandDialog(None, "x", "X", [], keep_open=True).txt_gesture.GetValue() == ""
+	assert EditCommandDialog(None, "playPause", [], keep_open=True).txt_gesture.GetValue() == ""
+
+
+@pytest.mark.parametrize(
+	("typed", "refusal"),
+	[
+		("f1", "F1, F2 and Escape always keep their meaning in the command layer."),
+		("Escape", "F1, F2 and Escape always keep their meaning in the command layer."),
+		("n", "That key already runs Next Track. Change that command first, or choose another key."),
+	],
+)
+def test_a_key_that_is_not_free_is_refused(
+	editor: LayerEditorDialog,
+	layer: command_layers.CommandLayerManager,
+	monkeypatch: pytest.MonkeyPatch,
+	typed: str,
+	refusal: str,
+) -> None:
+	"""A layer key or another command's key is refused with the reason, and nothing changes."""
+	layer.config_manager.set_script_config("previousTrack", ["no colon"], keep_open=True)
+	outcome = []
+
+	def type_key(dialog: EditCommandDialog) -> int:
+		dialog.txt_gesture.SetValue(typed)
+		outcome.append(dialog.fire(wx.EVT_BUTTON, wx.CommandEvent(wx.ID_OK)).skipped)
+		assert dialog.txt_gesture.HasFocus()
+		return wx.ID_CANCEL
+
+	monkeypatch.setattr(EditCommandDialog, "ShowModal", type_key)
+	editor.list_ctrl.activate(row_of(editor, "Play My Top Tracks"))
+	assert outcome == [False]  # the dialog stays open
+	assert wx.message_boxes[-1] == (refusal, "Choose Another Key")
+	assert layer.config_manager.get_script_config("playMyTopTracks")["gestures"] == ["kb:g"]
 
 
 def test_cancelled_edit_changes_nothing(
@@ -246,7 +276,6 @@ def test_cancelled_edit_changes_nothing(
 	editor.list_ctrl.selected = -1
 	editor.on_edit(None)
 	editor.Close()
-	assert core.restarts == 0
 	assert layer.config_manager.get_script_config("playMyTopTracks")["gestures"] == ["kb:g"]
 
 
@@ -261,7 +290,6 @@ def test_reset_to_defaults(editor: LayerEditorDialog, layer: command_layers.Comm
 	assert layer.config_manager.get_script_config("playMyTopTracks")["gestures"] == ["kb:g"]
 	wx.message_box_answer = wx.NO
 	editor.Close()
-	assert core.restarts == 0
 
 
 def test_editor_opens_once(editor: LayerEditorDialog, layer: command_layers.CommandLayerManager) -> None:

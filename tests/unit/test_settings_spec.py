@@ -100,7 +100,7 @@ def panel() -> SpotifySettingsPanel:
 
 def test_the_panel_offers_every_visible_setting_and_nothing_hidden(panel: SpotifySettingsPanel) -> None:
 	"""Each setting outside nvda.ini has a control; hidden ones have none."""
-	shown = set(panel._spins) | set(panel._choices) | OWN_CONTROLS
+	shown = set(panel._spins) | set(panel._choices) | set(panel._shortcuts) | OWN_CONTROLS
 	visible = {key for key, setting in SETTINGS.items() if not setting.hidden}
 	assert shown == visible
 
@@ -141,6 +141,20 @@ def test_the_guides_describe_every_hidden_setting(language: str) -> None:
 		default = str(setting.default).lower() if isinstance(setting.default, bool) else str(setting.default)
 		assert f"`{default}`" in line, (
 			f"{language}/configuration.md gives {key} a default other than {default}"
+		)
+
+
+@pytest.mark.parametrize("language", ["en", "id"])
+def test_the_guides_describe_every_window_shortcut(language: str) -> None:
+	"""customizing_commands.md lists each shortcut setting with its default keys, in both languages."""
+	text = (DOCS / language / "customizing_commands.md").read_text(encoding="utf-8")
+	for key, setting in SETTINGS.items():
+		if not setting.shortcut:
+			continue
+		line = next((line for line in text.splitlines() if f"`{key}`" in line), None)
+		assert line, f"{language}/customizing_commands.md does not mention {key}"
+		assert re.search(rf"`{key}` \(\w+ `{re.escape(setting.default)}`\)", line), (
+			f"{language}/customizing_commands.md gives {key} a default other than {setting.default}"
 		)
 
 
