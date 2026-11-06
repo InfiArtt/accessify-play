@@ -29,6 +29,7 @@ You can change the keys in the layer, and you can also give any command a shortc
 
 ## Guides
 
+* [Lists and context menus](lists_guide.html): how every list works: what its rows say, what Enter does, the context menu and the tab keys.
 * [Search](search_guide.html): songs, albums, artists, playlists, podcasts and audiobooks; Browse Categories and Featured Playlists.
 * [Library](library_management.html): your playlists, saved music, podcasts and audiobooks, followed artists, top items and recently played.
 * [Lyrics](lyrics_guide.html): the lyrics window, automatic lyric reading, and lyrics for any song.

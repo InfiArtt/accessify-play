@@ -39,10 +39,10 @@ EPISODES = Kind(
 	"spotify:show:s1",
 	"Episodes for Pod",
 	"Episodes:",
-	["Part 1 (2026-01-01)", "Part 2 (2026-01-01)"],
+	["Part 1 (2026-01-01, 1:01)", "Part 2 (2026-01-01, 1:01)"],
 	"No episodes found for this show.",
 	"Unable to load episodes.",
-	["Play Episode", "Add to Queue", "Copy Link", "Save/Unsave Episode"],
+	["Play", "Add to Queue", "Copy Link", "---", "Save/Unsave Episode"],
 )
 CHAPTERS = Kind(
 	AudiobookChaptersDialog,
@@ -50,10 +50,10 @@ CHAPTERS = Kind(
 	"spotify:audiobook:s1",
 	"Chapters for Pod",
 	"Chapters:",
-	["1. Part 1 (1:01)", "2. Part 2 (1:01)"],
+	["Part 1 (1:01)", "Part 2 (1:01)"],
 	"No chapters found for this audiobook.",
 	"Unable to load chapters.",
-	["Play Chapter", "Add to Queue", "Copy Link"],
+	["Play", "Add to Queue", "Copy Link"],
 )
 
 
@@ -201,8 +201,8 @@ def test_saving_an_episode(client: SpotifyClient, server: SpotifyServer, spoken:
 	assert spoken[-1] == "'Part 1' saved to your library."
 
 
-def test_chapter_rows_without_a_number_or_length(client: SpotifyClient) -> None:
-	"""A chapter numbered 0, or without a number or length, is listed by its name alone."""
+def test_chapter_rows_without_a_length(client: SpotifyClient) -> None:
+	"""A chapter without a length is listed by its name alone; without a name, as Unknown."""
 	window = AudiobookChaptersDialog(None, client, "b1", "Book")
-	assert window.row({"name": "Intro", "chapter_number": 0}, 1) == "Intro"
-	assert window.row({}, 1) == "Unknown Chapter"
+	assert window.row({"name": "Intro", "chapter_number": 3}, 1) == "Intro"
+	assert window.row({}, 1) == "Unknown"

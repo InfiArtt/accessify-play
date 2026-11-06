@@ -25,14 +25,9 @@ These work anywhere in the Search window. If there is text in the search field, 
 
 The artist window below uses the same keys for its tabs.
 
-## What Enter does
+## Results
 
-* **Song**: plays it, continuing with the rest of its album.
-* **Album**: opens the album's track list.
-* **Artist**: opens the artist's discography (see below).
-* **Playlist**: opens the playlist's track list.
-* **Podcast**: opens the list of episodes.
-* **Audiobook**: opens the list of chapters; playing a chapter continues into the next ones.
+The results work like every list: `Enter` plays a song, continuing with the rest of its album, and opens an album, artist, playlist, podcast or audiobook in its own window. What the rows say, and what the context menu holds, are described in [Lists and context menus](lists_guide.html).
 
 ## Shortcuts in the results
 
@@ -47,22 +42,9 @@ The artist window below uses the same keys for its tabs.
 
 These are the default keys. You can change them, and those of every other window: see [Customizing commands and shortcuts](customizing_commands.html).
 
-## Context menu
-
-Press the Applications key or `Shift+F10` on a result for more options. Besides Play, Add to Queue and Copy Link, depending on the item:
-
-* **Song**: Add to Playlist (a submenu of your own playlists), Show Lyrics, Go to Album, Go to Artist.
-* **Album**: Save Album, Add Album to Playlist. Songs already in the playlist are skipped.
-* **Artist**: Follow/Unfollow Artist, View Discography.
-* **Playlist made by someone else**: Follow Playlist or Unfollow Playlist, and Follow/Unfollow Owner, to follow the person who made it.
-* **Podcast**: View Episodes, Save/Unsave Show.
-* **Audiobook**: View Chapters, Save/Unsave Audiobook.
-
-"Save/Unsave" and "Follow/Unfollow" work like Like/Unlike: they save the item if it isn't in your library and remove it if it is, then tell you which they did.
-
 ## Track lists, episodes and chapters
 
-The windows that open from a result (album tracks, playlist tracks, episodes, chapters) work the same way: `Enter` or **Play** plays the selected item in its album, playlist, show or book, so playback carries on from there. `Alt+P`, `Alt+Q` and `Alt+L` play, queue and copy the link, `Alt+W` shows a song's lyrics, and the context menu has the same options as above. Long lists end with "Load More".
+The windows that open from a result (album tracks, playlist tracks, episodes, chapters) work the same way: `Enter` or **Play Selected** plays the selected item in its album, playlist, show or book, so playback carries on from there. `Alt+P`, `Alt+Q` and `Alt+L` play, queue and copy the link, `Alt+W` shows a song's lyrics, and the context menu is the same as everywhere. Long lists end with "Load More".
 
 In an episode list, `Alt+S` (or Save/Unsave Episode in the context menu) saves the episode to your library or removes it.
 
@@ -70,10 +52,10 @@ In an episode list, `Alt+S` (or Save/Unsave Episode in the context menu) saves t
 
 The discography window opens on Top Tracks, with the focus on the first song once it has loaded. It has five tabs:
 
-1. **Top Tracks**: popular songs by the artist. `Enter` plays one.
+1. **Top Tracks**: popular songs by the artist. `Enter` plays one, continuing with its album.
 2. **Albums and Singles**: `Enter` opens an album's tracks.
 3. **Playlists**: playlists found by searching for the artist's name, made by Spotify or by anyone else. `Enter` opens a playlist's tracks.
-4. **All Tracks**: every song from the artist's albums and singles, without duplicates, loaded page by page. If an album can't be loaded, the songs so far stay and "Load More" tries that album again.
+4. **All Tracks**: every song from the artist's albums and singles, without duplicates, loaded page by page, each with its album. `Enter` plays a song, continuing with its album. If an album can't be loaded, the songs so far stay and "Load More" tries that album again.
 5. **Artist Info**: followers, popularity, genres and the artist's link.
 
 | Shortcut | Action |
@@ -82,14 +64,14 @@ The discography window opens on Top Tracks, with the focus on the first song onc
 | `Ctrl+Tab` or `Ctrl+PageDown` | Next tab |
 | `Ctrl+Shift+Tab` or `Ctrl+PageUp` | Previous tab |
 
-`Alt+P`, `Alt+Q` and `Alt+L` play, queue and copy the link of the selected song, album or playlist.
+`Alt+P`, `Alt+Q` and `Alt+L` play, queue and copy the link of the selected song, album or playlist. The rows leave out the artist's own name, and the context menu does not offer to go to this artist again.
 
 ## Browse Categories and Featured Playlists
 
 * **Browse Categories** lists Spotify's moods and genres (such as Focus, Sleep, Workout or Pop). Press `Enter` on one to see its playlists.
 * **Featured Playlists** shows the playlists Spotify is currently featuring, with its greeting above the list.
 
-In both playlist lists, `Enter` opens the playlist's tracks, and the context menu offers View Tracks in Playlist, Play Entire Playlist, Add to Queue, Copy Playlist Link and Follow/Unfollow Owner. `Alt+P`, `Alt+Q` and `Alt+L` play, queue and copy the link of the selected playlist.
+In both playlist lists, `Enter` opens the playlist's tracks, and the context menu is a playlist's usual one: Play, Add to Queue, Copy Link, View Tracks, Follow/Unfollow Playlist and Follow/Unfollow Owner. `Alt+P`, `Alt+Q` and `Alt+L` play, queue and copy the link of the selected playlist.
 
 Like the search results, these lists come a page at a time: if there are more, the last item is "Load More".
 

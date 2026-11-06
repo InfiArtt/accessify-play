@@ -2,9 +2,12 @@
 
 `NVDA+Alt+G` then `Q` opens the queue. The first item is the one playing ("Playing"), followed by what comes next ("Queue").
 
+Each row reads like a song or episode anywhere else, such as "Queue: Yesterday - The Beatles (2:05)".
+
 * `Enter` (or `Alt+P`) on an item skips ahead to it.
-* `Alt+L` copies the item's Spotify link.
+* `Alt+L` copies the item's Spotify link, and `Alt+W` shows a song's lyrics.
 * **Refresh** (`Alt+R`) reloads the list.
+* The context menu is the item's usual one (see [Lists and context menus](lists_guide.html)), so you can save a song, add it to a playlist or go to its album from here. Its Play skips ahead to the item.
 
 These are the default keys; see [Customizing commands and shortcuts](customizing_commands.html) to change them.
 

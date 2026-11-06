@@ -460,15 +460,14 @@ def test_full_queue(client: SpotifyClient, server: SpotifyServer) -> None:
 	"""The queue lists what plays now, then what follows until the context repeats."""
 	server.routes["GET", "me/player/queue"] = QUEUE
 	queue = client.get_full_queue()
-	assert [(q["type"], q["name"], q["artists"]) for q in queue] == [
-		("currently_playing", "Song", "A, B"),
-		("queue_item", "Next", "C"),
-		("queue_item", "Ep", "Show"),
+	assert [(q["playing"], q["item"]["name"]) for q in queue] == [
+		(True, "Song"),
+		(False, "Next"),
+		(False, "Ep"),
 	]
-	assert queue[0]["link"] == "https://open.spotify.com/track/t1"
 	# Between items Spotify reports nothing playing; the queue still lists what follows.
 	server.routes["GET", "me/player/queue"] = dict(QUEUE, currently_playing=None)
-	assert [q["name"] for q in client.get_full_queue()] == ["Next", "Ep", "Song", "Later"]
+	assert [q["item"]["name"] for q in client.get_full_queue()] == ["Next", "Ep", "Song", "Later"]
 	assert client.get_next_track_in_queue().startswith("Next in queue: Next by C")
 
 
@@ -491,7 +490,6 @@ def test_empty_queue(client: SpotifyClient, server: SpotifyServer, queue: dict |
 	server.routes["GET", "me/player/queue"] = queue
 	assert client.get_next_track_in_queue() == "Queue is empty."
 	assert client._describe_queue_item(None, "x") == "Queue is empty."
-	assert client._format_queue_item(None, "queue_item") is None
 
 
 def test_queue_errors(client: SpotifyClient, server: SpotifyServer) -> None:

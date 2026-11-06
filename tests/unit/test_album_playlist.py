@@ -70,10 +70,10 @@ def album_window(client: SpotifyClient, server: SpotifyServer, tracks: object) -
 
 
 def test_album_lists_its_tracks(client: SpotifyClient, ready: SpotifyServer) -> None:
-	"""Tracks are numbered, with artists and length; the title names the album."""
-	window = album_window(client, ready, [track(1), track(2, artists=[])])
+	"""Tracks show name and length, and artists other than the album's own; the title names the album."""
+	window = album_window(client, ready, [track(1), track(2, artists=[{"id": "b", "name": "B"}])])
 	assert window.GetTitle() == "Tracks in LP"
-	assert window.tracks_list.GetStrings() == ["1. Song 1 — A (1:01)", "2. Song 2 (1:01)"]
+	assert window.tracks_list.GetStrings() == ["Song 1 (1:01)", "Song 2 - B (1:01)"]
 
 
 @pytest.mark.parametrize(
@@ -150,7 +150,7 @@ def test_album_without_a_uri_plays_the_track(
 
 
 def test_album_track_menu(client: SpotifyClient, ready: SpotifyServer) -> None:
-	"""The menu has play, queue, link, Add to Playlist, Show Lyrics and Go to Artist, but no Go to Album."""
+	"""The menu is a song's: play, queue, link; save, Add to Playlist; lyrics, album and artist."""
 	window = album_window(client, ready, [track(1, album=ALBUM)])
 	window.on_context_menu(None)
 	assert wx.popped_menus == []
@@ -161,6 +161,7 @@ def test_album_track_menu(client: SpotifyClient, ready: SpotifyServer) -> None:
 		"Add to Queue",
 		"Copy Link",
 		"---",
+		"Save/Unsave Track",
 		"Add to Playlist >",
 		"---",
 		"Show Lyrics",
@@ -190,10 +191,10 @@ def page(tracks: list, total: int | None = None, next_url: str | None = None) ->
 def test_playlist_loads_page_by_page(client: SpotifyClient, ready: SpotifyServer) -> None:
 	"""A Load More row fetches the next page; it goes away when everything is there."""
 	window = playlist_window(client, ready, [page([track(1), None], total=3), page([track(2)], total=3)])
-	assert window.tracks_list.GetStrings() == ["1. Song 1 — A (1:01)", "--- Load More ---"]
+	assert window.tracks_list.GetStrings() == ["Song 1 - A (1:01)", "--- Load More ---"]
 	window.tracks_list.SetSelection(1)
 	window.tracks_list.fire(wx.EVT_CHAR_HOOK, wx.KeyEvent(wx.WXK_RETURN))
-	assert window.tracks_list.GetStrings() == ["1. Song 1 — A (1:01)", "2. Song 2 — A (1:01)"]
+	assert window.tracks_list.GetStrings() == ["Song 1 - A (1:01)", "Song 2 - A (1:01)"]
 	assert [r[2]["offset"] for r in ready.requests] == [0, 2]
 
 
@@ -202,7 +203,7 @@ def test_playlist_paging_without_a_total(client: SpotifyClient, ready: SpotifySe
 	window = playlist_window(client, ready, [page([track(1)], next_url="more"), page([])])
 	window.tracks_list.SetSelection(1)
 	assert window._get_selected_track() is None
-	assert window.tracks_list.GetStrings() == ["1. Song 1 — A (1:01)"]
+	assert window.tracks_list.GetStrings() == ["Song 1 - A (1:01)"]
 
 
 def test_playlist_problems(client: SpotifyClient, ready: SpotifyServer, spoken: list[str]) -> None:
@@ -227,7 +228,7 @@ def test_a_page_after_closing_is_dropped(client: SpotifyClient, ready: SpotifySe
 	ready.routes["GET", "playlists/p1/items"] = close_first
 	window.tracks_list.SetSelection(1)
 	window.paged.load_more()
-	assert window.tracks_list.GetStrings() == ["1. Song 1 — A (1:01)", "--- Load More ---"]
+	assert window.tracks_list.GetStrings() == ["Song 1 - A (1:01)", "--- Load More ---"]
 
 
 def test_playlist_error_after_the_first_page(
@@ -237,7 +238,7 @@ def test_playlist_error_after_the_first_page(
 	window = playlist_window(client, ready, [page([track(1)], total=2), spotify_error(502)])
 	window.tracks_list.SetSelection(1)
 	window.tracks_list.fire(wx.EVT_CHAR_HOOK, wx.KeyEvent(wx.WXK_RETURN))
-	assert window.tracks_list.GetString(0).startswith("1. Song 1")
+	assert window.tracks_list.GetString(0).startswith("Song 1")
 	assert "having trouble" in spoken[-1]
 
 
@@ -262,7 +263,10 @@ def test_playlist_actions(client: SpotifyClient, ready: SpotifyServer, spoken: l
 
 
 def test_playlist_track_menu(client: SpotifyClient, ready: SpotifyServer) -> None:
-	"""Tracks get lyrics and go-to items; episodes and the Load More row do not, and nothing loads."""
+	"""Tracks get lyrics and go-to items; episodes and the Load More row do not.
+
+	The user's playlists load the first time a menu needs them, for Add to Playlist, and only then.
+	"""
 	episode = {"id": "e1", "type": "episode", "name": "Ep", "uri": "spotify:episode:e1"}
 	window = playlist_window(client, ready, [page([track(1, album=ALBUM), episode], total=9)])
 	window.tracks_list.SetSelection(0)
@@ -271,10 +275,11 @@ def test_playlist_track_menu(client: SpotifyClient, ready: SpotifyServer) -> Non
 	window.tracks_list.SetSelection(1)
 	window.on_context_menu(None)
 	assert "Show Lyrics" not in last_menu().labels()
+	popped = len(wx.popped_menus)
 	window.tracks_list.SetSelection(2)
 	window.on_context_menu(None)
-	assert last_menu().labels() == ["Play", "Add to Queue", "Copy Link"]
-	assert len(ready.requests) == 1
+	assert len(wx.popped_menus) == popped
+	assert ready.paths() == ["playlists/p1/items", "me", "me/playlists"]
 
 
 def test_playlist_without_a_uri_plays_the_track(client: SpotifyClient, ready: SpotifyServer) -> None:

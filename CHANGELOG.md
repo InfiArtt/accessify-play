@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### 🎉 The same lists, menus and keys in every window
+
+- **One context menu per kind of item, the same in every window**: first Play, Add to Queue and Copy Link, with their keys; then opening the item (View Tracks, View Episodes, View Chapters, View Discography), Save/Unsave or Follow/Unfollow, and Add to Playlist; then Show Lyrics, Go to Album and Go to Artist; and last what belongs to that window alone. A menu offers only what works for the item: an artist or podcast no longer offers Add to Queue, and nothing pops up for an item nothing can be done with.
+- **Save/Unsave Track and Save/Unsave Album** in every list of songs and albums, and **Follow/Unfollow Playlist** for any playlist someone else made, also in the artist window and in Browse.
+- **Enter does the same everywhere**: it plays a song, episode or chapter, opens an album, playlist, podcast or audiobook, and opens an artist's discography. In the Library, New Releases now opens an album instead of playing it (`Alt+P` still plays it), and an artist in Top Items opens.
+- **A song listed outside its album plays within its album**, as it already did in Search: in the artist window's Top Tracks and All Tracks, and in the Library's song tabs. The album carries on afterwards.
+- **Every kind of item reads the same in every list**: "Song - Artist (3:21)", "Album - Artist (2020)", "Episode - Podcast (2026-01-02, 45:00)", "Book - Author". The queue's rows read the same way, after "Playing" or "Queue".
+- **The Library's tabs switch like Search and the artist window**: `Ctrl+1` to `Ctrl+9`, `Ctrl+Tab` / `Ctrl+PageDown` and `Ctrl+Shift+Tab` / `Ctrl+PageUp`, with the focus in the tab's list.
+- **Removing an item from the Library takes its row away and keeps the cursor where it was**, instead of loading the tab again from the top.
+- **The queue window's context menu** is a song's or episode's usual menu, so you can save a song, add it to a playlist or go to its album from there; `Alt+W` shows its lyrics.
+- **Add to Playlist works in every list of songs**, also in a playlist's tracks and in the queue: your own playlists load the first time the menu needs them.
+- **The play button reads "Play Selected"** in every track, episode and chapter window.
+- New page in the user guide: **Lists and context menus**, describing all of this in one place.
+
 ### 🎉 More settings
 
 New in Accessify Play's settings (NVDA menu, Preferences, Settings, Accessify Play):
@@ -16,7 +30,7 @@ New in Accessify Play's settings (NVDA menu, Preferences, Settings, Accessify Pl
 ### 🎉 Change the shortcuts inside the windows
 
 - **New Window Shortcuts... button** in Accessify Play's settings: every shortcut inside the windows can be changed, such as `Alt+P` to play, the keys that switch search types and tabs, `Ctrl+N` for a new playlist, and the keys that move and remove tracks in the Library. Several keys per action are possible, or none. Keys that would get in the way of typing, or that another action already has, are refused with the reason. Menus show the keys you chose. They are in `nvda.ini` too; the user guide (Customizing commands and shortcuts) lists them.
-- **`Alt+W` shows a song's lyrics in every list of songs**: albums, playlists, the artist window and the Library, not only in Search.
+- **`Alt+W` shows a song's lyrics in every list of songs**: albums, playlists, the artist window, the Library and the queue, not only in Search.
 
 ### 🎉 Long lists come a page at a time
 
@@ -47,6 +61,7 @@ New in Accessify Play's settings (NVDA menu, Preferences, Settings, Accessify Pl
 - **Add to Playlist in the Library offered other people's playlists**, which Spotify does not let you change. It now offers only your own.
 - **The command layer editor took a key away from another command without saying so** when you gave a command a key that was already in use. It now says which command has that key and lets you choose another.
 - **The lyrics window had no timestamp buttons** when the first song it showed had plain lyrics only, so later songs with synced lyrics had none either.
+- **The artist window stopped filling its tabs** when Spotify sent an album without a name or release date: Albums and Singles, All Tracks and Playlists stayed empty.
 - **All Tracks in the artist window named the artist on every line.** Like Top Tracks, it now names the artists only when someone else is on the song.
 - **A list could stay on "Loading..." for good** after an unexpected error. It now says the list could not be loaded.
 - **A hand-edited `layerConfig.json` with a malformed entry** gave that command odd keys. Such an entry now gets the command's default key.
@@ -62,6 +77,7 @@ New in Accessify Play's settings (NVDA menu, Preferences, Settings, Accessify Pl
 - **Type checking with pyright** runs with the other checks, and found a few places where missing details from Spotify could stop a window (a playlist or artist without a name, a song without an id).
 - **One way to give a window its shortcuts** (`_bind_shortcuts`), instead of an accelerator table written out in each window; the keys come from the settings, and menus show them.
 - **Every long list uses one paged list** (Search, the Library's tabs, Browse Categories and Featured Playlists included), and playing from any window goes through one helper that reports failures.
+- **One context menu, one Enter and one row format for every window**: `rows.py` writes the rows, and the windows' base class builds the context menu, opens items, decides what Enter does and queues, instead of each window keeping its own copy. The windows fetch your playlists for Add to Playlist in one way too.
 - Lyrics requests name the add-on's homepage from its manifest (`addon_url` in `buildVars.py`) instead of a fixed address, and the donation link is written once.
 
 ## Version 2026.11.0

@@ -55,7 +55,6 @@ BOOK = {
 	"authors": [{"name": "Au"}],
 	"uri": "spotify:audiobook:b1",
 }
-EPISODE = {"id": "e1", "type": "episode", "name": "Ep", "uri": "spotify:episode:e1"}
 
 WINDOWS = (
 	"AlbumTracksDialog",
@@ -127,7 +126,7 @@ def test_rows_are_translatable(client: SpotifyClient, ready: SpotifyServer) -> N
 	window = SearchDialog(None, client)
 	window.select_type(3)
 	search_for(window, ready, "x", page("playlist", [OTHER, {"type": "playlist", "name": None}]))
-	assert window.resultsList.GetStrings() == ["Hits - by Bob", "Unknown - by Unknown"]
+	assert window.resultsList.GetStrings() == ["Hits - by Bob", "Unknown"]
 
 
 def search_for(window: SearchDialog, server: SpotifyServer, query: str, answer: object) -> None:
@@ -223,7 +222,11 @@ def test_switching_type(client: SpotifyClient, ready: SpotifyServer, spoken: lis
 	[
 		("track", TRACK, "Song - A"),
 		("playlist", OTHER, "Hits - by Bob"),
-		("playlist", {"type": "playlist", "name": "Anon"}, "Anon - by Unknown"),
+		("playlist", {"type": "playlist", "name": "Anon"}, "Anon"),
+		("playlist", OWN, "Mine"),
+		("album", ALBUM, "LP - A"),
+		("album", dict(ALBUM, release_date="2020-05-01"), "LP - A (2020)"),
+		("track", dict(TRACK, duration_ms=201_000), "Song - A (3:21)"),
 		("show", SHOW, "Pod - Pub"),
 		("audiobook", BOOK, "Book - Au"),
 		("audiobook", {"type": "audiobook", "name": "B", "publisher": "Pub"}, "B - Pub"),
@@ -271,20 +274,21 @@ def test_enter_opens_the_result(
 	assert opened == [(window_name, args)]
 
 
-def test_enter_plays_tracks_and_the_rest(client: SpotifyClient, ready: SpotifyServer) -> None:
-	"""A track plays within its album, or alone; anything else just plays."""
-	with_results(client, ready, "track", TRACK)._on_item_activated()
+def test_enter_and_play_play_a_song_in_its_album(client: SpotifyClient, ready: SpotifyServer) -> None:
+	"""Enter and the Play key play a song within its album, or alone without one; nothing without a song."""
+	window = with_results(client, ready, "track", TRACK)
+	window.resultsList.fire(wx.EVT_CHAR_HOOK, wx.KeyEvent(wx.WXK_RETURN))
 	assert ready.requests[-1][3] == {
 		"context_uri": "spotify:album:al1",
 		"offset": {"uri": "spotify:track:t1"},
 	}
 	window = with_results(client, ready, "track", dict(TRACK, album={}))
-	window._on_item_activated()
+	accelerate(window, wx.ACCEL_ALT, "P")
 	assert ready.requests[-1][3] == {"uris": ["spotify:track:t1"]}
-	window._activate_item(EPISODE)
-	assert ready.requests[-1][3] == {"uris": ["spotify:episode:e1"]}
+	asked = len(ready.requests)
 	window.resultsList.SetSelection(wx.NOT_FOUND)
-	window._on_item_activated()
+	window.resultsList.fire(wx.EVT_CHAR_HOOK, wx.KeyEvent(wx.WXK_RETURN))
+	assert len(ready.requests) == asked
 
 
 @pytest.mark.parametrize(
@@ -298,6 +302,7 @@ def test_enter_plays_tracks_and_the_rest(client: SpotifyClient, ready: SpotifySe
 				"Add to Queue",
 				"Copy Link",
 				"---",
+				"Save/Unsave Track",
 				"Add to Playlist >",
 				"---",
 				"Show Lyrics",
@@ -308,45 +313,59 @@ def test_enter_plays_tracks_and_the_rest(client: SpotifyClient, ready: SpotifySe
 		(
 			"album",
 			ALBUM,
-			["Play", "Add to Queue", "Copy Link", "---", "Save Album", "Add Album to Playlist >"],
+			[
+				"Play",
+				"Add to Queue",
+				"Copy Link",
+				"---",
+				"View Tracks",
+				"Save/Unsave Album",
+				"Add Album to Playlist >",
+				"---",
+				"Go to Artist: A",
+			],
 		),
-		("artist", ARTIST, ["Play", "---", "Follow/Unfollow Artist", "View Discography"]),
+		("artist", ARTIST, ["Play", "---", "View Discography", "Follow/Unfollow Artist"]),
 		("show", SHOW, ["Play", "---", "View Episodes", "Save/Unsave Show"]),
 		("audiobook", BOOK, ["Play", "---", "View Chapters", "Save/Unsave Audiobook"]),
-		("playlist", OWN, ["Play", "Add to Queue"]),
+		("playlist", OWN, ["Play", "Add to Queue", "---", "View Tracks"]),
 		(
 			"playlist",
 			OTHER,
-			["Play", "Add to Queue", "---", "Follow/Unfollow Owner: Bob", "Unfollow Playlist"],
+			[
+				"Play",
+				"Add to Queue",
+				"---",
+				"View Tracks",
+				"Follow/Unfollow Playlist",
+				"Follow/Unfollow Owner: Bob",
+			],
 		),
 	],
 )
 def test_result_menus(
 	client: SpotifyClient, ready: SpotifyServer, kind: str, item: dict, labels: list[str]
 ) -> None:
-	"""Each kind of result has its own menu; someone else's playlist shows whether it is followed."""
-	ready.routes["GET", "me/library/contains"] = [True]
+	"""Each kind of result has the menu every window has for its kind; one's own playlist is not followed."""
 	window = with_results(client, ready, kind, item)
 	window.resultsList.fire(wx.EVT_CONTEXT_MENU, wx.ContextMenuEvent())
 	assert last_menu().labels() == labels
 
 
 def test_menu_for_the_row_under_the_mouse(client: SpotifyClient, ready: SpotifyServer) -> None:
-	"""A right-click acts on the row under the mouse; a playlist without an owner offers no owner item."""
-	ready.routes["GET", "me/library/contains"] = spotify_error(500)
+	"""A right-click acts on the row under the mouse; a playlist without a URI or owner offers neither."""
 	window = with_results(client, ready, "playlist", OWN, {"id": "p3", "type": "playlist", "name": "Anon"})
 	window.resultsList.hit = 1
 	window.resultsList.fire(wx.EVT_CONTEXT_MENU, wx.ContextMenuEvent())
 	assert window.resultsList.GetSelection() == 1
-	assert last_menu().labels() == ["Add to Queue", "---", "Follow Playlist"]
+	assert last_menu().labels() == ["View Tracks", "Follow/Unfollow Playlist"]
 	window.resultsList.hit = 5
 	window.resultsList.fire(wx.EVT_CONTEXT_MENU, wx.ContextMenuEvent())
-	window._show_results_menu({"type": "user"})
 	assert len(wx.popped_menus) == 1
 
 
 def test_menu_actions(client: SpotifyClient, ready: SpotifyServer, opened: list, spoken: list[str]) -> None:
-	"""View Episodes, View Chapters, saving and following do what they say."""
+	"""View Episodes, View Chapters, View Tracks and saving do what they say."""
 	ready.routes["GET", "me/library/contains"] = [False]
 	window = with_results(client, ready, "show", SHOW)
 	window.resultsList.fire(wx.EVT_CONTEXT_MENU, wx.ContextMenuEvent())
@@ -360,8 +379,10 @@ def test_menu_actions(client: SpotifyClient, ready: SpotifyServer, opened: list,
 	assert opened == [("PodcastEpisodesDialog", ("s1", "Pod")), ("AudiobookChaptersDialog", ("b1", "Book"))]
 	window = with_results(client, ready, "album", ALBUM)
 	window.resultsList.fire(wx.EVT_CONTEXT_MENU, wx.ContextMenuEvent())
-	choose(window, last_menu(), "Save Album")
+	choose(window, last_menu(), "Save/Unsave Album")
 	assert ready.requests[-1][:3] == ("PUT", "me/library", {"uris": "spotify:album:al1"})
+	choose(window, last_menu(), "View Tracks")
+	assert opened[-1] == ("AlbumTracksDialog", (ALBUM, [OWN]))
 
 
 @pytest.mark.parametrize(
@@ -371,15 +392,15 @@ def test_menu_actions(client: SpotifyClient, ready: SpotifyServer, opened: list,
 def test_following_a_playlist(
 	client: SpotifyClient, ready: SpotifyServer, spoken: list[str], followed: bool, method: str, said: str
 ) -> None:
-	"""Follow Playlist follows it; Unfollow Playlist unfollows; failures are said."""
+	"""Follow/Unfollow Playlist follows a playlist that is not followed, and unfollows one that is."""
 	ready.routes["GET", "me/library/contains"] = [followed]
 	window = with_results(client, ready, "playlist", OTHER)
 	window.resultsList.fire(wx.EVT_CONTEXT_MENU, wx.ContextMenuEvent())
-	choose(window, last_menu(), "Unfollow Playlist" if followed else "Follow Playlist")
+	choose(window, last_menu(), "Follow/Unfollow Playlist")
 	assert ready.requests[-1][:2] == (method, "me/library")
 	assert spoken[-1] == said
 	ready.routes[method, "me/library"] = spotify_error(500)
-	window.on_toggle_follow_playlist(OTHER, is_currently_followed=followed)
+	choose(window, last_menu(), "Follow/Unfollow Playlist")
 	assert "trouble" in spoken[-1]
 
 
@@ -389,13 +410,13 @@ def test_shortcuts(client: SpotifyClient, ready: SpotifyServer, opened: list, sp
 	accelerate(window, wx.ACCEL_ALT, "P")
 	assert ready.requests[-1][3] == {"context_uri": "spotify:artist:ar1"}
 	accelerate(window, wx.ACCEL_ALT, "Q")
-	assert spoken[-1] == "This item type cannot be added to the queue."
+	assert spoken[-1] == "Spotify does not allow queueing a whole artist. Please queue individual tracks."
 	ready.routes["GET", "me/library/contains"] = [True]
 	accelerate(window, wx.ACCEL_ALT, "F")
-	assert spoken[-1] == "Unfollowed artist: A."
+	assert spoken[-1] == "Unfollowed 'A'."
 	ready.routes["GET", "me/library/contains"] = [False]
 	accelerate(window, wx.ACCEL_ALT, "F")
-	assert spoken[-1] == "Now following artist: A."
+	assert spoken[-1] == "Now following 'A'."
 	ready.routes["GET", "me/library/contains"] = spotify_error(500)
 	accelerate(window, wx.ACCEL_ALT, "F")
 	assert "trouble" in spoken[-1]
@@ -419,8 +440,6 @@ def test_shortcuts_without_a_result(
 	window = SearchDialog(None, client)
 	for key in "PFDL":
 		accelerate(window, wx.ACCEL_ALT, key)
-	window.on_save_album()
-	window.on_save_show()
 	accelerate(window, wx.ACCEL_ALT, "Q")
 	accelerate(window, wx.ACCEL_ALT, "W")
 	assert spoken == ["No item selected.", "Lyrics are only available for songs."]

@@ -70,9 +70,6 @@ class EditCommandDialog(AccessifyDialog):
 		self.SetSizerAndFit(sizer)
 		self.Bind(wx.EVT_BUTTON, self.on_ok, id=wx.ID_OK)
 
-	def _on_close_button(self, _evt: wx.Event) -> None:
-		self.EndModal(wx.ID_CANCEL)
-
 	def _on_char_hook(self, evt: wx.KeyEvent) -> None:
 		if evt.GetKeyCode() == wx.WXK_ESCAPE:
 			self.EndModal(wx.ID_CANCEL)

@@ -12,8 +12,8 @@ from typing import TYPE_CHECKING
 import ui
 import wx
 
-from ..formatting import format_duration, format_names
 from ..language import init_translation
+from ..rows import track_row
 from ..ui.base_dialog import AccessifyDialog
 from ..ui.paged_list import PagedList
 from ..utils import copy_link, safe_text
@@ -64,7 +64,7 @@ class PlaylistTracksDialog(AccessifyDialog):
 		self.paged = PagedList(
 			self.tracks_list,
 			self._fetch_page,
-			self._format_track_display,
+			lambda track, _number: track_row(track),
 			empty=_("No tracks available."),
 			failed=_("Unable to load playlist tracks."),
 		)
@@ -103,15 +103,6 @@ class PlaylistTracksDialog(AccessifyDialog):
 			page["items"] = [(e.get("track") if isinstance(e, dict) else e) for e in page.get("items") or []]
 		return page
 
-	def _format_track_display(self, track: Item, index: int) -> str:
-		name = track.get("name", _("Unknown"))
-		artists = format_names(track.get("artists"))
-		duration = format_duration(track.get("duration_ms"))
-		display = f"{index}. {name}"
-		if artists:
-			display = f"{display} — {artists}"
-		return f"{display} ({duration})"
-
 	def _get_selected_track(self) -> Item | None:
 		"""Return the selected track; on the Load More row, load more instead."""
 		track = self.paged.selected()
@@ -125,19 +116,12 @@ class PlaylistTracksDialog(AccessifyDialog):
 
 	def on_context_menu(self, _evt: wx.Event) -> None:
 		"""Show the actions for the selected track."""
-		if not self.paged.items:
-			return
-		menu = wx.Menu()
-		self._append_action(menu, _("Play"), "keyPlay")
-		self._append_action(menu, _("Add to Queue"), "keyQueue")
-		self._append_action(menu, _("Copy Link"), "keyCopyLink")
 		# Not _get_selected_track: that loads more on the Load More row,
 		# which opening a menu must not do.
 		track = self.paged.selected()
-		if track:
-			self._append_go_to_options_for_track(menu, track)
-		self.PopupMenu(menu)
-		menu.Destroy()
+		if not track:
+			return
+		self._show_item_menu(track)
 
 	def on_play_selected(self, _evt: wx.Event | None = None) -> None:
 		"""Play the playlist from the selected track."""
@@ -151,7 +135,7 @@ class PlaylistTracksDialog(AccessifyDialog):
 		"""Add the selected track to the queue."""
 		track = self._get_selected_track()
 		if track:
-			self._queue_add_track(track.get("uri"), track.get("name"))
+			self._queue_item(track)
 
 	def on_copy_link(self, _evt: wx.Event | None = None) -> None:
 		"""Copy the selected track's Spotify link."""

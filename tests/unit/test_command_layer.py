@@ -231,7 +231,6 @@ def test_edit_dialog_details() -> None:
 	assert dialog.fire(wx.EVT_CHAR_HOOK, wx.KeyEvent(ord("a"))).skipped
 	dialog.fire(wx.EVT_CHAR_HOOK, wx.KeyEvent(wx.WXK_ESCAPE))
 	assert dialog.end_code == wx.ID_CANCEL
-	dialog._on_close_button(None)
 	assert EditCommandDialog(None, "playPause", [], keep_open=True).txt_gesture.GetValue() == ""
 
 

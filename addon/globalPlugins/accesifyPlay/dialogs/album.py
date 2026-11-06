@@ -13,8 +13,9 @@ import ui
 import wx
 
 from ..core.thread_manager import thread_manager
-from ..formatting import format_duration, format_names
+from ..formatting import format_names
 from ..language import init_translation
+from ..rows import track_row
 from ..ui.base_dialog import AccessifyDialog
 from ..utils import copy_link, safe_text
 
@@ -117,15 +118,10 @@ class AlbumTracksDialog(AccessifyDialog):
 		if not self.tracks:
 			self.tracks_list.Append(_("No tracks available."))
 			return
-		for index, track in enumerate(self.tracks, start=1):
-			name = track.get("name", _("Unknown"))
-			artists = format_names(track.get("artists"))
-			duration = format_duration(track.get("duration_ms"))
-			display = f"{index}. {name}"
-			if artists:
-				display = f"{display} — {artists}"
-			display = f"{display} ({duration})"
-			self.tracks_list.Append(display)
+		# The album's own artists would only repeat on every row; guests are named.
+		album_artists = {a.get("name") for a in self.album.get("artists") or () if a}
+		for track in self.tracks:
+			self.tracks_list.Append(track_row(track, skip=album_artists))
 
 	def _get_selected_track(self) -> Item | None:
 		selection = self.tracks_list.GetSelection()
@@ -140,17 +136,7 @@ class AlbumTracksDialog(AccessifyDialog):
 		if not track:
 			return
 
-		menu = wx.Menu()
-		self._append_action(menu, _("Play"), "keyPlay")
-		self._append_action(menu, _("Add to Queue"), "keyQueue")
-		self._append_action(menu, _("Copy Link"), "keyCopyLink")
-
-		menu.AppendSeparator()
-		self._append_add_to_playlist(menu, track, self.user_playlists)
-		self._append_go_to_options_for_track(menu, track)
-
-		self.PopupMenu(menu)
-		menu.Destroy()
+		self._show_item_menu(track)
 
 	def on_play_selected(self, _evt: wx.Event | None = None) -> None:
 		"""Play the album from the selected track."""
@@ -164,7 +150,7 @@ class AlbumTracksDialog(AccessifyDialog):
 		"""Add the selected track to the queue."""
 		track = self._get_selected_track()
 		if track:
-			self._queue_add_track(track.get("uri"), track.get("name"))
+			self._queue_item(track)
 
 	def on_copy_link(self, _evt: wx.Event | None = None) -> None:
 		"""Copy the selected track's Spotify link."""

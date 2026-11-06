@@ -9,8 +9,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from ..formatting import format_duration
 from ..language import init_translation
+from ..rows import chapter_row
 from ..utils import safe_text
 from .play_in_order import PlayInOrderDialog, Texts
 
@@ -31,6 +31,7 @@ class AudiobookChaptersDialog(PlayInOrderDialog):
 	"""
 
 	CONTEXT = "audiobook"
+	PART = "chapter"
 
 	def __init__(
 		self, parent: wx.Window, client: SpotifyClient, audiobook_id: str, audiobook_name: str | None
@@ -41,8 +42,6 @@ class AudiobookChaptersDialog(PlayInOrderDialog):
 			),
 			# Translators: Label of a list or text field, read by screen readers.
 			list_label=_("Chapters:"),
-			play_button=_("&Play Chapter"),
-			play_menu=_("Play Chapter"),
 			empty=_("No chapters found for this audiobook."),
 			failed=_("Unable to load chapters."),
 		)
@@ -53,12 +52,5 @@ class AudiobookChaptersDialog(PlayInOrderDialog):
 		return self.client.get_audiobook_chapters(self.context_id, limit=limit, offset=offset)
 
 	def row(self, chapter: Item, _number: int) -> str:
-		"""Return a chapter's number, name and length."""
-		display = chapter.get("name", _("Unknown Chapter"))
-		number = chapter.get("chapter_number")
-		if number:
-			display = f"{number}. {display}"
-		duration = chapter.get("duration_ms")
-		if duration:
-			display = f"{display} ({format_duration(duration)})"
-		return display
+		"""Return a chapter's row."""
+		return chapter_row(chapter)

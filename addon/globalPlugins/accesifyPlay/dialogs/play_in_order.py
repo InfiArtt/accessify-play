@@ -30,8 +30,6 @@ class Texts(NamedTuple):
 
 	title: str
 	list_label: str
-	play_button: str
-	play_menu: str
 	empty: str
 	failed: str
 
@@ -44,6 +42,8 @@ class PlayInOrderDialog(AccessifyDialog):
 	"""
 
 	CONTEXT = ""
+	#: The Spotify type of the parts ("episode", "chapter"), for parts Spotify sends without one.
+	PART = ""
 
 	def __init__(self, parent: wx.Window, client: SpotifyClient, context_id: str, texts: Texts) -> None:
 		super().__init__(parent, title=texts.title, size=(500, 400))
@@ -62,13 +62,9 @@ class PlayInOrderDialog(AccessifyDialog):
 		"""Return the text of a part's row."""
 		raise NotImplementedError
 
-	def actions(self) -> list[tuple[str, str, Callable[[wx.Event | None], object]]]:
-		"""Return (shortcut setting, menu label, handler) for each action, in menu order."""
-		return [
-			("keyPlay", self.texts.play_menu, self.on_play),
-			("keyQueue", _("Add to Queue"), self.on_add_to_queue),
-			("keyCopyLink", _("Copy Link"), self.on_copy_link),
-		]
+	def actions(self) -> dict[str, Callable[[wx.Event], object]]:
+		"""Return the window's shortcut actions: shortcut setting -> what it does."""
+		return {"keyPlay": self.on_play, "keyQueue": self.on_add_to_queue, "keyCopyLink": self.on_copy_link}
 
 	def _init_ui(self) -> None:
 		panel = wx.Panel(self)
@@ -88,7 +84,7 @@ class PlayInOrderDialog(AccessifyDialog):
 		self.parts_list.Bind(wx.EVT_CONTEXT_MENU, self.on_context_menu)
 
 		buttons_sizer = wx.StdDialogButtonSizer()
-		self.play_button = wx.Button(panel, wx.ID_OK, label=self.texts.play_button)
+		self.play_button = wx.Button(panel, wx.ID_OK, label=_("&Play Selected"))
 		self.play_button.Bind(wx.EVT_BUTTON, self.on_play)
 		buttons_sizer.AddButton(self.play_button)
 		close_button = wx.Button(panel, wx.ID_CANCEL, label=_("&Close"))
@@ -100,19 +96,16 @@ class PlayInOrderDialog(AccessifyDialog):
 
 	def _create_accelerators(self) -> None:
 		self._bind_shortcuts(
-			{setting: handler for setting, _label, handler in self.actions()},
+			self.actions(),
 			buttons={"keyPlay": [self.play_button]},
 		)
 
 	def on_context_menu(self, _evt: wx.Event) -> None:
 		"""Show the actions for the selected part."""
-		if not self.parts.selected():
+		part = self.parts.selected()
+		if not part:
 			return
-		menu = wx.Menu()
-		for setting, label, _handler in self.actions():
-			self._append_action(menu, label, setting)
-		self.PopupMenu(menu)
-		menu.Destroy()
+		self._show_item_menu({"type": self.PART, **part})
 
 	def on_play(self, _evt: wx.Event | None = None) -> None:
 		"""Play from the selected part on."""
@@ -125,7 +118,7 @@ class PlayInOrderDialog(AccessifyDialog):
 		"""Add the selected part to the queue."""
 		part = self.parts.selected()
 		if part:
-			self._queue_add_track(part.get("uri"), part.get("name"))
+			self._queue_item({"type": self.PART, **part})
 
 	def on_copy_link(self, _evt: wx.Event | None = None) -> None:
 		"""Copy the selected part's Spotify link."""

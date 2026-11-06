@@ -51,12 +51,12 @@ The shortcuts are settings in `nvda.ini` too, under `[spotify]`, should you pref
 * `keyPlay` (default `alt+p`): play the selected item, in every window with a list.
 * `keyQueue` (default `alt+q`): add the selected item to the queue.
 * `keyCopyLink` (default `alt+l`): copy the selected item's Spotify link.
-* `keyLyrics` (default `alt+w`): show the lyrics of the selected song: in Search, albums, playlists, the artist window and the Library.
+* `keyLyrics` (default `alt+w`): show the lyrics of the selected song: in Search, albums, playlists, the artist window, the Library and the queue.
 * `keyRefresh` (default `alt+r`): load the list again, in the Library and the queue.
 * `keyFollow` (default `alt+f`): in Search, follow or unfollow the selected artist.
 * `keyDiscography` (default `alt+d`): in Search, open the selected artist's discography.
 * `keySearchField` (default `ctrl+f`): in Search, go back to the search field.
-* `keyNextTab` (default `ctrl+tab ctrl+pageDown`): the next search type, or the next tab of the artist window.
+* `keyNextTab` (default `ctrl+tab ctrl+pageDown`): the next search type, or the next tab of the artist window or the Library.
 * `keyPreviousTab` (default `ctrl+shift+tab ctrl+pageUp`): the previous search type or tab.
 * `keyTabNumber` (default `ctrl`): held with a number, go to that search type or tab.
 * `keySaveEpisode` (default `alt+s`): in a show's episodes, save or unsave the selected episode.

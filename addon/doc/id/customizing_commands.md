@@ -52,12 +52,12 @@ Pintasan ini juga merupakan pengaturan di `nvda.ini`, di bawah `[spotify]`, jika
 * `keyPlay` (bawaan `alt+p`): memutar item yang dipilih, di setiap jendela yang berisi daftar.
 * `keyQueue` (bawaan `alt+q`): memasukkan item yang dipilih ke antrean.
 * `keyCopyLink` (bawaan `alt+l`): menyalin tautan Spotify item yang dipilih.
-* `keyLyrics` (bawaan `alt+w`): menampilkan lirik lagu yang dipilih: di Pencarian, album, playlist, jendela artis, dan Pustaka.
+* `keyLyrics` (bawaan `alt+w`): menampilkan lirik lagu yang dipilih: di Pencarian, album, playlist, jendela artis, Pustaka, dan antrean.
 * `keyRefresh` (bawaan `alt+r`): memuat ulang daftar, di Pustaka dan antrean.
 * `keyFollow` (bawaan `alt+f`): di Pencarian, mengikuti atau berhenti mengikuti artis yang dipilih.
 * `keyDiscography` (bawaan `alt+d`): di Pencarian, membuka diskografi artis yang dipilih.
 * `keySearchField` (bawaan `ctrl+f`): di Pencarian, kembali ke kolom pencarian.
-* `keyNextTab` (bawaan `ctrl+tab ctrl+pageDown`): jenis pencarian berikutnya, atau tab berikutnya di jendela artis.
+* `keyNextTab` (bawaan `ctrl+tab ctrl+pageDown`): jenis pencarian berikutnya, atau tab berikutnya di jendela artis atau Pustaka.
 * `keyPreviousTab` (bawaan `ctrl+shift+tab ctrl+pageUp`): jenis pencarian atau tab sebelumnya.
 * `keyTabNumber` (bawaan `ctrl`): ditahan bersama angka, berpindah ke jenis pencarian atau tab tersebut.
 * `keySaveEpisode` (bawaan `alt+s`): di daftar episode sebuah acara, menyimpan atau batal menyimpan episode yang dipilih.

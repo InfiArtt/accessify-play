@@ -2,9 +2,12 @@
 
 `NVDA+Alt+G` lalu `Q` membuka antrean. Item pertama adalah yang sedang diputar ("Playing"), diikuti yang akan datang ("Queue").
 
+Setiap baris terbaca seperti lagu atau episode di tempat lain, misalnya "Queue: Yesterday - The Beatles (2:05)".
+
 * `Enter` (atau `Alt+P`) pada sebuah item melompat maju ke item itu.
-* `Alt+L` menyalin tautan Spotify item itu.
+* `Alt+L` menyalin tautan Spotify item itu, dan `Alt+W` menampilkan lirik lagu.
 * **Refresh** (`Alt+R`) memuat ulang daftar.
+* Menu konteksnya adalah menu biasa untuk item itu (lihat [Daftar dan menu konteks](lists_guide.html)), jadi dari sini Anda bisa menyimpan lagu, menambahkannya ke playlist, atau membuka albumnya. Play di menu itu melompat maju ke item tersebut.
 
 Ini adalah tombol bawaan; lihat [Mengubah perintah dan pintasan](customizing_commands.html) untuk mengubahnya.
 

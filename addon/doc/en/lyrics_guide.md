@@ -22,7 +22,7 @@ It pauses when you pause the music, catches up within a few seconds when you see
 
 ## Lyrics for any song, without playing it
 
-In any list of songs (search results, albums, playlists, the artist window and the Library), select a song and press `Alt+W`, or choose **Show Lyrics** in the context menu.
+In any list of songs (search results, albums, playlists, the artist window, the Library and the queue), select a song and press `Alt+W`, or choose **Show Lyrics** in the context menu.
 
 The lyrics open in the same window, as a preview: `Enter` doesn't jump and there is no Jump to Current, since the song isn't the one playing, and the window stays on that song when the music changes. If the song has no lyrics, you are told and no window opens.
 

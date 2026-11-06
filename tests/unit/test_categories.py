@@ -118,7 +118,7 @@ def test_category_playlists(client: SpotifyClient, server: SpotifyServer) -> Non
 	)
 	window = categories.CategoryPlaylistsDialog(None, client, {"id": "c1", "name": "Pop"})
 	assert window.GetTitle() == "Pop Playlists"
-	assert window.list.GetStrings() == ["Hits - by Spotify", "Unknown - by Spotify"]
+	assert window.list.GetStrings() == ["Hits - by Spotify", "Unknown"]
 	assert window.greetingLabel.GetLabel() == ""
 
 
@@ -146,10 +146,10 @@ def test_featured_playlists(
 	assert window.greetingLabel.GetLabel() == "Good morning!"
 	assert window.list.GetStrings() == ["Hits - by Spotify", "--- Load More ---"]
 	press_enter(window.list, 1)
-	assert window.list.GetStrings() == ["Hits - by Spotify", "Unknown - by Spotify"]
+	assert window.list.GetStrings() == ["Hits - by Spotify", "Unknown"]
 	assert spoken.count("Good morning!") == 1
 	press_enter(window.list, 1)
-	assert opened == [("PlaylistTracksDialog", (MIX,))]
+	assert opened == [("PlaylistTracksDialog", ({**MIX, "type": "playlist"},))]
 	window.list.SetSelection(wx.NOT_FOUND)
 	window.on_open()
 	assert len(opened) == 1
@@ -173,7 +173,7 @@ def test_no_featured_playlists(
 
 
 def test_playlist_menu(client: SpotifyClient, server: SpotifyServer, spoken: list[str], opened: list) -> None:
-	"""The menu views, plays, queues, copies, and follows the owner."""
+	"""The menu is a playlist's: play, queue, link; view its tracks, follow it and its owner."""
 	client.device_id = "laptop"
 	server.routes["PUT", "me/player/play"] = None
 	server.routes["GET", "me/library/contains"] = [False]
@@ -185,15 +185,19 @@ def test_playlist_menu(client: SpotifyClient, server: SpotifyServer, spoken: lis
 	window.list.SetSelection(0)
 	window.list.fire(wx.EVT_CONTEXT_MENU, wx.CommandEvent())
 	assert last_menu().labels() == [
-		"View Tracks in Playlist",
-		"Play Entire Playlist",
+		"Play",
 		"Add to Queue",
-		"Copy Playlist Link",
+		"Copy Link",
+		"---",
+		"View Tracks",
+		"Follow/Unfollow Playlist",
 		"Follow/Unfollow Owner: Spotify",
 	]
 	for label in last_menu().labels():
-		choose(window, last_menu(), label)
-	assert opened == [("PlaylistTracksDialog", (HITS,))]
+		if label != "---":
+			choose(window, last_menu(), label)
+	assert opened == [("PlaylistTracksDialog", ({**HITS, "type": "playlist"},))]
+	assert "Now following 'Hits'." in spoken
 	assert {"context_uri": "spotify:playlist:p1"} in [
 		r[3] for r in server.requests if r[1] == "me/player/play"
 	]

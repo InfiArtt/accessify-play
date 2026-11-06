@@ -13,10 +13,10 @@ import ui
 import wx
 
 from ..language import init_translation
+from ..rows import playlist_row
 from ..ui.base_dialog import AccessifyDialog
 from ..ui.paged_list import PagedList
-from ..utils import copy_link, playlist_with_owner, safe_text
-from .playlist import PlaylistTracksDialog
+from ..utils import copy_link, safe_text
 
 if TYPE_CHECKING:
 	from collections.abc import Callable
@@ -113,10 +113,7 @@ class PlaylistBrowserDialog(_BrowseDialog):
 			# Translators: Label of the list of playlists in a browse window, read by screen readers.
 			_("Playlists:"),
 			self._fetch,
-			lambda playlist: playlist_with_owner(
-				safe_text(playlist.get("name"), _("Unknown")),
-				safe_text((playlist.get("owner") or {}).get("display_name"), "Spotify"),
-			),
+			playlist_row,
 			empty=empty_message,
 		)
 		self.list.Bind(wx.EVT_CONTEXT_MENU, self.on_context_menu)
@@ -134,7 +131,9 @@ class PlaylistBrowserDialog(_BrowseDialog):
 		# Spotify's own greeting with Featured Playlists ("Good morning!").
 		wx.CallAfter(self._set_greeting, result.get("message"))
 		page = dict(result.get("playlists") or {})
-		page["items"] = [p if p and p.get("id") else None for p in page.get("items") or []]
+		page["items"] = [
+			{"type": "playlist", **p} if p and p.get("id") else None for p in page.get("items") or []
+		]
 		return page
 
 	def _set_greeting(self, message: str | None) -> None:
@@ -164,25 +163,14 @@ class PlaylistBrowserDialog(_BrowseDialog):
 		"""Open the selected playlist's tracks."""
 		playlist = self.paged.selected()
 		if playlist:
-			PlaylistTracksDialog(self, self.client, playlist).Show()
+			self._open(playlist)
 
 	def on_context_menu(self, _evt: wx.Event) -> None:
 		"""Show the actions for the selected playlist."""
 		playlist = self.paged.selected()
 		if not playlist:
 			return
-		menu = wx.Menu()
-		self._append_menu_item(menu, _("View Tracks in Playlist"), lambda _evt: self.on_open())
-		self._append_action(menu, _("Play Entire Playlist"), "keyPlay")
-		self._append_action(menu, _("Add to Queue"), "keyQueue")
-		self._append_action(menu, _("Copy Playlist Link"), "keyCopyLink")
-		owner = self._owner_of(playlist)
-		if owner:
-			self._append_menu_item(
-				menu, self._follow_owner_label(playlist), lambda _evt: self._toggle_follow_user(owner)
-			)
-		self.PopupMenu(menu)
-		menu.Destroy()
+		self._show_item_menu(playlist)
 
 	def on_play(self) -> None:
 		"""Play the selected playlist from the start."""
@@ -194,9 +182,7 @@ class PlaylistBrowserDialog(_BrowseDialog):
 		"""Add the selected playlist's tracks to the queue."""
 		playlist = self.paged.selected()
 		if playlist:
-			self._queue_add_context(
-				playlist.get("uri"), "playlist", safe_text(playlist.get("name"), _("Unknown"))
-			)
+			self._queue_item(playlist)
 
 	def on_copy_link(self) -> None:
 		"""Copy the selected playlist's Spotify link."""

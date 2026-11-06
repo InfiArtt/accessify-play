@@ -31,6 +31,7 @@ Anda bisa mengubah tombol-tombol di lapisan, dan juga memberi perintah mana pun 
 
 ## Panduan
 
+* [Daftar dan menu konteks](lists_guide.html): cara kerja setiap daftar: isi barisnya, fungsi Enter, menu konteks, dan tombol tab.
 * [Pencarian](search_guide.html): lagu, album, artis, playlist, podcast, dan buku audio; Browse Categories dan Featured Playlists.
 * [Pustaka](library_management.html): playlist Anda, musik, podcast, dan buku audio yang disimpan, artis yang diikuti, item teratas, dan yang baru diputar.
 * [Lirik](lyrics_guide.html): jendela lirik, pembacaan lirik otomatis, dan lirik untuk lagu apa pun.

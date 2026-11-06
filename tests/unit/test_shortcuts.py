@@ -37,6 +37,7 @@ SONG = {
 	"name": "Song",
 	"uri": "spotify:track:t1",
 	"artists": [{"id": "ar1", "name": "A"}],
+	"external_urls": {"spotify": "https://x/t1"},
 }
 
 
@@ -251,12 +252,18 @@ def test_number_keys_follow_their_setting(client: SpotifyClient, ready: SpotifyS
 def test_episode_menu_shows_its_shortcuts(client: SpotifyClient, ready: SpotifyServer) -> None:
 	"""Episodes have a Save shortcut of their own, shown in the menu like the others."""
 	config.conf["spotify"]["keySaveEpisode"] = "ctrl+s"
-	ready.routes["GET", "shows/s1/episodes"] = {"items": [{"id": "e1", "name": "One"}], "total": 1}
+	episode = {
+		"id": "e1",
+		"name": "One",
+		"uri": "spotify:episode:e1",
+		"external_urls": {"spotify": "https://x/e1"},
+	}
+	ready.routes["GET", "shows/s1/episodes"] = {"items": [episode], "total": 1}
 	window = PodcastEpisodesDialog(None, client, "s1", "Show")
 	window.parts_list.SetSelection(0)
 	window.on_context_menu(None)
 	assert full_labels(last_menu()) == [
-		"Play Episode\tAlt+P",
+		"Play\tAlt+P",
 		"Add to Queue\tAlt+Q",
 		"Copy Link\tAlt+L",
 		"Save/Unsave Episode\tCtrl+S",

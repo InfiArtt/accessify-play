@@ -22,7 +22,7 @@ Pembacaan berhenti sementara saat musik dijeda, menyesuaikan diri dalam beberapa
 
 ## Lirik untuk lagu apa pun, tanpa memutarnya
 
-Di daftar lagu mana pun (hasil pencarian, album, playlist, jendela artis, dan Pustaka), pilih sebuah lagu lalu tekan `Alt+W`, atau pilih **Show Lyrics** di menu konteks.
+Di daftar lagu mana pun (hasil pencarian, album, playlist, jendela artis, Pustaka, dan antrean), pilih sebuah lagu lalu tekan `Alt+W`, atau pilih **Show Lyrics** di menu konteks.
 
 Liriknya terbuka di jendela yang sama, sebagai pratinjau: `Enter` tidak melompat dan tidak ada Jump to Current, karena lagu itu bukan yang sedang diputar, dan jendela tetap menampilkan lagu itu walaupun musiknya berganti. Jika lagu itu tidak punya lirik, Anda akan diberi tahu dan jendela tidak dibuka.
 

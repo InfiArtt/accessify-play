@@ -12,12 +12,10 @@ from typing import TYPE_CHECKING
 import config
 import pytest
 import wx
-from accesifyPlay.dialogs.album import AlbumTracksDialog
-from accesifyPlay.dialogs.artist import ArtistDiscographyDialog
 from accesifyPlay.lyrics import Lyrics
 from accesifyPlay.ui import base_dialog
 from accesifyPlay.ui.base_dialog import AccessifyDialog
-from conftest import SpotifyServer, choose, spotify_error
+from conftest import SpotifyServer, choose, last_menu, record_windows, spotify_error
 
 if TYPE_CHECKING:
 	from accesifyPlay.spotify_client import SpotifyClient
@@ -86,19 +84,21 @@ def test_one_queue_action_at_a_time(dialog: AccessifyDialog, spoken: list[str]) 
 
 
 def test_queue_a_whole_album(dialog: AccessifyDialog, server: SpotifyServer, spoken: list[str]) -> None:
-	"""An album or playlist is queued track by track; artists and shows cannot be."""
+	"""An album or playlist is queued track by track; artists and shows cannot be, and say why."""
 	server.routes["GET", "albums/al1/tracks"] = {
 		"items": [{"uri": "spotify:track:1"}, {"uri": "spotify:track:2"}]
 	}
-	dialog._queue_add_context("spotify:album:al1", "album", "LP")
+	dialog._queue_item({"type": "album", "uri": "spotify:album:al1", "name": "LP"})
 	assert spoken[-1] == "Queued 2 tracks from LP."
 	for kind, said in (
 		("artist", "Spotify does not allow queueing a whole artist."),
 		("show", "Spotify does not allow queueing a whole show."),
-		("episode", "Cannot add this item to the queue."),
+		("user", "This item type cannot be added to the queue."),
 	):
-		dialog._queue_add_context("spotify:x:1", kind, "X")
+		dialog._queue_item({"type": kind, "uri": "spotify:x:1", "name": "X"})
 		assert spoken[-1].startswith(said)
+	dialog._queue_item(None)
+	assert spoken[-1] == "No item selected."
 	dialog._queue_add_context("", "album", "LP")
 	assert spoken[-1] == "Unable to add LP to queue."
 
@@ -127,18 +127,6 @@ def test_queue_album_problems(dialog: AccessifyDialog, server: SpotifyServer, sp
 	dialog._queue_add_context("spotify:album:al1", "album", "LP")
 	assert spoken[-1] == "This feature requires Spotify Premium."
 	assert dialog._is_queuing is False
-
-
-def test_save_album(dialog: AccessifyDialog, server: SpotifyServer, spoken: list[str]) -> None:
-	"""An album is saved to the library; anything else is refused."""
-	server.routes["PUT", "me/library"] = None
-	dialog._save_album_to_library({"type": "album", "id": "al1", "name": "LP"})
-	assert spoken == ["Saving 'LP' to your library...", "Album 'LP' saved successfully."]
-	dialog._save_album_to_library(TRACK)
-	assert spoken[-1] == "Could not save. Invalid album data provided."
-	server.routes["PUT", "me/library"] = spotify_error(403)
-	dialog._save_album_to_library({"type": "album", "id": "al1", "name": "LP"})
-	assert "would not allow" in spoken[-1]
 
 
 def test_toggle_saved(dialog: AccessifyDialog, server: SpotifyServer, spoken: list[str]) -> None:
@@ -196,33 +184,126 @@ def test_list_activation(dialog: AccessifyDialog) -> None:
 
 
 def test_track_menu_offers_lyrics_album_and_artists(dialog: AccessifyDialog) -> None:
-	"""Every track gets Show Lyrics, Go to Album and Go to Artist (a submenu for several)."""
-	menu = wx.Menu()
-	dialog._append_go_to_options_for_track(menu, TRACK)
-	assert menu.labels() == ["---", "Show Lyrics", "Go to Album: LP", "Go to Artist: A"]
-	duo = dict(TRACK, artists=[{"id": "a", "name": "A"}, {"id": "b", "name": "B"}], album=None)
-	menu = wx.Menu()
-	dialog._append_go_to_options_for_track(menu, duo)
-	assert menu.labels() == ["---", "Show Lyrics", "Go to Artist >"]
-	menu = wx.Menu()
-	dialog._append_go_to_options_for_track(menu, dict(TRACK, artists=[]))
-	dialog._append_go_to_options_for_track(menu, {"type": "episode"})
-	assert menu.labels() == ["---", "Show Lyrics", "Go to Album: LP"]
+	"""A song's menu ends with Show Lyrics, Go to Album and Go to Artist (a submenu for several).
+
+	A window without the Play, Add to Queue and Copy Link shortcuts offers none of them.
+	"""
+	dialog._show_item_menu(TRACK)
+	start = ["Save/Unsave Track", "Add to Playlist >", "---", "Show Lyrics"]
+	assert last_menu().labels() == [*start, "Go to Album: LP", "Go to Artist: A"]
+	dialog._show_item_menu(
+		dict(TRACK, artists=[{"id": "a", "name": "A"}, {"id": "b", "name": "B"}], album=None)
+	)
+	assert last_menu().labels() == [*start, "Go to Artist >"]
+	dialog._show_item_menu(dict(TRACK, artists=[]))
+	assert last_menu().labels() == [*start, "Go to Album: LP"]
+	# In a window about the artist, the artist is not offered again.
+	dialog._show_item_menu(TRACK, here={"A"})
+	assert last_menu().labels() == [*start, "Go to Album: LP"]
 
 
-def test_going_to_album_and_artist(dialog: AccessifyDialog, server: SpotifyServer) -> None:
-	"""Go to Album and Go to Artist open those windows."""
-	server.routes["GET", "albums/al1/tracks"] = {"items": []}
-	server.routes["GET", "search"] = {"tracks": {"items": []}, "playlists": {"items": []}}
-	server.routes["GET", "artists/ar1/albums"] = {"items": []}
-	server.routes["GET", "artists/ar1"] = {"name": "A"}
-	menu = wx.Menu()
-	dialog._append_go_to_options_for_track(menu, TRACK)
-	choose(dialog, menu, "Go to Album: LP")
-	choose(dialog, menu, "Go to Artist: A")
-	opened = [type(child) for child in dialog.children]
-	assert AlbumTracksDialog in opened
-	assert ArtistDiscographyDialog in opened
+def test_own_playlists_load_once(dialog: AccessifyDialog, server: SpotifyServer, spoken: list[str]) -> None:
+	"""A window not given the user's playlists fetches them once; a failure is said and offers none."""
+	server.routes["GET", "me"] = {"id": "me"}
+	server.routes["GET", "me/playlists"] = {"items": [{"id": "p1", "owner": {"id": "me"}}, {"id": "p2"}]}
+	dialog._playlists_loading = True
+	assert dialog._addable_playlists() is None
+	dialog._playlists_loading = False
+	assert dialog._addable_playlists() == [{"id": "p1", "owner": {"id": "me"}}]
+	assert dialog._addable_playlists() == [{"id": "p1", "owner": {"id": "me"}}]
+	assert server.paths() == ["me", "me/playlists"]
+	dialog.user_playlists = None
+	server.routes["GET", "me/playlists"] = spotify_error(500)
+	assert dialog._addable_playlists() == []
+	assert "trouble" in spoken[-1]
+
+
+def test_no_menu_without_actions(dialog: AccessifyDialog) -> None:
+	"""Nothing pops up for an item nothing can be done with."""
+	dialog._show_item_menu({"type": "episode", "name": "Ep"})
+	dialog._show_item_menu({"type": "user", "id": "u1"})
+	assert wx.popped_menus == []
+
+
+def test_extras_come_last(dialog: AccessifyDialog) -> None:
+	"""What belongs to one window alone follows the shared actions, after a separator."""
+	chosen = []
+	dialog._show_item_menu({"type": "artist", "id": "ar1"}, extras=[("Extra", chosen.append)])
+	assert last_menu().labels() == ["View Discography", "Follow/Unfollow Artist", "---", "Extra"]
+	choose(dialog, last_menu(), "Extra")
+	assert len(chosen) == 1
+
+
+def test_going_to_album_and_artist(dialog: AccessifyDialog, monkeypatch: pytest.MonkeyPatch) -> None:
+	"""Go to Album and Go to Artist open those windows; with several artists, the one picked."""
+	opened = record_windows(monkeypatch, base_dialog, "AlbumTracksDialog", "ArtistDiscographyDialog")
+	dialog._show_item_menu(TRACK)
+	choose(dialog, last_menu(), "Go to Album: LP")
+	choose(dialog, last_menu(), "Go to Artist: A")
+	dialog._show_item_menu(dict(TRACK, artists=[{"id": "a", "name": "A"}, {"id": "b", "name": "B"}]))
+	choose(dialog, last_menu().find("Go to Artist").submenu, "B")
+	assert opened == [
+		("AlbumTracksDialog", ({**TRACK["album"], "type": "album"}, [])),
+		("ArtistDiscographyDialog", ("ar1", "A", [])),
+		("ArtistDiscographyDialog", ("b", "B", [])),
+	]
+
+
+@pytest.mark.parametrize(
+	("item", "window", "args"),
+	[
+		({"type": "playlist", "id": "p1"}, "PlaylistTracksDialog", ({"type": "playlist", "id": "p1"},)),
+		({"type": "show", "id": "s1", "name": "Pod"}, "PodcastEpisodesDialog", ("s1", "Pod")),
+		({"type": "audiobook", "id": "b1", "name": "Book"}, "AudiobookChaptersDialog", ("b1", "Book")),
+		(
+			{"type": "episode", "id": "e1", "show": {"id": "s1", "name": "Pod"}},
+			"PodcastEpisodesDialog",
+			("s1", "Pod"),
+		),
+	],
+)
+def test_opening(
+	dialog: AccessifyDialog, monkeypatch: pytest.MonkeyPatch, item: dict, window: str, args: tuple
+) -> None:
+	"""Each kind opens in its own window; an episode opens its show."""
+	opened = record_windows(monkeypatch, base_dialog, window)
+	dialog._open(item)
+	assert opened == [(window, args)]
+
+
+def test_nothing_to_open(dialog: AccessifyDialog, spoken: list[str]) -> None:
+	"""An item without an id, or of a kind that has no window, says there is nothing to open."""
+	dialog._open({"type": "album", "name": "No id"})
+	dialog._open({"type": "track", "id": "t1"})
+	dialog._open({"type": "episode", "id": "e1"})
+	assert spoken == ["There is nothing to open for this item."] * 3
+
+
+def test_enter_opens_or_plays(dialog: AccessifyDialog, monkeypatch: pytest.MonkeyPatch) -> None:
+	"""Enter opens what holds other items and an artist, and plays the rest."""
+	opened = record_windows(monkeypatch, base_dialog, "ArtistDiscographyDialog")
+	played = []
+	dialog._activate({"type": "artist", "id": "ar1", "name": "A"}, lambda: played.append(1))
+	dialog._activate({"type": "track", "id": "t1"}, lambda: played.append(2))
+	dialog._activate(None, lambda: played.append(3))
+	assert opened == [("ArtistDiscographyDialog", ("ar1", "A", []))]
+	assert played == [2, 3]
+
+
+def test_playing_an_item(dialog: AccessifyDialog, server: SpotifyServer, spoken: list[str]) -> None:
+	"""A song plays within its album; anything else, or a song without an album, plays alone."""
+	dialog._play_item(TRACK)
+	assert server.requests[-1][3] == {
+		"context_uri": "spotify:album:al1",
+		"offset": {"uri": "spotify:track:t1"},
+	}
+	dialog._play_item(dict(TRACK, album=None))
+	assert server.requests[-1][3] == {"uris": ["spotify:track:t1"]}
+	dialog._play_item({"type": "album", "uri": "spotify:album:al1", "album": {"uri": "spotify:album:x"}})
+	assert server.requests[-1][3] == {"context_uri": "spotify:album:al1"}
+	dialog._play_item(None)
+	assert len(server.requests) == 3
+	assert spoken == ["Playing.", "Playing...", "Playing..."]
 
 
 def test_playlist_submenu(dialog: AccessifyDialog) -> None:

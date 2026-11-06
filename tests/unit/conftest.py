@@ -15,6 +15,7 @@ fresh temporary one, and background tasks run at once.
 from __future__ import annotations
 
 import copy
+import importlib
 import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -197,10 +198,22 @@ def accelerate(window: wx.Window, flags: int, key: str | int) -> None:
 	raise LookupError(key)
 
 
-def record_windows(monkeypatch: pytest.MonkeyPatch, module: object, *names: str) -> list[tuple[str, tuple]]:
-	"""Replace the named window classes in module with stand-ins that only record being opened.
+#: Where the windows that any window can open (AccessifyDialog._open) are defined.
+WINDOW_HOMES = {
+	"AlbumTracksDialog": "accesifyPlay.dialogs.album",
+	"ArtistDiscographyDialog": "accesifyPlay.dialogs.artist",
+	"AudiobookChaptersDialog": "accesifyPlay.dialogs.audiobooks",
+	"PlaylistTracksDialog": "accesifyPlay.dialogs.playlist",
+	"PodcastEpisodesDialog": "accesifyPlay.dialogs.podcasts",
+}
 
-	Returns the list they record into: (class name, arguments after parent and client).
+
+def record_windows(monkeypatch: pytest.MonkeyPatch, module: object, *names: str) -> list[tuple[str, tuple]]:
+	"""Replace the named window classes with stand-ins that only record being opened.
+
+	They are replaced in module, and where they are defined, since any window
+	opens them from there. Returns the list they record into: (class name,
+	arguments after parent and client).
 	"""
 	opened: list[tuple[str, tuple]] = []
 	for name in names:
@@ -212,5 +225,7 @@ def record_windows(monkeypatch: pytest.MonkeyPatch, module: object, *names: str)
 				super().__init__(parent)
 				opened.append((_name, args[1:]))
 
-		monkeypatch.setattr(module, name, Window)
+		monkeypatch.setattr(module, name, Window, raising=False)
+		if name in WINDOW_HOMES:
+			monkeypatch.setattr(importlib.import_module(WINDOW_HOMES[name]), name, Window)
 	return opened

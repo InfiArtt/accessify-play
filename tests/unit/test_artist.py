@@ -117,11 +117,8 @@ def test_every_tab_fills(client: SpotifyClient) -> None:
 	assert window.top_tracks_list.GetSelection() == 0
 	assert window.albums_list.GetStrings() == ["LP (1999)", "No id (2000)", "EP (2001)"]
 	assert window.playlists_list.GetStrings() == ["This Is A - by Spotify", "Unknown"]
-	assert window.all_tracks_list.GetStrings() == [
-		"Song 1 — LP (1999)",
-		"Song 3 — LP (1999)",
-		"Song 4 — EP (2001)",
-	]
+	# All Tracks names each song's album, the artist only with a guest.
+	assert window.all_tracks_list.GetStrings() == ["Song 1 (LP)", "Song 3 (LP)", "Song 4 (EP)"]
 	assert window.info_text.GetValue().splitlines() == [
 		"Name: A",
 		"Followers: 12,345",
@@ -166,19 +163,15 @@ def test_an_artist_without_albums_or_details(client: SpotifyClient, server: Spot
 def test_all_tracks_in_batches(client: SpotifyClient, spoken: list[str]) -> None:
 	"""All Tracks loads a batch at a time, with a Load More row until every album is in."""
 	window = open_artist(client, batch=1)
-	assert window.all_tracks_list.GetStrings() == ["Song 1 — LP (1999)", "--- Load More ---"]
+	assert window.all_tracks_list.GetStrings() == ["Song 1 (LP)", "--- Load More ---"]
 	window.show_page(3)
 	window.all_tracks_list.SetSelection(1)
 	window.all_tracks_list.fire(wx.EVT_CHAR_HOOK, wx.KeyEvent(wx.WXK_RETURN))
-	assert window.all_tracks_list.GetStrings() == [
-		"Song 1 — LP (1999)",
-		"Song 3 — LP (1999)",
-		"--- Load More ---",
-	]
+	assert window.all_tracks_list.GetStrings() == ["Song 1 (LP)", "Song 3 (LP)", "--- Load More ---"]
 	window.all_tracks_list.SetSelection(2)
 	window.on_play_selected()
 	assert spoken[-1] == "Loading more tracks..."
-	assert window.all_tracks_list.GetStrings()[-1] == "Song 4 — EP (2001)"
+	assert window.all_tracks_list.GetStrings()[-1] == "Song 4 (EP)"
 	window.all_tracks.load_more()
 	assert window.all_tracks_list.GetCount() == 3
 
@@ -201,17 +194,17 @@ def test_all_tracks_names_guests_like_top_tracks(client: SpotifyClient, ready: S
 	"""All Tracks names the artists only when someone else is on the song, as Top Tracks does."""
 	ready.routes["GET", "albums/al1/tracks"] = {"items": [track(7, [*ME, {"name": "B"}]), track(8, ME)]}
 	window = open_artist(client)
-	assert window.all_tracks_list.GetStrings()[:2] == ["Song 7 - A, B — LP (1999)", "Song 8 — LP (1999)"]
+	assert window.all_tracks_list.GetStrings()[:2] == ["Song 7 - A, B (LP)", "Song 8 (LP)"]
 
 
 @pytest.mark.usefixtures("ready")
-def test_menu_for_a_playlist_without_a_link(client: SpotifyClient) -> None:
-	"""A playlist Spotify sent without a URI cannot be played, so its menu has no Play."""
+def test_no_menu_for_a_playlist_without_an_id(client: SpotifyClient) -> None:
+	"""A playlist Spotify sent without an id or URI can be neither played nor opened, so no menu pops up."""
 	window = open_artist(client)
 	window.show_page(2)
 	window.playlists_list.SetSelection(1)
 	window.on_context_menu(None)
-	assert last_menu().labels()[0] == "Add to Queue"
+	assert wx.popped_menus == []
 
 
 @pytest.mark.parametrize("batch", [2, 3])
@@ -221,7 +214,7 @@ def test_all_tracks_failure(
 	"""A failed album is said; the tracks so far stay, and Load More tries that album again."""
 	ready.routes["GET", "albums/al2/tracks"] = spotify_error(500)
 	window = open_artist(client, batch=batch)
-	first = ["Song 1 — LP (1999)", "Song 3 — LP (1999)", "--- Load More ---"]
+	first = ["Song 1 (LP)", "Song 3 (LP)", "--- Load More ---"]
 	assert window.all_tracks_list.GetStrings() == first
 	enter_row = 2
 	window.all_tracks_list.SetSelection(enter_row)
@@ -230,21 +223,13 @@ def test_all_tracks_failure(
 	assert window.all_tracks_list.GetStrings() == first
 	ready.routes["GET", "albums/al2/tracks"] = {"items": [track(4, [])]}
 	window.all_tracks_list.fire(wx.EVT_CHAR_HOOK, wx.KeyEvent(wx.WXK_RETURN))
-	assert window.all_tracks_list.GetStrings() == [*first[:2], "Song 4 — EP (2001)"]
+	assert window.all_tracks_list.GetStrings() == [*first[:2], "Song 4 (EP)"]
 
 
 def test_all_tracks_when_the_first_album_fails(client: SpotifyClient, ready: SpotifyServer) -> None:
 	"""With nothing loaded yet, a failure shows in the list."""
 	ready.routes["GET", "albums/al1/tracks"] = spotify_error(500)
 	assert open_artist(client).all_tracks_list.GetStrings() == ["Unable to load tracks."]
-
-
-@pytest.mark.usefixtures("ready")
-def test_all_tracks_row_formats(client: SpotifyClient) -> None:
-	"""A track without an album name still shows its year; without either, just the song."""
-	window = open_artist(client)
-	assert window._format_all_track_display({"name": "X", "album_release_date": "2002"}) == "X — (2002)"
-	assert window._format_all_track_display({"name": "X"}) == "X"
 
 
 @pytest.mark.usefixtures("ready")
@@ -287,20 +272,27 @@ def test_songs_do_not_steal_the_focus(client: SpotifyClient) -> None:
 def test_enter_opens_albums_and_playlists(
 	client: SpotifyClient, ready: SpotifyServer, opened: list, spoken: list[str]
 ) -> None:
-	"""Enter on an album or playlist opens it; Enter on a song plays it."""
+	"""Enter on an album or playlist opens it; Enter on a song plays it, in its album when known."""
 	window = open_artist(client)
 	window.top_tracks_list.fire(wx.EVT_CHAR_HOOK, wx.KeyEvent(wx.WXK_RETURN))
 	assert ready.requests[-1][3] == {"uris": ["spotify:track:t1"]}
+	window.show_page(3)
+	window.all_tracks_list.fire(wx.EVT_CHAR_HOOK, wx.KeyEvent(wx.WXK_RETURN))
+	assert ready.requests[-1][3] == {
+		"context_uri": "spotify:album:al1",
+		"offset": {"uri": "spotify:track:t1"},
+	}
 	window.show_page(1)
 	window.albums_list.fire(wx.EVT_CHAR_HOOK, wx.KeyEvent(wx.WXK_RETURN))
+	window.albums_list.SetSelection(1)
+	window.albums_list.fire(wx.EVT_CHAR_HOOK, wx.KeyEvent(wx.WXK_RETURN))
+	assert spoken[-1] == "There is nothing to open for this item."
 	window.show_page(2)
 	window.playlists_list.fire(wx.EVT_CHAR_HOOK, wx.KeyEvent(wx.WXK_RETURN))
 	assert opened == [("AlbumTracksDialog", (ALBUMS[0], MINE)), ("PlaylistTracksDialog", (PLAYLIST,))]
-	window.albums_list.SetSelection(wx.NOT_FOUND)
-	window._on_album_activate()
 	window.playlists_list.SetSelection(wx.NOT_FOUND)
-	window._on_playlist_activate()
-	assert spoken[-2:] == ["Please select an album first.", "Please select a playlist first."]
+	window.playlists_list.fire(wx.EVT_CHAR_HOOK, wx.KeyEvent(wx.WXK_RETURN))
+	assert spoken[-1] == "Please select an item from the active tab first."
 
 
 @pytest.mark.parametrize(
@@ -313,14 +305,26 @@ def test_enter_opens_albums_and_playlists(
 				"Add to Queue",
 				"Copy Link",
 				"---",
+				"Save/Unsave Track",
 				"Add to Playlist >",
 				"---",
 				"Show Lyrics",
-				"Go to Artist: A",
 			],
 		),
-		(1, ["Play", "Add to Queue", "Copy Link", "---", "Save Album to Library", "Add Album to Playlist >"]),
-		(2, ["Play", "Add to Queue", "---", "View Tracks in Playlist"]),
+		(
+			1,
+			[
+				"Play",
+				"Add to Queue",
+				"Copy Link",
+				"---",
+				"View Tracks",
+				"Save/Unsave Album",
+				"Add Album to Playlist >",
+			],
+		),
+		# Spotify sent the owner without an id, so there is no one to follow.
+		(2, ["Play", "Add to Queue", "---", "View Tracks", "Follow/Unfollow Playlist"]),
 		(
 			3,
 			[
@@ -328,17 +332,18 @@ def test_enter_opens_albums_and_playlists(
 				"Add to Queue",
 				"Copy Link",
 				"---",
+				"Save/Unsave Track",
 				"Add to Playlist >",
 				"---",
 				"Show Lyrics",
-				"Go to Artist: A",
+				"Go to Album: LP",
 			],
 		),
 	],
 )
 @pytest.mark.usefixtures("ready")
 def test_tab_menus(client: SpotifyClient, position: int, labels: list[str]) -> None:
-	"""Songs, albums, playlists and all tracks each get their own menu."""
+	"""Songs, albums and playlists get the menus they have everywhere; the artist is not offered again."""
 	window = open_artist(client)
 	window.show_page(position)
 	window._pages[position][1].fire(wx.EVT_CONTEXT_MENU)
@@ -346,17 +351,18 @@ def test_tab_menus(client: SpotifyClient, position: int, labels: list[str]) -> N
 
 
 def test_menu_actions(client: SpotifyClient, ready: SpotifyServer, opened: list, spoken: list[str]) -> None:
-	"""Save Album saves it; View Tracks opens the playlist; Alt+Q and Alt+L act on the selection."""
+	"""Save/Unsave Album saves it; View Tracks opens the playlist; Alt+Q and Alt+L act on the selection."""
+	ready.routes["GET", "me/library/contains"] = [False]
 	window = open_artist(client)
 	window.show_page(1)
 	window.on_context_menu(None)
-	choose(window, last_menu(), "Save Album to Library")
+	choose(window, last_menu(), "Save/Unsave Album")
 	assert ready.requests[-1][:3] == ("PUT", "me/library", {"uris": "spotify:album:al1"})
 	accelerate(window, wx.ACCEL_ALT, "L")
 	assert api.clipboard == ["https://x/al1"]
 	window.show_page(2)
 	window.on_context_menu(None)
-	choose(window, last_menu(), "View Tracks in Playlist")
+	choose(window, last_menu(), "View Tracks")
 	assert opened == [("PlaylistTracksDialog", (PLAYLIST,))]
 	window.show_page(0)
 	accelerate(window, wx.ACCEL_ALT, "Q")

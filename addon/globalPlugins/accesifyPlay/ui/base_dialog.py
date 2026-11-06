@@ -18,17 +18,35 @@ from .. import shortcuts
 from ..core.thread_manager import thread_manager
 from ..language import init_translation
 from ..lyrics import lyrics_for_track
-from ..settings_spec import conf_get
+from ..settings_spec import LIST_KEY, SETTINGS, conf_get
 from ..utils import safe_text
 
 if TYPE_CHECKING:
-	from collections.abc import Callable, Iterator, Sequence
+	from collections.abc import Callable, Collection, Iterator, Sequence
 
 	from ..lyrics import Lyrics
 	from ..spotify_client import SpotifyClient
 	from ..spotify_types import Item
 
 init_translation()
+
+#: What Enter opens instead of playing: what holds other items, and an artist's page.
+_OPENED_BY_ENTER = frozenset(("album", "playlist", "show", "audiobook", "artist"))
+#: What Spotify's queue takes (an album or playlist is queued track by track).
+_QUEUEABLE = frozenset(("track", "episode", "chapter", "album", "playlist"))
+#: Shortcut settings a window may have for opening or saving a kind of item.
+_OPEN_KEYS = {"artist": "keyDiscography"}
+_SAVE_KEYS = {"artist": "keyFollow", "episode": "keySaveEpisode"}
+#: What saving or following each kind of item is called in its menu.
+_SAVE_LABELS: dict[str, Callable[[], str]] = {
+	"track": lambda: _("Save/Unsave Track"),
+	"album": lambda: _("Save/Unsave Album"),
+	"episode": lambda: _("Save/Unsave Episode"),
+	"show": lambda: _("Save/Unsave Show"),
+	"audiobook": lambda: _("Save/Unsave Audiobook"),
+	"artist": lambda: _("Follow/Unfollow Artist"),
+	"playlist": lambda: _("Follow/Unfollow Playlist"),
+}
 
 
 class AccessifyDialog(wx.Dialog):
@@ -37,8 +55,9 @@ class AccessifyDialog(wx.Dialog):
 	Ensures Destroy() is always called on exit and background acts are managed.
 	"""
 
-	#: The user's playlists, for the Add to Playlist menus; None while they load.
+	#: The user's own playlists, for the Add to Playlist menus; None until they are loaded.
 	user_playlists: list[Item] | None = None
+	_playlists_loading = False
 	#: Spotify, for the windows that talk to it; they set it right after creating the window.
 	client: SpotifyClient
 
@@ -125,13 +144,45 @@ class AccessifyDialog(wx.Dialog):
 		"""Change a button's label, keeping its underlined letter only if no shortcut has that key."""
 		button.SetLabel(self._usable_label(button, label))
 
+	#: The tabs of a window with a notebook: (page index, the control that gets the focus).
+	_pages: list[tuple[int, wx.Window]]
+	notebook: wx.Notebook
+
+	def _current_position(self) -> int:
+		"""Return the position of the visible tab in self._pages."""
+		current = self.notebook.GetSelection()
+		for position, (page_index, _control) in enumerate(self._pages):
+			if page_index == current:
+				return position
+		return 0
+
+	def show_page(self, position: int) -> None:
+		"""Switch to a tab (0 = the first, wrapping around) and put the focus in its list, on an item."""
+		page_index, control = self._pages[position % len(self._pages)]
+		self.notebook.SetSelection(page_index)
+		control.SetFocus()
+		if isinstance(control, wx.ListBox) and control.GetSelection() == wx.NOT_FOUND and control.GetCount():
+			control.SetSelection(0)
+
+	def _tab_shortcuts(self) -> dict[str, Callable[[wx.Event], object]]:
+		"""Return the actions of the Next and Previous Tab shortcuts, for a window with tabs."""
+		return {
+			"keyNextTab": lambda _evt: self.show_page(self._current_position() + 1),
+			"keyPreviousTab": lambda _evt: self.show_page(self._current_position() - 1),
+		}
+
+	def _number_shortcuts(self) -> list[Callable[[], object]]:
+		"""Return what the number keys do in a window with tabs: go to tab 1, 2, ..."""
+		return [lambda p=position: self.show_page(p) for position in range(len(self._pages))]
+
 	def _append_action(self, menu: wx.Menu, label: str, setting: str) -> None:
 		"""Add the menu item of one of the window's shortcut actions, showing its keys."""
 		menu.Append(self.shortcut_ids[setting], self._menu_label(label, setting))
 
 	def _menu_label(self, label: str, setting: str) -> str:
-		"""Return a menu item's label followed by its shortcut, if the window has it."""
-		keys = shortcuts.shown(setting) if setting in self.shortcut_ids else ""
+		"""Return a menu item's label followed by its shortcut, if the window has it (or it is a list key)."""
+		has_it = setting in self.shortcut_ids or SETTINGS[setting].shortcut == LIST_KEY
+		keys = shortcuts.shown(setting) if has_it else ""
 		return f"{label}\t{keys}" if keys else label
 
 	def _show_lyrics_of(self, item: Item | None) -> None:
@@ -195,12 +246,40 @@ class AccessifyDialog(wx.Dialog):
 			name="PlayInContextTask",
 		)
 
+	def _play_item(self, item: Item | None) -> None:
+		"""Play an item from a list Spotify cannot play as a whole (search results, saved songs).
+
+		A song plays within its album, so the album carries on after it;
+		anything else plays on its own.
+		"""
+		if not item:
+			return
+		album_uri = (item.get("album") or {}).get("uri") if item.get("type") == "track" else None
+		self._play_in_context(album_uri, item.get("uri"), _("Playing."))
+
 	@staticmethod
 	def _say_if_refused(request: Callable[..., object], *args: object) -> None:
 		"""Send a playback request (in the background) and say Spotify's reason if it failed."""
 		result = request(*args)
 		if isinstance(result, str):
 			wx.CallAfter(ui.message, result)
+
+	def _queue_item(self, item: Item | None) -> None:
+		"""Add an item to the queue: a song, episode or chapter, or an album or playlist track by track."""
+		if not item:
+			ui.message(_("No item selected."))
+			return
+		kind = item.get("type") or ""
+		if kind in ("album", "playlist"):
+			self._queue_add_context(item.get("uri"), kind, item.get("name"))
+		elif kind in _QUEUEABLE:
+			self._queue_add_track(item.get("uri"), item.get("name"))
+		elif kind == "artist":
+			ui.message(_("Spotify does not allow queueing a whole artist. Please queue individual tracks."))
+		elif kind == "show":
+			ui.message(_("Spotify does not allow queueing a whole show. Please queue individual episodes."))
+		else:
+			ui.message(_("This item type cannot be added to the queue."))
 
 	def _queue_add_track(self, uri: str | None, name: str | None) -> None:
 		if self._is_queuing:
@@ -242,28 +321,15 @@ class AccessifyDialog(wx.Dialog):
 		)
 
 	def _queue_add_context_thread(self, uri: str, item_type: str, name: str) -> None:
+		"""Queue an album's or playlist's tracks (item_type says which), one by one."""
 		try:
-			if item_type in ("album", "playlist"):
-				track_uris = self.client.get_context_track_uris(uri, item_type)
-				if isinstance(track_uris, str):
-					wx.CallAfter(ui.message, track_uris)
-					return
-				if not track_uris:
-					wx.CallAfter(ui.message, _("No tracks were queued."))
-					return
-				self._queue_tracks(track_uris, name)
-			elif item_type == "artist":
-				wx.CallAfter(
-					ui.message,
-					_("Spotify does not allow queueing a whole artist. Please queue individual tracks."),
-				)
-			elif item_type == "show":
-				wx.CallAfter(
-					ui.message,
-					_("Spotify does not allow queueing a whole show. Please queue individual episodes."),
-				)
+			track_uris = self.client.get_context_track_uris(uri, item_type)
+			if isinstance(track_uris, str):
+				wx.CallAfter(ui.message, track_uris)
+			elif not track_uris:
+				wx.CallAfter(ui.message, _("No tracks were queued."))
 			else:
-				wx.CallAfter(ui.message, _("Cannot add this item to the queue."))
+				self._queue_tracks(track_uris, name)
 		finally:
 			self._is_queuing = False
 
@@ -287,39 +353,28 @@ class AccessifyDialog(wx.Dialog):
 			message = _("Queued {count} tracks from {name}.").format(count=len(track_uris), name=name)
 		wx.CallAfter(ui.message, message)
 
-	def _save_album_to_library(self, album: Item) -> None:
-		if not self.client or not album or album.get("type") != "album" or not album.get("id"):
-			wx.CallAfter(ui.message, _("Could not save. Invalid album data provided."))
-			return
-		ui.message(_("Saving '{album_name}' to your library...").format(album_name=album.get("name")))
-		thread_manager.submit_task(self._save_album_thread, album, name="SaveAlbumTask")
-
-	def _save_album_thread(self, album: Item) -> None:
-		result = self.client.library_save([album["id"]], "album")
-		if isinstance(result, str):
-			wx.CallAfter(ui.message, result)
-		else:
-			wx.CallAfter(
-				ui.message, _("Album '{album_name}' saved successfully.").format(album_name=album.get("name"))
-			)
-
 	def _toggle_saved(self, kind: str, item: Item | None) -> None:
 		"""Save the item if it is not in the library, otherwise remove it; say which.
 
-		kind is the Spotify type: "episode", "show", "audiobook", ...
+		kind is the Spotify type: "track", "album", "episode", "show", "audiobook";
+		for "artist" and "playlist" it follows or unfollows.
 		"""
 		if not self.client or not item or not item.get("id"):
 			return
 		name = safe_text(item.get("name"), _("This item"))
+
+		follows = kind in ("artist", "playlist")
 
 		def _run() -> None:
 			now = self.client.library_toggle(item["id"], kind)
 			if isinstance(now, str):
 				wx.CallAfter(ui.message, now)
 			elif now:
-				wx.CallAfter(ui.message, _("'{name}' saved to your library.").format(name=name))
+				said = _("Now following '{name}'.") if follows else _("'{name}' saved to your library.")
+				wx.CallAfter(ui.message, said.format(name=name))
 			else:
-				wx.CallAfter(ui.message, _("'{name}' removed from your library.").format(name=name))
+				said = _("Unfollowed '{name}'.") if follows else _("'{name}' removed from your library.")
+				wx.CallAfter(ui.message, said.format(name=name))
 
 		thread_manager.submit_task(_run, name="ToggleSavedTask")
 
@@ -413,14 +468,37 @@ class AccessifyDialog(wx.Dialog):
 		dialog.Show()
 		ui.message(_("Lyrics for {track} opened.").format(track=lyrics.track))
 
-	def _addable_playlists(self) -> list[Item]:
-		"""Return the playlists tracks can be added to: the user's own."""
-		return self.user_playlists or []
+	def _addable_playlists(self) -> list[Item] | None:
+		"""Return the playlists tracks can be added to, the user's own; None while they load.
 
-	def _append_menu_item(self, menu: wx.Menu, label: str, handler: Callable[[wx.Event], object]) -> None:
-		"""Add an item to a popup menu; choosing it calls handler(event)."""
-		item = menu.Append(wx.ID_ANY, label)
-		menu.Bind(wx.EVT_MENU, handler, item)
+		A window that was not given them fetches them the first time they are needed.
+		"""
+		if self.user_playlists is None:
+			self._load_own_playlists()
+		return self.user_playlists
+
+	def _load_own_playlists(self) -> None:
+		"""Fetch the user's own playlists in the background, for the Add to Playlist menus."""
+		if self._playlists_loading:
+			return
+		self._playlists_loading = True
+		thread_manager.submit_task(self._load_own_playlists_thread, name="LoadPlaylistsTask", daemon=True)
+
+	def _load_own_playlists_thread(self) -> None:
+		try:
+			# Cached by the client, so other windows ask Spotify only once.
+			user_id = self.client.get_current_user_id()
+			playlists = self.client.get_user_playlists()
+			if isinstance(playlists, str):
+				wx.CallAfter(ui.message, playlists)
+				self.user_playlists = []
+			else:
+				# Without the user's id, every playlist is offered rather than none.
+				self.user_playlists = (
+					[p for p in playlists if self._is_users_own(p)] if user_id else playlists
+				)
+		finally:
+			self._playlists_loading = False
 
 	def _playlist_submenu(
 		self, playlists: list[Item] | None, on_pick: Callable[[Item], object], empty_label: str
@@ -491,52 +569,198 @@ class AccessifyDialog(wx.Dialog):
 
 		thread_manager.submit_task(_add, name="AddAlbumToPlaylist", daemon=True)
 
-	def _append_go_to_options_for_track(self, menu: wx.Menu, track_item: Item | None) -> None:
-		if not track_item or track_item.get("type") != "track":
-			return
-		menu.AppendSeparator()
-		# Every track list builds its menu through here, so Show Lyrics is
-		# available wherever a track is: search, albums, playlists, library.
-		lyrics_item = menu.Append(wx.ID_ANY, self._menu_label(_("Show Lyrics"), "keyLyrics"))
-		self.Bind(wx.EVT_MENU, lambda _evt, t=track_item: self._show_lyrics_for_track(t), lyrics_item)
-		album = track_item.get("album")
-		if album and album.get("uri"):
-			go_to_album_item = menu.Append(
-				wx.ID_ANY,
-				_("Go to Album: {album_name}").format(album_name=safe_text(album.get("name"), _("Unknown"))),
-			)
-			self.Bind(wx.EVT_MENU, lambda evt, a=album: self._handle_go_to_album(evt, a), go_to_album_item)
-
-		# Artists without an id (local files) have no page to go to.
-		artists = [artist for artist in track_item.get("artists") or () if artist and artist.get("id")]
-		if not artists:
-			return
-		if len(artists) == 1:
-			artist = artists[0]
-			go_to_artist_item = menu.Append(
-				wx.ID_ANY,
-				_("Go to Artist: {artist_name}").format(
-					artist_name=safe_text(artist.get("name"), _("Unknown"))
-				),
-			)
-			self.Bind(wx.EVT_MENU, lambda evt, a=artist: self._handle_go_to_artist(evt, a), go_to_artist_item)
-		else:
-			artist_submenu = wx.Menu()
-			for artist in artists:
-				artist_item = artist_submenu.Append(wx.ID_ANY, safe_text(artist.get("name"), _("Unknown")))
-				self.Bind(wx.EVT_MENU, lambda evt, a=artist: self._handle_go_to_artist(evt, a), artist_item)
-			menu.AppendSubMenu(artist_submenu, _("Go to Artist"))
-
-	def _handle_go_to_album(self, _event: wx.Event, album: Item) -> None:
+	def _open(self, item: Item) -> None:
+		"""Open an album, playlist, show, audiobook or artist in its own window; an episode opens its show."""
 		from ..dialogs.album import AlbumTracksDialog  # noqa: PLC0415 - circular import
-
-		dialog = AlbumTracksDialog(self, self.client, album, self._addable_playlists())
-		dialog.Show()
-
-	def _handle_go_to_artist(self, _event: wx.Event, artist: Item) -> None:
 		from ..dialogs.artist import ArtistDiscographyDialog  # noqa: PLC0415 - circular import
+		from ..dialogs.audiobooks import AudiobookChaptersDialog  # noqa: PLC0415 - circular import
+		from ..dialogs.playlist import PlaylistTracksDialog  # noqa: PLC0415 - circular import
+		from ..dialogs.podcasts import PodcastEpisodesDialog  # noqa: PLC0415 - circular import
 
-		dialog = ArtistDiscographyDialog(
-			self, self.client, artist["id"], artist.get("name"), self._addable_playlists()
-		)
-		dialog.Show()
+		if item.get("type") == "episode":
+			item = {**(item.get("show") or {}), "type": "show"}
+		openers: dict[str, Callable[[], wx.Dialog]] = {
+			"album": lambda: AlbumTracksDialog(self, self.client, item, self._addable_playlists()),
+			"playlist": lambda: PlaylistTracksDialog(self, self.client, item),
+			"show": lambda: PodcastEpisodesDialog(self, self.client, item["id"], item.get("name")),
+			"audiobook": lambda: AudiobookChaptersDialog(self, self.client, item["id"], item.get("name")),
+			"artist": lambda: ArtistDiscographyDialog(
+				self, self.client, item["id"], item.get("name"), self._addable_playlists()
+			),
+		}
+		opener = openers.get(item.get("type") or "")
+		if opener is None or not item.get("id"):
+			ui.message(_("There is nothing to open for this item."))
+			return
+		opener().Show()
+
+	def _activate(self, item: Item | None, play: Callable[[], object]) -> None:
+		"""Do what Enter does with an item: open what holds other items (see _open), play the rest."""
+		if item and item.get("type") in _OPENED_BY_ENTER:
+			self._open(item)
+		else:
+			play()
+
+	def _show_item_menu(
+		self,
+		item: Item,
+		*,
+		remove: Callable[[wx.Event], object] | None = None,
+		extras: Sequence[tuple[str, Callable[[wx.Event], object]]] = (),
+		here: Collection[str] = (),
+	) -> None:
+		"""Pop up the context menu of item: what can be done with it, in the same order in every window.
+
+		First Play, Add to Queue and Copy Link, with the window's keys for them;
+		then opening it, saving or following it, and adding it to a playlist;
+		then, for a song or album, its lyrics, album and artists. extras, what
+		belongs to the window alone, come last. remove replaces Save/Unsave
+		where the item is known to be saved (the Library's tabs). here names
+		the artists the window is about, which Go to Artist leaves out.
+		Nothing pops up when nothing can be done with the item.
+		"""
+		groups = [
+			self._play_entries(item),
+			self._item_entries(item, remove),
+			self._song_entries(item, here),
+			[self._entry(label, handler) for label, handler in extras],
+		]
+		menu = wx.Menu()
+		for group in filter(None, groups):
+			if menu.GetMenuItemCount():
+				menu.AppendSeparator()
+			for add in group:
+				add(menu)
+		if menu.GetMenuItemCount():
+			self.PopupMenu(menu)
+		menu.Destroy()
+
+	@staticmethod
+	def _entry(label: str, handler: Callable[[wx.Event], object]) -> Callable[[wx.Menu], None]:
+		"""Return what adds a plain menu item."""
+
+		def add(menu: wx.Menu) -> None:
+			item = menu.Append(wx.ID_ANY, label)
+			menu.Bind(wx.EVT_MENU, handler, item)
+
+		return add
+
+	def _action_or_entry(
+		self, label: str, setting: str, handler: Callable[[wx.Event], object]
+	) -> Callable[[wx.Menu], None]:
+		"""Return what adds the window's shortcut action for setting if it has one, else a plain item."""
+		if setting in self.shortcut_ids:
+			return lambda menu: self._append_action(menu, label, setting)
+		return self._entry(label, handler)
+
+	def _play_entries(self, item: Item) -> list[Callable[[wx.Menu], None]]:
+		"""Return the entries for playing, queueing and copying the link: the window's own shortcuts."""
+		entries = []
+		if item.get("uri") and "keyPlay" in self.shortcut_ids:
+			entries.append(lambda menu: self._append_action(menu, _("Play"), "keyPlay"))
+		if item.get("type") in _QUEUEABLE and item.get("uri") and "keyQueue" in self.shortcut_ids:
+			entries.append(lambda menu: self._append_action(menu, _("Add to Queue"), "keyQueue"))
+		if (item.get("external_urls") or {}).get("spotify") and "keyCopyLink" in self.shortcut_ids:
+			entries.append(lambda menu: self._append_action(menu, _("Copy Link"), "keyCopyLink"))
+		return entries
+
+	def _item_entries(
+		self, item: Item, remove: Callable[[wx.Event], object] | None
+	) -> list[Callable[[wx.Menu], None]]:
+		"""Return the entries for opening, saving or following, and adding to a playlist.
+
+		All of them need the item's Spotify id, which a local file lacks.
+		"""
+		kind = item.get("type") or ""
+		if not item.get("id"):
+			return []
+		entries = []
+		open_label = self._open_label(item)
+		if open_label:
+			entries.append(
+				self._action_or_entry(open_label, _OPEN_KEYS.get(kind, ""), lambda _evt: self._open(item))
+			)
+		own = kind == "playlist" and self._is_users_own(item)
+		if remove:
+			entries.append(
+				self._entry(_("Unfollow Artist") if kind == "artist" else _("Remove from Library"), remove)
+			)
+		elif kind in _SAVE_LABELS and not own:
+			label = _SAVE_LABELS[kind]()
+			entries.append(
+				self._action_or_entry(
+					label, _SAVE_KEYS.get(kind, ""), lambda _evt: self._toggle_saved(kind, item)
+				)
+			)
+		if kind in ("track", "album"):
+			entries.append(lambda menu: self._append_add_to_playlist(menu, item, self._addable_playlists()))
+		owner = self._owner_of(item) if kind == "playlist" and not own else None
+		if owner:
+			entries.append(
+				self._entry(self._follow_owner_label(item), lambda _evt: self._toggle_follow_user(owner))
+			)
+		return entries
+
+	@staticmethod
+	def _open_label(item: Item) -> str:
+		"""Return what opening item is called in its menu; empty when it does not open."""
+		kind = item.get("type")
+		if kind == "episode":
+			show = item.get("show") or {}
+			if not show.get("id"):
+				return ""
+			return _("View All Episodes of {show}").format(show=safe_text(show.get("name"), _("this show")))
+		labels = {
+			"album": _("View Tracks"),
+			"playlist": _("View Tracks"),
+			"show": _("View Episodes"),
+			"audiobook": _("View Chapters"),
+			"artist": _("View Discography"),
+		}
+		return labels.get(kind or "", "")
+
+	def _is_users_own(self, playlist: Item) -> bool:
+		"""Return whether the signed-in user made the playlist (as far as known yet)."""
+		owner_id = (playlist.get("owner") or {}).get("id")
+		return bool(owner_id) and owner_id == self.client.current_user_id
+
+	def _song_entries(self, item: Item, here: Collection[str]) -> list[Callable[[wx.Menu], None]]:
+		"""Return the entries for a song's lyrics, album and artists, or an album's artists."""
+		kind = item.get("type")
+		if kind not in ("track", "album"):
+			return []
+		entries = []
+		if kind == "track":
+			entries.append(
+				self._action_or_entry(
+					_("Show Lyrics"), "keyLyrics", lambda _evt: self._show_lyrics_for_track(item)
+				)
+			)
+			album = item.get("album") or {}
+			if album.get("id"):
+				label = _("Go to Album: {album_name}").format(
+					album_name=safe_text(album.get("name"), _("Unknown"))
+				)
+				entries.append(self._entry(label, lambda _evt: self._open({**album, "type": "album"})))
+		# Artists without an id (local files) have no page to go to.
+		artists = [
+			artist
+			for artist in item.get("artists") or ()
+			if artist and artist.get("id") and artist.get("name") not in here
+		]
+		if len(artists) == 1:
+			artist = {**artists[0], "type": "artist"}
+			label = _("Go to Artist: {artist_name}").format(
+				artist_name=safe_text(artist.get("name"), _("Unknown"))
+			)
+			entries.append(self._entry(label, lambda _evt: self._open(artist)))
+		elif artists:
+			entries.append(lambda menu: self._append_artists_submenu(menu, artists))
+		return entries
+
+	def _append_artists_submenu(self, menu: wx.Menu, artists: list[Item]) -> None:
+		submenu = wx.Menu()
+		for artist in artists:
+			entry = submenu.Append(wx.ID_ANY, safe_text(artist.get("name"), _("Unknown")))
+			self.Bind(wx.EVT_MENU, lambda _evt, a=artist: self._open({**a, "type": "artist"}), entry)
+		menu.AppendSubMenu(submenu, _("Go to Artist"))

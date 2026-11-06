@@ -25,14 +25,9 @@ Pintasan ini berfungsi di mana saja di jendela Pencarian. Jika kolom pencarian b
 
 Jendela artis di bawah memakai tombol yang sama untuk tab-tabnya.
 
-## Fungsi Enter
+## Hasil
 
-* **Lagu**: memutarnya, lalu melanjutkan ke lagu berikutnya di albumnya.
-* **Album**: membuka daftar lagu album.
-* **Artis**: membuka diskografi artis (lihat di bawah).
-* **Playlist**: membuka daftar lagu playlist.
-* **Podcast**: membuka daftar episode.
-* **Buku audio**: membuka daftar bab; memutar satu bab akan berlanjut ke bab-bab berikutnya.
+Daftar hasil bekerja seperti setiap daftar: `Enter` memutar lagu, lalu melanjutkan ke sisa albumnya, dan membuka album, artis, playlist, podcast, atau buku audio di jendelanya sendiri. Isi baris dan isi menu konteks dijelaskan di [Daftar dan menu konteks](lists_guide.html).
 
 ## Pintasan di daftar hasil
 
@@ -47,22 +42,9 @@ Jendela artis di bawah memakai tombol yang sama untuk tab-tabnya.
 
 Ini adalah tombol bawaan. Anda bisa mengubahnya, juga tombol di jendela lain: lihat [Mengubah perintah dan pintasan](customizing_commands.html).
 
-## Menu konteks
-
-Tekan tombol Applications atau `Shift+F10` pada sebuah hasil untuk pilihan lainnya. Selain Play, Add to Queue, dan Copy Link, tergantung jenis itemnya:
-
-* **Lagu**: Add to Playlist (submenu berisi playlist Anda sendiri), Show Lyrics, Go to Album, Go to Artist.
-* **Album**: Save Album, Add Album to Playlist. Lagu yang sudah ada di playlist dilewati.
-* **Artis**: Follow/Unfollow Artist, View Discography.
-* **Playlist buatan orang lain**: Follow Playlist atau Unfollow Playlist, dan Follow/Unfollow Owner untuk mengikuti orang yang membuatnya.
-* **Podcast**: View Episodes, Save/Unsave Show.
-* **Buku audio**: View Chapters, Save/Unsave Audiobook.
-
-"Save/Unsave" dan "Follow/Unfollow" bekerja seperti Sukai/Batal Sukai: item disimpan jika belum ada di pustaka Anda dan dihapus jika sudah ada, lalu Anda diberi tahu mana yang dilakukan.
-
 ## Daftar lagu, episode, dan bab
 
-Jendela yang terbuka dari sebuah hasil (lagu album, lagu playlist, episode, bab) bekerja dengan cara yang sama: `Enter` atau **Play** memutar item yang dipilih di dalam album, playlist, acara, atau bukunya, sehingga pemutaran berlanjut dari situ. `Alt+P`, `Alt+Q`, dan `Alt+L` untuk memutar, memasukkan ke antrean, dan menyalin tautan, `Alt+W` menampilkan lirik lagu, dan menu konteksnya berisi pilihan yang sama seperti di atas. Daftar yang panjang diakhiri dengan "Load More".
+Jendela yang terbuka dari sebuah hasil (lagu album, lagu playlist, episode, bab) bekerja dengan cara yang sama: `Enter` atau **Play Selected** memutar item yang dipilih di dalam album, playlist, acara, atau bukunya, sehingga pemutaran berlanjut dari situ. `Alt+P`, `Alt+Q`, dan `Alt+L` untuk memutar, memasukkan ke antrean, dan menyalin tautan, `Alt+W` menampilkan lirik lagu, dan menu konteksnya sama seperti di tempat lain. Daftar yang panjang diakhiri dengan "Load More".
 
 Di daftar episode, `Alt+S` (atau Save/Unsave Episode di menu konteks) menyimpan episode ke pustaka Anda atau menghapusnya.
 
@@ -70,10 +52,10 @@ Di daftar episode, `Alt+S` (atau Save/Unsave Episode di menu konteks) menyimpan 
 
 Jendela diskografi terbuka di Top Tracks, dengan fokus pada lagu pertama setelah daftarnya dimuat. Jendela ini punya lima tab:
 
-1. **Top Tracks**: lagu-lagu populer artis. `Enter` memutar sebuah lagu.
+1. **Top Tracks**: lagu-lagu populer artis. `Enter` memutar sebuah lagu, lalu melanjutkan ke albumnya.
 2. **Albums and Singles**: `Enter` membuka lagu-lagu sebuah album.
 3. **Playlists**: playlist yang ditemukan dengan mencari nama artis, buatan Spotify atau orang lain. `Enter` membuka lagu-lagu sebuah playlist.
-4. **All Tracks**: semua lagu dari album dan single artis, tanpa duplikat, dimuat per halaman. Jika sebuah album gagal dimuat, lagu yang sudah ada tetap ditampilkan dan "Load More" mencoba album itu lagi.
+4. **All Tracks**: semua lagu dari album dan single artis, tanpa duplikat, dimuat per halaman, masing-masing dengan albumnya. `Enter` memutar sebuah lagu, lalu melanjutkan ke albumnya. Jika sebuah album gagal dimuat, lagu yang sudah ada tetap ditampilkan dan "Load More" mencoba album itu lagi.
 5. **Artist Info**: pengikut, popularitas, genre, dan tautan artis.
 
 | Pintasan | Fungsi |
@@ -82,14 +64,14 @@ Jendela diskografi terbuka di Top Tracks, dengan fokus pada lagu pertama setelah
 | `Ctrl+Tab` atau `Ctrl+PageDown` | Tab berikutnya |
 | `Ctrl+Shift+Tab` atau `Ctrl+PageUp` | Tab sebelumnya |
 
-`Alt+P`, `Alt+Q`, dan `Alt+L` untuk memutar, memasukkan ke antrean, dan menyalin tautan lagu, album, atau playlist yang dipilih.
+`Alt+P`, `Alt+Q`, dan `Alt+L` untuk memutar, memasukkan ke antrean, dan menyalin tautan lagu, album, atau playlist yang dipilih. Baris-barisnya tidak menyebut nama artis itu sendiri, dan menu konteks tidak menawarkan untuk membuka artis ini lagi.
 
 ## Browse Categories dan Featured Playlists
 
 * **Browse Categories** menampilkan suasana dan genre dari Spotify (seperti Focus, Sleep, Workout, atau Pop). Tekan `Enter` pada salah satunya untuk melihat playlist-nya.
 * **Featured Playlists** menampilkan playlist yang sedang ditonjolkan Spotify, dengan sapaannya di atas daftar.
 
-Di kedua daftar playlist itu, `Enter` membuka lagu-lagu playlist, dan menu konteks menyediakan View Tracks in Playlist, Play Entire Playlist, Add to Queue, Copy Playlist Link, dan Follow/Unfollow Owner. `Alt+P`, `Alt+Q`, dan `Alt+L` untuk memutar, memasukkan ke antrean, dan menyalin tautan playlist yang dipilih.
+Di kedua daftar playlist itu, `Enter` membuka lagu-lagu playlist, dan menu konteksnya adalah menu playlist yang biasa: Play, Add to Queue, Copy Link, View Tracks, Follow/Unfollow Playlist, dan Follow/Unfollow Owner. `Alt+P`, `Alt+Q`, dan `Alt+L` untuk memutar, memasukkan ke antrean, dan menyalin tautan playlist yang dipilih.
 
 Seperti hasil pencarian, daftar ini dimuat per halaman: jika masih ada lagi, item terakhir adalah "Load More".
 

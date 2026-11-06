@@ -23,16 +23,26 @@ from conftest import accelerate, choose, last_menu
 if TYPE_CHECKING:
 	from accesifyPlay.spotify_client import SpotifyClient
 
+NOW = {
+	"type": "track",
+	"id": "t0",
+	"name": "Now",
+	"artists": [{"id": "a", "name": "A"}],
+	"uri": "spotify:track:t0",
+	"external_urls": {"spotify": "https://x/t0"},
+}
+NEXT = {
+	"type": "track",
+	"id": "t1",
+	"name": "Next",
+	"artists": [{"id": "b", "name": "B"}],
+	"uri": "spotify:track:t1",
+	"external_urls": {"spotify": "https://x/t1"},
+}
 QUEUE = [
-	{
-		"type": "currently_playing",
-		"name": "Now",
-		"artists": "A",
-		"uri": "spotify:track:t0",
-		"link": "https://x/t0",
-	},
-	{"type": "queue", "name": "Next", "artists": "B", "uri": "spotify:track:t1", "link": "https://x/t1"},
-	{"type": "queue", "name": "Local", "artists": "C"},
+	{"playing": True, "item": NOW},
+	{"playing": False, "item": NEXT},
+	{"playing": False, "item": {"type": "track", "name": "Local", "artists": [{"name": "C"}]}},
 ]
 
 
@@ -61,7 +71,7 @@ def calls(client: SpotifyClient, monkeypatch: pytest.MonkeyPatch) -> Calls:
 def test_queue_lists_what_plays_now_and_next(client: SpotifyClient) -> None:
 	"""The playing item comes first and is selected; each row says what it is."""
 	window = QueueListDialog(None, client, QUEUE)
-	assert window.queueList.GetStrings() == ["Playing: Now by A", "Queue: Next by B", "Queue: Local by C"]
+	assert window.queueList.GetStrings() == ["Playing: Now - A", "Queue: Next - B", "Queue: Local - C"]
 	assert window.queueList.GetSelection() == 0
 	label, control = window.GetChildren()[:2]
 	assert (label.GetLabel(), control) == ("Queue:", window.queueList)
@@ -96,12 +106,22 @@ def test_skipping_ahead(client: SpotifyClient, calls: Calls, spoken: list[str]) 
 
 
 def test_queue_menu_and_copy(client: SpotifyClient, calls: Calls) -> None:
-	"""The menu plays or copies; Alt+L copies the link."""
+	"""The menu is a song's menu, whose Play skips ahead to it; Alt+L copies the link."""
 	calls.answer("skip_to_queue_index", None)
 	window = QueueListDialog(None, client, QUEUE)
+	window.user_playlists = []
 	window.queueList.SetSelection(1)
 	window.on_queue_context_menu(None)
-	assert last_menu().labels() == ["Play", "Copy Link"]
+	assert last_menu().labels() == [
+		"Play",
+		"Copy Link",
+		"---",
+		"Save/Unsave Track",
+		"Add to Playlist >",
+		"---",
+		"Show Lyrics",
+		"Go to Artist: B",
+	]
 	choose(window, last_menu(), "Copy Link")
 	choose(window, last_menu(), "Play")
 	assert api.clipboard == ["https://x/t1"]
@@ -119,11 +139,11 @@ def test_refreshing_the_queue(client: SpotifyClient, calls: Calls, spoken: list[
 	window = QueueListDialog(None, client, QUEUE)
 	refresh = next(c for c in window.GetChildren() if isinstance(c, wx.Button) and c.GetLabel() == "&Refresh")
 	refresh.press()
-	assert window.queueList.GetStrings() == ["Playing: Now by A"]
+	assert window.queueList.GetStrings() == ["Playing: Now - A"]
 	assert spoken[-2:] == ["Refreshing queue...", "Queue updated."]
 	calls.answer("get_full_queue", "Spotify is not running.")
 	window.refresh_queue_data()
-	assert window.queueList.GetStrings() == ["Playing: Now by A"]
+	assert window.queueList.GetStrings() == ["Playing: Now - A"]
 	assert spoken[-1] == "Spotify is not running."
 	window._refresh_in_progress = True
 	window.refresh_queue_data()

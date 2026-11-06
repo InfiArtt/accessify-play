@@ -14,6 +14,7 @@ import wx
 
 from ..core.thread_manager import thread_manager
 from ..language import init_translation
+from ..rows import item_row
 from ..ui.base_dialog import AccessifyDialog
 from ..utils import copy_link
 
@@ -66,6 +67,7 @@ class QueueListDialog(AccessifyDialog):
 			{
 				"keyPlay": self.play_selected_queue_item,
 				"keyCopyLink": self.copy_selected_queue_link,
+				"keyLyrics": lambda _evt: self._show_lyrics_of(self._get_queue_selection()),
 				"keyRefresh": lambda _evt: self.refresh_queue_data(),
 			},
 			buttons={"keyRefresh": [self.refresh_button]},
@@ -82,31 +84,25 @@ class QueueListDialog(AccessifyDialog):
 			self.queueList.Append(_("Queue is empty."))
 			return
 		self.queue_items = queue_data
-		for item in self.queue_items:
-			prefix = _("Playing") if item["type"] == "currently_playing" else _("Queue")
-			# Translators: a row of the queue, e.g. "Queue: Yesterday by The Beatles".
-			display_text = _("{prefix}: {name} by {artists}").format(
-				prefix=prefix, name=item["name"], artists=item["artists"]
-			)
-			self.queueList.Append(display_text)
+		for entry in self.queue_items:
+			prefix = _("Playing") if entry["playing"] else _("Queue")
+			# Translators: a row of the queue, e.g. "Queue: Yesterday - The Beatles (2:05)".
+			self.queueList.Append(_("{prefix}: {row}").format(prefix=prefix, row=item_row(entry["item"])))
 		self.queueList.SetSelection(0)
 
 	def _get_queue_selection(self) -> Item | None:
+		"""Return the selected song or episode."""
 		selection = self.queueList.GetSelection()
 		if selection == wx.NOT_FOUND or not self.queue_items or selection >= len(self.queue_items):
 			return None
-		return self.queue_items[selection]
+		return self.queue_items[selection]["item"]
 
 	def on_queue_context_menu(self, _evt: wx.Event) -> None:
 		"""Show the actions for the selected queue item."""
 		item = self._get_queue_selection()
-		if not item:
-			return
-		menu = wx.Menu()
-		self._append_menu_item(menu, _("Play"), self.play_selected_queue_item)
-		self._append_menu_item(menu, _("Copy Link"), self.copy_selected_queue_link)
-		self.PopupMenu(menu)
-		menu.Destroy()
+		if item:
+			# Play skips ahead to it; the rest is what can be done with any song or episode.
+			self._show_item_menu(item)
 
 	def play_selected_queue_item(self, _evt: wx.Event | None = None) -> None:
 		"""Skip ahead to the selected queue item."""
@@ -132,7 +128,7 @@ class QueueListDialog(AccessifyDialog):
 		"""Copy the selected queue item's Spotify link."""
 		item = self._get_queue_selection()
 		if item:
-			copy_link(item.get("link"))
+			copy_link((item.get("external_urls") or {}).get("spotify"))
 
 	def refresh_queue_data(self) -> None:
 		"""Fetch the queue again in the background."""

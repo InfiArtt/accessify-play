@@ -93,6 +93,24 @@ class PagedList:
 		selection = self.control.GetSelection()
 		return self.items[selection] if 0 <= selection < len(self.items) else None
 
+	def remove(self, item: Item | None) -> None:
+		"""Take an item out of the list, as after removing it from the library; the cursor stays put.
+
+		Spotify's own list shrinks too, so the next page starts one item earlier.
+		"""
+		index = next((i for i, listed in enumerate(self.items) if listed is item), None)
+		if index is None or not self.control:
+			return
+		del self.items[index]
+		self.control.Delete(index)
+		self._offset -= 1
+		if self.items:
+			self.control.SetSelection(min(index, len(self.items) - 1))
+		elif self._has_more:
+			self.reload()
+		else:
+			self._show_only(self._empty)
+
 	def on_load_more_row(self) -> bool:
 		"""Return whether the Load More row is selected."""
 		count = self.control.GetCount()

@@ -752,41 +752,17 @@ class SpotifyClient:
 		return f"{description} {self._queue_autoplay_notice()}"
 
 	def get_full_queue(self) -> list[Item] | str:
-		"""Return what plays now and next, ready to list, or a message."""
+		"""Return what plays now and next, as {"playing": bool, "item": track or episode}, or a message."""
 		queue_data = self.run_request("queue")
 		if isinstance(queue_data, str):
 			return queue_data
 
-		full_queue = []
 		currently_playing = (queue_data or {}).get("currently_playing")
-		formatted_current = self._format_queue_item(currently_playing, entry_type="currently_playing")
-		if formatted_current:
-			full_queue.append(formatted_current)
-
-		# The filtered items are never empty, so each formats.
+		full_queue = [{"playing": True, "item": currently_playing}] if currently_playing else []
 		full_queue.extend(
-			self._format_queue_item(track, entry_type="queue_item")
-			for track in self._get_filtered_queue_items(queue_data)
+			{"playing": False, "item": item} for item in self._get_filtered_queue_items(queue_data)
 		)
-
 		return full_queue
-
-	def _format_queue_item(self, item: Item | None, entry_type: str) -> Item | None:
-		if not item:
-			return None
-		item_type = item.get("type")
-		if item_type == "episode":
-			artists = (item.get("show") or {}).get("name", "")
-		else:
-			artists = format_names(item.get("artists"))
-		return {
-			"type": entry_type,
-			"item_type": item_type,
-			"name": item.get("name"),
-			"artists": artists,
-			"uri": item.get("uri"),
-			"link": (item.get("external_urls") or {}).get("spotify"),
-		}
 
 	def get_current_songlink_url(self) -> str:
 		"""Generate a universal Odesli/Song.link URL for the current track."""

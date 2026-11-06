@@ -253,10 +253,9 @@ def test_nothing_to_act_on(client: SpotifyClient, ready: SpotifyServer, spoken: 
 	library = open_library(client)
 	sent = len(ready.requests)
 	library.FindFocus = lambda: None  # the focus is on none of the lists
-	library.on_view_chapters()
-	library.on_view_discography(None)
 	library.on_remove_from_library()
-	assert spoken[-3:] == ["Please select an item from the active tab first."] * 3
+	library._on_list_context_menu(None)
+	assert spoken[-2:] == ["Please select an item from the active tab first."] * 2
 	assert gui.message_boxes == []
 	library._tracks_loading = True
 	library.playlist_tracks_list.SetSelection(1)
@@ -297,11 +296,11 @@ def test_playing_a_playlist_track_that_cannot_play_in_order(
 	assert spoken[-1] == "Unable to play selection. URI not found."
 
 
-def test_menus_for_unusual_items(client: SpotifyClient, ready: SpotifyServer, spoken: list[str]) -> None:
-	"""Menus fit what the item is.
+def test_menus_for_unusual_items(client: SpotifyClient, ready: SpotifyServer) -> None:
+	"""Menus offer only what works.
 
-	An artist in Top Items offers its discography; a song without a URI cannot be played or queued;
-	an item of an unknown kind gets no menu; an album without artists has no artist to open.
+	An artist in Top Items can be followed; a local song, without an id or URI, offers only its
+	lyrics; an item of an unknown kind gets no menu; an album without a URI cannot be played.
 	"""
 	library = open_library(
 		client,
@@ -313,16 +312,15 @@ def test_menus_for_unusual_items(client: SpotifyClient, ready: SpotifyServer, sp
 	top = tab(library, "top_items")
 	assert top.GetStrings() == ["A", "?"]
 	top.fire(wx.EVT_CONTEXT_MENU)
-	assert last_menu().labels() == ["Play", "Add to Queue", "View Discography"]
+	assert last_menu().labels() == ["Play", "---", "View Discography", "Follow/Unfollow Artist"]
 	menus = len(wx.popped_menus)
 	top.SetSelection(1)
 	top.fire(wx.EVT_CONTEXT_MENU)
 	assert len(wx.popped_menus) == menus
 	tab(library, "saved_tracks").fire(wx.EVT_CONTEXT_MENU)
-	assert last_menu().labels()[0] == "Remove from Library"
-	tab(library, "saved_albums")
-	library.on_view_discography(None)
-	assert spoken[-1] == "Could not identify the artist for this item."
+	assert last_menu().labels() == ["Show Lyrics"]
+	tab(library, "saved_albums").fire(wx.EVT_CONTEXT_MENU)
+	assert last_menu().labels() == ["View Tracks", "Remove from Library", "Add Album to Playlist >"]
 
 
 def test_play_playlist(client: SpotifyClient, ready: SpotifyServer, spoken: list[str]) -> None:
@@ -582,8 +580,8 @@ ROWS = {
 	"followed_artists": ["A"],
 	"top_items": ["Song 2 - A", "A"],
 	"saved_shows": ["Pod - Pub"],
-	"saved_episodes": ["Ep - Pod - 2026-01-02", "Bare"],
-	"saved_audiobooks": ["Book - Au", "Loose - Pub", "Unknown Audiobook"],
+	"saved_episodes": ["Ep - Pod (2026-01-02)", "Bare"],
+	"saved_audiobooks": ["Book - Au", "Loose - Pub", "Unknown"],
 	"new_releases": ["LP - A"],
 	"recently_played": ["Song 3 - A"],
 }
@@ -665,6 +663,27 @@ def test_a_tab_that_fails_or_is_empty(client: SpotifyClient, ready: SpotifyServe
 	assert library.tabs_config["saved_tracks"]["control"].GetStrings() == ["No items found."]
 
 
+def test_switching_tabs(client: SpotifyClient, ready: SpotifyServer) -> None:
+	"""Ctrl+number, Ctrl+Tab and Ctrl+Shift+Tab switch tabs as in Search, with the focus in the tab's list."""
+	ready.routes["GET", "me/albums"] = {"items": [{"album": ALBUM}]}
+	ready.routes["GET", "me/following"] = {"artists": {"items": [ARTIST], "next": None}}
+	ready.routes["GET", "me/player/recently-played"] = {"items": []}
+	library = open_library(client)
+	accelerate(library, wx.ACCEL_CTRL, "3")
+	albums = library.tabs_config["saved_albums"]["control"]
+	assert library.notebook.GetSelection() == 2
+	assert albums.HasFocus()
+	assert albums.GetSelection() == 0
+	accelerate(library, wx.ACCEL_CTRL, wx.WXK_TAB)
+	assert library.tabs_config["followed_artists"]["control"].HasFocus()
+	accelerate(library, wx.ACCEL_CTRL, "1")
+	assert library.playlist_choices.HasFocus()
+	# Before the first tab comes the last, which has no number of its own.
+	accelerate(library, wx.ACCEL_CTRL | wx.ACCEL_SHIFT, wx.WXK_TAB)
+	assert library.notebook.GetSelection() == 9
+	assert library.tabs_config["recently_played"]["control"].HasFocus()
+
+
 def test_top_items_follow_the_choices(client: SpotifyClient, ready: SpotifyServer, spoken: list[str]) -> None:
 	"""Show and Time Range pick the top list; a late answer for an old choice is dropped."""
 	ready.routes["GET", "me/top/tracks"] = {"items": [track(4)]}
@@ -708,35 +727,67 @@ def test_top_items_open_on_the_period_from_the_settings(client: SpotifyClient, r
 				"Play",
 				"Add to Queue",
 				"Copy Link",
-				"Remove from Library",
 				"---",
+				"Remove from Library",
 				"Add to Playlist >",
 				"---",
 				"Show Lyrics",
 				"Go to Artist: A",
 			],
 		),
-		("saved_albums", ["Play", "Add to Queue", "Copy Link", "View Album Tracks", "Remove from Library"]),
-		("followed_artists", ["Play", "Add to Queue", "View Discography", "Unfollow"]),
-		("saved_shows", ["Play", "Add to Queue", "View Episodes", "Remove from Library"]),
-		("saved_episodes", ["Play", "Add to Queue", "View All Episodes of Pod", "Remove from Library"]),
-		("saved_audiobooks", ["Play", "Add to Queue", "View Chapters", "Remove from Library"]),
+		(
+			"saved_albums",
+			[
+				"Play",
+				"Add to Queue",
+				"Copy Link",
+				"---",
+				"View Tracks",
+				"Remove from Library",
+				"Add Album to Playlist >",
+				"---",
+				"Go to Artist: A",
+			],
+		),
+		("followed_artists", ["Play", "---", "View Discography", "Unfollow Artist"]),
+		("saved_shows", ["Play", "---", "View Episodes", "Remove from Library"]),
+		(
+			"saved_episodes",
+			["Play", "Add to Queue", "---", "View All Episodes of Pod", "Remove from Library"],
+		),
+		("saved_audiobooks", ["Play", "---", "View Chapters", "Remove from Library"]),
 		(
 			"new_releases",
 			[
 				"Play",
 				"Add to Queue",
 				"Copy Link",
-				"View Discography",
-				"View Album Tracks",
 				"---",
+				"View Tracks",
+				"Save/Unsave Album",
 				"Add Album to Playlist >",
+				"---",
+				"Go to Artist: A",
+			],
+		),
+		(
+			"recently_played",
+			[
+				"Play",
+				"Add to Queue",
+				"Copy Link",
+				"---",
+				"Save/Unsave Track",
+				"Add to Playlist >",
+				"---",
+				"Show Lyrics",
+				"Go to Artist: A",
 			],
 		),
 	],
 )
 def test_tab_menus(full: ManagementDialog, key: str, labels: list[str]) -> None:
-	"""Each tab's menu has its own actions next to play, queue and copy."""
+	"""Each tab's menu is the one its kind has everywhere; saved items offer Remove instead of Save."""
 	tab(full, key).fire(wx.EVT_CONTEXT_MENU)
 	assert last_menu().labels() == labels
 
@@ -760,7 +811,7 @@ def test_only_own_playlists_can_be_added_to(full: ManagementDialog, key: str, la
 			"Track 'Song 1' removed from your library.",
 		),
 		("saved_albums", "Remove from Library", "spotify:album:al1", "Album 'LP' removed from your library."),
-		("followed_artists", "Unfollow", "spotify:artist:ar1", "You have unfollowed A."),
+		("followed_artists", "Unfollow Artist", "spotify:artist:ar1", "You have unfollowed A."),
 		("saved_shows", "Remove from Library", "spotify:show:s1", "Show 'Pod' removed from your library."),
 		(
 			"saved_episodes",
@@ -785,11 +836,55 @@ def test_removing_from_the_library(
 	kind_uri: str,
 	said: str,
 ) -> None:
-	"""Remove asks, removes by URI, says so and reloads the tab."""
-	tab(full, key).fire(wx.EVT_CONTEXT_MENU)
+	"""Remove asks, removes by URI, says so and takes the row out of the tab."""
+	control = tab(full, key)
+	rows = control.GetStrings()
+	control.fire(wx.EVT_CONTEXT_MENU)
 	choose(full, last_menu(), label)
 	assert [r[2] for r in ready.requests if r[0] == "DELETE"] == [{"uris": kind_uri}]
 	assert spoken[-1] == said
+	assert control.GetStrings() == (rows[1:] or ["No items found."])
+
+
+def test_removing_keeps_the_place(client: SpotifyClient, ready: SpotifyServer) -> None:
+	"""The cursor stays on the row where the removed one was; Load More then asks one item earlier."""
+	ready.routes["GET", "me/tracks"] = {"items": [{"track": track(n)} for n in (1, 2, 3)], "next": "more"}
+	library = open_library(client)
+	library.notebook.SetSelection(1)
+	control = tab(library, "saved_tracks")
+	control.SetSelection(1)
+	library.on_remove_from_library()
+	assert control.GetStrings() == ["Song 1 - A", "Song 3 - A", "--- Load More ---"]
+	assert control.GetSelection() == 1
+	library.on_remove_from_library()
+	assert control.GetStrings() == ["Song 1 - A", "--- Load More ---"]
+	assert control.GetSelection() == 0
+	ready.routes["GET", "me/tracks"] = {"items": [{"track": track(4)}], "next": None}
+	library.tabs_config["saved_tracks"]["paged"].load_more()
+	assert ready.requests[-1][2]["offset"] == 1
+
+
+def test_removing_the_last_row_loads_what_follows(client: SpotifyClient, ready: SpotifyServer) -> None:
+	"""When the last row of the page goes and Spotify has more, the list loads again from the top."""
+	ready.routes["GET", "me/tracks"] = {"items": [{"track": track(1)}], "next": "more"}
+	library = open_library(client)
+	library.notebook.SetSelection(1)
+	control = tab(library, "saved_tracks")
+	ready.routes["GET", "me/tracks"] = {"items": [{"track": track(2)}], "next": None}
+	library.on_remove_from_library()
+	assert control.GetStrings() == ["Song 2 - A"]
+	assert ready.requests[-1][2]["offset"] == 0
+
+
+def test_a_removal_after_closing_or_reloading_changes_nothing(full: ManagementDialog) -> None:
+	"""A row that is no longer listed, or a closed window, is left alone."""
+	paged = full.tabs_config["saved_tracks"]["paged"]
+	rows = paged.control.GetStrings()
+	paged.remove({"track": track(1)})
+	assert paged.control.GetStrings() == rows
+	full.Destroy()
+	paged.remove(paged.items[0])
+	assert paged.items
 
 
 def test_removing_needs_a_yes(full: ManagementDialog, ready: SpotifyServer, spoken: list[str]) -> None:
@@ -817,31 +912,26 @@ def test_enter_opens_what_the_item_holds(full: ManagementDialog, ready: SpotifyS
 	assert ready.requests[-1][3] == {"uris": ["spotify:track:t1"]}
 
 
-def test_episode_menu_opens_its_show(full: ManagementDialog, opened: list, spoken: list[str]) -> None:
-	"""View All Episodes opens the episode's show; an episode without one says so."""
+def test_episode_menu_opens_its_show(full: ManagementDialog, opened: list) -> None:
+	"""View All Episodes opens the episode's show; an episode Spotify sent bare gets no menu."""
 	tab(full, "saved_episodes").fire(wx.EVT_CONTEXT_MENU)
 	choose(full, last_menu(), "View All Episodes of Pod")
 	assert opened == [("PodcastEpisodesDialog", ("s1", "Pod"))]
+	menus = len(wx.popped_menus)
 	tab(full, "saved_episodes").SetSelection(1)
-	full.on_view_episode_show()
-	assert spoken[-1] == "This episode's show is not available."
+	full._on_list_context_menu(None)
+	assert len(wx.popped_menus) == menus
 
 
-def test_opening_needs_the_right_item(full: ManagementDialog, opened: list, spoken: list[str]) -> None:
-	"""Album tracks need an album, episodes a show, discography an artist."""
-	tab(full, "saved_tracks")
-	full.on_view_album_tracks()
-	full.on_view_episodes(None)
-	full.on_view_discography(None)
-	assert spoken[-2:] == [
-		"Please select an album to view its tracks.",
-		"Please select a show to view episodes.",
+def test_enter_opens_new_releases_and_top_artists(full: ManagementDialog, opened: list) -> None:
+	"""Enter on a new album opens it, and on an artist in Top Items opens the artist, as everywhere."""
+	tab(full, "new_releases").fire(wx.EVT_CHAR_HOOK, wx.KeyEvent(wx.WXK_RETURN))
+	tab(full, "top_items").SetSelection(1)
+	full.tabs_config["top_items"]["control"].fire(wx.EVT_CHAR_HOOK, wx.KeyEvent(wx.WXK_RETURN))
+	assert opened == [
+		("AlbumTracksDialog", (ALBUM, [MINE])),
+		("ArtistDiscographyDialog", ("ar1", "A", [MINE])),
 	]
-	assert opened == [("ArtistDiscographyDialog", ("ar1", "A", [MINE]))]
-	tab(full, "saved_episodes")
-	full.on_view_discography(None)
-	assert spoken[-1] == "Could not identify the artist for this item."
-	assert len(opened) == 1
 
 
 def test_queue_copy_and_play_shortcuts(
@@ -859,7 +949,7 @@ def test_queue_copy_and_play_shortcuts(
 	assert spoken[-1] == "Queued 1 tracks from LP."
 	tab(full, "saved_episodes").SetSelection(1)
 	full._handle_add_to_queue()
-	assert spoken[-1] == "This item cannot be added to the queue."
+	assert spoken[-1] == "Could not get URI for selected item."
 
 
 def test_nothing_selected(full: ManagementDialog, spoken: list[str]) -> None:
@@ -872,6 +962,7 @@ def test_nothing_selected(full: ManagementDialog, spoken: list[str]) -> None:
 	assert spoken == ["Please select an item from the active tab first."] * 3
 	tab(full, "saved_tracks").SetSelection(wx.NOT_FOUND)
 	full._on_list_context_menu(None)
+	full.tabs_config["saved_tracks"]["control"].fire(wx.EVT_CHAR_HOOK, wx.KeyEvent(wx.WXK_RETURN))
 	full.tabs_config["saved_tracks"]["paged"].items = []
 	tab(full, "saved_tracks")
 	assert full._get_selected_item() is None

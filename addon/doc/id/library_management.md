@@ -1,6 +1,8 @@
 # Pustaka
 
-Buka Pustaka dengan `NVDA+Alt+G` lalu `M`. Jendelanya langsung terbuka, dan setiap tab memuat daftarnya saat pertama kali dibuka, sambil menampilkan "Loading...". Pindah tab dengan `Ctrl+Tab`.
+Buka Pustaka dengan `NVDA+Alt+G` lalu `M`. Jendelanya langsung terbuka, dan setiap tab memuat daftarnya saat pertama kali dibuka, sambil menampilkan "Loading...".
+
+Daftarnya bekerja seperti setiap daftar di Accessify Play: `Enter` memutar lagu atau episode dan membuka album, artis, podcast, atau buku audio, dan menu konteks berisi apa yang bisa dilakukan dengan item itu, dengan Remove from Library (atau Unfollow Artist) sebagai ganti Save/Unsave. Lihat [Daftar dan menu konteks](lists_guide.html).
 
 ## Pintasan
 
@@ -8,7 +10,10 @@ Pintasan ini berlaku di semua tab:
 
 | Pintasan | Fungsi |
 | :------- | :----- |
-| `Enter` | Tindakan utama untuk item (lihat tiap tab) |
+| `Enter` | Memutar lagu atau episode; membuka album, artis, podcast, atau buku audio |
+| `Ctrl+1` sampai `Ctrl+9` | Pindah ke tab itu, dengan fokus di daftarnya |
+| `Ctrl+Tab` atau `Ctrl+PageDown` | Tab berikutnya |
+| `Ctrl+Shift+Tab` atau `Ctrl+PageUp` | Tab sebelumnya |
 | `Alt+P` | Putar |
 | `Alt+Q` | Tambahkan ke antrean |
 | `Alt+L` | Salin tautan Spotify |
@@ -20,6 +25,8 @@ Pintasan ini berlaku di semua tab:
 Ini adalah tombol bawaan. Anda bisa mengubahnya, juga tombol di jendela lain: lihat [Mengubah perintah dan pintasan](customizing_commands.html).
 
 Daftar di setiap tab dimuat per halaman, sebanyak pengaturan Search Results Limit. Jika masih ada lagi, item terakhir adalah "Load More": tekan `Enter` padanya untuk menambahkan halaman berikutnya.
+
+Saat Anda menghapus sebuah item dari pustaka, barisnya hilang dan kursor tetap di tempatnya, pada item berikutnya.
 
 ## Tab
 
@@ -40,45 +47,45 @@ Di playlist milik Anda, Anda juga bisa menyusun ulang lagu:
 * `Alt+Panah Atas` dan `Alt+Panah Bawah` memindahkan lagu yang dipilih ke atas atau ke bawah.
 * `Delete` menghapus lagu yang dipilih, setelah bertanya kepada Anda. Jika lagu yang sama ada lebih dari sekali di playlist, hanya salinan yang Anda pilih yang dihapus.
 
-Menu konteks lagu juga berisi Remove Track from Playlist, Remove Duplicates, Show Lyrics, Go to Album, dan Go to Artist.
+Menu konteks lagu adalah menu lagu yang biasa; di playlist milik Anda, menu itu diakhiri dengan Remove Track from Playlist dan Remove Duplicates.
 
 **Membuat playlist:** tekan `Ctrl+N`, isi nama dan, jika mau, deskripsi, lalu pilih apakah playlist bersifat publik. Public playlist sudah dicentang, kecuali Anda mematikan **New playlists are public** di pengaturan. Playlist kolaboratif harus privat.
 
 ### Saved Tracks
 
-Lagu yang Anda sukai (Liked Songs). `Enter` memutar lagu. Menu konteks berisi Remove from Library, Add to Playlist, Show Lyrics, Go to Album, dan Go to Artist.
+Lagu yang Anda sukai (Liked Songs). `Enter` memutar lagu, lalu melanjutkan ke albumnya.
 
 ### Saved Albums
 
-`Enter` membuka lagu-lagu album. Menu konteks berisi View Album Tracks dan Remove from Library.
+`Enter` membuka lagu-lagu album.
 
 ### Followed Artists
 
-`Enter` membuka diskografi artis. Menu konteks berisi View Discography dan Unfollow.
+`Enter` membuka diskografi artis. Unfollow Artist di menu konteks berhenti mengikutinya.
 
 ### Top Items
 
-Lagu atau artis yang paling sering Anda putar. Pilih **Top Tracks** atau **Top Artists** di **Show**, dan Last 4 Weeks, Last 6 Months, atau All Time di **Time Range**; daftarnya diperbarui saat pilihan diubah. Tab ini dibuka pada Last 6 Months, atau periode yang dipilih di **Top Items in the Library opens on** pada pengaturan. `Enter` memutar item, dan untuk artis menu konteks berisi View Discography.
+Lagu atau artis yang paling sering Anda putar. Pilih **Top Tracks** atau **Top Artists** di **Show**, dan Last 4 Weeks, Last 6 Months, atau All Time di **Time Range**; daftarnya diperbarui saat pilihan diubah. Tab ini dibuka pada Last 6 Months, atau periode yang dipilih di **Top Items in the Library opens on** pada pengaturan. `Enter` memutar lagu, atau membuka diskografi artis.
 
 ### Saved Shows
 
-Podcast yang Anda ikuti. `Enter` membuka episode sebuah acara. Menu konteks berisi View Episodes dan Remove from Library.
+Podcast yang Anda ikuti. `Enter` membuka episode sebuah acara.
 
 ### Saved Episodes
 
-Episode yang Anda simpan untuk didengarkan nanti, beserta acaranya dan tanggal rilisnya. `Enter` memutar episode. Menu konteks berisi View All Episodes of (nama acara), yang membuka daftar lengkap episode podcast itu, dan Remove from Library.
+Episode yang Anda simpan untuk didengarkan nanti, beserta acaranya dan tanggal rilisnya. `Enter` memutar episode. View All Episodes of (nama acara), di menu konteks, membuka daftar lengkap episode podcast itu.
 
 ### Saved Audiobooks
 
-`Enter` membuka bab-bab sebuah buku. Menu konteks berisi View Chapters dan Remove from Library.
+`Enter` membuka bab-bab sebuah buku.
 
 ### New Releases
 
-Album dan single terbaru. `Enter` memutar album. Menu konteks berisi View Discography, View Album Tracks, dan Add Album to Playlist. Spotify sudah mengumumkan akan menghentikan New Releases; jika itu terjadi, tab ini akan memberitahukannya.
+Album dan single terbaru. `Enter` membuka lagu-lagu album, dan `Alt+P` memutarnya. Spotify sudah mengumumkan akan menghentikan New Releases; jika itu terjadi, tab ini akan memberitahukannya.
 
 ### Recently Played
 
-Yang baru saja Anda dengarkan. `Enter` memutar lagu. Menu konteks berisi Add to Playlist, Show Lyrics, Go to Album, dan Go to Artist.
+Yang baru saja Anda dengarkan. `Enter` memutar lagu, lalu melanjutkan ke albumnya.
 
 ## Menambahkan lagu yang sedang diputar ke playlist
 
