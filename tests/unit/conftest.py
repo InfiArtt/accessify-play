@@ -202,11 +202,30 @@ def last_menu() -> wx.Menu:
 	return wx.popped_menus[-1]
 
 
-def accelerate(window: wx.Window, flags: int, key: str) -> None:
-	"""Press a shortcut from the window's accelerator table, such as Alt+P."""
-	command = window.accelerators.command(flags, ord(key))
+def accelerate(window: wx.Window, flags: int, key: str | int) -> None:
+	"""Press a shortcut from the window's accelerator table: a letter such as "P", or a key code."""
+	command = window.accelerators.command(flags, key if isinstance(key, int) else ord(key))
 	for event, handler, source, id_ in window.bindings:
 		if event is wx.EVT_MENU and command in (id_, source):
 			handler(wx.CommandEvent(command, window))
 			return
 	raise LookupError(key)
+
+
+def record_windows(monkeypatch: pytest.MonkeyPatch, module: object, *names: str) -> list[tuple[str, tuple]]:
+	"""Replace the named window classes in module with stand-ins that only record being opened.
+
+	Returns the list they record into: (class name, arguments after parent and client).
+	"""
+	opened: list[tuple[str, tuple]] = []
+	for name in names:
+
+		class Window(wx.Dialog):
+			def __init__(
+				self, parent: wx.Window, *args: object, _name: str = name, **_kwargs: object
+			) -> None:
+				super().__init__(parent)
+				opened.append((_name, args[1:]))
+
+		monkeypatch.setattr(module, name, Window)
+	return opened

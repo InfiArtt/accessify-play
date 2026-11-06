@@ -219,7 +219,7 @@ class SearchDialog(AccessifyDialog):
 		self.current_type = self.search_types[self.typeBox.GetValue()]
 		self.next_offset = 0
 		self.can_load_more = False
-		self._search_generation = getattr(self, "_search_generation", 0) + 1
+		self._search_generation += 1
 		self._raw_results.clear()
 		self._rendered_items.clear()
 		self.resultsList.Clear()
@@ -251,18 +251,18 @@ class SearchDialog(AccessifyDialog):
 			return
 
 		index_to_focus = len(self._rendered_items)
-		generation = getattr(self, "_search_generation", 0)
+		generation = self._search_generation
 		thread_manager.submit_task(
 			self._search_thread, index_to_focus, generation, name="DialogTask", daemon=True
 		)
 
-	def _search_thread(self, index_to_focus: int, generation: int | None = None) -> None:
+	def _search_thread(self, index_to_focus: int, generation: int) -> None:
 		"""Fetch data from the Spotify client in a background thread."""
 		search_type = self.current_type
 		result_data = self.client.search(self.current_query, search_type, offset=self.next_offset)
 
 		# A newer search started while this one was waiting for Spotify.
-		if generation is not None and generation != getattr(self, "_search_generation", 0):
+		if generation != self._search_generation:
 			return
 
 		if isinstance(result_data, str):
@@ -286,9 +286,9 @@ class SearchDialog(AccessifyDialog):
 		wx.CallAfter(self._update_results_list, index_to_focus)
 
 	def _update_results_list(self, focus_index: int) -> None:
+		"""Show the results gathered so far, with a Load More row when there are more."""
 		if not self.resultsList:
 			return
-		"""Updates the ListBox with the latest results."""
 		self.resultsList.Clear()
 		self._rendered_items.clear()
 
@@ -307,10 +307,9 @@ class SearchDialog(AccessifyDialog):
 		if self.can_load_more:
 			self.resultsList.Append("--- {} ---".format(_("Load More")))
 
-		if self._rendered_items:
-			self.resultsList.SetSelection(focus_index)
-			self.resultsList.EnsureVisible(focus_index)
-			self.resultsList.SetFocus()
+		self.resultsList.SetSelection(focus_index)
+		self.resultsList.EnsureVisible(focus_index)
+		self.resultsList.SetFocus()
 
 	def _format_item_for_display(self, item: Item) -> str:
 		"""Create a readable string for an item to be shown in the ListBox."""
@@ -388,7 +387,6 @@ class SearchDialog(AccessifyDialog):
 		self._toggle_saved("audiobook", audiobook)
 
 	def _open_audiobook_chapters(self, audiobook: Item) -> None:
-
 		dialog = AudiobookChaptersDialog(self, self.client, audiobook["id"], audiobook.get("name"))
 		dialog.Show()
 

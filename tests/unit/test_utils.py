@@ -103,7 +103,7 @@ def test_copy_in_thread_reports_errors(spoken: list[str]) -> None:
 		("https://x", False, "Could not open clipboard."),
 	],
 )
-def test_copy_link(link: str | None, works: bool, message: str, spoken: list[str]) -> None:  # noqa: FBT001
+def test_copy_link(link: str | None, works: bool, message: str, spoken: list[str]) -> None:
 	"""copy_link says what happened."""
 	api.copy_works = works
 	utils.copy_link(link)

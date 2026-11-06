@@ -58,7 +58,7 @@ def test_retry_after_without_headers() -> None:
 	("value", "valid"),
 	[("d420a117a32841c2b3474932e49fb54b", True), ("short", False), ("", False), (None, False)],
 )
-def test_client_id_check(value: str | None, valid: bool) -> None:  # noqa: FBT001
+def test_client_id_check(value: str | None, valid: bool) -> None:
 	"""A client ID is 32 hexadecimal digits."""
 	assert sc.is_valid_client_id(value) is valid
 

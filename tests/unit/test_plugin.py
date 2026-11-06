@@ -373,7 +373,7 @@ def test_play_pause(
 	plugin: accesifyPlay.GlobalPlugin,
 	server: SpotifyServer,
 	spoken: list[str],
-	state: bool,  # noqa: FBT001
+	state: bool,
 	path: str,
 	said: str,
 ) -> None:
