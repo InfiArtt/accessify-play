@@ -7,7 +7,6 @@
 
 from __future__ import annotations
 
-import threading
 from typing import TYPE_CHECKING, NamedTuple
 
 import gui
@@ -29,7 +28,7 @@ if TYPE_CHECKING:
 	from collections.abc import Callable
 
 	from ..spotify_client import SpotifyClient
-	from ..spotify_types import Item
+	from ..spotify_types import Item, Reply
 
 init_translation()
 
@@ -344,67 +343,76 @@ class ManagementDialog(AccessifyDialog):
 			display_string = tab_cfg["formatter"](parsed_item)
 			tab_cfg["control"].Append(display_string)
 
-	def _load_data_thread(self, key: str, loader_func: Callable[..., object]) -> None:
-		data = loader_func()
-		if isinstance(data, str):
-			wx.CallAfter(ui.message, data)
-		wx.CallAfter(self._populate_generic_list, key, data)
+	def _load_list(
+		self,
+		key: str,
+		fetch: Callable[[], Reply | str],
+		initial_data: Item | list[Item] | None = None,
+		unwrap: Callable[[Item], list[Item]] | None = None,
+	) -> None:
+		"""Show a tab's list: initial_data when given, else fetched in the background.
+
+		unwrap picks the list out of an answer that wraps it in a page.
+		"""
+
+		def prepared(data: Reply | str) -> list[Item] | str:
+			return unwrap(data) if unwrap and isinstance(data, dict) else data
+
+		if initial_data is not None:
+			self._populate_generic_list(key, prepared(initial_data))
+			return
+
+		def _load() -> None:
+			data = prepared(fetch())
+			if isinstance(data, str):
+				wx.CallAfter(ui.message, data)
+			wx.CallAfter(self._populate_generic_list, key, data)
+
+		thread_manager.submit_task(_load, name=f"Load_{key}", daemon=True)
 
 	# --- Tab loaders ---
 
 	def load_saved_tracks(self, initial_data: list[Item] | None = None) -> None:
 		"""Show the saved tracks, fetching them unless they are given."""
-		if initial_data is not None:
-			self._populate_generic_list("saved_tracks", initial_data)
-		else:
-			threading.Thread(
-				target=lambda: self._load_data_thread("saved_tracks", self.client.get_saved_tracks)
-			).start()
+		self._load_list("saved_tracks", self.client.get_saved_tracks, initial_data)
 
 	def load_saved_albums(self, initial_data: list[Item] | None = None) -> None:
 		"""Show the saved albums, fetching them unless they are given."""
-		if initial_data is not None:
-			self._populate_generic_list("saved_albums", initial_data)
-		else:
-			threading.Thread(
-				target=lambda: self._load_data_thread("saved_albums", self.client.get_saved_albums)
-			).start()
+		self._load_list("saved_albums", self.client.get_saved_albums, initial_data)
 
 	def load_followed_artists(self, initial_data: list[Item] | None = None) -> None:
 		"""Show the followed artists, fetching them unless they are given."""
-		if initial_data is not None:
-			self._populate_generic_list("followed_artists", initial_data)
-		else:
-			threading.Thread(
-				target=lambda: self._load_data_thread("followed_artists", self.client.get_followed_artists)
-			).start()
+		self._load_list("followed_artists", self.client.get_followed_artists, initial_data)
 
 	def load_saved_shows(self, initial_data: list[Item] | None = None) -> None:
 		"""Show the saved shows, fetching them unless they are given."""
-		if initial_data is not None:
-			self._populate_generic_list("saved_shows", initial_data)
-		else:
-			threading.Thread(
-				target=lambda: self._load_data_thread("saved_shows", self.client.get_saved_shows)
-			).start()
+		self._load_list("saved_shows", self.client.get_saved_shows, initial_data)
 
 	def load_saved_episodes(self, initial_data: list[Item] | None = None) -> None:
 		"""Show the saved episodes, fetching them unless they are given."""
-		if initial_data is not None:
-			self._populate_generic_list("saved_episodes", initial_data)
-		else:
-			threading.Thread(
-				target=lambda: self._load_data_thread("saved_episodes", self.client.get_saved_episodes)
-			).start()
+		self._load_list("saved_episodes", self.client.get_saved_episodes, initial_data)
 
 	def load_saved_audiobooks(self, initial_data: list[Item] | None = None) -> None:
 		"""Show the saved audiobooks, fetching them unless they are given."""
-		if initial_data is not None:
-			self._populate_generic_list("saved_audiobooks", initial_data)
-		else:
-			threading.Thread(
-				target=lambda: self._load_data_thread("saved_audiobooks", self.client.get_saved_audiobooks)
-			).start()
+		self._load_list("saved_audiobooks", self.client.get_saved_audiobooks, initial_data)
+
+	def load_new_releases(self, initial_data: Item | list[Item] | None = None) -> None:
+		"""Show the new releases, fetching them unless they are given."""
+		self._load_list(
+			"new_releases",
+			self.client.get_new_releases,
+			initial_data,
+			unwrap=lambda page: page.get("albums", {}).get("items", []),
+		)
+
+	def load_recently_played(self, initial_data: Item | list[Item] | None = None) -> None:
+		"""Show the recently played tracks, fetching them unless they are given."""
+		self._load_list(
+			"recently_played",
+			self.client.get_recently_played,
+			initial_data,
+			unwrap=lambda page: page.get("items", []),
+		)
 
 	def _format_saved_episode(self, episode: Item) -> str:
 		name = safe_text(episode.get("name"), _("Unknown Episode"))
@@ -429,34 +437,6 @@ class ManagementDialog(AccessifyDialog):
 			self, self.client, audiobook["id"], safe_text(audiobook.get("name"), _("Audiobook"))
 		)
 		dialog.Show()
-
-	def load_new_releases(self, initial_data: Item | list[Item] | None = None) -> None:
-		"""Show the new releases, fetching them unless they are given."""
-		if initial_data is not None:
-			if isinstance(initial_data, dict):
-				initial_data = initial_data.get("albums", {}).get("items", [])
-			self._populate_generic_list("new_releases", initial_data)
-		else:
-
-			def loader() -> list[Item] | str:
-				data = self.client.get_new_releases()
-				return data.get("albums", {}).get("items", []) if isinstance(data, dict) else data
-
-			threading.Thread(target=lambda: self._load_data_thread("new_releases", loader)).start()
-
-	def load_recently_played(self, initial_data: Item | list[Item] | None = None) -> None:
-		"""Show the recently played tracks, fetching them unless they are given."""
-		if initial_data is not None:
-			if isinstance(initial_data, dict):
-				initial_data = initial_data.get("items", [])
-			self._populate_generic_list("recently_played", initial_data)
-		else:
-
-			def loader() -> list[Item] | str:
-				data = self.client.get_recently_played()
-				return data.get("items", []) if isinstance(data, dict) else data
-
-			threading.Thread(target=lambda: self._load_data_thread("recently_played", loader)).start()
 
 	def init_manage_playlists_tab(self) -> None:
 		"""Build the Manage Playlists tab."""

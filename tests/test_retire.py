@@ -141,6 +141,7 @@ class FakeList:
     def Clear(self): self.rows = []
     def Append(self, t): self.rows.append(t)
 dlg = mg.ManagementDialog.__new__(mg.ManagementDialog)
+dlg.client = types.SimpleNamespace(get_new_releases=None, get_recently_played=None)
 for key in ("new_releases", "recently_played", "top_items", "saved_tracks"):
     setattr(dlg, f"_{key}_ctrl", FakeList())
 dlg.tabs_config = {k: {"control": getattr(dlg, f"_{k}_ctrl"), "data_attr": k, "item_parser": lambda i: i,
