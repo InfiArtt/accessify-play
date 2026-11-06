@@ -81,20 +81,37 @@ def test_search_is_the_fallback(lrclib: Lrclib) -> None:
 	assert lrclib.requests[-1] == ("search", {"q": "Artist Song"})
 
 
-@pytest.mark.parametrize(
-	"answer",
-	[
-		Response([]),
-		Response({"oops": 1}),
-		Response(ValueError("bad json")),
-		requests.ConnectionError("offline"),
-	],
-)
+@pytest.mark.parametrize("answer", [Response([]), Response({"oops": 1})])
 def test_nothing_found(lrclib: Lrclib, answer: object) -> None:
-	"""No results, an odd answer, broken JSON or no connection all mean no lyrics."""
+	"""No results, or an odd answer, means lrclib has no lyrics: an empty record."""
 	lrclib.answers["get"] = Response({"plainLyrics": "", "syncedLyrics": ""})
 	lrclib.answers["search"] = answer
+	assert lyrics.fetch_lyrics("Song", "Artist", "Album", 1000) == {}
+
+
+@pytest.mark.parametrize("answer", [Response(ValueError("bad json")), requests.ConnectionError("offline")])
+def test_lrclib_unreachable(lrclib: Lrclib, answer: object) -> None:
+	"""Broken JSON or no connection means lrclib could not be asked: None."""
+	lrclib.answers["get"] = answer
+	lrclib.answers["search"] = answer
 	assert lyrics.fetch_lyrics("Song", "Artist", "Album", 1000) is None
+
+
+def test_lyrics_for_a_spotify_track(lrclib: Lrclib) -> None:
+	"""A Spotify track's names are looked up, and its timed lines parsed."""
+	lrclib.answers["get"] = Response({"plainLyrics": "words", "syncedLyrics": "[00:01.00]words"})
+	track = {"name": "Song", "artists": [{"name": "A"}], "album": {"name": "LP"}, "duration_ms": 2000}
+	assert lyrics.lyrics_for_track(track) == lyrics.Lyrics("Song", "A", "words", [(1000, "words")])
+	assert lrclib.requests[0][1]["album_name"] == "LP"
+
+
+def test_lyrics_for_a_track_without_lyrics(lrclib: Lrclib) -> None:
+	"""No lyrics gives a Lyrics without lines; no lrclib gives None; missing fields are fine."""
+	lrclib.answers["get"] = Response(None, status=404)
+	lrclib.answers["search"] = Response([])
+	assert lyrics.lyrics_for_track({"artists": [None]}) == lyrics.Lyrics("", "", None, None)
+	lrclib.answers["search"] = requests.ConnectionError()
+	assert lyrics.lyrics_for_track({"name": "Song"}) is None
 
 
 def test_user_agent_names_the_add_on_version(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -152,7 +169,7 @@ def timers(monkeypatch: pytest.MonkeyPatch) -> list[Timer]:
 	return Timer.made
 
 
-SONG = "[00:01.00]One\n[00:05.00]Two\n[00:10.00]Three"
+SONG = lyrics.parse_lrc("[00:01.00]One\n[00:05.00]Two\n[00:10.00]Three")
 
 
 def test_reader_schedules_the_remaining_lines(timers: list[Timer], spoken: list[str]) -> None:
@@ -172,7 +189,8 @@ def test_reader_with_nothing_left(timers: list[Timer]) -> None:
 	"""A song that is over, or no lyrics at all, schedules nothing."""
 	reader = lyrics.LyricsAutoReader()
 	assert reader.start(SONG, progress_ms=60_000) is False
-	assert reader.start("", progress_ms=0) is False
+	assert reader.start([], progress_ms=0) is False
+	assert reader.start(None, progress_ms=0) is False
 	assert timers == []
 
 

@@ -28,7 +28,6 @@ if TYPE_CHECKING:
 	from collections.abc import Callable
 
 	from . import GlobalPlugin
-	from .spotify_types import Item
 
 init_translation()
 
@@ -49,7 +48,7 @@ def _set_capture_func(func: Callable[..., object]) -> None:
 class LayerHelpDialog(AccessifyDialog):
 	"""Simple read-only dialog to list available layered commands."""
 
-	def __init__(self, parent: wx.Window, entries: list[Item]) -> None:
+	def __init__(self, parent: wx.Window, entries: list[tuple[str, str]]) -> None:
 		super().__init__(
 			parent,
 			title=_("Accessify Play command layer"),

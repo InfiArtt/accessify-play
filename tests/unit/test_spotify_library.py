@@ -391,7 +391,7 @@ def test_current_user_id_is_cached(client: SpotifyClient, server: SpotifyServer)
 		),
 	],
 )
-def test_link_details(  # noqa: PLR0913, PLR0917 - one parameter per column of the table
+def test_link_details(
 	client: SpotifyClient, server: SpotifyServer, link: str, route: str, data: dict, label: str, line: str
 ) -> None:
 	"""Each kind of link is looked up and described line by line."""

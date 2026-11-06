@@ -9,7 +9,8 @@ from __future__ import annotations
 
 
 class InputGesture:
-	def __init__(self, identifier: str = "kb:a") -> None:
+	def __init__(self, identifier: str = "kb:a", *, isModifier: bool = False) -> None:
+		self.isModifier = isModifier
 		self.identifiers = [identifier]
 		self.normalizedIdentifiers = [normalizeGestureIdentifier(identifier)]
 		self.displayName = identifier.split(":", 1)[-1]

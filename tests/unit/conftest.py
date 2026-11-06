@@ -175,3 +175,38 @@ def client(server: SpotifyServer) -> spotify_client.SpotifyClient:
 def spotify_error(status: int, reason: str | None = None, headers: dict | None = None) -> SpotifyException:
 	"""Return the exception spotipy raises for an error answer."""
 	return SpotifyException(status, -1, f"error {status}", reason=reason, headers=headers)
+
+
+def choose(window: wx.Window, menu: wx.Menu, label: str) -> None:
+	"""Choose a popup menu item by its text, as the user would.
+
+	The handler is looked up the way wx finds it: bound to the item itself, to
+	its id, or else a window-wide menu handler.
+	"""
+	item = menu.find(label)
+	owners = (item.menu, window)
+	for exact in (True, False):
+		for owner in owners:
+			for event, handler, source, id_ in owner.bindings:
+				if event is not wx.EVT_MENU:
+					continue
+				matches = source is item or item.id in (id_, source)
+				if matches if exact else (source is None and id_ == wx.ID_ANY):
+					handler(wx.CommandEvent(item.id, window))
+					return
+	raise LookupError(label)
+
+
+def last_menu() -> wx.Menu:
+	"""Return the menu popped up most recently."""
+	return wx.popped_menus[-1]
+
+
+def accelerate(window: wx.Window, flags: int, key: str) -> None:
+	"""Press a shortcut from the window's accelerator table, such as Alt+P."""
+	command = window.accelerators.command(flags, ord(key))
+	for event, handler, source, id_ in window.bindings:
+		if event is wx.EVT_MENU and command in (id_, source):
+			handler(wx.CommandEvent(command, window))
+			return
+	raise LookupError(key)

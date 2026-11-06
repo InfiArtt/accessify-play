@@ -39,6 +39,13 @@ MOD_NONE, MOD_ALT, MOD_CONTROL, MOD_SHIFT = 0, 1, 2, 4
 _ids = itertools.count(10000)
 
 
+def __getattr__(name: str) -> int:
+	# Style and flag constants the add-on uses but the tests do not care about.
+	if name.isupper():
+		return 0
+	raise AttributeError(name)
+
+
 class _EventType:
 	def __init__(self, name: str) -> None:
 		self.name = name
@@ -258,10 +265,13 @@ class Window:
 		return [b[1] for b in self.bindings if b[0] is event]
 
 	def fire(self, event: _EventType, evt: Event | None = None) -> Event:
-		"""Call every handler bound to event on this window, as wx would."""
+		"""Handle event as wx does: the handler bound last runs first, the next only after Skip()."""
 		evt = evt or CommandEvent(self.id, self)
-		for handler in self.handlers(event):
+		for handler in reversed(self.handlers(event)):
+			evt.skipped = False
 			handler(evt)
+			if not evt.skipped:
+				break
 		return evt
 
 	# Tree
@@ -319,12 +329,8 @@ class Window:
 		return True
 
 	def Close(self, force: bool = False) -> bool:
-		handlers = self.handlers(EVT_CLOSE)
-		if handlers:
-			event = CloseEvent(self, can_veto=not force)
-			for handler in handlers:
-				handler(event)
-			return not event.vetoed
+		if self.handlers(EVT_CLOSE):
+			return not self.fire(EVT_CLOSE, CloseEvent(self, can_veto=not force)).vetoed
 		self.Destroy()
 		return True
 

@@ -16,13 +16,14 @@ from logHandler import log
 
 from ..core.thread_manager import thread_manager
 from ..language import init_translation
-from ..lyrics import Lyrics, fetch_lyrics, parse_lrc
+from ..lyrics import lyrics_for_track
 from ..utils import safe_text
 
 if TYPE_CHECKING:
 	from collections.abc import Callable
 
-	from ..spotify_types import Item, TimedLines
+	from ..lyrics import Lyrics
+	from ..spotify_types import Item
 
 init_translation()
 
@@ -253,10 +254,7 @@ class AccessifyDialog(wx.Dialog):
 			return
 		track_name = safe_text(track.get("name"), "")
 		artists = track.get("artists") or []
-		artist_name = safe_text((artists[0] if artists else {}).get("name"), "")
-		album_name = safe_text((track.get("album") or {}).get("name"), "")
-		duration_ms = track.get("duration_ms") or 0
-		if not track_name or not artist_name:
+		if not track_name or not safe_text((artists[0] if artists else {}).get("name"), ""):
 			ui.message(_("Not enough information about this track to look up its lyrics."))
 			return
 
@@ -265,38 +263,27 @@ class AccessifyDialog(wx.Dialog):
 
 		def _fetch() -> None:
 			try:
-				result = fetch_lyrics(track_name, artist_name, album_name, duration_ms)
+				lyrics = lyrics_for_track(track)
 			except Exception:
 				log.exception("AccessifyPlay: lyrics preview fetch failed.")
-				result = None
+				lyrics = None
 			finally:
 				self._lyrics_loading = False
-			if result is None:
+			if lyrics is None:
 				wx.CallAfter(ui.message, _("Could not load lyrics. Please check your internet connection."))
-				return
-			plain = result.get("plainLyrics")
-			synced = result.get("syncedLyrics")
-			if not plain and not synced:
+			elif not lyrics.plain and not lyrics.synced:
 				wx.CallAfter(ui.message, _("No lyrics found for {track}.").format(track=track_name))
-				return
-			wx.CallAfter(
-				self._open_lyrics_preview,
-				track_name,
-				artist_name,
-				plain,
-				parse_lrc(synced) if synced else None,
-			)
+			else:
+				wx.CallAfter(self._open_lyrics_preview, lyrics)
 
 		thread_manager.submit_task(_fetch, name="LyricsPreviewTask")
 
-	def _open_lyrics_preview(
-		self, track_name: str, artist_name: str, plain: str | None, synced_lines: TimedLines | None
-	) -> None:
+	def _open_lyrics_preview(self, lyrics: Lyrics) -> None:
 		from ..dialogs.lyrics_window import LyricsDialog  # noqa: PLC0415 - circular import
 
-		dialog = LyricsDialog(self, Lyrics(track_name, artist_name, plain, synced_lines))
+		dialog = LyricsDialog(self, lyrics)
 		dialog.Show()
-		ui.message(_("Lyrics for {track} opened.").format(track=track_name))
+		ui.message(_("Lyrics for {track} opened.").format(track=lyrics.track))
 
 	def _append_menu_item(self, menu: wx.Menu, label: str, handler: Callable[[wx.Event], object]) -> None:
 		"""Add an item to a popup menu; choosing it calls handler(event)."""

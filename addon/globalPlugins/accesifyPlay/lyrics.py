@@ -48,20 +48,32 @@ LATE_LINE_TOLERANCE_MS = 200
 def fetch_lyrics(track_name: str, artist_name: str, album_name: str, duration_ms: int) -> Item | None:
 	"""Fetch lyrics from lrclib.net for a given track.
 
-	Tries an exact match first (artist + track + album + duration).
-	Falls back to a fuzzy keyword search if the exact match returns nothing.
-
-	Returns a dict with at least 'plainLyrics' and 'syncedLyrics' keys
-	(either value may be None/empty), or None if the API is unreachable.
+	Tries an exact match first (artist + track + album + duration), then a
+	keyword search. Returns lrclib's record, with 'plainLyrics' and
+	'syncedLyrics' (either may be empty); an empty dict when lrclib has no
+	lyrics for the track; or None when lrclib could not be reached.
 	"""
 	duration_s = max(1, int(duration_ms / 1000))
 
 	result = _fetch_exact(track_name, artist_name, album_name, duration_s)
 	if isinstance(result, dict) and (result.get("plainLyrics") or result.get("syncedLyrics")):
 		return result
-
-	# Fuzzy search fallback
 	return _fetch_search(track_name, artist_name)
+
+
+def lyrics_for_track(track: Item) -> Lyrics | None:
+	"""Return a Spotify track's lyrics, or None when lrclib could not be reached.
+
+	A track lrclib has no lyrics for gets a Lyrics without plain or timed lines.
+	"""
+	name = track.get("name") or ""
+	artist = ((track.get("artists") or [{}])[0] or {}).get("name") or ""
+	album = (track.get("album") or {}).get("name") or ""
+	record = fetch_lyrics(name, artist, album, track.get("duration_ms") or 0)
+	if record is None:
+		return None
+	synced = record.get("syncedLyrics")
+	return Lyrics(name, artist, record.get("plainLyrics") or None, parse_lrc(synced) if synced else None)
 
 
 def _fetch_exact(track_name: str, artist_name: str, album_name: str, duration_s: int) -> Reply:
@@ -77,11 +89,11 @@ def _fetch_exact(track_name: str, artist_name: str, album_name: str, duration_s:
 
 
 def _fetch_search(track_name: str, artist_name: str) -> Item | None:
-	"""Fuzzy search: returns the first result or None."""
+	"""Fuzzy search: the first result, {} when there is none, or None when lrclib is unreachable."""
 	result = _make_request("search", {"q": f"{artist_name} {track_name}"})
-	if isinstance(result, list) and result:
-		return result[0]
-	return None
+	if result is None:
+		return None
+	return result[0] if isinstance(result, list) and result else {}
 
 
 @functools.cache
@@ -187,14 +199,13 @@ class LyricsAutoReader:
 		"""Return whether lyrics are being read along with the song."""
 		return self._active
 
-	def start(self, synced_lyrics: str | None, progress_ms: int) -> bool:
+	def start(self, lines: TimedLines | None, progress_ms: int) -> bool:
 		"""Cancel any existing timers and schedule all upcoming lyric lines.
 
 		Returns True if at least one line was scheduled, False otherwise
-		(e.g. the song is already over or synced_lyrics is empty/None).
+		(e.g. the song is already over, or there are no lines).
 		"""
 		self._cancel_timers()
-		lines = parse_lrc(synced_lyrics)
 		if not lines:
 			return False
 
@@ -228,7 +239,7 @@ class LyricsAutoReader:
 		"""
 		self._cancel_timers()
 
-	def resync(self, synced_lyrics: str | None, progress_ms: int) -> None:
+	def resync(self, lines: TimedLines | None, progress_ms: int) -> None:
 		"""Re-schedule timers from a new playback position.
 
 		Call this after a seek or pause/resume to correct drift.
@@ -236,7 +247,7 @@ class LyricsAutoReader:
 		"""
 		if not self._active:
 			return
-		self.start(synced_lyrics, progress_ms)
+		self.start(lines, progress_ms)
 
 	def set_line_callback(self, callback: Callable[[int], object] | None) -> None:
 		"""Set a callable to call with the timestamp (ms) of each line as it is spoken.
