@@ -33,15 +33,11 @@ addon_info = AddonInfo(
 		"""Accessify Play provides comprehensive NVDA control for Spotify playback on any Connect-enabled device. A Spotify Premium subscription is required for full functionality."""
 	),
 	# version
-	addon_version="2026.11.1",
+	addon_version="2026.11.2",
 	# Brief changelog for this version
 	# Translators: what's new content for the add-on version to be shown in the add-on store
 	addon_changelog=_("""
-- Every list works the same way: one context menu per kind of item, the same Enter, the same rows ("Song - Artist (3:21)"), and the same tab keys in Search, the artist window and the Library.
-- Every shortcut inside the windows can be changed (Window Shortcuts... in the settings), and there are new settings for the sleep timer, queueing, Top Items and Search.
-- Long lists, the Library's tabs included, load a page at a time with Load More.
-- Playing from a window now says why when Spotify refuses.
-- Fixed: the artist window could stay empty; the Library offered other people's playlists to add to; Show Queue failed while nothing played; and more, listed in the changelog.
+- Fixed: signing in failed with "redirect_uri: Not matching configuration". The shared Client ID's sign-in address changed, and Accessify Play now uses the new one.
 	"""),
 	# Authors
 	addon_author="Rafli I .<rafli08523717409@gmail.com>, Rexya <rexya2017@gmail.com>",

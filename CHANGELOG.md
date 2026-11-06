@@ -1,6 +1,12 @@
 # Changelog
 
-## Unreleased
+## Version 2026.11.2
+
+Changes since 2026.11.1.
+
+### 🐛 Fixed
+
+- **Signing in failed with "redirect_uri: Not matching configuration"**: the shared Client ID belongs to ncspot, which changed the sign-in address registered on it, so Spotify refused every sign-in. Accessify Play now uses the new address. Signing in with your own Client ID is unchanged.
 
 ### 🧹 Under the hood
 
