@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import config
 import pytest
 import wx
 from accesifyPlay.dialogs.album import AlbumTracksDialog
@@ -103,6 +104,17 @@ def test_queue_a_whole_album(dialog: AccessifyDialog, server: SpotifyServer, spo
 		assert spoken[-1].startswith(said)
 	dialog._queue_add_context("", "album", "LP")
 	assert spoken[-1] == "Unable to add LP to queue."
+
+
+def test_queueing_stops_at_the_limit(
+	dialog: AccessifyDialog, server: SpotifyServer, spoken: list[str]
+) -> None:
+	"""A long album or playlist is queued up to queueTrackLimit tracks, a request each, and says so."""
+	config.conf["spotify"]["queueTrackLimit"] = 2
+	server.routes["GET", "albums/al1/tracks"] = {"items": [{"uri": f"spotify:track:{n}"} for n in range(5)]}
+	dialog._queue_add_context("spotify:album:al1", "album", "LP")
+	assert spoken[-1] == "Queued the first 2 of 5 tracks from LP."
+	assert len(server.paths("POST")) == 2
 
 
 def test_queue_album_problems(dialog: AccessifyDialog, server: SpotifyServer, spoken: list[str]) -> None:

@@ -8,10 +8,9 @@
 from __future__ import annotations
 
 from functools import wraps
-from typing import TYPE_CHECKING, Literal, ParamSpec, TypeVar
+from typing import TYPE_CHECKING, Literal, ParamSpec
 
 import api
-import config
 import ui
 import wx
 from logHandler import log
@@ -26,11 +25,7 @@ if TYPE_CHECKING:
 
 init_translation()
 
-#: The shortest keep-alive interval, in seconds; 0 turns keep-alive off.
-KEEP_ALIVE_MIN_SECONDS = 5
-
 P = ParamSpec("P")
-T = TypeVar("T")
 
 
 def run_in_thread(func: Callable[P, object]) -> Callable[P, None]:
@@ -121,21 +116,10 @@ def copy_link(link: str) -> None:
 		ui.message(_("Could not open clipboard."))
 
 
-def conf_get(key: str, default: T | None = None) -> T | None:
-	"""Read one of our settings without ever raising.
-
-	A missing key means the config spec has not been applied to the section.
-	Reading it directly then raises KeyError, and in a settings panel that
-	aborts makeSettings halfway, leaving a half-built panel that corrupts
-	NVDA's whole settings dialog. Falling back to the default degrades one
-	control instead.
-	"""
-	try:
-		value = config.conf["spotify"][key]
-	except Exception:
-		log.debug("AccessifyPlay: setting %r unavailable, using %r.", key, default, exc_info=True)
-		return default
-	return default if value is None else value
+def playlist_with_owner(name: str, owner: str) -> str:
+	"""Return a playlist's row in a list: its name and who made it."""
+	# Translators: a playlist in a list, with who made it, e.g. "Chill Mix - by Spotify".
+	return _("{name} - by {owner}").format(name=name, owner=owner)
 
 
 def safe_text(value: object, fallback: str) -> str:

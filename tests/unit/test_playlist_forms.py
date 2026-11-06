@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import config
 import pytest
 import wx
 from accesifyPlay.dialogs.playlist_forms import (
@@ -62,6 +63,13 @@ def test_create_a_playlist(client: SpotifyClient, server: SpotifyServer, spoken:
 	assert spoken[-1] == "Playlist 'Road trip' created successfully."
 	assert parent.reloads == 1
 	assert form.destroyed
+
+
+def test_new_playlists_are_public_as_set(client: SpotifyClient) -> None:
+	"""Public playlist starts checked or not, as the newPlaylistPublic setting says."""
+	assert CreatePlaylistDialog(None, client).publicCheck.GetValue() is True
+	config.conf["spotify"]["newPlaylistPublic"] = False
+	assert CreatePlaylistDialog(None, client).publicCheck.GetValue() is False
 
 
 def test_create_checks_the_form(client: SpotifyClient, server: SpotifyServer, spoken: list[str]) -> None:

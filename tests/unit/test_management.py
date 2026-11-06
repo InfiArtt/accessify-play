@@ -10,6 +10,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import api
+import config
 import gui
 import pytest
 import wx
@@ -205,8 +206,13 @@ def test_track_problems(client: SpotifyClient, ready: SpotifyServer, spoken: lis
 	"""A failed or empty playlist shows that; a late answer for a playlist left behind is dropped."""
 	ready.routes["GET", "playlists/p1/items"] = spotify_error(404)
 	library = open_library(client)
-	assert library.playlist_tracks_list.GetStrings() == []
+	# Said, and shown in the list where the tracks would be.
 	assert "could not find" in spoken[-1]
+	assert library.playlist_tracks_list.GetStrings() == [spoken[-1]]
+	library.playlist_tracks_list.SetFocus()
+	library.playlist_tracks_list.SetSelection(0)
+	library.on_remove_track_from_playlist()
+	assert gui.message_boxes == []
 	ready.routes["GET", "playlists/p1/items"] = entries()
 	library.refresh_current_playlist()
 	assert library.playlist_tracks_list.GetStrings() == ["This playlist is empty."]
@@ -554,6 +560,16 @@ def test_top_items_follow_the_choices(client: SpotifyClient, ready: SpotifyServe
 	assert control.GetStrings() == [spoken[-1]]
 	library._finish_top_items([track(5)], token=0)
 	assert control.GetStrings() == [spoken[-1]]
+
+
+def test_top_items_open_on_the_period_from_the_settings(client: SpotifyClient, ready: SpotifyServer) -> None:
+	"""Top Items starts on the topItemsTimeRange setting."""
+	config.conf["spotify"]["topItemsTimeRange"] = "short_term"
+	ready.routes["GET", "me/top/tracks"] = {"items": [track(4)]}
+	library = open_library(client)
+	assert library.time_range_box.GetValue() == "Last 4 Weeks"
+	library.notebook.SetSelection(4)
+	assert ready.requests[-1][2]["time_range"] == "short_term"
 
 
 @pytest.mark.parametrize(

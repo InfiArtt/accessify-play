@@ -116,7 +116,8 @@ def test_category_playlists(client: SpotifyClient, server: SpotifyServer) -> Non
 	window = categories.CategoryPlaylistsDialog(None, client, {"id": "c1", "name": "Pop"})
 	assert window.GetTitle() == "Pop Playlists"
 	assert rows(window.playlistsList) == [["Hits", "Spotify"], ["Unknown", "Spotify"]]
-	assert server.requests[-1][2]["offset"] == 0
+	# Pages as big as the Search Results Limit, like every other list.
+	assert (server.requests[-1][2]["offset"], server.requests[-1][2]["limit"]) == (0, 20)
 
 
 def test_featured_playlists(

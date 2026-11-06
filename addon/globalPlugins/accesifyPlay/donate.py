@@ -17,6 +17,8 @@ from .language import init_translation
 
 init_translation()
 
+DONATE_URL = "https://www.paypal.com/paypalme/rafli23115"
+
 
 def open_donate_link() -> None:
 	"""Open the PayPal donation link in the default web browser."""
@@ -30,17 +32,14 @@ def open_donate_link() -> None:
 			)
 			== wx.OK
 		):
-			webbrowser.open("https://www.paypal.com/paypalme/rafli23115")
+			webbrowser.open(DONATE_URL)
 	except Exception:
 		# Fallback message if the browser fails to open. The raw exception goes
 		# to the log; the user gets the address so they can open it themselves.
 		log.exception("AccessifyPlay: could not open the donation link.")
 		wx.CallAfter(
 			messageBox,
-			_(
-				"Could not open your web browser. The donation page is at "
-				"https://www.paypal.com/paypalme/rafli23115"
-			),
+			_("Could not open your web browser. The donation page is at {url}").format(url=DONATE_URL),
 			_("Donate"),
 			wx.OK | wx.ICON_ERROR,
 		)

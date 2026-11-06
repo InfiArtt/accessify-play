@@ -12,52 +12,21 @@ import json
 from logHandler import log
 
 from . import paths
+from .commands import BY_SCRIPT, COMMANDS
+
+#: What layerConfig.json keeps for each command: only the user's own choices.
+#: Names and descriptions come from commands.py, so they follow the code and
+#: the add-on's language instead of staying as they were when the file was written.
+_STORED_KEYS = ("gestures", "keep_open")
 
 
-def N_(message: str) -> str:
-	"""No-op gettext marker so xgettext can pick up strings without translating them at import time."""
-	return message
-
-
-_ = N_
+def _default_entry(script: str) -> dict[str, object]:
+	command = BY_SCRIPT[script]
+	return {"gestures": [command.key], "keep_open": command.keep_open}
 
 
 class LayerConfigManager:
-	"""Manages configuration for the Accessify Play command layer."""
-
-	_default_specs = (
-		# ScriptName, DefaultGesture, Description, HelpLabel, DefaultKeepOpen
-		("playMyTopTracks", "kb:g", _("Play your top tracks from the last month."), "G", False),
-		("playRecentlyPlayed", "kb:o", _("Play your recently played tracks."), "O", False),
-		("playPause", "kb:p", _("Play or pause the current track on Spotify."), "P", False),
-		("nextTrack", "kb:n", _("Skip to the next track on Spotify."), "N", True),
-		("previousTrack", "kb:b", _("Skip to the previous track on Spotify."), "B", True),
-		("toggleShuffle", "kb:h", _("Toggle Shuffle mode."), "H", False),
-		("cycleRepeat", "kb:r", _("Cycle Repeat mode (Off, Context, Track)."), "R", True),
-		("toggleFollowArtist", "kb:f", _("Follow or unfollow the artist of the current track."), "F", False),
-		("volumeDown", "kb:-", _("Decrease Spotify volume."), "-", True),
-		("volumeUp", "kb:=", _("Increase Spotify volume."), "=", True),
-		("seekBackward", "kb:[", _("Seek backward in the current track."), "[", True),
-		("seekForward", "kb:]", _("Seek forward in the current track."), "]", True),
-		("announceTrack", "kb:i", _("Announce the currently playing track."), "I", False),
-		("announcePlaybackTime", "kb:t", _("Announces the current track's playback time."), "T", False),
-		("announceNextInQueue", "kb:e", _("Announce the next track in the queue."), "E", False),
-		("addToPlaylist", "kb:a", _("Add the currently playing track to a playlist."), "A", False),
-		("copyTrackURL", "kb:c", _("Copy the URL of the current track."), "C", False),
-		("showDevicesDialog", "kb:d", _("Show available devices to switch playback."), "D", False),
-		("showSeekDialog", "kb:j", _("Seek to a specific time or jump forward/backward."), "J", False),
-		("toggleLike", "kb:l", _("Like/Unlike Track."), "L", True),
-		("showManagementDialog", "kb:m", _("Manage your Spotify library and playlists."), "M", False),
-		("showQueueListDialog", "kb:q", _("Show the Spotify queue list."), "Q", False),
-		("showSearchDialog", "kb:s", _("Search for an item on Spotify."), "S", False),
-		("showPlayFromLinkDialog", "kb:u", _("Play an item from a Spotify URL."), "U", False),
-		("setVolume", "kb:v", _("Set Spotify volume to a specific percentage."), "V", False),
-		("copyUniversalLink", "kb:x", _("Copy Universal (Song.link) URL."), "X", False),
-		("showSleepTimerDialog", "kb:z", _("Set Sleep Timer."), "Z", False),
-		("openSettings", "kb:f4", _("Open Accessify Play settings."), "F4", False),
-		("showLyricsWindow", "kb:w", _("Show lyrics window for the current track."), "W", False),
-		("toggleAutoReadLyrics", "kb:y", _("Toggle automatic lyric reading as the song plays."), "Y", False),
-	)
+	"""The user's keys for the command layer, kept in layerConfig.json in the data folder."""
 
 	def __init__(self) -> None:
 		self.config_file = paths.get_data_path(paths.LAYER_CONFIG_FILE)
@@ -65,36 +34,44 @@ class LayerConfigManager:
 		self.load()
 
 	def load(self) -> None:
-		"""Load configuration from file, then injects any missing defaults."""
+		"""Load the user's keys, bringing the file up to date with the commands there are now."""
 		try:
 			if self.config_file.exists():
 				self.config = json.loads(self.config_file.read_text(encoding="utf-8"))
-				# Merge new commands that didn't exist in the saved file
-				self._inject_missing_defaults()
+				self._tidy()
 			else:
 				self.reset_to_defaults()
 		except Exception:
 			log.exception("Error loading layer config")
 			self.reset_to_defaults()
 
-	def _inject_missing_defaults(self) -> None:
-		"""Add the default commands missing from the loaded config.
+	def _tidy(self) -> None:
+		"""Bring a loaded file up to date, keeping every key the user chose.
 
-		Existing user customizations are left completely untouched. Saves
-		automatically if anything was added.
+		Commands added since the file was written get their default key;
+		commands that no longer exist are dropped; so are the names and
+		descriptions older versions stored. Saves only if anything changed.
 		"""
-		injected = False
-		for script, gesture, desc, label, keep_open in self._default_specs:
-			if script not in self.config:
-				self.config[script] = {
-					"gestures": [gesture],
-					"description": desc,
-					"label": label,
-					"keep_open": keep_open,
-				}
-				injected = True
-				log.info("AccessifyPlay: injected new default command '%s' into layer config.", script)
-		if injected:
+		changed = False
+		for script in list(self.config):
+			if script not in BY_SCRIPT:
+				del self.config[script]
+				changed = True
+				log.info("AccessifyPlay: dropped unknown command '%s' from the layer config.", script)
+				continue
+			entry = self.config[script]
+			stale = [key for key in entry if key not in _STORED_KEYS]
+			for key in stale:
+				del entry[key]
+			changed = changed or bool(stale)
+		for command in COMMANDS:
+			if command.script not in self.config:
+				self.config[command.script] = _default_entry(command.script)
+				changed = True
+				log.info(
+					"AccessifyPlay: injected new default command '%s' into layer config.", command.script
+				)
+		if changed:
 			self.save()
 
 	def save(self) -> None:
@@ -105,15 +82,8 @@ class LayerConfigManager:
 			log.exception("Error saving layer config")
 
 	def reset_to_defaults(self) -> None:
-		"""Reset configuration to hardcoded defaults."""
-		self.config = {}
-		for script, gesture, desc, label, keep_open in self._default_specs:
-			self.config[script] = {
-				"gestures": [gesture],
-				"description": desc,
-				"label": label,
-				"keep_open": keep_open,
-			}
+		"""Give every command its default key again, and save."""
+		self.config = {command.script: _default_entry(command.script) for command in COMMANDS}
 		self.save()
 
 	def get_script_config(self, script_name: str) -> dict[str, object] | None:
@@ -128,14 +98,12 @@ class LayerConfigManager:
 			self.save()
 
 	def get_all_configs(self) -> list[tuple[str, dict[str, object]]]:
-		"""Return a list of tuples for UI or processing."""
-		# Ensure order matches default specs for consistency
-		result = []
-		for script, _, _, _, _ in self._default_specs:
-			if script in self.config:
-				data = self.config[script]
-				result.append((script, data))
-		return result
+		"""Return (script, its keys and settings) for every command, in the order of commands.py."""
+		return [
+			(command.script, self.config[command.script])
+			for command in COMMANDS
+			if command.script in self.config
+		]
 
 	def get_gesture_map(self) -> dict[str, str]:
 		"""Return a dict of gesture -> script_name for binding."""

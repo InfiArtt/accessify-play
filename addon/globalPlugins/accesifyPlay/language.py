@@ -18,7 +18,8 @@ from logHandler import log
 
 locale_path = Path(__file__).resolve().parents[2] / "locale"
 LANGUAGE_AUTO = "auto"
-# Friendly display names for known language codes; fall back to the raw code when unknown.
+#: Languages named in their own language. Any other catalogue gets the name
+#: NVDA gives the language, so adding a translation needs no code change.
 LANGUAGE_DISPLAY_OVERRIDES = {
 	"en": "English",
 	"id": "Bahasa Indonesia",
@@ -37,6 +38,23 @@ def _discover_language_codes() -> list[str]:
 
 
 AVAILABLE_LANGUAGE_CODES = _discover_language_codes()
+
+
+def language_name(code: str) -> str:
+	"""Return what a language the add-on has a catalogue for is called in the language list."""
+	if code in LANGUAGE_DISPLAY_OVERRIDES:
+		return LANGUAGE_DISPLAY_OVERRIDES[code]
+	try:
+		name = languageHandler.getLanguageDescription(code)
+	except Exception:  # NVDA's own lookup; a failure only costs the name
+		log.debug("AccessifyPlay: no name for language %r", code, exc_info=True)
+		name = None
+	return name or code
+
+
+def language_entries(auto_label: str) -> list[tuple[str, str]]:
+	"""Return (code, name) for the settings panel's language list: "auto" first, then each catalogue."""
+	return [(LANGUAGE_AUTO, auto_label)] + [(code, language_name(code)) for code in AVAILABLE_LANGUAGE_CODES]
 
 
 def _normalize_language_setting(lang_code: str) -> str:

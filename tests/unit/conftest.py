@@ -15,7 +15,6 @@ fresh temporary one, and background tasks run at once.
 from __future__ import annotations
 
 import copy
-import re
 import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -39,7 +38,7 @@ import spotipy  # noqa: E402
 import tones  # noqa: E402
 import ui  # noqa: E402
 import wx  # noqa: E402
-from accesifyPlay import spotify_client  # noqa: E402
+from accesifyPlay import settings_spec, spotify_client  # noqa: E402
 from accesifyPlay.core import thread_manager as thread_manager_module  # noqa: E402
 from spotipy.exceptions import SpotifyException  # noqa: E402
 
@@ -47,19 +46,9 @@ if TYPE_CHECKING:
 	from collections.abc import Callable
 
 
-def _default(spec: str) -> object:
-	"""Return the default value of a configobj spec such as "integer(min=1, default=20)"."""
-	value = re.search(r"default=([^,)]*)", spec).group(1).strip("'\"")
-	if spec.startswith("integer"):
-		return int(value)
-	if spec.startswith("boolean"):
-		return value == "True"
-	return value
-
-
 def spotify_defaults() -> dict[str, object]:
 	"""Return the add-on's settings as a fresh install has them."""
-	return {key: _default(spec) for key, spec in config.conf.spec["spotify"].items()}
+	return settings_spec.defaults()
 
 
 class Tasks:

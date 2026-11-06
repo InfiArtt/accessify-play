@@ -8,7 +8,6 @@
 from __future__ import annotations
 
 import threading
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 import addonHandler
@@ -21,8 +20,6 @@ if TYPE_CHECKING:
 	from types import ModuleType
 
 addonHandler.initTranslation()
-
-_ADDON_DIR = str(Path(__file__).parent)
 
 
 def _load_donate_module() -> ModuleType | None:
@@ -110,57 +107,6 @@ class InstallInfoDialog(wx.Dialog):
 		self.EndModal(wx.ID_OK)
 
 
-def _defensive_cleanup_nvda_import_tracker(addon_name: str) -> None:
-	"""Detach built-in modules from NVDA's import tracker for this add-on.
-
-	Built-in or compiled modules (like `_overlapped`) get dragged in by
-	asynchronous dependencies (e.g., urllib, asyncio).
-
-	NVDA's `_cleanupAddonImports` naively calls `__file__` without a `hasattr` check, crashing
-	when inspecting built-in modules without file paths (especially isolated in Python 3.13).
-	"""
-	# NVDA-internal, and not in every NVDA version.
-	trackers = getattr(addonHandler, "_addonImportTrackers", None)
-	if not trackers:
-		return
-
-	tracker_set = trackers.get(addon_name)
-	if not tracker_set:
-		return
-
-	to_remove = []
-	for mod in tracker_set:
-		# C-level modules have no __file__ at all.
-		if not hasattr(mod, "__file__"):
-			to_remove.append(mod)
-			continue
-
-		# Built-in modules, in case one does carry a __file__.
-		spec = getattr(mod, "__spec__", None)
-		if spec and getattr(spec, "origin", None) == "built-in":
-			to_remove.append(mod)
-			continue
-
-		# Anything else that does not live in the add-on directory.
-		try:
-			file_path = getattr(mod, "__file__", "")
-			if not file_path or not str(file_path).startswith(_ADDON_DIR):
-				to_remove.append(mod)
-		except Exception:  # a module's __file__ can be anything
-			log.debug("AccessifyPlay installTasks: unreadable __file__", exc_info=True)
-			to_remove.append(mod)
-
-	for invalid_mod in to_remove:
-		try:
-			tracker_set.remove(invalid_mod)
-			log.debug(
-				"AccessifyPlay installTasks: Scrubber removed incompatible '%s' from tracker",
-				getattr(invalid_mod, "__name__", "unknown"),
-			)
-		except KeyError:
-			pass
-
-
 def onInstall() -> None:
 	"""Show the add-on's information after it is installed."""
 	addon = addonHandler.getCodeAddon()
@@ -198,10 +144,3 @@ def onInstall() -> None:
 	wx.CallAfter(_show_dialog)
 	# Wait for the dialog to close before allowing NVDA to proceed with installation.
 	done_event.wait()
-
-	# Run defensive NVDA import tracker scrubbing here to secure the cleanup
-	# procedure immediately before NVDA takes over.
-	try:
-		_defensive_cleanup_nvda_import_tracker(addon_name)
-	except Exception:
-		log.exception("AccessifyPlay installTasks: defensive cleanup scrubber failed")

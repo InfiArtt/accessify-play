@@ -198,11 +198,6 @@ msgstr ""
 msgid "Copy the URL of the current track."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:663
-#: addon/globalPlugins/accesifyPlay/layer_config.py:22
-msgid "Play your top tracks from the last month."
-msgstr ""
-
 #: addon/globalPlugins/accesifyPlay/__init__.py:670
 #: addon/globalPlugins/accesifyPlay/layer_config.py:23
 msgid "Play your recently played tracks."
@@ -909,18 +904,6 @@ msgstr ""
 
 #: addon/globalPlugins/accesifyPlay/dialogs/layer_editor.py:225
 msgid "Confirm Reset"
-msgstr ""
-
-#: addon/globalPlugins/accesifyPlay/dialogs/layer_editor.py:239
-msgid ""
-"You have made changes to the command layer. NVDA needs to restart to apply "
-"them fully.\n"
-"\n"
-"Restart now?"
-msgstr ""
-
-#: addon/globalPlugins/accesifyPlay/dialogs/layer_editor.py:241
-msgid "Restart Required"
 msgstr ""
 
 #: addon/globalPlugins/accesifyPlay/dialogs/lyrics_window.py:38
@@ -2024,27 +2007,6 @@ msgstr ""
 msgid "Done."
 msgstr ""
 
-#. Translators: Label for a setting to choose how many search results to load at a
-#. time.
-#: addon/globalPlugins/accesifyPlay/dialogs/settings.py:31
-msgid "Search Results Limit (1 to 50)"
-msgstr ""
-
-#. Translators: Label for a setting to choose the duration for seek
-#. forward/backward actions.
-#: addon/globalPlugins/accesifyPlay/dialogs/settings.py:37
-msgid "Seek Duration (seconds, 1 to 60)"
-msgstr ""
-
-#. Translators: Label for a setting to choose the volume step percentage.
-#: addon/globalPlugins/accesifyPlay/dialogs/settings.py:43
-msgid "Volume Step (1 to 100)"
-msgstr ""
-
-#: addon/globalPlugins/accesifyPlay/dialogs/settings.py:48
-msgid "Keep Alive Interval (seconds, 0 = Off, Min = 5)"
-msgstr ""
-
 #. Translators: Label for a setting to choose the display language for the addon.
 #: addon/globalPlugins/accesifyPlay/dialogs/settings.py:53
 msgid "Language:"
@@ -2105,10 +2067,6 @@ msgstr ""
 
 #: addon/globalPlugins/accesifyPlay/dialogs/settings.py:112
 msgid "Language changes will take effect after restarting NVDA."
-msgstr ""
-
-#: addon/globalPlugins/accesifyPlay/dialogs/settings.py:117
-msgid "Keep Alive interval adjusted to minimum 5 seconds."
 msgstr ""
 
 #: addon/globalPlugins/accesifyPlay/dialogs/settings.py:124
@@ -2189,20 +2147,6 @@ msgstr ""
 msgid ""
 "Thank you for considering a donation! This will open a link in your web "
 "browser."
-msgstr ""
-
-#: addon/globalPlugins/accesifyPlay/donate.py:35
-msgid ""
-"Could not open your web browser. The donation page is at "
-"https://www.paypal.com/paypalme/rafli23115"
-msgstr ""
-
-#: addon/globalPlugins/accesifyPlay/layer_config.py:29
-msgid "Follow or unfollow the artist of the current track."
-msgstr ""
-
-#: addon/globalPlugins/accesifyPlay/layer_config.py:41
-msgid "Like/Unlike Track."
 msgstr ""
 
 #. Translators: how long to wait before retrying, in seconds.
@@ -2843,4 +2787,100 @@ msgstr ""
 msgid "{type}, searching..."
 msgstr ""
 
+#: addon/globalPlugins/accesifyPlay/commands.py:37
+msgid "Play your top tracks."
+msgstr ""
 
+#: addon/globalPlugins/accesifyPlay/dialogs/artist.py:240
+msgid "No albums found."
+msgstr ""
+
+#. Translators: a row of the queue, e.g. "Queue: Yesterday by The Beatles".
+#: addon/globalPlugins/accesifyPlay/dialogs/queue_list.py:94
+#, python-brace-format
+msgid "{prefix}: {name} by {artists}"
+msgstr ""
+
+#. Translators: Label for a setting to choose how many search results to load at a time.
+#: addon/globalPlugins/accesifyPlay/dialogs/settings.py:76
+#, python-brace-format
+msgid "Search Results Limit ({minimum} to {maximum})"
+msgstr ""
+
+#. Translators: Label for a setting to choose the duration for seek forward/backward actions.
+#: addon/globalPlugins/accesifyPlay/dialogs/settings.py:82
+#, python-brace-format
+msgid "Seek Duration (seconds, {minimum} to {maximum})"
+msgstr ""
+
+#. Translators: Label for a setting to choose the volume step percentage.
+#: addon/globalPlugins/accesifyPlay/dialogs/settings.py:88
+#, python-brace-format
+msgid "Volume Step ({minimum} to {maximum})"
+msgstr ""
+
+#. Translators: Label for the keep-alive setting; {minimum} is the shortest interval allowed.
+#: addon/globalPlugins/accesifyPlay/dialogs/settings.py:94
+#, python-brace-format
+msgid "Keep Alive Interval (seconds, 0 = Off, Min = {minimum})"
+msgstr ""
+
+#. Translators: Label for a setting: the number of minutes the sleep timer offers when it opens.
+#: addon/globalPlugins/accesifyPlay/dialogs/settings.py:100
+#, python-brace-format
+msgid "Sleep timer starts at (minutes, {minimum} to {maximum})"
+msgstr ""
+
+#. Translators: Label for a setting: the longest sleep timer that can be set, in minutes.
+#: addon/globalPlugins/accesifyPlay/dialogs/settings.py:106
+#, python-brace-format
+msgid "Longest sleep timer (minutes, {minimum} to {maximum})"
+msgstr ""
+
+#. Translators: Label for a setting: how many tracks Add to Queue sends for a whole album
+#. or playlist.
+#: addon/globalPlugins/accesifyPlay/dialogs/settings.py:113
+#, python-brace-format
+msgid "Most tracks to queue from an album or playlist ({minimum} to {maximum})"
+msgstr ""
+
+#. Translators: Label for a setting: the period Play My Top Tracks takes its tracks from.
+#: addon/globalPlugins/accesifyPlay/dialogs/settings.py:119
+msgid "Play My Top Tracks plays the top tracks of:"
+msgstr ""
+
+#. Translators: Label for a setting: the period the Top Items tab of the Library starts on.
+#: addon/globalPlugins/accesifyPlay/dialogs/settings.py:126
+msgid "Top Items in the Library opens on:"
+msgstr ""
+
+#. Translators: Label for a setting: the type (Song, Album, ...) the Search window starts on.
+#: addon/globalPlugins/accesifyPlay/dialogs/settings.py:133
+msgid "Search opens on:"
+msgstr ""
+
+#. Translators: Label for a setting: whether Create Playlist starts with Public playlist checked.
+#: addon/globalPlugins/accesifyPlay/dialogs/settings.py:164
+msgid "New playlists are public"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/dialogs/settings.py:254
+#, python-brace-format
+msgid "Keep Alive interval adjusted to minimum {seconds} seconds."
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/donate.py:42
+#, python-brace-format
+msgid "Could not open your web browser. The donation page is at {url}"
+msgstr ""
+
+#: addon/globalPlugins/accesifyPlay/ui/base_dialog.py:167
+#, python-brace-format
+msgid "Queued the first {count} of {total} tracks from {name}."
+msgstr ""
+
+#. Translators: a playlist in a list, with who made it, e.g. "Chill Mix - by Spotify".
+#: addon/globalPlugins/accesifyPlay/utils.py:122
+#, python-brace-format
+msgid "{name} - by {owner}"
+msgstr ""

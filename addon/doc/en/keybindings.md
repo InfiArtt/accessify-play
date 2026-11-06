@@ -23,7 +23,7 @@ Press **`NVDA+Alt+G`** to open the command layer, then press one of the keys bel
 | `J` | Seek to a time, or jump forward or back |
 | `H` | Shuffle on or off |
 | `R` | Repeat: all, one track, off (stays open) |
-| `G` | Play your top tracks of the last month |
+| `G` | Play your top tracks (of the period chosen in the settings) |
 | `O` | Play your recently played tracks |
 | `D` | Choose the device to play on |
 

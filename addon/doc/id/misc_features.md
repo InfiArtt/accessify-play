@@ -30,7 +30,7 @@ Semua tombol di bawah ditekan setelah `NVDA+Alt+G`.
 
 ## Putar cepat
 
-* `G` memutar lagu teratas Anda sebulan terakhir.
+* `G` memutar lagu teratas Anda dari 4 minggu terakhir, atau dari periode yang dipilih di **Play My Top Tracks plays the top tracks of** pada pengaturan.
 * `O` memutar lagu yang baru Anda putar.
 
 ## Berbagi
@@ -40,7 +40,7 @@ Semua tombol di bawah ditekan setelah `NVDA+Alt+G`.
 
 ## Timer tidur
 
-`Z` membuka timer tidur. Masukkan jumlah menit (sampai 240) lalu tekan **Start Timer**; saat waktunya habis, musik dijeda dan NVDA memberitahukannya. Timer tetap berjalan walaupun NVDA dimulai ulang. Untuk membatalkannya, buka timer tidur lagi dan masukkan 0.
+`Z` membuka timer tidur. Timer menawarkan 30 menit; masukkan jumlah menit yang Anda inginkan (sampai 240) lalu tekan **Start Timer**. Kedua angka itu bisa diubah di pengaturan. Saat waktunya habis, musik dijeda dan NVDA memberitahukannya. Timer tetap berjalan walaupun NVDA dimulai ulang. Untuk membatalkannya, buka timer tidur lagi dan masukkan 0.
 
 ---
 [Kembali ke Beranda](readme.html)

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
 
+import config
 import pytest
 import requests
 import spotipy
@@ -337,6 +338,19 @@ def test_play_top_and_recent(client: SpotifyClient, now: SpotifyServer) -> None:
 	assert now.requests[-1][3]["uris"] == ["spotify:track:1"]
 	assert client.play_recently_played() == "Playing your recently played tracks."
 	assert now.requests[-1][3]["uris"] == ["u1", "u2"]
+
+
+def test_top_tracks_period_is_a_setting(client: SpotifyClient, now: SpotifyServer) -> None:
+	"""Play My Top Tracks plays from the period chosen in the settings: the last 4 weeks by default."""
+	now.routes["GET", "me/top/tracks"] = {"items": [{"uri": "spotify:track:1"}]}
+	now.routes["PUT", "me/player/play"] = None
+	client.play_my_top_tracks()
+	top = [request for request in now.requests if request[1] == "me/top/tracks"]
+	assert top[-1][2]["time_range"] == "short_term"
+	config.conf["spotify"]["topTracksTimeRange"] = "long_term"
+	client.play_my_top_tracks()
+	top = [request for request in now.requests if request[1] == "me/top/tracks"]
+	assert top[-1][2]["time_range"] == "long_term"
 
 
 @pytest.mark.parametrize(

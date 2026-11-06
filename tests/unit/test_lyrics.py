@@ -11,6 +11,7 @@ from types import SimpleNamespace
 from typing import TYPE_CHECKING, ClassVar
 
 import addonHandler
+import config
 import pytest
 import requests
 from accesifyPlay import lyrics
@@ -40,6 +41,8 @@ class Lrclib:
 	def __init__(self) -> None:
 		self.answers: dict[str, object] = {}
 		self.requests: list[tuple[str, dict]] = []
+		self.urls: list[str] = []
+		self.timeouts: list[float] = []
 
 
 @pytest.fixture
@@ -50,6 +53,8 @@ def lrclib(monkeypatch: pytest.MonkeyPatch) -> Lrclib:
 	def get(url: str, params: dict, headers: dict, timeout: int) -> Response:
 		endpoint = url.rsplit("/", 1)[-1]
 		server.requests.append((endpoint, params))
+		server.urls.append(url)
+		server.timeouts.append(timeout)
 		assert headers["User-Agent"].startswith("AccessifyPlay-NVDA-Addon/")
 		assert timeout > 0
 		answer = server.answers[endpoint]
@@ -115,13 +120,27 @@ def test_lyrics_for_a_track_without_lyrics(lrclib: Lrclib) -> None:
 
 
 def test_user_agent_names_the_add_on_version(monkeypatch: pytest.MonkeyPatch) -> None:
-	"""Lrclib is told which version asks; outside an add-on the version is unknown."""
+	"""Lrclib is told which version asks and its homepage, from the manifest; outside an add-on, unknown."""
 	lyrics._get_user_agent.cache_clear()
-	assert "/unknown " in lyrics._get_user_agent()
+	assert lyrics._get_user_agent() == "AccessifyPlay-NVDA-Addon/unknown"
 	lyrics._get_user_agent.cache_clear()
 	monkeypatch.setattr(addonHandler, "code_addon", SimpleNamespace(manifest={"version": "9.9.9"}))
-	assert "/9.9.9 " in lyrics._get_user_agent()
+	assert lyrics._get_user_agent() == "AccessifyPlay-NVDA-Addon/9.9.9"
 	lyrics._get_user_agent.cache_clear()
+	manifest = {"version": "9.9.9", "url": "https://example.org/fork"}
+	monkeypatch.setattr(addonHandler, "code_addon", SimpleNamespace(manifest=manifest))
+	assert lyrics._get_user_agent() == "AccessifyPlay-NVDA-Addon/9.9.9 (+https://example.org/fork)"
+	lyrics._get_user_agent.cache_clear()
+
+
+def test_lyrics_server_and_timeout_are_settings(lrclib: Lrclib) -> None:
+	"""Where lyrics come from, and how long a request may take, are hidden settings."""
+	config.conf["spotify"]["lyricsServer"] = "https://lyrics.example/api/"
+	config.conf["spotify"]["lyricsTimeoutSeconds"] = 3
+	lrclib.answers["get"] = Response({"plainLyrics": "la"})
+	lyrics.fetch_lyrics("Song", "A", "LP", 1000)
+	assert lrclib.urls == ["https://lyrics.example/api/get"]
+	assert lrclib.timeouts == [3]
 
 
 @pytest.mark.parametrize(

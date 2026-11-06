@@ -11,6 +11,7 @@ import json
 from typing import TYPE_CHECKING
 
 from accesifyPlay import paths
+from accesifyPlay.commands import COMMANDS
 from accesifyPlay.layer_config import LayerConfigManager
 
 if TYPE_CHECKING:
@@ -27,7 +28,8 @@ def test_first_run_writes_the_defaults() -> None:
 	manager = LayerConfigManager()
 	assert manager.get_script_config("playMyTopTracks")["gestures"] == ["kb:g"]
 	assert stored() == manager.config
-	assert [name for name, _data in manager.get_all_configs()] == [s[0] for s in manager._default_specs]
+	assert [name for name, _data in manager.get_all_configs()] == [c.script for c in COMMANDS]
+	assert stored()["nextTrack"] == {"gestures": ["kb:n"], "keep_open": True}
 
 
 def test_user_keys_survive_and_new_commands_are_added() -> None:
@@ -40,6 +42,29 @@ def test_user_keys_survive_and_new_commands_are_added() -> None:
 	assert manager.should_keep_open("playMyTopTracks") is True
 	assert manager.get_script_config("playRecentlyPlayed")["gestures"] == ["kb:o"]
 	assert "playRecentlyPlayed" in stored()
+
+
+def test_an_old_file_is_tidied() -> None:
+	"""Names and descriptions older versions stored, and commands that are gone, are dropped; keys stay."""
+	paths.get_data_path(paths.LAYER_CONFIG_FILE).write_text(
+		json.dumps(
+			{
+				"playPause": {
+					"gestures": ["kb:space"],
+					"description": "Play or pause the current track on Spotify.",
+					"label": "P",
+					"keep_open": False,
+				},
+				"retiredCommand": {"gestures": ["kb:k"], "keep_open": False},
+			}
+		),
+		encoding="utf-8",
+	)
+	manager = LayerConfigManager()
+	assert stored()["playPause"] == {"gestures": ["kb:space"], "keep_open": False}
+	assert "retiredCommand" not in stored()
+	assert manager.get_gesture_map()["kb:space"] == "playPause"
+	assert "kb:k" not in manager.get_gesture_map()
 
 
 def test_complete_file_is_not_rewritten(monkeypatch: pytest.MonkeyPatch) -> None:

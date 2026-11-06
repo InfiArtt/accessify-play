@@ -15,7 +15,9 @@ import wx
 from gui import guiHelper
 
 from ..core.thread_manager import thread_manager
+from ..labels import time_range_labels
 from ..language import init_translation
+from ..settings_spec import TIME_RANGES, conf_get
 from ..ui.base_dialog import AccessifyDialog
 from ..utils import copy_link, duplicate_occurrences, playlist_rows, positions_after_move, safe_text
 from .album import AlbumTracksDialog
@@ -65,9 +67,7 @@ class ManagementDialog(AccessifyDialog):
 		# in here is used as-is and skips that tab's first fetch.
 		self.preloaded_data = preloaded_data or {}
 		profile = self.preloaded_data.get("user_profile")
-		self.current_user_id = (
-			profile.get("id") if isinstance(profile, dict) else getattr(client, "_current_user_id", None)
-		)
+		self.current_user_id = profile.get("id") if isinstance(profile, dict) else client.current_user_id
 		self._createPlaylistDialog = None
 		self._playlistDetailsDialog = None
 		self.is_current_playlist_owned = False
@@ -570,7 +570,7 @@ class ManagementDialog(AccessifyDialog):
 		if not self.current_user_id:
 			# Never a network call here: this runs on the UI thread. The loader
 			# thread has already fetched it into the client's cache.
-			self.current_user_id = getattr(self.client, "_current_user_id", None)
+			self.current_user_id = self.client.current_user_id
 
 		if not self.user_playlists:
 			self._shown_playlist_id = None
@@ -606,10 +606,6 @@ class ManagementDialog(AccessifyDialog):
 		same_playlist = self.user_playlists[index].get("id") == previous_id
 		self.playlist_choices.SetSelection(index)
 		self._show_selected_playlist(force=True, keep_row=previous_row if same_playlist else None)
-
-	#: Wait this long after the selection changes before fetching tracks, so
-	#: arrowing through the playlist box sends one request, not one per playlist.
-	TRACKS_LOAD_DELAY_MS = 300
 
 	def on_playlist_selected(self, _evt: wx.Event | None = None) -> None:
 		"""Return the user moved to a playlist in the combo box."""
@@ -651,8 +647,10 @@ class ManagementDialog(AccessifyDialog):
 		if force:
 			self.load_playlist_tracks(playlist_id, token, keep_row)
 		else:
+			# Wait until the cursor stops, so arrowing through the playlist box
+			# sends one request, not one per playlist passed over.
 			self._tracks_timer = wx.CallLater(
-				self.TRACKS_LOAD_DELAY_MS, self.load_playlist_tracks, playlist_id, token, keep_row
+				conf_get("listLoadDelayMs"), self.load_playlist_tracks, playlist_id, token, keep_row
 			)
 
 	def load_playlist_tracks(
@@ -679,7 +677,9 @@ class ManagementDialog(AccessifyDialog):
 		self._tracks_loading = False
 		if isinstance(tracks_data, str):
 			ui.message(tracks_data)
+			# Say it where the user looks for the tracks, too.
 			self.playlist_tracks_list.Clear()
+			self.playlist_tracks_list.Append(tracks_data)
 			return
 		self._populate_playlist_tracks(tracks_data, keep_row)
 
@@ -1034,15 +1034,11 @@ class ManagementDialog(AccessifyDialog):
 		)
 		self.top_item_type_box.SetSelection(0)
 
-		self.time_range_choices = {
-			_("Last 4 Weeks"): "short_term",
-			_("Last 6 Months"): "medium_term",
-			_("All Time"): "long_term",
-		}
+		self.time_range_choices = {label: code for code, label in time_range_labels().items()}
 		self.time_range_box = s_helper.addLabeledControl(
 			_("Time Range:"), wx.ComboBox, choices=list(self.time_range_choices.keys()), style=wx.CB_READONLY
 		)
-		self.time_range_box.SetSelection(1)
+		self.time_range_box.SetSelection(TIME_RANGES.index(conf_get("topItemsTimeRange")))
 		self._top_items_request = 0
 		self._top_items_timer = None
 		self.top_item_type_box.Bind(wx.EVT_COMBOBOX, self._on_top_items_choice)
@@ -1076,14 +1072,12 @@ class ManagementDialog(AccessifyDialog):
 			panel, self.load_top_items, list_control, initial_data=self.preloaded_data.get("top_items")
 		)
 
-	#: As for the playlist box: arrowing through Show or Time Range sends one
-	#: request once the user stops, not one per choice passed over.
-	TOP_ITEMS_LOAD_DELAY_MS = 300
-
 	def _on_top_items_choice(self, _evt: wx.Event | None = None) -> None:
+		# As for the playlist box: arrowing through Show or Time Range sends one
+		# request once the user stops, not one per choice passed over.
 		if self._top_items_timer is not None:
 			self._top_items_timer.Stop()
-		self._top_items_timer = wx.CallLater(self.TOP_ITEMS_LOAD_DELAY_MS, self.load_top_items)
+		self._top_items_timer = wx.CallLater(conf_get("listLoadDelayMs"), self.load_top_items)
 
 	def load_top_items(
 		self, _evt: wx.Event | None = None, initial_data: Item | list[Item] | None = None
@@ -1224,7 +1218,6 @@ class ManagementDialog(AccessifyDialog):
 		self._append_menu_item(menu, _("Play"), self._handle_play)
 		self._append_menu_item(menu, _("Add to Queue"), self._handle_add_to_queue)
 		self._append_menu_item(menu, _("Copy Link"), self._handle_copy_link)
-		menu.AppendSeparator()
 		if self.is_current_playlist_owned:
 			menu.AppendSeparator()
 			self._append_menu_item(menu, _("Remove Track from Playlist"), self.on_remove_track_from_playlist)

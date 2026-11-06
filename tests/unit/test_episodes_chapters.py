@@ -199,3 +199,10 @@ def test_saving_an_episode(client: SpotifyClient, server: SpotifyServer, spoken:
 	accelerate(window, wx.ACCEL_ALT, "S")
 	assert server.requests[-1][:3] == ("PUT", "me/library", {"uris": "spotify:episode:e1"})
 	assert spoken[-1] == "'Part 1' saved to your library."
+
+
+def test_chapter_rows_without_a_number_or_length(client: SpotifyClient) -> None:
+	"""A chapter numbered 0, or without a number or length, is listed by its name alone."""
+	window = AudiobookChaptersDialog(None, client, "b1", "Book")
+	assert window.row({"name": "Intro", "chapter_number": 0}, 1) == "Intro"
+	assert window.row({}, 1) == "Unknown Chapter"

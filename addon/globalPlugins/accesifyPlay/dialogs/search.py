@@ -13,9 +13,11 @@ import ui
 import wx
 
 from ..core.thread_manager import thread_manager
+from ..labels import search_type_labels
 from ..language import init_translation
+from ..settings_spec import conf_get
 from ..ui.base_dialog import AccessifyDialog
-from ..utils import copy_link
+from ..utils import copy_link, playlist_with_owner, safe_text
 from .album import AlbumTracksDialog
 from .artist import ArtistDiscographyDialog
 from .audiobooks import AudiobookChaptersDialog
@@ -59,7 +61,7 @@ class SearchDialog(AccessifyDialog):
 		self._rendered_items = []
 
 		self.current_query = ""
-		self.current_type = "track"
+		self.current_type = conf_get("searchType")
 		self.next_offset = 0
 		self.can_load_more = False
 		# Bumped on every new search, so results of an older search that
@@ -82,21 +84,15 @@ class SearchDialog(AccessifyDialog):
 		main_sizer = wx.BoxSizer(wx.VERTICAL)
 
 		controls_sizer = wx.BoxSizer(wx.HORIZONTAL)
-		self.search_types = {
-			_("Song"): "track",
-			_("Album"): "album",
-			_("Artist"): "artist",
-			_("Playlist"): "playlist",
-			_("Podcast"): "show",
-			_("Audiobook"): "audiobook",
-		}
+		self.search_types = {label: code for code, label in search_type_labels().items()}
 		# Each label is created right before its control, so screen readers
 		# announce it as the control's name.
 		# Translators: Label of the search type list (Song, Album, Artist, ...) in the Search dialog.
 		type_label = wx.StaticText(self, label=_("Type:"))
 		controls_sizer.Add(type_label, flag=wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, border=5)
 		self.typeBox = wx.ComboBox(self, choices=list(self.search_types.keys()), style=wx.CB_READONLY)
-		self.typeBox.SetValue(_("Song"))
+		# The type chosen in the settings.
+		self.typeBox.SetSelection(list(self.search_types.values()).index(self.current_type))
 		controls_sizer.Add(self.typeBox, flag=wx.ALIGN_CENTER_VERTICAL)
 
 		# Translators: Label of the text field where the search words are typed in the Search dialog.
@@ -313,15 +309,15 @@ class SearchDialog(AccessifyDialog):
 
 	def _format_item_for_display(self, item: Item) -> str:
 		"""Create a readable string for an item to be shown in the ListBox."""
-		display = item.get("name", "Unknown")
+		display = safe_text(item.get("name"), _("Unknown"))
 		item_type = item.get("type")
 
 		if item_type == "track":
 			artists = ", ".join([a["name"] for a in item.get("artists", [])])
 			display = f"{display} - {artists}"
 		elif item_type == "playlist":
-			owner = item.get("owner", {}).get("display_name", "Unknown")
-			display = f"{display} - by {owner}"
+			owner = safe_text((item.get("owner") or {}).get("display_name"), _("Unknown"))
+			display = playlist_with_owner(display, owner)
 		elif item_type == "show":
 			publisher = item.get("publisher", "")
 			display = f"{display} - {publisher}"

@@ -20,7 +20,7 @@ Press `NVDA+Alt+G`, then `F2`. The **Command Layer Editor** lists every command 
 
 **Reset to Defaults** puts every command back to its original key and Keep Open setting, after asking you.
 
-When you close the editor after making changes, the new keys work right away. Accessify Play also offers to restart NVDA, which you can decline.
+When you close the editor after making changes, the new keys work right away; there is no need to restart NVDA.
 
 `F1`, `F2` and `Escape` always keep their meaning in the layer and can't be reassigned.
 

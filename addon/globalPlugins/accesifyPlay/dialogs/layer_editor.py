@@ -9,9 +9,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import core
 import wx
 
+from ..commands import BY_SCRIPT
 from ..language import init_translation
 from ..ui.base_dialog import AccessifyDialog
 
@@ -95,48 +95,12 @@ class LayerEditorDialog(AccessifyDialog):
 	def __init__(self, parent: wx.Window, config_manager: LayerConfigManager) -> None:
 		super().__init__(parent, title=_("Command Layer Editor"), size=(600, 400))
 		self.config_manager = config_manager
-		self.is_dirty = False
 
 		# Item data -> script id. SetItemData only stores integers.
 		self.item_data_map = {}
 
 		self._build_ui()
 		self._populate_list()
-
-	def _get_script_labels(self) -> dict[str, str]:
-		"""Return translatable display names for each script id."""
-		return {
-			"playMyTopTracks": _("Play My Top Tracks"),
-			"playRecentlyPlayed": _("Play Recently Played"),
-			"playPause": _("Play/Pause"),
-			"nextTrack": _("Next Track"),
-			"previousTrack": _("Previous Track"),
-			"toggleShuffle": _("Toggle Shuffle"),
-			"cycleRepeat": _("Cycle Repeat"),
-			"toggleFollowArtist": _("Follow/Unfollow Artist"),
-			"volumeDown": _("Volume Down"),
-			"volumeUp": _("Volume Up"),
-			"seekBackward": _("Seek Backward"),
-			"seekForward": _("Seek Forward"),
-			"announceTrack": _("Announce Track"),
-			"announcePlaybackTime": _("Announce Time"),
-			"announceNextInQueue": _("Announce Next in Queue"),
-			"addToPlaylist": _("Add to Playlist"),
-			"copyTrackURL": _("Copy Track URL"),
-			"showDevicesDialog": _("Show Devices"),
-			"showSeekDialog": _("Show Seek Dialog"),
-			"toggleLike": _("Like/Unlike Track"),
-			"showManagementDialog": _("Manage Library"),
-			"showQueueListDialog": _("Show Queue"),
-			"showSearchDialog": _("Search Spotify"),
-			"showPlayFromLinkDialog": _("Play from Link"),
-			"setVolume": _("Set Volume"),
-			"copyUniversalLink": _("Copy Universal Link"),
-			"showSleepTimerDialog": _("Sleep Timer"),
-			"openSettings": _("Settings"),
-			"showLyricsWindow": _("Lyrics Window"),
-			"toggleAutoReadLyrics": _("Auto-Read Lyrics"),
-		}
 
 	def _build_ui(self) -> None:
 		sizer = wx.BoxSizer(wx.VERTICAL)
@@ -175,30 +139,26 @@ class LayerEditorDialog(AccessifyDialog):
 		self.btn_edit.Bind(wx.EVT_BUTTON, self.on_edit)
 		self.btn_reset.Bind(wx.EVT_BUTTON, self.on_reset)
 		self.bind_close_button(btn_close)
-		self.Bind(wx.EVT_CLOSE, self.on_close)
 
 	def _populate_list(self) -> None:
 		self.list_ctrl.DeleteAllItems()
 		self.item_data_map.clear()
 
 		configs = self.config_manager.get_all_configs()
-		labels_map = self._get_script_labels()
 
 		for i, (script_id, data) in enumerate(configs):
-			# Fall back to the script id when there is no display name.
-			display_name = labels_map.get(script_id, script_id)
+			command = BY_SCRIPT[script_id]
 
 			# Strip kb: prefix for display
 			gestures_list = [g.replace("kb:", "") for g in data.get("gestures", [])]
 			gestures = ", ".join(gestures_list)
 
 			keep_open = _("Yes") if data.get("keep_open") else _("No")
-			desc = _(data.get("description", ""))
 
-			idx = self.list_ctrl.InsertItem(self.list_ctrl.GetItemCount(), display_name)
+			idx = self.list_ctrl.InsertItem(self.list_ctrl.GetItemCount(), command.name)
 			self.list_ctrl.SetItem(idx, 1, gestures)
 			self.list_ctrl.SetItem(idx, 2, keep_open)
-			self.list_ctrl.SetItem(idx, 3, desc)
+			self.list_ctrl.SetItem(idx, 3, command.description)
 
 			# Remember which script this row is, for on_edit.
 			self.list_ctrl.SetItemData(idx, i)
@@ -237,7 +197,6 @@ class LayerEditorDialog(AccessifyDialog):
 			self.config_manager.set_script_config(
 				script_name, dlg.result_gestures, keep_open=dlg.result_keep_open
 			)
-			self.is_dirty = True
 			self._populate_list()
 
 			# Reselect the edited script; the list was rebuilt.
@@ -261,22 +220,4 @@ class LayerEditorDialog(AccessifyDialog):
 			== wx.YES
 		):
 			self.config_manager.reset_to_defaults()
-			self.is_dirty = True
 			self._populate_list()
-
-	def on_close(self, evt: wx.Event) -> None:
-		"""Offer to restart NVDA when keys were changed."""
-		if self.is_dirty:
-			self.is_dirty = False
-			res = wx.MessageBox(
-				_(
-					"You have made changes to the command layer. "
-					"NVDA needs to restart to apply them fully.\n\nRestart now?"
-				),
-				_("Restart Required"),
-				wx.YES_NO | wx.ICON_QUESTION,
-				self,
-			)
-			if res == wx.YES:
-				wx.CallLater(200, core.restart)
-		evt.Skip()

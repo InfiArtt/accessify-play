@@ -15,6 +15,7 @@ from logHandler import log
 
 from ..core.thread_manager import thread_manager
 from ..language import init_translation
+from ..settings_spec import conf_get
 from ..ui.base_dialog import AccessifyDialog
 from ..utils import copy_link, safe_text
 from .playlist import PlaylistTracksDialog
@@ -84,7 +85,7 @@ class CategoriesDialog(AccessifyDialog):
 
 	def _fetch_categories_thread(self) -> None:
 		try:
-			result = self.client.get_categories(limit=50, offset=self._offset)
+			result = self.client.get_categories(limit=conf_get("searchLimit"), offset=self._offset)
 			wx.CallAfter(self._on_categories_loaded, result)
 		except Exception:
 			log.exception("AccessifyPlay: browse request failed.")
@@ -409,7 +410,9 @@ class CategoryPlaylistsDialog(PlaylistBrowserDialog):
 			parent,
 			client,
 			title=_("{name} Playlists").format(name=safe_text(category.get("name"), _("Unknown"))),
-			fetch_page=lambda offset: client.get_category_playlists(category["id"], limit=50, offset=offset),
+			fetch_page=lambda offset: client.get_category_playlists(
+				category["id"], limit=conf_get("searchLimit"), offset=offset
+			),
 			empty_message=_("No playlists found."),
 		)
 
@@ -422,6 +425,8 @@ class FeaturedPlaylistsDialog(PlaylistBrowserDialog):
 			parent,
 			client,
 			title=_("Featured Playlists"),
-			fetch_page=lambda offset: client.get_featured_playlists(limit=50, offset=offset),
+			fetch_page=lambda offset: client.get_featured_playlists(
+				limit=conf_get("searchLimit"), offset=offset
+			),
 			empty_message=_("No featured playlists found."),
 		)

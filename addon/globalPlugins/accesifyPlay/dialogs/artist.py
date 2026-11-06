@@ -17,7 +17,7 @@ from ..formatting import format_followers
 from ..language import init_translation
 from ..ui.base_dialog import AccessifyDialog
 from ..ui.paged_list import PagedList
-from ..utils import copy_link
+from ..utils import copy_link, playlist_with_owner
 from .album import AlbumTracksDialog
 from .playlist import PlaylistTracksDialog
 
@@ -229,11 +229,15 @@ class ArtistDiscographyDialog(AccessifyDialog):
 		albums_results = self.client.get_artist_albums(self.artist_id)
 		if isinstance(albums_results, str):
 			wx.CallAfter(ui.message, albums_results)
+			# In the list as well, where the user will look for the albums.
+			wx.CallAfter(self.albums_list.Append, albums_results)
 		else:
 			self.albums = albums_results.get("items", [])
 			for album in self.albums:
 				display = f"{album['name']} ({album['release_date']})"
 				wx.CallAfter(self.albums_list.Append, display)
+			if not self.albums:
+				wx.CallAfter(self.albums_list.Append, _("No albums found."))
 		wx.CallAfter(self._load_all_tracks)
 
 		# Spotify has no "playlists of this artist", so search playlists by the artist's name.
@@ -268,7 +272,7 @@ class ArtistDiscographyDialog(AccessifyDialog):
 		for playlist in self.playlists:
 			name = playlist.get("name") or _("Unknown")
 			owner = (playlist.get("owner") or {}).get("display_name")
-			self.playlists_list.Append(f"{name} - by {owner}" if owner else name)
+			self.playlists_list.Append(playlist_with_owner(name, owner) if owner else name)
 		if not self.playlists:
 			self.playlists_list.Append(_("No playlists found."))
 

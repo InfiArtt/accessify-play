@@ -37,7 +37,7 @@ Di playlist milik Anda, Anda juga bisa menyusun ulang lagu:
 
 Menu konteks lagu juga berisi Remove Track from Playlist, Remove Duplicates, Show Lyrics, Go to Album, dan Go to Artist.
 
-**Membuat playlist:** tekan `Ctrl+N`, isi nama dan, jika mau, deskripsi, lalu pilih apakah playlist bersifat publik. Playlist kolaboratif harus privat.
+**Membuat playlist:** tekan `Ctrl+N`, isi nama dan, jika mau, deskripsi, lalu pilih apakah playlist bersifat publik. Public playlist sudah dicentang, kecuali Anda mematikan **New playlists are public** di pengaturan. Playlist kolaboratif harus privat.
 
 ### Saved Tracks
 
@@ -53,7 +53,7 @@ Lagu yang Anda sukai (Liked Songs). `Enter` memutar lagu. Menu konteks berisi Re
 
 ### Top Items
 
-Lagu atau artis yang paling sering Anda putar. Pilih **Top Tracks** atau **Top Artists** di **Show**, dan Last 4 Weeks, Last 6 Months, atau All Time di **Time Range**; daftarnya diperbarui saat pilihan diubah. `Enter` memutar item, dan untuk artis menu konteks berisi View Discography.
+Lagu atau artis yang paling sering Anda putar. Pilih **Top Tracks** atau **Top Artists** di **Show**, dan Last 4 Weeks, Last 6 Months, atau All Time di **Time Range**; daftarnya diperbarui saat pilihan diubah. Tab ini dibuka pada Last 6 Months, atau periode yang dipilih di **Top Items in the Library opens on** pada pengaturan. `Enter` memutar item, dan untuk artis menu konteks berisi View Discography.
 
 ### Saved Shows
 

@@ -17,6 +17,7 @@ from logHandler import log
 from ..core.thread_manager import thread_manager
 from ..language import init_translation
 from ..lyrics import lyrics_for_track
+from ..settings_spec import conf_get
 from ..utils import safe_text
 
 if TYPE_CHECKING:
@@ -134,16 +135,7 @@ class AccessifyDialog(wx.Dialog):
 				if not track_uris:
 					wx.CallAfter(ui.message, _("No tracks were queued."))
 					return
-				added = 0
-				for track_uri in track_uris:
-					result = self.client.add_to_queue(track_uri)
-					if isinstance(result, str):
-						wx.CallAfter(ui.message, result)
-						return
-					added += 1
-				wx.CallAfter(
-					ui.message, _("Queued {count} tracks from {name}.").format(count=added, name=name)
-				)
+				self._queue_tracks(track_uris, name)
 			elif item_type == "artist":
 				wx.CallAfter(
 					ui.message,
@@ -158,6 +150,26 @@ class AccessifyDialog(wx.Dialog):
 				wx.CallAfter(ui.message, _("Cannot add this item to the queue."))
 		finally:
 			self._is_queuing = False
+
+	def _queue_tracks(self, track_uris: list[str], name: str) -> None:
+		"""Queue the tracks of an album or playlist, at most queueTrackLimit of them.
+
+		Spotify queues one track per request, and every request counts against
+		the request limit, so a long playlist is cut short rather than sent whole.
+		"""
+		limit = conf_get("queueTrackLimit")
+		for track_uri in track_uris[:limit]:
+			result = self.client.add_to_queue(track_uri)
+			if isinstance(result, str):
+				wx.CallAfter(ui.message, result)
+				return
+		if len(track_uris) > limit:
+			message = _("Queued the first {count} of {total} tracks from {name}.").format(
+				count=limit, total=len(track_uris), name=name
+			)
+		else:
+			message = _("Queued {count} tracks from {name}.").format(count=len(track_uris), name=name)
+		wx.CallAfter(ui.message, message)
 
 	def _save_album_to_library(self, album: Item) -> None:
 		if not self.client or not album or album.get("type") != "album" or not album.get("id"):

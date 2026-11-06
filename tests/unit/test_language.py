@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import builtins
 from typing import TYPE_CHECKING
 
 import config
@@ -44,6 +45,22 @@ def compiled_locale(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 def test_languages_with_a_catalogue_are_offered() -> None:
 	"""English and Indonesian ship with the add-on."""
 	assert {"en", "id"} <= set(language.AVAILABLE_LANGUAGE_CODES)
+
+
+def test_language_names(monkeypatch: pytest.MonkeyPatch) -> None:
+	"""Known languages are named in their own language; others get NVDA's name, or their code."""
+	monkeypatch.setattr(languageHandler, "descriptions", {"nl": "Dutch"})
+	assert language.language_name("id") == "Bahasa Indonesia"
+	assert language.language_name("nl") == "Dutch"
+	assert language.language_name("xx") == "xx"
+	monkeypatch.setattr(language, "AVAILABLE_LANGUAGE_CODES", ["en", "nl"])
+	assert language.language_entries("Auto") == [("auto", "Auto"), ("en", "English"), ("nl", "Dutch")]
+
+	def broken(_code: str) -> str:
+		raise LookupError
+
+	monkeypatch.setattr(languageHandler, "getLanguageDescription", broken)
+	assert language.language_name("nl") == "nl"
 
 
 def test_discovery_skips_folders_without_a_catalogue(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -115,6 +132,8 @@ def test_init_translation_installs_into_the_caller() -> None:
 	namespace: dict[str, object] = {"init": language.init_translation}
 	exec("init()", namespace)  # noqa: S102 - a module namespace of our own
 	assert namespace["_"] is language._gettext
+	# Never NVDA's own _ in builtins: that would translate all of NVDA and every add-on with ours.
+	assert getattr(builtins, "_", None) is not language._gettext
 	assert namespace["ngettext"] is language._ngettext
 	assert namespace["pgettext"] is language._pgettext
 	assert namespace["npgettext"] is language._npgettext

@@ -10,6 +10,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import api
+import config
 import pytest
 import wx
 from accesifyPlay.dialogs import search
@@ -94,6 +95,24 @@ def ready(client: SpotifyClient, server: SpotifyServer) -> SpotifyServer:
 	):
 		server.routes[route] = None
 	return server
+
+
+def test_search_opens_on_the_type_from_the_settings(client: SpotifyClient, ready: SpotifyServer) -> None:
+	"""The Type list starts on the searchType setting, and the first search looks for that type."""
+	config.conf["spotify"]["searchType"] = "artist"
+	window = SearchDialog(None, client)
+	assert window.typeBox.GetValue() == "Artist"
+	search_for(window, ready, "x", page("artist", [ARTIST]))
+	assert ready.requests[-1][2]["type"] == "artist"
+	assert window.resultsList.GetStrings() == ["A"]
+
+
+def test_rows_are_translatable(client: SpotifyClient, ready: SpotifyServer) -> None:
+	"""A playlist's row names its owner through a translatable text; a missing name is Unknown."""
+	window = SearchDialog(None, client)
+	window.select_type(3)
+	search_for(window, ready, "x", page("playlist", [OTHER, {"type": "playlist", "name": None}]))
+	assert window.resultsList.GetStrings() == ["Hits - by Bob", "Unknown - by Unknown"]
 
 
 def search_for(window: SearchDialog, server: SpotifyServer, query: str, answer: object) -> None:

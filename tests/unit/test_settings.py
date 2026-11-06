@@ -66,6 +66,44 @@ def test_the_panel_shows_the_settings(panel: SpotifySettingsPanel) -> None:
 	assert panel.ownClientIDCtrl.GetValue() == ""
 
 
+def test_the_new_settings(panel: SpotifySettingsPanel, sign_in: SignIn) -> None:
+	"""Sleep timer, queue limit, periods, search type and public playlists are saved like the rest."""
+	assert panel.sleepTimerCtrl.GetValue() == 30
+	assert panel.topTracksRangeCtrl.GetValue() == "Last 4 Weeks"
+	assert panel.topItemsRangeCtrl.GetValue() == "Last 6 Months"
+	assert panel.searchTypeCtrl.GetValue() == "Song"
+	assert panel.newPlaylistPublicCheck.GetValue() is True
+	panel.sleepTimerCtrl.SetValue(45)
+	panel.sleepTimerMaxCtrl.SetValue(600)
+	panel.queueLimitCtrl.SetValue(25)
+	panel.topTracksRangeCtrl.SetSelection(2)
+	panel.topItemsRangeCtrl.SetSelection(0)
+	panel.searchTypeCtrl.SetSelection(3)
+	panel.newPlaylistPublicCheck.SetValue(state=False)
+	panel.onSave()
+	spotify = config.conf["spotify"]
+	assert (spotify["sleepTimerMinutes"], spotify["sleepTimerMaxMinutes"], spotify["queueTrackLimit"]) == (
+		45,
+		600,
+		25,
+	)
+	assert (spotify["topTracksTimeRange"], spotify["topItemsTimeRange"]) == ("long_term", "short_term")
+	assert spotify["searchType"] == "playlist"
+	assert spotify["newPlaylistPublic"] is False
+	assert sign_in.calls == []
+
+
+def test_keep_alive_minimum_is_a_setting(panel: SpotifySettingsPanel, spoken: list[str]) -> None:
+	"""The shortest keep-alive interval comes from the hidden keepAliveMinSeconds setting."""
+	config.conf["spotify"]["keepAliveMinSeconds"] = 30
+	panel = SpotifySettingsPanel(None)
+	assert panel.keepAliveCtrl.label_text.endswith("Min = 30)")
+	panel.keepAliveCtrl.SetValue(10)
+	panel.onSave()
+	assert config.conf["spotify"]["keepAliveInterval"] == 30
+	assert spoken[-1] == "Keep Alive interval adjusted to minimum 30 seconds."
+
+
 def test_saving(panel: SpotifySettingsPanel, sign_in: SignIn, spoken: list[str]) -> None:
 	"""The values are stored; a short keep-alive is raised to the minimum; a new language needs a restart."""
 	panel.limitCtrl.SetValue(30)

@@ -141,6 +141,8 @@ def test_failures_and_empty_tabs(client: SpotifyClient, server: SpotifyServer, s
 	assert len(spoken) == 4
 	assert window.top_tracks_list.GetStrings() == ["No tracks available."]
 	assert window.playlists_list.GetStrings() == ["No playlists found."]
+	# The albums list says why it is empty, where the user looks for the albums.
+	assert window.albums_list.GetStrings() == [spoken[2]]
 	assert window.info_text.GetValue() == ""
 
 
@@ -151,6 +153,7 @@ def test_an_artist_without_albums_or_details(client: SpotifyClient, server: Spot
 	server.routes["GET", "artists/ar1/albums"] = {"items": []}
 	window = open_artist(client)
 	assert window.all_tracks_list.GetStrings() == ["No tracks available."]
+	assert window.albums_list.GetStrings() == ["No albums found."]
 	assert window.info_text.GetValue().splitlines()[:4] == [
 		"Name: Unknown",
 		"Followers: Unknown",

@@ -23,7 +23,7 @@ Tekan **`NVDA+Alt+G`** untuk membuka lapisan perintah, lalu tekan salah satu tom
 | `J` | Pergi ke waktu tertentu, atau lompat maju atau mundur |
 | `H` | Acak hidup atau mati |
 | `R` | Ulangi: semua, satu lagu, mati (tetap terbuka) |
-| `G` | Putar lagu teratas Anda sebulan terakhir |
+| `G` | Putar lagu teratas Anda (dari periode yang dipilih di pengaturan) |
 | `O` | Putar lagu yang baru Anda putar |
 | `D` | Pilih perangkat untuk memutar |
 

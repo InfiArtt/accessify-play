@@ -10,6 +10,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import accesifyPlay
+import config
 import core
 import inputCore
 import pytest
@@ -17,8 +18,8 @@ import scriptHandler
 import tones
 import wx
 from accesifyPlay import command_layers
+from accesifyPlay.commands import COMMANDS
 from accesifyPlay.dialogs.layer_editor import EditCommandDialog, LayerEditorDialog
-from accesifyPlay.layer_config import LayerConfigManager
 
 if TYPE_CHECKING:
 	from accesifyPlay.spotify_client import SpotifyClient
@@ -93,7 +94,7 @@ def test_command_without_a_script(layer: command_layers.CommandLayerManager) -> 
 def test_layer_times_out(layer: command_layers.CommandLayerManager, monkeypatch: pytest.MonkeyPatch) -> None:
 	"""A layer left open closes by itself, and the key then works as outside the layer."""
 	layer.activate()
-	later = command_layers.time.monotonic() + layer.TIMEOUT + 1
+	later = command_layers.time.monotonic() + config.conf["spotify"]["layerTimeoutSeconds"] + 1
 	monkeypatch.setattr(command_layers.time, "monotonic", lambda: later)
 	assert press("g") is True
 	assert not layer.is_active
@@ -128,7 +129,7 @@ def test_help_lists_every_key(layer: command_layers.CommandLayerManager) -> None
 	layer.show_help()
 	dialog = layer._help_dialog
 	text = dialog.children[1].GetValue()
-	assert "g: Play your top tracks from the last month." in text
+	assert "g: Play your top tracks." in text
 	assert text.endswith("Esc: Close the command layer.")
 	layer.show_help()
 	assert layer._help_dialog is dialog
@@ -141,20 +142,34 @@ def test_unbound_command_shows_as_unbound(layer: command_layers.CommandLayerMana
 	"""A command without a key is listed as Unbound in the help."""
 	layer.config_manager.set_script_config("playMyTopTracks", [], keep_open=False)
 	layer._refresh_bindings()
-	assert ("Unbound", "Play your top tracks from the last month.") in layer._help_entries
+	assert ("Unbound", "Play your top tracks.") in layer._help_entries
 
 
 def test_every_layer_command_has_a_name_and_a_script(
 	client: SpotifyClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-	"""Each default command has a display name in the editor and an Input Gestures description."""
+	"""Each command has a name for the editor, and its description is the script's in Input Gestures."""
 	monkeypatch.setattr(client, "initialize", lambda: None)
 	plugin = accesifyPlay.GlobalPlugin()
-	labels = LayerEditorDialog._get_script_labels(None)
-	for name, *_rest in LayerConfigManager._default_specs:
-		assert name in labels
-		assert getattr(plugin, f"script_{name}").__doc__
+	for command in COMMANDS:
+		assert command.name
+		assert getattr(plugin, f"script_{command.script}").__doc__ == command.description
+	assert len({command.key for command in COMMANDS}) == len(COMMANDS), "two commands share a default key"
 	plugin.terminate()
+
+
+def test_beeps_and_timeout_come_from_the_settings(
+	layer: command_layers.CommandLayerManager, monkeypatch: pytest.MonkeyPatch
+) -> None:
+	"""The layer's beeps and its timeout are hidden settings, read when they are needed."""
+	config.conf["spotify"].update(layerBeepHz=880, layerBeepMs=10, layerErrorBeepHz=200, layerErrorBeepMs=50)
+	config.conf["spotify"]["layerTimeoutSeconds"] = 5
+	monkeypatch.setattr(command_layers.time, "monotonic", lambda: 100.0)
+	layer.activate()
+	assert tones.beeps[-1] == (880, 10)
+	assert layer._deadline == 105.0
+	assert press("1") is False
+	assert tones.beeps[-1] == (200, 50)
 
 
 # --- The editor -----------------------------------------------------------------------------
@@ -186,7 +201,7 @@ def test_editor_lists_the_commands(editor: LayerEditorDialog) -> None:
 def test_editing_a_key(
 	editor: LayerEditorDialog, layer: command_layers.CommandLayerManager, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-	"""A new key is saved with kb: added, the row stays selected, and closing offers a restart."""
+	"""A new key is saved with kb: added, the row stays selected, and works once the editor closes."""
 
 	def type_key(dialog: EditCommandDialog) -> int:
 		dialog.txt_gesture.SetValue("shift+t")
@@ -199,7 +214,8 @@ def test_editing_a_key(
 	assert layer.config_manager.get_script_config("playMyTopTracks")["gestures"] == ["kb:shift+t"]
 	assert editor.list_ctrl.GetFirstSelected() == row_of(editor, "Play My Top Tracks")
 	editor.Close()
-	assert core.restarts == 1
+	assert core.restarts == 0
+	assert wx.message_boxes == []
 	assert layer._editor_dialog is None
 	assert layer._lookup(inputCore.InputGesture("kb:shift+t")) == "playMyTopTracks"
 
@@ -224,7 +240,7 @@ def test_edit_dialog_details() -> None:
 def test_cancelled_edit_changes_nothing(
 	editor: LayerEditorDialog, layer: command_layers.CommandLayerManager, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-	"""Cancel leaves the key alone, and closing then needs no restart."""
+	"""Cancel leaves the key alone."""
 	monkeypatch.setattr(EditCommandDialog, "ShowModal", lambda _self: wx.ID_CANCEL)
 	editor.list_ctrl.activate(row_of(editor, "Play My Top Tracks"))
 	editor.list_ctrl.selected = -1

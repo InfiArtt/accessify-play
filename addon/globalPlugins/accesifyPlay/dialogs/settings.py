@@ -17,13 +17,9 @@ from gui import guiHelper, messageBox, settingsDialogs
 
 from .. import donate, spotify_client
 from ..core.thread_manager import thread_manager
-from ..language import (
-	AVAILABLE_LANGUAGE_CODES,
-	LANGUAGE_AUTO,
-	LANGUAGE_DISPLAY_OVERRIDES,
-	init_translation,
-)
-from ..utils import KEEP_ALIVE_MIN_SECONDS, conf_get
+from ..labels import search_type_labels, time_range_labels
+from ..language import LANGUAGE_AUTO, init_translation, language_entries
+from ..settings_spec import SETTINGS, conf_get
 
 init_translation()
 
@@ -31,43 +27,116 @@ DEVELOPER_DASHBOARD_URL = "https://developer.spotify.com/dashboard"
 
 
 class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
-	"""Accessify Play's settings in NVDA's settings dialog."""
+	"""Accessify Play's settings in NVDA's settings dialog.
+
+	Ranges, defaults and the numbers in the labels come from settings_spec, so
+	the panel always offers exactly what the config spec accepts.
+	"""
 
 	title = _("Accessify Play")
 
 	def __init__(self, parent: wx.Window) -> None:
-		super().__init__(parent)
+		super().__init__(parent)  # calls makeSettings
 		self.client = spotify_client.get_client()
+
+	def _add_spin(self, helper: guiHelper.BoxSizerHelper, key: str, label: str) -> wx.SpinCtrl:
+		"""Add a spin control for a numeric setting; label may name {minimum} and {maximum}."""
+		setting = SETTINGS[key]
+		minimum = conf_get("keepAliveMinSeconds") if key == "keepAliveInterval" else setting.minimum
+		ctrl = helper.addLabeledControl(label.format(minimum=minimum, maximum=setting.maximum), wx.SpinCtrl)
+		ctrl.SetRange(setting.minimum, setting.maximum)
+		ctrl.SetValue(conf_get(key))
+		self._spins[key] = ctrl
+		return ctrl
+
+	def _add_choice(
+		self, helper: guiHelper.BoxSizerHelper, key: str, label: str, names: dict[str, str]
+	) -> wx.ComboBox:
+		"""Add a list for a setting with choices; names maps each choice to what it is called."""
+		codes = list(SETTINGS[key].choices)
+		ctrl = helper.addLabeledControl(
+			label, wx.ComboBox, choices=[names[code] for code in codes], style=wx.CB_READONLY
+		)
+		ctrl.SetSelection(codes.index(conf_get(key)))
+		self._choices[key] = (ctrl, codes)
+		return ctrl
 
 	def makeSettings(self, settings_sizer: wx.BoxSizer) -> None:
 		"""Build the controls."""
+		#: Setting key -> its spin control, for the numeric settings.
+		self._spins: dict[str, wx.SpinCtrl] = {}
+		#: Setting key -> (its list, the codes in the list's order), for settings with choices.
+		self._choices: dict[str, tuple[wx.ComboBox, list[str]]] = {}
 		s_helper = guiHelper.BoxSizerHelper(self, sizer=settings_sizer)
 
-		# Translators: Label for a setting to choose how many search results to load at a time.
-		limit_label = _("Search Results Limit (1 to 50)")
-		self.limitCtrl = s_helper.addLabeledControl(limit_label, wx.SpinCtrl)
-		self.limitCtrl.SetRange(1, 50)
-		self.limitCtrl.SetValue(conf_get("searchLimit", 20))
+		self.limitCtrl = self._add_spin(
+			s_helper,
+			"searchLimit",
+			# Translators: Label for a setting to choose how many search results to load at a time.
+			_("Search Results Limit ({minimum} to {maximum})"),
+		)
+		self.seekDurationCtrl = self._add_spin(
+			s_helper,
+			"seekDuration",
+			# Translators: Label for a setting to choose the duration for seek forward/backward actions.
+			_("Seek Duration (seconds, {minimum} to {maximum})"),
+		)
+		self.volumeStepCtrl = self._add_spin(
+			s_helper,
+			"volumeStep",
+			# Translators: Label for a setting to choose the volume step percentage.
+			_("Volume Step ({minimum} to {maximum})"),
+		)
+		self.keepAliveCtrl = self._add_spin(
+			s_helper,
+			"keepAliveInterval",
+			# Translators: Label for the keep-alive setting; {minimum} is the shortest interval allowed.
+			_("Keep Alive Interval (seconds, 0 = Off, Min = {minimum})"),
+		)
+		self.sleepTimerCtrl = self._add_spin(
+			s_helper,
+			"sleepTimerMinutes",
+			# Translators: Label for a setting: the number of minutes the sleep timer offers when it opens.
+			_("Sleep timer starts at (minutes, {minimum} to {maximum})"),
+		)
+		self.sleepTimerMaxCtrl = self._add_spin(
+			s_helper,
+			"sleepTimerMaxMinutes",
+			# Translators: Label for a setting: the longest sleep timer that can be set, in minutes.
+			_("Longest sleep timer (minutes, {minimum} to {maximum})"),
+		)
+		self.queueLimitCtrl = self._add_spin(
+			s_helper,
+			"queueTrackLimit",
+			# Translators: Label for a setting: how many tracks Add to Queue sends for a whole album
+			# or playlist.
+			_("Most tracks to queue from an album or playlist ({minimum} to {maximum})"),
+		)
+		self.topTracksRangeCtrl = self._add_choice(
+			s_helper,
+			"topTracksTimeRange",
+			# Translators: Label for a setting: the period Play My Top Tracks takes its tracks from.
+			_("Play My Top Tracks plays the top tracks of:"),
+			time_range_labels(),
+		)
+		self.topItemsRangeCtrl = self._add_choice(
+			s_helper,
+			"topItemsTimeRange",
+			# Translators: Label for a setting: the period the Top Items tab of the Library starts on.
+			_("Top Items in the Library opens on:"),
+			time_range_labels(),
+		)
+		self.searchTypeCtrl = self._add_choice(
+			s_helper,
+			"searchType",
+			# Translators: Label for a setting: the type (Song, Album, ...) the Search window starts on.
+			_("Search opens on:"),
+			search_type_labels(),
+		)
 
-		# Translators: Label for a setting to choose the duration for seek forward/backward actions.
-		seek_duration_label = _("Seek Duration (seconds, 1 to 60)")
-		self.seekDurationCtrl = s_helper.addLabeledControl(seek_duration_label, wx.SpinCtrl)
-		self.seekDurationCtrl.SetRange(1, 60)
-		self.seekDurationCtrl.SetValue(conf_get("seekDuration", 15))
-
-		# Translators: Label for a setting to choose the volume step percentage.
-		volume_step_label = _("Volume Step (1 to 100)")
-		self.volumeStepCtrl = s_helper.addLabeledControl(volume_step_label, wx.SpinCtrl)
-		self.volumeStepCtrl.SetRange(1, 100)
-		self.volumeStepCtrl.SetValue(conf_get("volumeStep", 5))
-
-		keep_alive_label = _("Keep Alive Interval (seconds, 0 = Off, Min = 5)")
-		self.keepAliveCtrl = s_helper.addLabeledControl(keep_alive_label, wx.SpinCtrl)
-		self.keepAliveCtrl.SetRange(0, 300)
-		self.keepAliveCtrl.SetValue(conf_get("keepAliveInterval", 0))
 		# Translators: Label for a setting to choose the display language for the addon.
 		language_label = _("Language:")
-		self.languageEntries = self._build_language_entries()
+		self.languageEntries = language_entries(_("Follow NVDA language (default)"))
 		language_choices = [label for _, label in self.languageEntries]
 		self.languageCodeByLabel = {label: code for code, label in self.languageEntries}
 		self.languageLabelByCode = dict(self.languageEntries)
@@ -78,24 +147,29 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 			style=wx.CB_READONLY,
 		)
 
-		current_lang_code = conf_get("language", LANGUAGE_AUTO)
+		current_lang_code = conf_get("language")
 		current_label = self.languageLabelByCode.get(
 			current_lang_code, self.languageLabelByCode.get(LANGUAGE_AUTO, language_choices[0])
 		)
 		self.languageCtrl.SetValue(current_label)
 		self._originalLanguage = current_lang_code
 
-		# Announce track changes checkbox (Fixed for accessibility)
 		self.announceTrackChanges = s_helper.addItem(
 			wx.CheckBox(self, label=_("Announce track changes automatically:"))
 		)
-		self.announceTrackChanges.SetValue(conf_get("announceTrackChanges", default=False))
+		self.announceTrackChanges.SetValue(conf_get("announceTrackChanges"))
+
+		self.newPlaylistPublicCheck = s_helper.addItem(
+			# Translators: Label for a setting: whether Create Playlist starts with Public playlist checked.
+			wx.CheckBox(self, label=_("New playlists are public"))
+		)
+		self.newPlaylistPublicCheck.SetValue(conf_get("newPlaylistPublic"))
 
 		# Translators: Label for an optional setting where users can enter the Client ID
 		# of a Spotify developer app of their own, instead of the shared one.
 		own_client_id_label = _("Your own Spotify Client ID (optional, leave blank to use the shared one):")
 		self.ownClientIDCtrl = s_helper.addLabeledControl(own_client_id_label, wx.TextCtrl)
-		self.ownClientIDCtrl.SetValue(conf_get("ownClientID", ""))
+		self.ownClientIDCtrl.SetValue(conf_get("ownClientID"))
 
 		buttons_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
@@ -119,13 +193,6 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 
 		s_helper.addItem(buttons_sizer)
 		self.Layout()  # Ensure all elements are properly laid out
-
-	def _build_language_entries(self) -> list[tuple[str, str]]:
-		entries = [(LANGUAGE_AUTO, _("Follow NVDA language (default)"))]
-		for code in AVAILABLE_LANGUAGE_CODES:
-			label = LANGUAGE_DISPLAY_OVERRIDES.get(code, code)
-			entries.append((code, label))
-		return entries
 
 	def isValid(self) -> bool:
 		"""Refuse to save a client ID that is not 32 letters and digits."""
@@ -166,30 +233,34 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 
 	def _save_values(self) -> bool:
 		"""Store the panel's values. Returns whether the Client ID changed."""
-		config.conf["spotify"]["searchLimit"] = self.limitCtrl.GetValue()
-		config.conf["spotify"]["seekDuration"] = self.seekDurationCtrl.GetValue()
-		config.conf["spotify"]["volumeStep"] = self.volumeStepCtrl.GetValue()
+		spotify = config.conf["spotify"]
+		for key, ctrl in self._spins.items():
+			spotify[key] = ctrl.GetValue()
+		for key, (ctrl, codes) in self._choices.items():
+			spotify[key] = codes[ctrl.GetSelection()]
 
 		selected_lang_display = self.languageCtrl.GetValue()
 		selected_code = self.languageCodeByLabel.get(selected_lang_display, LANGUAGE_AUTO)
-		config.conf["spotify"]["language"] = selected_code
+		spotify["language"] = selected_code
 
 		if selected_code != self._originalLanguage:
 			ui.message(_("Language changes will take effect after restarting NVDA."))
 			self._originalLanguage = selected_code
-		ka_val = self.keepAliveCtrl.GetValue()
-		if 0 < ka_val < KEEP_ALIVE_MIN_SECONDS:
-			ka_val = KEEP_ALIVE_MIN_SECONDS
-			ui.message(_("Keep Alive interval adjusted to minimum 5 seconds."))
-
-		config.conf["spotify"]["keepAliveInterval"] = ka_val
-		config.conf["spotify"]["announceTrackChanges"] = self.announceTrackChanges.IsChecked()
+		keep_alive = spotify["keepAliveInterval"]
+		minimum = conf_get("keepAliveMinSeconds")
+		if 0 < keep_alive < minimum:
+			spotify["keepAliveInterval"] = minimum
+			ui.message(
+				_("Keep Alive interval adjusted to minimum {seconds} seconds.").format(seconds=minimum)
+			)
+		spotify["announceTrackChanges"] = self.announceTrackChanges.IsChecked()
+		spotify["newPlaylistPublic"] = self.newPlaylistPublicCheck.IsChecked()
 
 		own_client_id = self.ownClientIDCtrl.GetValue().strip()
 		if not spotify_client.is_valid_client_id(own_client_id):
 			own_client_id = ""
-		changed = own_client_id != conf_get("ownClientID", "")
-		config.conf["spotify"]["ownClientID"] = own_client_id
+		changed = own_client_id != conf_get("ownClientID")
+		spotify["ownClientID"] = own_client_id
 		return changed
 
 	def on_validate(self, _evt: wx.Event) -> None:

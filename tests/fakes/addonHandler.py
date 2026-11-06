@@ -7,6 +7,8 @@
 
 from __future__ import annotations
 
+import inspect
+
 
 class AddonError(Exception):
 	pass
@@ -14,11 +16,12 @@ class AddonError(Exception):
 
 #: Set to an object with a `manifest` dict to pretend the code runs from an add-on.
 code_addon = None
-_addonImportTrackers: dict[str, set] = {}
 
 
 def initTranslation() -> None:
-	pass
+	"""Put `_` into the calling module, as NVDA does; here it leaves the text in English."""
+	caller = inspect.currentframe().f_back
+	caller.f_globals["_"] = str
 
 
 def getCodeAddon(*_args: object, **_kwargs: object) -> object:

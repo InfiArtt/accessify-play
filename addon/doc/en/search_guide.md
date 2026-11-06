@@ -4,7 +4,7 @@ Open Search with `NVDA+Alt+G` then `S`.
 
 ## Searching
 
-1. In **Type**, choose what to look for: Song, Album, Artist, Playlist, Podcast or Audiobook.
+1. In **Type**, choose what to look for: Song, Album, Artist, Playlist, Podcast or Audiobook. Search opens on Song, unless you chose another type under **Search opens on** in the settings.
 2. In **Search for**, type your search and press `Enter` (or the **Search** button).
 3. Move through the **Results** list with the arrow keys.
 

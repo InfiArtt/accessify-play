@@ -16,7 +16,6 @@ The checks CI runs, in the same order:
 
 ```
 pre-commit run --all-files            # ruff check and ruff format, plus a few file checks
-python tests/run_tests.py             # the older test scripts (see "Tests" below)
 python -m pytest --cov                # the test suite; fails below 90% coverage
 scons && scons pot                    # build the .nvda-addon and the translation template
 ```
@@ -27,9 +26,12 @@ scons && scons pot                    # build the .nvda-addon and the translatio
 
 Everything lives in `addon/globalPlugins/accesifyPlay/`:
 
-* `__init__.py`: the `GlobalPlugin`. The settings spec (`confspec`), every script (command), the track poller that announces new songs and keeps the lyrics in time, and opening the windows.
-* `spotify_client.py`: everything the add-on asks Spotify. `SpotifyClient` is shared (`get_client()`). Its methods return Spotify's answer, or a message string to speak when something went wrong; callers check `isinstance(result, str)`. `run_request` sends a request and turns errors into those messages; `run_on_device` adds the active device. Sign-in, the token cache, rate limits and retired endpoints are handled here.
-* `command_layers.py`, `layer_config.py`, `dialogs/layer_editor.py`: the command layer (`NVDA+Alt+G`, then one key). `layer_config.py` holds the default keys and loads and saves the user's own, which the editor (`F2` in the layer) changes.
+* `__init__.py`: the `GlobalPlugin`. It registers the settings spec, and has every script (command), the track poller that announces new songs and keeps the lyrics in time, and opening the windows.
+* `settings_spec.py`: every setting in one table (`SETTINGS`): its default, its range or choices, and whether it is hidden. The config spec NVDA validates against (`CONFSPEC`), the defaults `conf_get` falls back on, and the ranges and labels of the settings panel are all made from it. It translates nothing, so `__init__` can import it before registering the spec.
+* `commands.py`: every command of the command layer in one table (`COMMANDS`): default key, whether the layer stays open, its name in the layer editor and its description, which is also the script's description in Input Gestures.
+* `labels.py`: what the choices of a setting (periods, search types) are called on screen, shared by the settings panel and the windows.
+* `spotify_client.py`: everything the add-on asks Spotify. Spotify's own limits (page sizes, batch sizes) are named at its top; they are facts of the Web API, not settings. `SpotifyClient` is shared (`get_client()`). Its methods return Spotify's answer, or a message string to speak when something went wrong; callers check `isinstance(result, str)`. `run_request` sends a request and turns errors into those messages; `run_on_device` adds the active device. Sign-in, the token cache, rate limits and retired endpoints are handled here.
+* `command_layers.py`, `layer_config.py`, `dialogs/layer_editor.py`: the command layer (`NVDA+Alt+G`, then one key). `layer_config.py` loads and saves the user's own keys (`layerConfig.json` keeps only keys and "keep open"; everything else comes from `commands.py`), which the editor (`F2` in the layer) changes. New keys work as soon as the editor closes.
 * `lyrics.py`: lyrics from lrclib.net (`lyrics_for_track`), LRC parsing, and the auto-reader that speaks each line in time.
 * `ui/base_dialog.py`: `AccessifyDialog`, the base of every window. It destroys the window on close and has the shared actions: play, queue, save and follow toggles, the Add to Playlist submenu, the Go to Album/Artist items, the lyrics preview.
 * `ui/paged_list.py`: `PagedList`, a list box filled a page at a time, with the Loading, Load More, empty and failed rows. Used by playlists, episodes, chapters and the artist's All Tracks.
@@ -47,7 +49,7 @@ Bundled libraries are in `addon/lib` (see `addon/thirdPartyNotices.md`). User gu
 * **Say what happened.** Results are spoken with `ui.message`. When a client method returns a string, speak it; that is the reason it failed.
 * **Windows put their data where the user looks.** A list that failed to load, or is empty, says so in its first row, so the screen reader finds it there.
 * **Every list and field is named** by a `wx.StaticText` created right before it, which NVDA reads as its label.
-* **Settings** live in `config.conf["spotify"]` (spec in `__init__.py`); read them with `conf_get(key, default)`. The page size of every paged list is the `searchLimit` setting.
+* **Settings** live in `config.conf["spotify"]`, described by the table in `settings_spec.py`; read them with `conf_get(key)`, which never raises and falls back on the table's default. A value that could reasonably differ between users or setups (an interval, a timeout, a limit, a default choice) belongs in that table rather than in the code: in the settings panel when users will want to change it, otherwise as a hidden setting (`hidden=True`), changeable in `nvda.ini` and listed in `configuration.md`. Read settings when they are needed, not once at import. The page size of every paged list is the `searchLimit` setting.
 * **Shortcuts.** The command layer is configurable (`layer_config.py`). Inside windows, shortcuts are accelerator tables written in each dialog: `Alt+P` play, `Alt+Q` queue, `Alt+L` copy link, `Alt+R` refresh, plus a few per window (`Alt+F`, `Alt+D`, `Alt+W` in Search; `Alt+S` for episodes; `Ctrl+1` to `Ctrl+6` and `Ctrl+Tab` for types or tabs in Search and the artist window). They are not configurable yet.
 
 ## Conventions
@@ -72,7 +74,8 @@ Bundled libraries are in `addon/lib` (see `addon/thirdPartyNotices.md`). User gu
   * `choose(window, menu, label)` picks a context menu item; `last_menu()` is the menu that popped up; `accelerate(window, wx.ACCEL_ALT, "P")` presses a shortcut; `record_windows(monkeypatch, module, "AlbumTracksDialog", ...)` replaces windows a dialog opens with recorders.
   * Fake widgets have test-only helpers: `button.press()`, `control.fire(wx.EVT_CHAR_HOOK, wx.KeyEvent(wx.WXK_RETURN))`, `listbox.select(row, wx.EVT_LISTBOX)`, `listctrl.activate(row)`.
 * Test behaviour through the window, as a user would: press keys and buttons, open menus, and check what is spoken, shown and sent to Spotify. Coverage must stay at 90% or more (`fail_under` in `pyproject.toml`); it is about 98%.
-* `tests/test_*.py` are older standalone scripts, run by `tests/run_tests.py`. They stay until their checks are in `tests/unit`; many already are. Some check the project rather than the code (the Indonesian catalog, the user guides, import order, a build without site-packages) and are worth porting as they are. When one is fully covered, delete it.
+* Some tests check the project rather than the code. `test_project.py`: the Indonesian and English catalogues against the code's strings, the user guides (pages, links, the key tables against `commands.py`), the import order, that every setting in `settings_spec.py` is used, and the bundled libraries' notices. `test_settings_spec.py`: the config spec, the settings panel and `configuration.md` against the table of settings. `test_isolated.py` runs the scripts in `tests/isolated` with `python -I -S`, so the bundled libraries and the secrets fallback are tried with the standard library alone, as inside NVDA.
+* Changing or adding a user-facing text means updating `addon/locale/id/LC_MESSAGES/nvda.po` (translated) and `addon/locale/en/LC_MESSAGES/nvda.po` (untranslated) in the same change; `test_project.py` fails until both match the code.
 
 ## Releases
 

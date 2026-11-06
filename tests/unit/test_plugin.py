@@ -147,11 +147,11 @@ def test_poller_announces_new_tracks(
 ) -> None:
 	"""With announcements on, a new track is said once; playing polls fastest."""
 	accesifyPlay.config.conf["spotify"]["announceTrackChanges"] = True
-	assert plugin.track_change_poller() == accesifyPlay.POLL_PLAYING_SECONDS
-	assert plugin.track_change_poller() == accesifyPlay.POLL_PLAYING_SECONDS
+	assert plugin.track_change_poller() == 5
+	assert plugin.track_change_poller() == 5
 	assert spoken == ["Song - A"]
 	server.routes["GET", "me/player"] = playing(EPISODE, is_playing=False)
-	assert plugin.track_change_poller() == accesifyPlay.POLL_PAUSED_SECONDS
+	assert plugin.track_change_poller() == 10
 	assert spoken[-1] == "Ep - Show"
 
 
@@ -171,7 +171,10 @@ def test_poller_waits_out_errors(
 	accesifyPlay.config.conf["spotify"]["announceTrackChanges"] = True
 	plugin.track_change_poller()
 	server.routes["GET", "me/player"] = spotify_error(502)
-	assert plugin.track_change_poller() == accesifyPlay.POLL_IDLE_SECONDS
+	assert plugin.track_change_poller() == 15
+	# The intervals are hidden settings.
+	accesifyPlay.config.conf["spotify"]["pollIdleSeconds"] = 60
+	assert plugin.track_change_poller() == 60
 	server.routes["GET", "me/player"] = playing()
 	plugin.track_change_poller()
 	assert spoken == ["Song - A"]
@@ -201,7 +204,7 @@ def test_poller_keeps_lyrics_in_time(
 	plugin.last_track_id = "t1"
 	plugin._last_is_playing = True
 	server.routes["GET", "me/player"] = playing(is_playing=False)
-	assert plugin.track_change_poller() == accesifyPlay.POLL_PLAYING_SECONDS
+	assert plugin.track_change_poller() == 5
 	assert all(t.cancelled for t in timers)
 	made = len(timers)
 	server.routes["GET", "me/player"] = playing()
@@ -718,6 +721,18 @@ def test_sleep_timer(
 	plugin._handle_sleep_timer(3)
 	plugin._handle_sleep_timer(0)
 	assert spoken[-1] == "Sleep timer cancelled."
+
+
+def test_sleep_timer_minutes_are_settings(plugin: accesifyPlay.GlobalPlugin) -> None:
+	"""The timer opens on the minutes from the settings, and goes no higher than the longest allowed."""
+	plugin.script_showSleepTimerDialog(None)
+	ctrl = plugin.sleepTimerDialog.minutesCtrl
+	assert (ctrl.GetValue(), ctrl.min, ctrl.max) == (30, 0, 240)
+	plugin.sleepTimerDialog.Close()
+	accesifyPlay.config.conf["spotify"].update(sleepTimerMinutes=90, sleepTimerMaxMinutes=60)
+	plugin.script_showSleepTimerDialog(None)
+	ctrl = plugin.sleepTimerDialog.minutesCtrl
+	assert (ctrl.GetValue(), ctrl.max) == (60, 60)
 
 
 def test_sleep_timer_resumes_after_a_restart(

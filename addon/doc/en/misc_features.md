@@ -30,7 +30,7 @@ All keys below are pressed after `NVDA+Alt+G`.
 
 ## Quick play
 
-* `G` plays your top tracks of the last month.
+* `G` plays your top tracks of the last 4 weeks, or of the period chosen under **Play My Top Tracks plays the top tracks of** in the settings.
 * `O` plays your recently played tracks.
 
 ## Sharing
@@ -40,7 +40,7 @@ All keys below are pressed after `NVDA+Alt+G`.
 
 ## Sleep timer
 
-`Z` opens the sleep timer. Enter a number of minutes (up to 240) and press **Start Timer**; when the time is up, the music pauses and NVDA tells you so. The timer keeps running even if you restart NVDA. To cancel it, open the sleep timer again and enter 0.
+`Z` opens the sleep timer. It offers 30 minutes; enter the number of minutes you want (up to 240) and press **Start Timer**. Both numbers can be changed in the settings. When the time is up, the music pauses and NVDA tells you so. The timer keeps running even if you restart NVDA. To cancel it, open the sleep timer again and enter 0.
 
 ---
 [Back to Home](readme.html)

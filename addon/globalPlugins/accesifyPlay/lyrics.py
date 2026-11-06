@@ -18,12 +18,12 @@ import ui as nvda_ui
 import wx
 from logHandler import log
 
+from .settings_spec import conf_get
+
 if TYPE_CHECKING:
 	from collections.abc import Callable
 
 	from .spotify_types import Item, Reply, TimedLines
-
-LRCLIB_BASE = "https://lrclib.net/api"
 
 
 class Lyrics(NamedTuple):
@@ -34,10 +34,6 @@ class Lyrics(NamedTuple):
 	plain: str | None
 	#: [(milliseconds, line)] when the lines are timed, else None.
 	synced: list | None = None
-
-
-#: A lyric line still gets spoken when it is at most this late.
-LATE_LINE_TOLERANCE_MS = 200
 
 
 # ---------------------------------------------------------------------------
@@ -98,26 +94,28 @@ def _fetch_search(track_name: str, artist_name: str) -> Item | None:
 
 @functools.cache
 def _get_user_agent() -> str:
-	"""Identify ourselves to lrclib with the add-on's real version.
+	"""Identify ourselves to lrclib with the add-on's real version and homepage.
 
-	lrclib asks clients for a name, version and homepage. This used to be a
-	hard-coded "1.6.1", five releases stale.
+	lrclib asks clients for a name, version and homepage. Both come from the
+	add-on's manifest (buildVars.py), so they never go stale.
 	"""
 	try:
-		version = addonHandler.getCodeAddon().manifest["version"]
+		manifest = addonHandler.getCodeAddon().manifest
 	except addonHandler.AddonError:
-		version = "unknown"
-	return f"AccessifyPlay-NVDA-Addon/{version} (+https://github.com/InfiArtt/accessify-play)"
+		return "AccessifyPlay-NVDA-Addon/unknown"
+	agent = f"AccessifyPlay-NVDA-Addon/{manifest['version']}"
+	url = manifest.get("url")
+	return f"{agent} (+{url})" if url else agent
 
 
 def _make_request(endpoint: str, params: dict[str, str | int]) -> Reply:
 	"""Return the JSON answer of one lrclib endpoint, or None if there is none."""
 	try:
 		response = requests.get(
-			f"{LRCLIB_BASE}/{endpoint}",
+			f"{str(conf_get('lyricsServer')).rstrip('/')}/{endpoint}",
 			params=params,
 			headers={"User-Agent": _get_user_agent()},
-			timeout=10,
+			timeout=conf_get("lyricsTimeoutSeconds"),
 		)
 		response.raise_for_status()
 		return response.json()
@@ -209,12 +207,13 @@ class LyricsAutoReader:
 		if not lines:
 			return False
 
+		tolerance_ms = conf_get("lyricLateToleranceMs")
 		with self._lock:
 			self._active = True
 			scheduled = 0
 			for line_ms, text in lines:
 				delay_ms = line_ms - progress_ms
-				if delay_ms < -LATE_LINE_TOLERANCE_MS:
+				if delay_ms < -tolerance_ms:
 					continue
 				delay_s = max(0.0, delay_ms / 1000.0)
 				# Pass ms so _speak can fire the line_callback for auto-scroll

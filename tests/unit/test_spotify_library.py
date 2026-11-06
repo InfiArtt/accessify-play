@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import config
 import pytest
 from conftest import SpotifyServer, spotify_error
 
@@ -238,7 +239,12 @@ def test_top_items_and_history(client: SpotifyClient, server: SpotifyServer) -> 
 	assert server.requests[-1][2]["time_range"] == "long_term"
 	assert client.get_top_items("artists")["items"] == [{"name": "A"}]
 	assert client.get_top_items("genres") is None
-	assert client.get_recently_played(limit=5) == page([])
+	assert client.get_recently_played() == page([])
+	# How many is the hidden topAndRecentLimit setting.
+	assert server.requests[-1][2]["limit"] == 50
+	config.conf["spotify"]["topAndRecentLimit"] = 20
+	client.get_top_items("tracks")
+	assert server.requests[-1][2]["limit"] == 20
 
 
 # --- Browsing -------------------------------------------------------------------------------

@@ -15,6 +15,7 @@ from gui import guiHelper
 
 from ..core.thread_manager import thread_manager
 from ..language import init_translation
+from ..settings_spec import conf_get
 from ..ui.base_dialog import AccessifyDialog
 
 if TYPE_CHECKING:
@@ -42,7 +43,7 @@ class CreatePlaylistDialog(AccessifyDialog):
 		)
 		self.descriptionCtrl.SetMinSize((-1, 80))
 		self.publicCheck = s_helper.addItem(wx.CheckBox(self, label=_("Public playlist")))
-		self.publicCheck.SetValue(state=True)
+		self.publicCheck.SetValue(state=conf_get("newPlaylistPublic"))
 		self.collabCheck = s_helper.addItem(wx.CheckBox(self, label=_("Collaborative (requires public off)")))
 
 		buttons_sizer = wx.StdDialogButtonSizer()
@@ -268,12 +269,14 @@ class AddToPlaylistDialog(AccessifyDialog):
 			ui.message(_("Please select a playlist and ensure a track is playing."))
 			return
 
+		# Read here, on the UI thread: wx controls must not be touched from _add's thread.
+		selected_playlist_name = self.playlist_combobox.GetValue()
+
 		def _add() -> None:
 			result = self.client.add_items_to_playlist(self.selected_playlist_id, self.current_track_uri)
 			if isinstance(result, str):
 				wx.CallAfter(ui.message, result)
 			else:
-				selected_playlist_name = self.playlist_combobox.GetValue()
 				wx.CallAfter(
 					ui.message,
 					_("Track added to playlist '{playlist_name}'.").format(

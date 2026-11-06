@@ -211,11 +211,6 @@ msgstr "Umumkan waktu pemutaran trek saat ini."
 msgid "Copy the URL of the current track."
 msgstr "Salin URL trek saat ini."
 
-#: addon/globalPlugins/accesifyPlay/__init__.py:663
-#: addon/globalPlugins/accesifyPlay/layer_config.py:22
-msgid "Play your top tracks from the last month."
-msgstr "Putar trek teratas Anda sebulan terakhir."
-
 #: addon/globalPlugins/accesifyPlay/__init__.py:670
 #: addon/globalPlugins/accesifyPlay/layer_config.py:23
 msgid "Play your recently played tracks."
@@ -925,22 +920,6 @@ msgstr "Yakin ingin mengatur ulang semua pintasan ke default?"
 #: addon/globalPlugins/accesifyPlay/dialogs/layer_editor.py:225
 msgid "Confirm Reset"
 msgstr "Konfirmasi Atur Ulang"
-
-#: addon/globalPlugins/accesifyPlay/dialogs/layer_editor.py:239
-msgid ""
-"You have made changes to the command layer. NVDA needs to restart to apply "
-"them fully.\n"
-"\n"
-"Restart now?"
-msgstr ""
-"Anda telah mengubah lapisan perintah. NVDA perlu dimulai ulang agar "
-"perubahan diterapkan sepenuhnya.\n"
-"\n"
-"Mulai ulang sekarang?"
-
-#: addon/globalPlugins/accesifyPlay/dialogs/layer_editor.py:241
-msgid "Restart Required"
-msgstr "Diperlukan Mulai Ulang"
 
 #: addon/globalPlugins/accesifyPlay/dialogs/lyrics_window.py:38
 #: addon/globalPlugins/accesifyPlay/dialogs/lyrics_window.py:229
@@ -2053,27 +2032,6 @@ msgstr "Melompat..."
 msgid "Done."
 msgstr "Selesai."
 
-#. Translators: Label for a setting to choose how many search results to load at a
-#. time.
-#: addon/globalPlugins/accesifyPlay/dialogs/settings.py:31
-msgid "Search Results Limit (1 to 50)"
-msgstr "Batas Hasil Pencarian (1 sampai 50)"
-
-#. Translators: Label for a setting to choose the duration for seek
-#. forward/backward actions.
-#: addon/globalPlugins/accesifyPlay/dialogs/settings.py:37
-msgid "Seek Duration (seconds, 1 to 60)"
-msgstr "Durasi Lompat (detik, 1 sampai 60)"
-
-#. Translators: Label for a setting to choose the volume step percentage.
-#: addon/globalPlugins/accesifyPlay/dialogs/settings.py:43
-msgid "Volume Step (1 to 100)"
-msgstr "Langkah Volume (1 sampai 100)"
-
-#: addon/globalPlugins/accesifyPlay/dialogs/settings.py:48
-msgid "Keep Alive Interval (seconds, 0 = Off, Min = 5)"
-msgstr "Interval Keep Alive (detik, 0 = Mati, Minimal = 5)"
-
 #. Translators: Label for a setting to choose the display language for the addon.
 #: addon/globalPlugins/accesifyPlay/dialogs/settings.py:53
 msgid "Language:"
@@ -2140,10 +2098,6 @@ msgstr "Ikuti bahasa NVDA (default)"
 #: addon/globalPlugins/accesifyPlay/dialogs/settings.py:112
 msgid "Language changes will take effect after restarting NVDA."
 msgstr "Perubahan bahasa akan berlaku setelah NVDA dihidupkan ulang."
-
-#: addon/globalPlugins/accesifyPlay/dialogs/settings.py:117
-msgid "Keep Alive interval adjusted to minimum 5 seconds."
-msgstr "Interval Keep Alive disesuaikan ke minimal 5 detik."
 
 #: addon/globalPlugins/accesifyPlay/dialogs/settings.py:124
 msgid "Validating credentials with Spotify..."
@@ -2230,22 +2184,6 @@ msgid ""
 msgstr ""
 "Terima kasih telah mempertimbangkan donasi! Ini akan membuka tautan di "
 "browser web Anda."
-
-#: addon/globalPlugins/accesifyPlay/donate.py:35
-msgid ""
-"Could not open your web browser. The donation page is at "
-"https://www.paypal.com/paypalme/rafli23115"
-msgstr ""
-"Tidak dapat membuka browser web Anda. Halaman donasi ada di "
-"https://www.paypal.com/paypalme/rafli23115"
-
-#: addon/globalPlugins/accesifyPlay/layer_config.py:29
-msgid "Follow or unfollow the artist of the current track."
-msgstr "Ikuti atau berhenti mengikuti artis trek saat ini."
-
-#: addon/globalPlugins/accesifyPlay/layer_config.py:41
-msgid "Like/Unlike Track."
-msgstr "Sukai/Batal Sukai Trek."
 
 #. Translators: how long to wait before retrying, in seconds.
 #: addon/globalPlugins/accesifyPlay/spotify_client.py:39
@@ -2899,4 +2837,102 @@ msgstr "Daftar Putar"
 msgid "{type}, searching..."
 msgstr "{type}, mencari..."
 
+#: addon/globalPlugins/accesifyPlay/commands.py:37
+msgid "Play your top tracks."
+msgstr "Putar trek teratas Anda."
 
+#: addon/globalPlugins/accesifyPlay/dialogs/artist.py:240
+msgid "No albums found."
+msgstr "Tidak ada album yang ditemukan."
+
+#. Translators: a row of the queue, e.g. "Queue: Yesterday by The Beatles".
+#: addon/globalPlugins/accesifyPlay/dialogs/queue_list.py:94
+#, python-brace-format
+msgid "{prefix}: {name} by {artists}"
+msgstr "{prefix}: {name} oleh {artists}"
+
+#. Translators: Label for a setting to choose how many search results to load at a time.
+#: addon/globalPlugins/accesifyPlay/dialogs/settings.py:76
+#, python-brace-format
+msgid "Search Results Limit ({minimum} to {maximum})"
+msgstr "Batas Hasil Pencarian ({minimum} sampai {maximum})"
+
+#. Translators: Label for a setting to choose the duration for seek forward/backward actions.
+#: addon/globalPlugins/accesifyPlay/dialogs/settings.py:82
+#, python-brace-format
+msgid "Seek Duration (seconds, {minimum} to {maximum})"
+msgstr "Durasi Lompat (detik, {minimum} sampai {maximum})"
+
+#. Translators: Label for a setting to choose the volume step percentage.
+#: addon/globalPlugins/accesifyPlay/dialogs/settings.py:88
+#, python-brace-format
+msgid "Volume Step ({minimum} to {maximum})"
+msgstr "Langkah Volume ({minimum} sampai {maximum})"
+
+#. Translators: Label for the keep-alive setting; {minimum} is the shortest interval allowed.
+#: addon/globalPlugins/accesifyPlay/dialogs/settings.py:94
+#, python-brace-format
+msgid "Keep Alive Interval (seconds, 0 = Off, Min = {minimum})"
+msgstr "Interval Keep Alive (detik, 0 = Mati, Minimal = {minimum})"
+
+#. Translators: Label for a setting: the number of minutes the sleep timer offers when it opens.
+#: addon/globalPlugins/accesifyPlay/dialogs/settings.py:100
+#, python-brace-format
+msgid "Sleep timer starts at (minutes, {minimum} to {maximum})"
+msgstr "Pengatur waktu tidur dimulai dari (menit, {minimum} sampai {maximum})"
+
+#. Translators: Label for a setting: the longest sleep timer that can be set, in minutes.
+#: addon/globalPlugins/accesifyPlay/dialogs/settings.py:106
+#, python-brace-format
+msgid "Longest sleep timer (minutes, {minimum} to {maximum})"
+msgstr "Pengatur waktu tidur terlama (menit, {minimum} sampai {maximum})"
+
+#. Translators: Label for a setting: how many tracks Add to Queue sends for a whole album
+#. or playlist.
+#: addon/globalPlugins/accesifyPlay/dialogs/settings.py:113
+#, python-brace-format
+msgid "Most tracks to queue from an album or playlist ({minimum} to {maximum})"
+msgstr ""
+"Jumlah trek terbanyak yang dimasukkan ke antrean dari album atau daftar "
+"putar ({minimum} sampai {maximum})"
+
+#. Translators: Label for a setting: the period Play My Top Tracks takes its tracks from.
+#: addon/globalPlugins/accesifyPlay/dialogs/settings.py:119
+msgid "Play My Top Tracks plays the top tracks of:"
+msgstr "Putar Trek Teratas Saya memutar trek teratas dari:"
+
+#. Translators: Label for a setting: the period the Top Items tab of the Library starts on.
+#: addon/globalPlugins/accesifyPlay/dialogs/settings.py:126
+msgid "Top Items in the Library opens on:"
+msgstr "Item Teratas di Perpustakaan dibuka pada:"
+
+#. Translators: Label for a setting: the type (Song, Album, ...) the Search window starts on.
+#: addon/globalPlugins/accesifyPlay/dialogs/settings.py:133
+msgid "Search opens on:"
+msgstr "Pencarian dibuka pada:"
+
+#. Translators: Label for a setting: whether Create Playlist starts with Public playlist checked.
+#: addon/globalPlugins/accesifyPlay/dialogs/settings.py:164
+msgid "New playlists are public"
+msgstr "Daftar putar baru bersifat publik"
+
+#: addon/globalPlugins/accesifyPlay/dialogs/settings.py:254
+#, python-brace-format
+msgid "Keep Alive interval adjusted to minimum {seconds} seconds."
+msgstr "Interval Keep Alive disesuaikan ke minimal {seconds} detik."
+
+#: addon/globalPlugins/accesifyPlay/donate.py:42
+#, python-brace-format
+msgid "Could not open your web browser. The donation page is at {url}"
+msgstr "Tidak dapat membuka browser web Anda. Halaman donasi ada di {url}"
+
+#: addon/globalPlugins/accesifyPlay/ui/base_dialog.py:167
+#, python-brace-format
+msgid "Queued the first {count} of {total} tracks from {name}."
+msgstr "{count} trek pertama dari {total} trek dari {name} dimasukkan ke antrean."
+
+#. Translators: a playlist in a list, with who made it, e.g. "Chill Mix - by Spotify".
+#: addon/globalPlugins/accesifyPlay/utils.py:122
+#, python-brace-format
+msgid "{name} - by {owner}"
+msgstr "{name} - oleh {owner}"

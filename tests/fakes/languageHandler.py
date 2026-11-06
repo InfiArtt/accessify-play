@@ -12,3 +12,11 @@ language = "en"
 
 def getLanguage() -> str:
 	return language
+
+
+#: What getLanguageDescription answers, by language code.
+descriptions: dict[str, str] = {}
+
+
+def getLanguageDescription(language: str) -> str | None:
+	return descriptions.get(language)

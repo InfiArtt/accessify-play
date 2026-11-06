@@ -7,11 +7,10 @@
 
 from __future__ import annotations
 
+import random
 import threading
-from types import SimpleNamespace
 
 import api
-import config
 import pytest
 from accesifyPlay import utils
 
@@ -110,21 +109,6 @@ def test_copy_link(link: str | None, works: bool, message: str, spoken: list[str
 	assert spoken == [message]
 
 
-def test_conf_get_reads_the_setting() -> None:
-	"""A stored value is returned; None falls back to the default."""
-	config.conf["spotify"]["searchLimit"] = 7
-	config.conf["spotify"]["ownClientID"] = None
-	assert utils.conf_get("searchLimit", default=20) == 7
-	assert utils.conf_get("ownClientID", default="") == ""
-
-
-def test_conf_get_never_raises(monkeypatch: pytest.MonkeyPatch) -> None:
-	"""A missing key or a broken configuration gives the default."""
-	assert utils.conf_get("noSuchKey", default=3) == 3
-	monkeypatch.setattr(config, "conf", SimpleNamespace())
-	assert utils.conf_get("searchLimit", default=20) == 20
-
-
 @pytest.mark.parametrize(
 	("value", "expected"), [("Song", "Song"), ("", "?"), ("  ", "?"), (None, "?"), (5, "?")]
 )
@@ -160,3 +144,42 @@ def test_positions_after_move() -> None:
 	assert utils.positions_after_move(positions, 1, "up") == [0, 1, 4]
 	assert utils.positions_after_move(positions, 1, "down") == [0, 3, 4]
 	assert utils.positions_after_move([0, 2, 5], 0, "down") == [1, 2, 5]
+
+
+def spotify_reorder(entries: list, range_start: int, insert_before: int) -> list:
+	"""Return entries after Spotify's reorder: the entry at range_start moves before insert_before."""
+	moved = entries[range_start]
+	rest = entries[:range_start] + entries[range_start + 1 :]
+	rest.insert(insert_before if insert_before <= range_start else insert_before - 1, moved)
+	return rest
+
+
+def test_positions_after_move_match_spotify() -> None:
+	"""Thousands of random moves, many across hidden tracks, leave the positions where Spotify puts them.
+
+	The row index is not the playlist position once unavailable tracks are
+	hidden; using it moved the wrong track.
+	"""
+	rng = random.Random(11)  # noqa: S311 - a repeatable test, nothing secret
+	across_hidden = 0
+	for _ in range(6000):
+		playlist = [None if rng.random() < 0.35 else f"T{i}" for i in range(rng.randint(2, 10))]
+		rows = utils.playlist_rows([{"track": {"uri": t} if t else None} for t in playlist])
+		if len(rows) < 2:
+			continue
+		positions = [position for _track, position in rows]
+		row = rng.randrange(len(rows))
+		direction = rng.choice(["up", "down"])
+		if (direction == "up" and row == 0) or (direction == "down" and row == len(rows) - 1):
+			continue
+		other = row - 1 if direction == "up" else row + 1
+		across_hidden += abs(positions[row] - positions[other]) > 1
+		# What SpotifyClient.reorder_playlist_track sends for a move between these positions.
+		start, target = positions[row], positions[other]
+		after = spotify_reorder(playlist, start, target + 1 if start < target else target)
+		visible = [track["uri"] for track, _position in rows]
+		visible[row], visible[other] = visible[other], visible[row]
+		moved = utils.positions_after_move(positions, row, direction)
+		assert [after[p] for p in moved] == visible
+		assert moved == [p for p, entry in enumerate(after) if entry]
+	assert across_hidden > 500

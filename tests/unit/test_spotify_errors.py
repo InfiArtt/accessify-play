@@ -78,6 +78,9 @@ def test_own_client_id_and_search_limit() -> None:
 	assert sc._get_cache_path().name == "spotifyCache.json"
 	del sc.config.conf["spotify"]["ownClientID"]
 	assert sc.own_client_id() == ""
+	# Configurations from before 1.9 carry a clientID for the old redirect URI; it is never used.
+	conf["clientID"] = "0123456789abcdef0123456789abcdef"
+	assert sc.own_client_id() == ""
 
 
 def test_not_signed_in() -> None:
@@ -113,6 +116,14 @@ def test_request_failures(
 	"""Timeouts, lost connections and surprises each get their own message."""
 	server.routes["GET", "me"] = error
 	assert message in client.run_request("current_user")
+
+
+def test_an_unknown_command_is_a_message(client: SpotifyClient) -> None:
+	"""A spotipy method that does not exist is reported, not raised."""
+	assert (
+		client.run_request("no_such_method")
+		== "Something went wrong while talking to Spotify. Please try again."
+	)
 
 
 def test_expected_failures_can_have_their_own_message(client: SpotifyClient, server: SpotifyServer) -> None:

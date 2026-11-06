@@ -19,9 +19,11 @@ import ui
 import wx
 from logHandler import log
 
+from .commands import BY_SCRIPT
 from .dialogs.layer_editor import LayerEditorDialog
 from .language import init_translation
 from .layer_config import LayerConfigManager
+from .settings_spec import conf_get
 from .ui.base_dialog import AccessifyDialog
 
 if TYPE_CHECKING:
@@ -96,12 +98,6 @@ class CommandLayerManager:
 	the layer.
 	"""
 
-	#: Seconds of inactivity after which an open layer closes itself.
-	#: A safety net only: every non-modifier gesture already either runs a
-	#: command or closes the layer, so this can only fire if the user opened the
-	#: layer and then walked away.
-	TIMEOUT = 30.0
-
 	def __init__(self, plugin: GlobalPlugin) -> None:
 		self.plugin = plugin
 		self.config_manager = LayerConfigManager()
@@ -138,13 +134,12 @@ class CommandLayerManager:
 	def _build_help_entries(self) -> list[tuple[str, str]]:
 		configs = self.config_manager.get_all_configs()
 		entries = []
-		for _script, data in configs:
+		for script, data in configs:
 			gestures = data.get("gestures", [])
 			# Strip kb: prefix and join multiple gestures
 			clean_gestures = [g.replace("kb:", "") for g in gestures]
 			label = ", ".join(clean_gestures) if clean_gestures else _("Unbound")
-			desc = _(data.get("description", ""))
-			entries.append((label, desc))
+			entries.append((label, BY_SCRIPT[script].description))
 
 		entries.append(("F1", _("Show this layered command help.")))
 		entries.append(("F2", _("Edit layer shortcuts.")))
@@ -168,9 +163,18 @@ class CommandLayerManager:
 			# over would silently break them, so refuse instead.
 			self._error_beep()
 			return
-		self._deadline = time.monotonic() + self.TIMEOUT
+		self._extend_deadline()
 		_set_capture_func(self._captor)
 		self._entry_beep()
+
+	def _extend_deadline(self) -> None:
+		"""Close the layer after layerTimeoutSeconds without a key.
+
+		A safety net only: every non-modifier gesture already either runs a
+		command or closes the layer, so this can only fire if the user opened
+		the layer and then walked away.
+		"""
+		self._deadline = time.monotonic() + conf_get("layerTimeoutSeconds")
 
 	def finish(self, *, announce: bool = False) -> None:
 		"""Stop waiting for a layer key; announce it when asked."""
@@ -220,7 +224,7 @@ class CommandLayerManager:
 			return False
 
 		if self.config_manager.should_keep_open(script_name):
-			self._deadline = time.monotonic() + self.TIMEOUT
+			self._extend_deadline()
 		else:
 			self.finish()
 
@@ -296,7 +300,7 @@ class CommandLayerManager:
 		wx.CallAfter(_show)
 
 	def _entry_beep(self) -> None:
-		self._queue(tones.beep, 440, 30)
+		self._queue(tones.beep, conf_get("layerBeepHz"), conf_get("layerBeepMs"))
 
 	def _error_beep(self) -> None:
-		self._queue(tones.beep, 120, 120)
+		self._queue(tones.beep, conf_get("layerErrorBeepHz"), conf_get("layerErrorBeepMs"))

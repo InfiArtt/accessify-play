@@ -90,7 +90,10 @@ class QueueListDialog(AccessifyDialog):
 		self.queue_items = queue_data
 		for item in self.queue_items:
 			prefix = _("Playing") if item["type"] == "currently_playing" else _("Queue")
-			display_text = f"{prefix}: {item['name']} by {item['artists']}"
+			# Translators: a row of the queue, e.g. "Queue: Yesterday by The Beatles".
+			display_text = _("{prefix}: {name} by {artists}").format(
+				prefix=prefix, name=item["name"], artists=item["artists"]
+			)
 			self.queueList.Append(display_text)
 		self.queueList.SetSelection(0)
 

@@ -14,7 +14,7 @@ import wx
 
 from ..core.thread_manager import thread_manager
 from ..language import init_translation
-from ..utils import conf_get
+from ..settings_spec import conf_get
 
 if TYPE_CHECKING:
 	from collections.abc import Callable
@@ -38,8 +38,6 @@ class PagedList:
 	page" setting says.
 	"""
 
-	DEFAULT_PAGE_SIZE = 20
-
 	def __init__(
 		self,
 		control: wx.ListBox,
@@ -55,7 +53,7 @@ class PagedList:
 		self._row = row
 		self._empty = empty
 		self._failed = failed
-		self._page_size = conf_get("searchLimit", self.DEFAULT_PAGE_SIZE)
+		self._page_size = conf_get("searchLimit")
 		self._offset = 0
 		self._loading = False
 		self._has_more = True

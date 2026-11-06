@@ -13,6 +13,7 @@ import wx
 from gui import guiHelper
 
 from ..language import init_translation
+from ..settings_spec import conf_get
 from ..ui.base_dialog import AccessifyDialog
 
 if TYPE_CHECKING:
@@ -33,8 +34,10 @@ class SleepTimerDialog(AccessifyDialog):
 
 		label = _("Stop audio in (minutes): (Enter 0 to cancel timer)")
 		self.minutesCtrl = s_helper.addLabeledControl(label, wx.SpinCtrl)
-		self.minutesCtrl.SetRange(0, 240)
-		self.minutesCtrl.SetValue(30)
+		# 0 cancels a running timer; the longest timer and the starting value are settings.
+		longest = conf_get("sleepTimerMaxMinutes")
+		self.minutesCtrl.SetRange(0, longest)
+		self.minutesCtrl.SetValue(min(conf_get("sleepTimerMinutes"), longest))
 
 		buttons_sizer = wx.StdDialogButtonSizer()
 		ok_button = wx.Button(self, wx.ID_OK, label=_("&Start Timer"))

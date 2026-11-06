@@ -20,7 +20,7 @@ Tekan `NVDA+Alt+G`, lalu `F2`. **Command Layer Editor** menampilkan semua perint
 
 **Reset to Defaults** mengembalikan semua perintah ke tombol dan pengaturan Keep Open aslinya, setelah bertanya kepada Anda.
 
-Saat editor ditutup setelah ada perubahan, tombol baru langsung berfungsi. Accessify Play juga menawarkan untuk memulai ulang NVDA, yang boleh Anda tolak.
+Saat editor ditutup setelah ada perubahan, tombol baru langsung berfungsi; NVDA tidak perlu dimulai ulang.
 
 `F1`, `F2`, dan `Escape` selalu punya fungsi yang sama di lapisan dan tidak bisa diubah.
 

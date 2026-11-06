@@ -8,7 +8,7 @@
 
 `NVDA+Alt+G` lalu `E` hanya mengumumkan item berikutnya, tanpa membuka jendela.
 
-Untuk menambahkan ke antrean, gunakan Add to Queue (`Alt+Q`) di Pencarian, Pustaka, atau daftar lagu mana pun.
+Untuk menambahkan ke antrean, gunakan Add to Queue (`Alt+Q`) di Pencarian, Pustaka, atau daftar lagu mana pun. Untuk seluruh album atau playlist, Accessify Play memasukkan lagunya satu per satu, paling banyak 100 (lihat **Most tracks to queue from an album or playlist** di pengaturan), dan memberi tahu bila berhenti lebih awal.
 
 ## Mengapa antrean kadang berbeda dengan aplikasi Spotify
 

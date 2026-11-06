@@ -37,7 +37,7 @@ In a playlist you own, you can also rearrange tracks:
 
 The track context menu also has Remove Track from Playlist, Remove Duplicates, Show Lyrics, Go to Album and Go to Artist.
 
-**Creating a playlist:** press `Ctrl+N`, enter a name and, if you like, a description, and choose whether it is public. A collaborative playlist must be private.
+**Creating a playlist:** press `Ctrl+N`, enter a name and, if you like, a description, and choose whether it is public. Public playlist starts checked, unless you turned off **New playlists are public** in the settings. A collaborative playlist must be private.
 
 ### Saved Tracks
 
@@ -53,7 +53,7 @@ Your Liked Songs. `Enter` plays a song. The context menu has Remove from Library
 
 ### Top Items
 
-Your most-played tracks or artists. Choose **Top Tracks** or **Top Artists** in **Show**, and Last 4 Weeks, Last 6 Months or All Time in **Time Range**; the list updates as you change them. `Enter` plays the item, and for an artist the context menu has View Discography.
+Your most-played tracks or artists. Choose **Top Tracks** or **Top Artists** in **Show**, and Last 4 Weeks, Last 6 Months or All Time in **Time Range**; the list updates as you change them. The tab opens on Last 6 Months, or the period chosen under **Top Items in the Library opens on** in the settings. `Enter` plays the item, and for an artist the context menu has View Discography.
 
 ### Saved Shows
 

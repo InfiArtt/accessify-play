@@ -4,7 +4,7 @@ Buka Pencarian dengan `NVDA+Alt+G` lalu `S`.
 
 ## Mencari
 
-1. Di **Type**, pilih apa yang dicari: Song, Album, Artist, Playlist, Podcast, atau Audiobook.
+1. Di **Type**, pilih apa yang dicari: Song, Album, Artist, Playlist, Podcast, atau Audiobook. Pencarian dibuka pada Song, kecuali Anda memilih jenis lain di **Search opens on** pada pengaturan.
 2. Di **Search for**, ketik pencarian Anda lalu tekan `Enter` (atau tombol **Search**).
 3. Telusuri daftar **Results** dengan tombol panah.
 

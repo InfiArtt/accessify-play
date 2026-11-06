@@ -1,5 +1,38 @@
 # Changelog
 
+## Unreleased
+
+### 🎉 More settings
+
+New in Accessify Play's settings (NVDA menu, Preferences, Settings, Accessify Play):
+
+- **Sleep timer starts at** and **Longest sleep timer**: the minutes the sleep timer offers (30) and the most it accepts (240).
+- **Most tracks to queue from an album or playlist**: Add to Queue on a whole album or playlist sends a request for every track, so it now stops at 100 tracks by default and says so ("Queued the first 100 of 250 tracks from ..."). Every request counts against the request limit everyone shares.
+- **Play My Top Tracks plays the top tracks of**: Last 4 Weeks, Last 6 Months or All Time, for `G` in the command layer.
+- **Top Items in the Library opens on**: the period the Top Items tab starts with.
+- **Search opens on**: the type the Search window starts with.
+- **New playlists are public**: whether Create Playlist starts with Public playlist checked.
+
+### 🎉 Advanced settings in nvda.ini
+
+- **Timings and limits that were fixed in the code are now settings**: how often Accessify Play asks Spotify what is playing, how long a request may take and how often it is retried, the lyrics server, the command layer's timeout and beeps, and more. They are not in the settings panel; the user guide (Sign-in and settings) lists each one with its default and how to change it in `nvda.ini`.
+
+### 🛠️ Bug fixes
+
+- **The command layer editor offered to restart NVDA** after a change, although the new keys already worked. It no longer asks.
+- **Command descriptions in the layer's help and editor stayed in the words of the version that first saved your keys**. They now always follow the add-on, in the add-on's language.
+- **A playlist whose tracks could not be loaded**, in the Library, left an empty list; so did the artist window's albums. The list now says what went wrong, and an artist without albums says so.
+- **Some list rows were always in English**: "by" in playlist rows in Search and the artist window, and in the queue window.
+- **Browse Categories and Featured Playlists loaded 50 items at a time** whatever the Search Results Limit said. They now follow it, like every other list.
+- **Lyrics requests named the original add-on's homepage**; they now name the homepage of the version installed.
+
+### 🧹 Under the hood
+
+- **One table of settings** (`settings_spec.py`): the config spec, the defaults, and the ranges and labels of the settings panel are all made from it, so a limit is changed in one place. Tests check that the panel and the user guide match it.
+- **One table of commands** (`commands.py`) for the command layer's keys, names and descriptions, which used to be listed three times. `layerConfig.json` now keeps only your keys and whether the layer stays open.
+- **One test suite**: the older test scripts are ported to pytest or removed, including the checks of the translations, the user guides and the bundled libraries. `installTasks.py` is now tested and measured too.
+- Removed code that never ran: an install-time clean-up for an NVDA function that does not exist.
+
 ## Version 2026.11.0
 
 Changes since 1.12.2. This build comes from the aradix85 fork. Its versions follow the date (year.month.number), so they never collide with the 1.x versions of the original add-on.

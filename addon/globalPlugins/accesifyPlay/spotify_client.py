@@ -29,6 +29,7 @@ from urllib3.util.retry import Retry
 from . import paths
 from .formatting import format_duration, format_followers
 from .language import init_translation
+from .settings_spec import conf_get
 
 if TYPE_CHECKING:
 	from collections.abc import Callable
@@ -60,11 +61,24 @@ SCOPES = (
 SHARED_CLIENT_ID = "d420a117a32841c2b3474932e49fb54b"
 #: Also the URI to register on an app of one's own.
 REDIRECT_URI = "http://127.0.0.1:5588/login"
+
+# --- Spotify's own limits ---------------------------------------------------
+# What Spotify's Web API accepts, not preferences: asking for more fails. The
+# add-on's own choices are settings (settings_spec.py).
+
 #: The most results one search may ask for from a Development Mode app, which
 #: is what an own Client ID is, since Spotify's February 2026 changes.
 DEV_MODE_SEARCH_LIMIT = 10
-#: Retry-After is sometimes missing from a 429; wait this long then.
-_DEFAULT_RATE_LIMIT_SECONDS = 5
+#: The most items one page of a listing holds (saved items, albums, top items...).
+MAX_PAGE = 50
+#: The most items one page of a playlist holds.
+MAX_PLAYLIST_PAGE = 100
+#: The most items Spotify takes in one request that adds to or removes from a playlist.
+PLAYLIST_BATCH = 100
+#: The most URIs one /me/library request takes.
+LIBRARY_BATCH = 40
+#: Server errors worth trying again; anything else is answered at once.
+_RETRY_STATUSES = (500, 502, 503, 504)
 
 #: A slow network or a slow Spotify: not worth a traceback.
 _TIMEOUT_ERRORS = (
@@ -89,10 +103,7 @@ def own_client_id() -> str:
 	carry a clientID for the old redirect URI, and picking that up again would
 	break their sign-in.
 	"""
-	try:
-		value = (config.conf["spotify"]["ownClientID"] or "").strip()
-	except KeyError:
-		return ""
+	value = str(conf_get("ownClientID") or "").strip()
 	return value if is_valid_client_id(value) else ""
 
 
@@ -102,7 +113,11 @@ def search_limit() -> int:
 	Asking a Development Mode app's search for more than it allows fails
 	outright with "Invalid limit", so the cap is applied rather than reported.
 	"""
-	limit = config.conf["spotify"]["searchLimit"]
+	return _capped_for_own_client_id(conf_get("searchLimit"))
+
+
+def _capped_for_own_client_id(limit: int) -> int:
+	"""Return a search limit, lowered to what a Development Mode app may ask for when needed."""
 	return min(limit, DEV_MODE_SEARCH_LIMIT) if own_client_id() else limit
 
 
@@ -215,7 +230,7 @@ def _new_spotify(auth_manager: SpotifyPKCE) -> spotipy.Spotify:
 	return spotipy.Spotify(
 		auth_manager=auth_manager,
 		requests_session=_retrying_session(),
-		requests_timeout=10,
+		requests_timeout=conf_get("requestTimeoutSeconds"),
 	)
 
 
@@ -225,14 +240,15 @@ def _retrying_session() -> requests.Session:
 	urllib3 retries any 429 that carries Retry-After, whatever the status
 	list says; respect_retry_after_header=False is what makes it come back.
 	"""
+	retries = conf_get("requestRetries")
 	retry = Retry(
-		total=3,
+		total=retries,
 		connect=None,
 		read=False,
-		status=3,
-		backoff_factor=0.3,
+		status=retries,
+		backoff_factor=conf_get("requestBackoffFactor"),
 		allowed_methods=frozenset(("GET", "POST", "PUT", "DELETE")),
-		status_forcelist=(500, 502, 503, 504),
+		status_forcelist=_RETRY_STATUSES,
 		respect_retry_after_header=False,
 	)
 	session = requests.Session()
@@ -284,12 +300,12 @@ def _describe_playing(item: Item, item_type: str, *, playing: bool) -> str:
 class SpotifyClient:
 	"""The add-on's connection to Spotify; get_client() returns the shared one."""
 
-	#: The most items Spotify takes in one request that adds to or removes from a playlist.
-	PLAYLIST_BATCH = 100
-
 	def __init__(self) -> None:
 		self.client = None
 		self.device_id = None
+		#: The signed-in user's id once get_current_user_id() has fetched it, else None.
+		#: Windows read it on the UI thread, where they may not wait for a request.
+		self.current_user_id: str | None = None
 		#: time.monotonic() until which Spotify asked us to stop sending requests.
 		self._rate_limited_until = 0.0
 
@@ -361,7 +377,7 @@ class SpotifyClient:
 		self.client = None
 		self.device_id = None
 		self._rate_limited_until = 0.0
-		self._current_user_id = None
+		self.current_user_id = None
 
 	def _note_rate_limit(self, e: Exception) -> None:
 		"""Hold every request back for as long as the 429 asks.
@@ -369,7 +385,7 @@ class SpotifyClient:
 		The limit is shared by everyone on the same client ID, and requests
 		sent while it lasts only keep it going, so none are sent at all.
 		"""
-		seconds = _retry_after(e) or _DEFAULT_RATE_LIMIT_SECONDS
+		seconds = _retry_after(e) or conf_get("rateLimitFallbackSeconds")
 		self._rate_limited_until = max(self._rate_limited_until, time.monotonic() + seconds)
 		log.debug("Spotify rate limit: holding requests for %s s (%s)", seconds, e)
 
@@ -631,8 +647,12 @@ class SpotifyClient:
 		return self.run_request("search", q=query, type=search_type, limit=search_limit(), offset=offset)
 
 	def play_my_top_tracks(self) -> str:
-		"""Play the user's top tracks of the last month."""
-		top_tracks = self.run_request("current_user_top_tracks", limit=50, time_range="short_term")
+		"""Play the user's top tracks of the period chosen in the settings."""
+		top_tracks = self.run_request(
+			"current_user_top_tracks",
+			limit=conf_get("topAndRecentLimit"),
+			time_range=conf_get("topTracksTimeRange"),
+		)
 		if isinstance(top_tracks, str):
 			return top_tracks
 
@@ -651,7 +671,7 @@ class SpotifyClient:
 
 	def play_recently_played(self) -> str:
 		"""Play the tracks the user played recently."""
-		recent_tracks = self.run_request("current_user_recently_played", limit=50)
+		recent_tracks = self.run_request("current_user_recently_played", limit=conf_get("topAndRecentLimit"))
 		if isinstance(recent_tracks, str):
 			return recent_tracks
 
@@ -844,7 +864,7 @@ class SpotifyClient:
 			result = self.run_on_device("next_track")
 			if isinstance(result, str):
 				return result
-			time.sleep(0.2)
+			time.sleep(conf_get("queueSkipStepSeconds"))
 
 		playback = self.run_on_device("current_playback")
 		if isinstance(playback, str):
@@ -959,8 +979,8 @@ class SpotifyClient:
 			if len(uris) == 1:
 				return _("This track is already in the playlist.")
 			return _("All these tracks are already in the playlist.")
-		for start in range(0, len(uris_to_add), self.PLAYLIST_BATCH):
-			batch = uris_to_add[start : start + self.PLAYLIST_BATCH]
+		for start in range(0, len(uris_to_add), PLAYLIST_BATCH):
+			batch = uris_to_add[start : start + PLAYLIST_BATCH]
 			result = self.run_request("playlist_add_items", playlist_id=playlist_id, items=batch)
 			if isinstance(result, str):
 				return result
@@ -1026,24 +1046,11 @@ class SpotifyClient:
 
 	def get_playlist_tracks(self, playlist_id: str) -> list[Item] | str:
 		"""Fetch all tracks from a specified playlist."""
-		tracks = []
-		offset = 0
-		limit = 100  # Max limit per request
-		while True:
-			results = self.get_playlist_tracks_page(playlist_id, limit=limit, offset=offset)
-			if isinstance(results, str):
-				return results  # Error message
+		return self._paginate("playlist_items", playlist_id=playlist_id, limit=MAX_PLAYLIST_PAGE)
 
-			items = results.get("items", []) if results else []
-			if not items:
-				break
-			tracks.extend(items)
-			if len(items) < limit:
-				break
-			offset += len(items)
-		return tracks
-
-	def get_playlist_tracks_page(self, playlist_id: str, limit: int = 50, offset: int = 0) -> Reply | str:
+	def get_playlist_tracks_page(
+		self, playlist_id: str, limit: int = MAX_PAGE, offset: int = 0
+	) -> Reply | str:
 		"""Get a single page of tracks from a playlist."""
 		return self.run_request(
 			"playlist_items",
@@ -1081,8 +1088,8 @@ class SpotifyClient:
 		still to be sent, and no later position is shifted by an earlier call.
 		"""
 		by_position = sorted(occurrences, key=lambda o: o[1], reverse=True)
-		for start in range(0, len(by_position), self.PLAYLIST_BATCH):
-			chunk = by_position[start : start + self.PLAYLIST_BATCH]
+		for start in range(0, len(by_position), PLAYLIST_BATCH):
+			chunk = by_position[start : start + PLAYLIST_BATCH]
 			items = [{"uri": uri, "positions": [pos]} for uri, pos in chunk]
 			result = self.run_request(
 				"playlist_remove_specific_occurrences_of_items",
@@ -1185,7 +1192,7 @@ class SpotifyClient:
 		"""Fetch all artists followed by the user."""
 		artists = []
 		after = None
-		limit = 50  # Max limit per request
+		limit = MAX_PAGE
 		while True:
 			results = self.run_request("current_user_followed_artists", limit=limit, after=after)
 			if isinstance(results, str):
@@ -1201,7 +1208,7 @@ class SpotifyClient:
 
 	def get_top_items(self, item_type: str = "tracks", time_range: str = "medium_term") -> Reply | str:
 		"""Fetch the user's top tracks or artists."""
-		limit = 50
+		limit = conf_get("topAndRecentLimit")
 		if item_type == "tracks":
 			return self.run_request("current_user_top_tracks", limit=limit, time_range=time_range)
 		if item_type == "artists":
@@ -1219,9 +1226,6 @@ class SpotifyClient:
 	# Pass Spotify URIs, or ids of one kind together with that kind:
 	#     library_save([album_id], "album")    library_contains([uri])
 
-	#: Spotify accepts at most 40 URIs per /me/library request.
-	LIBRARY_BATCH = 40
-
 	@staticmethod
 	def _uris(kind: str, ids: list[str]) -> list[str]:
 		"""Spotify URIs for ids of one kind; ids that are already URIs pass through."""
@@ -1230,8 +1234,8 @@ class SpotifyClient:
 	def _library_batches(self, verb: str, path: str, uris: str | list[str]) -> list[Reply] | str:
 		"""Send uris in batches; returns the results in order, or the first error message."""
 		results = []
-		for start in range(0, len(uris), self.LIBRARY_BATCH):
-			chunk = uris[start : start + self.LIBRARY_BATCH]
+		for start in range(0, len(uris), LIBRARY_BATCH):
+			chunk = uris[start : start + LIBRARY_BATCH]
 			result = self.run_request(verb, path, uris=",".join(chunk))
 			if isinstance(result, str):
 				return result
@@ -1269,7 +1273,9 @@ class SpotifyClient:
 		result = (self.library_remove if was_saved else self.library_save)([item], kind)
 		return result if isinstance(result, str) else not was_saved
 
-	def _paginate(self, command: str, *args: object, limit: int = 50, **kwargs: object) -> list[Item] | str:
+	def _paginate(
+		self, command: str, *args: object, limit: int = MAX_PAGE, **kwargs: object
+	) -> list[Item] | str:
 		"""Every item of an offset-paginated listing, or the error message."""
 		items = []
 		offset = 0
@@ -1300,14 +1306,14 @@ class SpotifyClient:
 	def get_new_releases(self) -> Reply | str:
 		"""Fetch new album releases."""
 		retired = self._retired_endpoint_message()
-		return self.run_request("new_releases", limit=50, status_messages={404: retired, 403: retired})
+		return self.run_request("new_releases", limit=MAX_PAGE, status_messages={404: retired, 403: retired})
 
-	def get_recently_played(self, limit: int = 50) -> Reply | str:
+	def get_recently_played(self) -> Reply | str:
 		"""Fetch the user's recently played tracks."""
-		return self.run_request("current_user_recently_played", limit=limit)
+		return self.run_request("current_user_recently_played", limit=conf_get("topAndRecentLimit"))
 
 	def get_categories(
-		self, country: str | None = None, locale: str | None = None, limit: int = 50, offset: int = 0
+		self, country: str | None = None, locale: str | None = None, limit: int = MAX_PAGE, offset: int = 0
 	) -> Reply | str:
 		"""Get a list of categories used to tag items in Spotify."""
 		retired = self._retired_endpoint_message()
@@ -1321,7 +1327,7 @@ class SpotifyClient:
 		)
 
 	def get_category_playlists(
-		self, category_id: str, country: str | None = None, limit: int = 50, offset: int = 0
+		self, category_id: str, country: str | None = None, limit: int = MAX_PAGE, offset: int = 0
 	) -> Reply | str:
 		"""Get a list of Spotify playlists tagged with a particular category."""
 		retired = self._retired_endpoint_message()
@@ -1349,7 +1355,8 @@ class SpotifyClient:
 			artist_name = artist_info.get("name")
 		if not artist_name:
 			return {"tracks": []}
-		results = self.run_request("search", q=f'artist:"{artist_name}"', limit=10, type="track")
+		limit = _capped_for_own_client_id(conf_get("artistTopTracksLimit"))
+		results = self.run_request("search", q=f'artist:"{artist_name}"', limit=limit, type="track")
 		if isinstance(results, str):
 			return results
 		return {"tracks": (results.get("tracks") or {}).get("items") or []}
@@ -1367,11 +1374,13 @@ class SpotifyClient:
 		"""Get profile information for the given artist."""
 		return self.run_request("artist", artist_id=artist_id)
 
-	def get_show_episodes(self, show_id: str, limit: int = 50, offset: int = 0) -> Reply | str:
+	def get_show_episodes(self, show_id: str, limit: int = MAX_PAGE, offset: int = 0) -> Reply | str:
 		"""Get episodes for a show (paginated)."""
 		return self.run_request("show_episodes", show_id=show_id, limit=limit, offset=offset)
 
-	def get_audiobook_chapters(self, audiobook_id: str, limit: int = 50, offset: int = 0) -> Reply | str:
+	def get_audiobook_chapters(
+		self, audiobook_id: str, limit: int = MAX_PAGE, offset: int = 0
+	) -> Reply | str:
 		"""Get chapters for an audiobook (paginated)."""
 		return self.run_request(
 			"get_audiobook_chapters",
@@ -1381,7 +1390,7 @@ class SpotifyClient:
 			status_messages={404: _("This audiobook is not available in your country.")},
 		)
 
-	def get_featured_playlists(self, limit: int = 50, offset: int = 0) -> Reply | str:
+	def get_featured_playlists(self, limit: int = MAX_PAGE, offset: int = 0) -> Reply | str:
 		"""Get Spotify's front-page curated playlists for this account.
 
 		Returns the raw payload, which carries both Spotify's own greeting
@@ -1401,14 +1410,12 @@ class SpotifyClient:
 
 	def get_current_user_id(self) -> str | None:
 		"""Return the logged-in user's id, cached; None if it can't be fetched."""
-		cached = getattr(self, "_current_user_id", None)
-		if cached:
-			return cached
+		if self.current_user_id:
+			return self.current_user_id
 		profile = self.get_current_user_profile()
 		if isinstance(profile, dict) and profile.get("id"):
-			self._current_user_id = profile["id"]
-			return self._current_user_id
-		return None
+			self.current_user_id = profile["id"]
+		return self.current_user_id
 
 	def _user_link_data(self, user_id: str) -> Reply | str:
 		"""Profile for a user link, or just the id if the profile can't be had.
