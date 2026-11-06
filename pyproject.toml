@@ -119,10 +119,17 @@ filterwarnings = ["ignore::DeprecationWarning:spotipy"]
 [tool.coverage.run]
 branch = true
 source = ["addon/globalPlugins/accesifyPlay"]
+# A verbatim copy of CPython's secrets module, used only where Python lacks one;
+# and type aliases, which only type checkers import.
+omit = ["*/_secrets_fallback.py", "*/spotify_types.py"]
 
 [tool.coverage.report]
 show_missing = true
 skip_covered = true
+# CI fails when coverage drops below this.
+fail_under = 90
+# Imports needed only by type checkers.
+exclude_also = ["if TYPE_CHECKING:"]
 
 [tool.pyright]
 pythonPlatform = "Windows"

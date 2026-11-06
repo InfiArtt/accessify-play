@@ -18,8 +18,6 @@ from ..ui.base_dialog import AccessifyDialog
 from ..utils import copy_link
 
 if TYPE_CHECKING:
-	from collections.abc import Callable
-
 	from ..spotify_client import SpotifyClient
 	from ..spotify_types import Item
 
@@ -94,8 +92,7 @@ class QueueListDialog(AccessifyDialog):
 			prefix = _("Playing") if item["type"] == "currently_playing" else _("Queue")
 			display_text = f"{prefix}: {item['name']} by {item['artists']}"
 			self.queueList.Append(display_text)
-		if self.queue_items:
-			self.queueList.SetSelection(0)
+		self.queueList.SetSelection(0)
 
 	def _get_queue_selection(self) -> Item | None:
 		selection = self.queueList.GetSelection()
@@ -109,22 +106,17 @@ class QueueListDialog(AccessifyDialog):
 		if not item:
 			return
 		menu = wx.Menu()
-
-		def _append_menu_item(label: str, handler: Callable[[wx.Event], object]) -> None:
-			menu_item = menu.Append(wx.ID_ANY, label)
-			menu.Bind(wx.EVT_MENU, handler, menu_item)
-
-		_append_menu_item(_("Play"), self.play_selected_queue_item)
-		_append_menu_item(_("Copy Link"), self.copy_selected_queue_link)
+		self._append_menu_item(menu, _("Play"), self.play_selected_queue_item)
+		self._append_menu_item(menu, _("Copy Link"), self.copy_selected_queue_link)
 		self.PopupMenu(menu)
 		menu.Destroy()
 
 	def play_selected_queue_item(self, _evt: wx.Event | None = None) -> None:
 		"""Skip ahead to the selected queue item."""
-		selection = self.queueList.GetSelection()
 		item = self._get_queue_selection()
-		if selection == wx.NOT_FOUND or not item:
+		if not item:
 			return
+		selection = self.queueList.GetSelection()
 		if not item.get("uri"):
 			ui.message(_("Unable to play this entry because no URI was found."))
 			return
@@ -135,12 +127,9 @@ class QueueListDialog(AccessifyDialog):
 		thread_manager.submit_task(self._skip_to_queue_item, selection, name="DialogTask", daemon=True)
 
 	def _skip_to_queue_item(self, selection_index: int) -> None:
-		try:
-			message = self.client.skip_to_queue_index(selection_index)
-			if message:
-				wx.CallAfter(ui.message, message)
-		finally:
-			pass
+		message = self.client.skip_to_queue_index(selection_index)
+		if message:
+			wx.CallAfter(ui.message, message)
 
 	def copy_selected_queue_link(self, _evt: wx.Event | None = None) -> None:
 		"""Copy the selected queue item's Spotify link."""

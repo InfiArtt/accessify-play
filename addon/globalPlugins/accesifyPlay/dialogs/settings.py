@@ -208,8 +208,8 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 		wx.CallAfter(self.show_validation_result, success=success)
 
 	def on_clear_credentials(self, _evt: wx.Event) -> None:
-		# Translators: Confirmation message before clearing Spotify credentials and cache.
 		"""Forget the Spotify sign-in, after asking."""
+		# Translators: Confirmation message before clearing Spotify credentials and cache.
 		confirmation_msg = _(
 			"Are you sure you want to delete your stored Spotify access token? "
 			"You will need to sign in to Spotify again to use the add-on."

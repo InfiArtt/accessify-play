@@ -18,4 +18,6 @@ class Logger(logging.Logger):
 		self.debug(msg, *args, **kwargs)
 
 
+# Part of the logging tree, so pytest's caplog sees what the add-on logs.
 log = Logger("nvda")
+log.parent = logging.getLogger()

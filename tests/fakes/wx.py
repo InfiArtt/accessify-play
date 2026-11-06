@@ -226,7 +226,9 @@ class Window:
 		self.parent = parent
 		self.children: list[Window] = []
 		self.bindings: list[tuple[_EventType, Callable[..., Any], Any, Any]] = []
-		self.label = kwargs.get("label", kwargs.get("title", ""))
+		# wx takes the label (or a dialog's title) by keyword or after the id: Button(parent, id, label).
+		positional = args[1] if len(args) > 1 and isinstance(args[1], str) else ""
+		self.label = kwargs.get("label", kwargs.get("title", positional))
 		self.id = kwargs.get("id", args[0] if args and isinstance(args[0], int) else ID_ANY)
 		self.shown = True
 		self.enabled = True

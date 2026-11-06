@@ -96,6 +96,7 @@ def nvda(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Tasks:
 	"""Give every test a fresh NVDA; return the task runner."""
 	ui.spoken.clear()
 	api.clipboard.clear()
+	api.notified.clear()
 	api.copy_works = True
 	tones.beeps.clear()
 	scriptHandler.queued.clear()
