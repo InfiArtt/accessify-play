@@ -8,7 +8,7 @@ Lirik berasal dari [lrclib.net](https://lrclib.net), basis data gratis yang dike
 
 * `Enter` pada sebuah baris melompatkan lagu ke baris itu (hanya lirik tersinkron).
 * **Jump to Current** (`Alt+J`) pindah ke baris yang sedang dinyanyikan (hanya lirik tersinkron).
-* **Copy Lyrics** (`Alt+L`) menyalin lirik sebagai teks.
+* **Copy Lyrics** (`Alt+L`) menyalin lirik sebagai teks. NVDA memberi tahu saat lirik sudah disalin.
 * **Copy with Timestamps** (`Alt+T`, atau `Alt+W` jika Accessify Play berbahasa Indonesia) menyalin lirik tersinkron beserta waktunya, dalam format LRC.
 * **Close** atau `Escape` menutup jendela.
 

@@ -21,7 +21,7 @@ First, please review our [Code of Conduct](CODE_OF_CONDUCT.md). We enforce this 
 
 ## 💻 Coding Guidelines
 
-If you are contributing code, please ensure you follow the [official NVDA Developer Guide](https://github.com/nvaccess/nvda/wiki/Development-Guide) and modern Python coding standards (Accessify Play strictly follows Python 3.11 conventions). 
+Start with [DEVELOPMENT.md](DEVELOPMENT.md): how the code is organised, how to run the linter and the tests, and the conventions the code follows. Beyond that, please follow the [official NVDA Developer Guide](https://github.com/nvaccess/nvda/wiki/Development-Guide) and modern Python coding standards (Accessify Play strictly follows Python 3.11 conventions). 
 
 Following the official NVDA coding guidelines makes it significantly easier for the international NVDA add-ons community to review our code, which is essential if this add-on is ever submitted to the official NV Access Add-on Store. We highly encourage all contributors to join the [NVDA Add-ons Community Forum](https://nvda-addons.groups.io/g/nvda-addons) to share ideas and learn best practices.
 
@@ -75,10 +75,10 @@ Once your changes are ready, it's time to create a PR.
 
 ### ✅ PR Requirements
 
-Our repository is protected by automated checks (GitHub Actions). Before your PR can be merged, it **must** meet two conditions:
+Our repository is protected by automated checks (GitHub Actions). Before your PR can be merged, it **must** meet these conditions:
 
-1.  **🤖 Linting Check Must Pass**
-    Our linter will automatically check your code for style errors (using `flake8`). You can see the result at the bottom of your PR page. If it fails, please fix the reported issues.
+1.  **🤖 Lint and tests must pass**
+    ruff checks and formats the code (every rule is on; the exceptions are listed in `pyproject.toml`), and pytest runs the tests, which must cover at least 90% of the code. Run the same checks locally before pushing; [DEVELOPMENT.md](DEVELOPMENT.md) explains how, and how the code and tests are organised.
 
 2.  **🌿 Branch Must Be Up-to-Date**
     Your branch must be in sync with the `main` branch. If `main` has been updated while you were working, you'll need to update your branch before we can merge it.

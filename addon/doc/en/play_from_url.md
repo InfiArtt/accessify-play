@@ -2,7 +2,7 @@
 
 Play anything from a Spotify link, such as one a friend sent you. Press `NVDA+Alt+G` then `U`.
 
-1. Paste the link into **Spotify URL**, for example `https://open.spotify.com/track/4n7jnSxVLd8QioibtTDBDq`. `spotify:` links (URIs) work too.
+1. Paste the link into **Spotify URL**, for example `https://open.spotify.com/track/4n7jnSxVLd8QioibtTDBDq`. `spotify:` links (URIs) work too, and so do links with a country in them, such as `https://open.spotify.com/intl-nl/track/...`.
 2. Press **Check**. The details appear in **Link Details**, so you can make sure it's the right thing.
 3. Press **Play**. It is available once a playable link has been checked.
 

@@ -10,6 +10,21 @@ Buka Pencarian dengan `NVDA+Alt+G` lalu `S`.
 
 Jika masih ada hasil lain, item terakhir adalah "Load More". Tekan `Enter` padanya untuk menambahkan halaman berikutnya. Ukuran halaman mengikuti pengaturan Search Results Limit.
 
+Kolom pencarian mendapat fokus saat Pencarian dibuka, dan juga saat Anda membuka Pencarian yang sudah terbuka.
+
+## Mengganti jenis
+
+Pintasan ini berfungsi di mana saja di jendela Pencarian. Jika kolom pencarian berisi teks, pencarian langsung dijalankan lagi dengan jenis yang baru, dan fokus pindah ke daftar hasil.
+
+| Pintasan | Fungsi |
+| :------- | :----- |
+| `Ctrl+1` sampai `Ctrl+6` | Song, Album, Artist, Playlist, Podcast, Audiobook |
+| `Ctrl+Tab` atau `Ctrl+PageDown` | Jenis berikutnya |
+| `Ctrl+Shift+Tab` atau `Ctrl+PageUp` | Jenis sebelumnya |
+| `Ctrl+F` | Kembali ke kolom pencarian, dengan teksnya terpilih |
+
+Jendela artis di bawah memakai tombol yang sama untuk tab-tabnya.
+
 ## Fungsi Enter
 
 * **Lagu**: memutarnya, lalu melanjutkan ke lagu berikutnya di albumnya.
@@ -51,12 +66,21 @@ Di daftar episode, `Alt+S` (atau Save/Unsave Episode di menu konteks) menyimpan 
 
 ## Diskografi artis
 
-Jendela diskografi punya empat tab:
+Jendela diskografi terbuka di Top Tracks, dengan fokus pada lagu pertama setelah daftarnya dimuat. Jendela ini punya lima tab:
 
-* **Artist Info**: pengikut, popularitas, genre, dan tautan artis.
-* **Top Tracks**: lagu-lagu populer artis.
-* **All Tracks**: semua lagu dari album dan single artis, tanpa duplikat, dimuat per halaman.
-* **Albums and Singles**: tekan `Enter` untuk membuka lagu-lagu sebuah album.
+1. **Top Tracks**: lagu-lagu populer artis. `Enter` memutar sebuah lagu.
+2. **Albums and Singles**: `Enter` membuka lagu-lagu sebuah album.
+3. **Playlists**: playlist yang ditemukan dengan mencari nama artis, buatan Spotify atau orang lain. `Enter` membuka lagu-lagu sebuah playlist.
+4. **All Tracks**: semua lagu dari album dan single artis, tanpa duplikat, dimuat per halaman. Jika sebuah album gagal dimuat, lagu yang sudah ada tetap ditampilkan dan "Load More" mencoba album itu lagi.
+5. **Artist Info**: pengikut, popularitas, genre, dan tautan artis.
+
+| Pintasan | Fungsi |
+| :------- | :----- |
+| `Ctrl+1` sampai `Ctrl+5` | Pindah ke tab itu, dengan fokus di daftarnya |
+| `Ctrl+Tab` atau `Ctrl+PageDown` | Tab berikutnya |
+| `Ctrl+Shift+Tab` atau `Ctrl+PageUp` | Tab sebelumnya |
+
+`Alt+P`, `Alt+Q`, dan `Alt+L` untuk memutar, memasukkan ke antrean, dan menyalin tautan lagu, album, atau playlist yang dipilih.
 
 ## Browse Categories dan Featured Playlists
 

@@ -8,7 +8,7 @@ Lyrics come from [lrclib.net](https://lrclib.net), a free, community-run databas
 
 * `Enter` on a line jumps the song to that line (synced lyrics only).
 * **Jump to Current** (`Alt+J`) moves to the line being sung now (synced lyrics only).
-* **Copy Lyrics** (`Alt+L`) copies the lyrics as text.
+* **Copy Lyrics** (`Alt+L`) copies the lyrics as text. NVDA says when they are copied.
 * **Copy with Timestamps** (`Alt+T`) copies synced lyrics with their times, in LRC format.
 * **Close** or `Escape` closes the window.
 

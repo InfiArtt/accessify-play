@@ -1,8 +1,8 @@
 # Changelog
 
-## Unreleased
+## Version 2026.11.0
 
-Changes since 1.12.2.
+Changes since 1.12.2. This build comes from the aradix85 fork. Its versions follow the date (year.month.number), so they never collide with the 1.x versions of the original add-on.
 
 ### 🎉 Search: switch the type without leaving the results
 
@@ -31,6 +31,11 @@ Changes since 1.12.2.
 - **A timeout on a playback command was logged as an unexpected error**, with a full traceback.
 - **Shared links with a country in them** (`open.spotify.com/intl-nl/track/...`) were misread by Play from Link and the link details. They now work like any other link.
 - **Copying the lyrics** from the lyrics window gave no feedback. NVDA now says they were copied.
+- **Adding an album to a playlist stopped after 100 songs** when one of them was already in the playlist. The whole album is now added, skipping only the songs that are already there.
+- **A song without lyrics was reported as a connection problem** ("Could not load lyrics. Please check your internet connection."). It now says no lyrics were found, and the connection message is only for when lrclib.net can't be reached.
+- **A failed lyrics lookup was remembered**: after a network hiccup, the song kept saying it had no lyrics until NVDA restarted. Only successful lookups are kept now.
+- **All Tracks in the artist window stopped for good** when one album failed to load. The songs so far now stay, and "Load More" tries that album again.
+- **A context menu with nothing in it was never cleaned up**, leaving a small leak each time.
 
 ### 🧹 Under the hood
 
@@ -44,8 +49,10 @@ Changes since 1.12.2.
 - **Type annotations and docstrings on everything**: every function says what it takes and returns, and every module, class and public method says what it is for.
 - **Errors are handled on purpose**: catching every exception is narrowed to what can actually fail, or kept at a boundary and logged, instead of being swallowed silently.
 - **One clipboard helper**, built on NVDA's `api.copyToClip`, replaces three hand-written ones; **one set of add-to-playlist helpers** replaces four copies in four windows; the long context menus are split into small parts.
-- **Lyrics are fetched with requests**, already bundled for spotipy, instead of hand-built urllib requests; paths use pathlib; HTTP statuses use `http.HTTPStatus`.
-- Nearly 400 lines less code from the clean-up, the new features included, and dead code removed, such as error branches that could never run. The tests cover the new behaviour, 695 checks in all.
+- **Lyrics are fetched with requests**, already bundled for spotipy, instead of hand-built urllib requests; paths use pathlib; HTTP statuses use `http.HTTPStatus`. One lyrics lookup serves the lyrics window, the auto-reader and the preview.
+- **One paged list** fills playlists, episodes, chapters and the artist's All Tracks a page at a time, with the Load More row, instead of four copies of that code. The episode and chapter windows share one window class.
+- **A real test suite**: pytest drives every window and command against stand-ins for NVDA, wx and Spotify's Web API, and covers 98% of the code. CI fails if coverage drops below 90%. The older test scripts still run alongside it while their checks move over.
+- Hundreds of lines less code from the clean-up, the new features included, and dead code removed, such as error branches that could never run.
 
 ## Version 1.12.2
 

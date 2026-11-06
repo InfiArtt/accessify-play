@@ -63,9 +63,9 @@ Powered by [lrclib.net](https://lrclib.net), a free, community-driven lyrics dat
 
 ### Discovery
 
-*   **Advanced Search:** Find songs, albums, artists, playlists, podcasts and audiobooks.
+*   **Advanced Search:** Find songs, albums, artists, playlists, podcasts and audiobooks, and switch between them with `Ctrl+1` to `Ctrl+6` without leaving the results.
 *   **Browse Categories & Featured Playlists:** Explore Spotify's moods and genres (Sleep, Focus, Workout, Pop, and more).
-*   **Deep Dives:** Explore an artist's info, top tracks, every track and full discography.
+*   **Deep Dives:** Explore an artist's top tracks, albums and singles, playlists, every track and profile, one tab each.
 
 ## 🎛️ Keyboard Command Center
 
