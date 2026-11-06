@@ -141,16 +141,18 @@ jobs:
           echo "### $TAG is new - it will be published as a release" >> "$GITHUB_STEP_SUMMARY"
 
   # -----------------------------------------------------------------------
-  # JOB 3: Create a GitHub Release (only on push to main/master, new version)
+  # JOB 3: Create a GitHub Release (push to, or manual run on, main/master; new version)
   # -----------------------------------------------------------------------
   release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
     needs: [build, version-check]
-    # Only when a real push lands on main/master (not on PRs), and only for a
-    # version that has not been released yet.
+    # Only when a push lands on main/master, or the workflow is run by hand on
+    # it (not on PRs), and only for a version that has not been released yet.
+    # A manual run releases what a push could not trigger, for instance a push
+    # made with a token that starts no workflows.
     if: >-
-      github.event_name == 'push' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
       (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') &&
       needs.version-check.outputs.released == 'false'
     permissions:

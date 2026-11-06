@@ -80,7 +80,7 @@ The version is `addon_version` in `buildVars.py`. This fork numbers releases by 
 
 1. Set the new version in `buildVars.py`, and the short store changelog (`addon_changelog`) next to it.
 2. Rename `## Unreleased` in `CHANGELOG.md` to `## Version <version>`.
-3. Push to `main`. CI builds the add-on and, for a version that has no release yet, publishes a GitHub release with that changelog section as its notes. A push without a new version builds but publishes nothing.
+3. Push to `main`. CI builds the add-on and, for a version that has no release yet, publishes a GitHub release with that changelog section as its notes. A push without a new version builds but publishes nothing. If the push started no workflow (some tokens don't), run "Build & Release Addon" by hand on `main` from the Actions tab; it releases the same way.
 
 ## Ideas and known gaps
 
