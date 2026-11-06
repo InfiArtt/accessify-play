@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 from functools import wraps
-from typing import TYPE_CHECKING, ParamSpec, TypeVar
+from typing import TYPE_CHECKING, Literal, ParamSpec, TypeVar
 
 import api
 import config
@@ -192,7 +192,7 @@ def duplicate_occurrences(rows: list[tuple[Item, int]]) -> list[tuple[str, int]]
 	return extra
 
 
-def positions_after_move(positions: list[int], row: int, direction: int) -> list[int]:
+def positions_after_move(positions: list[int], row: int, direction: Literal["up", "down"]) -> list[int]:
 	"""Return new real positions after moving the track at `row` one row up or down.
 
 	Mirrors SpotifyClient.reorder_playlist_track. Moving up inserts the track

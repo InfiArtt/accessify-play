@@ -27,8 +27,11 @@ extend-exclude = [
 	"sconstruct",
 	# Mostly a verbatim copy of CPython's Lib/secrets.py, kept identical to it.
 	"addon/globalPlugins/accesifyPlay/_secrets_fallback.py",
-	# Not yet: the tests are linted once they move to pytest.
-	"tests",
+	# The old script-style tests, retired as their checks move to tests/unit.
+	"tests/test_*.py",
+	"tests/run_tests.py",
+	"tests/_support.py",
+	"tests/_strings.py",
 ]
 
 [tool.ruff.format]
@@ -62,6 +65,13 @@ logger-objects = ["logHandler.log"]
 # sconstruct, from the NVDA add-on template, reads these names. The add-on's
 # description and changelog are prose for the add-on store, kept as written.
 "buildVars.py" = ["N816", "E501"]
+# Tests assert, use literal expected values and look at private state.
+"tests/unit/**" = ["S101", "PLR2004", "SLF001", "INP001"]
+# The fakes copy NVDA's and wx's names and signatures, whatever ruff thinks of them.
+"tests/fakes/**" = [
+	"N802", "N803", "N815", "N816", "N999", "FBT001", "FBT002", "ARG001", "ARG002", "ANN401", "D1",
+	"INP001", "A002", "PLW0603", "TRY003", "EM101", "RUF012",
+]
 # NVDA runs installTasks.py from the add-on's root folder, which is not a package.
 "addon/installTasks.py" = ["INP001"]
 
@@ -97,6 +107,18 @@ required-imports = ["from __future__ import annotations"]
 
 [tool.ruff.lint.mccabe]
 max-complexity = 15
+
+[tool.pytest.ini_options]
+testpaths = ["tests/unit"]
+addopts = "--strict-markers --strict-config"
+
+[tool.coverage.run]
+branch = true
+source = ["addon/globalPlugins/accesifyPlay"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
 
 [tool.pyright]
 pythonPlatform = "Windows"

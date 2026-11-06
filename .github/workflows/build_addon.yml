@@ -62,6 +62,7 @@ jobs:
         run: |
           pip install -r tests/requirements.txt
           python tests/run_tests.py
+          python -m pytest --cov --cov-report=term
 
       - name: Build addon and generate .pot
         run: scons && scons pot

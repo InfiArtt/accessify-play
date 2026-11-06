@@ -7,7 +7,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, NamedTuple
+from typing import TYPE_CHECKING, Literal, NamedTuple
 
 import gui
 import ui
@@ -931,7 +931,7 @@ class ManagementDialog(AccessifyDialog):
 
 		thread_manager.submit_task(_clear, name="DialogTask", daemon=True)
 
-	def _handle_reorder_track(self, direction: int) -> None:
+	def _handle_reorder_track(self, direction: Literal["up", "down"]) -> None:
 		"""Handle the logic for reordering a track up or down."""
 		playlist_selection = self.playlist_choices.GetSelection()
 		track_selection = self.playlist_tracks_list.GetSelection()

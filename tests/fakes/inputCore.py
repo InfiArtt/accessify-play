@@ -1,0 +1,33 @@
+# Accessify Play, an NVDA add-on for Spotify
+# Copyright (C) 2025-2026 Accessify Play contributors
+# This file is covered by the GNU General Public License, version 2.
+# See the file LICENSE for more details.
+
+"""NVDA's inputCore: the input manager's capture function and gesture identifiers."""
+
+from __future__ import annotations
+
+
+class InputGesture:
+	def __init__(self, identifier: str = "kb:a") -> None:
+		self.identifiers = [identifier]
+		self.normalizedIdentifiers = [normalizeGestureIdentifier(identifier)]
+		self.displayName = identifier.split(":", 1)[-1]
+
+
+class _Manager:
+	def __init__(self) -> None:
+		self._captureFunc = None
+
+
+class InputManager:
+	_inputHelpCaptor = None
+
+
+manager = _Manager()
+
+
+def normalizeGestureIdentifier(identifier: str) -> str:
+	prefix, main = identifier.split(":", 1)
+	keys = main.lower().split("+")
+	return f"{prefix.lower()}:{'+'.join(sorted(keys[:-1]) + keys[-1:])}"

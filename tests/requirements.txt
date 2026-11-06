@@ -1,3 +1,5 @@
 # Needed only to run the tests (python tests/run_tests.py), not by the add-on.
 babel
 pyflakes
+pytest
+pytest-cov
