@@ -48,12 +48,14 @@ def playing(item: dict | None = None, **extra: object) -> dict:
 
 
 class PKCE:
-	"""SpotifyPKCE without the browser: get_access_token answers from `token`."""
+	"""SpotifyPKCE without the browser: get_access_token and validate_token answer from `token`."""
 
 	token: object = {"access_token": "t"}
 	opened: ClassVar[list[bool]] = []
 	#: check_cache of each get_access_token call.
 	checked: ClassVar[list[bool]] = []
+	#: The saved token handed to each validate_token call.
+	cached: ClassVar[list[object]] = []
 
 	def __init__(
 		self, *, client_id: str, redirect_uri: str, scope: str, cache_handler: object, open_browser: object
@@ -67,6 +69,13 @@ class PKCE:
 
 	def get_access_token(self, *, check_cache: bool) -> object:
 		PKCE.checked.append(check_cache)
+		return self._answer()
+
+	def validate_token(self, token_info: object) -> object:
+		PKCE.cached.append(token_info)
+		return self._answer()
+
+	def _answer(self) -> object:
 		if isinstance(self.token, BaseException):
 			raise self.token
 		return self.token
@@ -75,8 +84,8 @@ class PKCE:
 @pytest.fixture
 def pkce(monkeypatch: pytest.MonkeyPatch, server: SpotifyServer) -> type[PKCE]:
 	"""Sign in without a browser; the new spotipy client talks to the stand-in server."""
-	PKCE.token, PKCE.opened, PKCE.checked = {"access_token": "t"}, [], []
-	monkeypatch.setattr(sc, "SpotifyPKCE", PKCE)
+	PKCE.token, PKCE.opened, PKCE.checked, PKCE.cached = {"access_token": "t"}, [], [], []
+	monkeypatch.setattr(sc, "SignInPKCE", PKCE)
 
 	def new_spotify(_auth: object) -> spotipy.Spotify:
 		sp = spotipy.Spotify(auth="t")
@@ -93,7 +102,23 @@ def test_silent_sign_in_from_the_cache(pkce: type[PKCE]) -> None:
 	fresh.initialize()
 	assert fresh.client is not None
 	assert pkce.opened == [False]
-	assert pkce.checked == [True]
+	# Only the saved token is read: no sign-in is started.
+	assert len(pkce.cached) == 1
+	assert pkce.checked == []
+
+
+def test_starting_signed_out_asks_nothing(monkeypatch: pytest.MonkeyPatch) -> None:
+	"""Without a saved sign-in, startup stays signed out instead of asking for one on stdin.
+
+	spotipy's own get_access_token would ask with input(), which fails inside NVDA
+	with "lost sys.stdin" and filled the log at every start.
+	"""
+	asked: list[str] = []
+	monkeypatch.setattr("builtins.input", asked.append)
+	fresh = sc.SpotifyClient()
+	fresh.initialize()
+	assert fresh.client is None
+	assert asked == []
 
 
 @pytest.mark.parametrize(
@@ -156,6 +181,86 @@ def test_shared_client_id_uses_its_registered_redirect_uri() -> None:
 	auth = sc.SpotifyClient()._get_auth_manager()
 	assert auth.client_id == sc.SHARED_CLIENT_ID
 	assert auth.redirect_uri == "http://127.0.0.1:5588/ncspot_login"
+
+
+class ListeningSocket:
+	"""The socket of the local server: records the timeout it is given."""
+
+	timeout: float | None = None
+
+	def settimeout(self, seconds: float) -> None:
+		self.timeout = seconds
+
+
+class LocalServer:
+	"""spotipy's local HTTP server: Spotify's redirect brings what the test sets."""
+
+	def __init__(self, **redirect: object) -> None:
+		self.socket = ListeningSocket()
+		self.redirect = redirect
+		self.closed = False
+
+	def handle_request(self) -> None:
+		for name, value in self.redirect.items():
+			setattr(self, name, value)
+
+	def server_close(self) -> None:
+		self.closed = True
+
+
+def sign_in_with(monkeypatch: pytest.MonkeyPatch, server: LocalServer, state: str | None = None) -> str:
+	"""Run the browser sign-in against server; return the code it hands back."""
+	ports: list[int] = []
+
+	def start(port: int) -> LocalServer:
+		ports.append(port)
+		return server
+
+	monkeypatch.setattr(sc, "start_local_http_server", start)
+	auth = sc.SignInPKCE(
+		client_id=sc.SHARED_CLIENT_ID,
+		redirect_uri=sc.redirect_uri(),
+		scope=" ".join(sc.SCOPES),
+		cache_handler=spotipy.MemoryCacheHandler(),
+		open_browser=True,
+		state=state,
+	)
+	opened: list[bool] = []
+	monkeypatch.setattr(auth, "_open_auth_url", lambda: opened.append(True))
+	try:
+		return auth._get_auth_response_local_server(5588)
+	finally:
+		assert ports == [5588]
+		assert opened == [True]
+		# The port is free for the next try, whatever happened.
+		assert server.closed
+
+
+def test_sign_in_waits_longer_than_nvda_lets_a_socket(monkeypatch: pytest.MonkeyPatch) -> None:
+	"""NVDA gives every socket 10 seconds; the sign-in waits signInTimeoutSeconds."""
+	server = LocalServer(auth_code="the code")
+	assert sign_in_with(monkeypatch, server) == "the code"
+	assert server.socket.timeout == 300
+	sc.config.conf["spotify"]["signInTimeoutSeconds"] = 60
+	server = LocalServer(auth_code="the code")
+	sign_in_with(monkeypatch, server)
+	assert server.socket.timeout == 60
+
+
+@pytest.mark.parametrize(
+	("redirect", "state", "error", "message"),
+	[
+		({}, None, spotipy.SpotifyOauthError, "has not been accessed"),
+		({"auth_code": None, "error": "access_denied"}, None, spotipy.SpotifyOauthError, "access_denied"),
+		({"auth_code": "the code", "state": "theirs"}, "ours", spotipy.SpotifyStateError, "ours"),
+	],
+)
+def test_sign_in_failures(
+	monkeypatch: pytest.MonkeyPatch, redirect: dict, state: str | None, error: type[Exception], message: str
+) -> None:
+	"""No redirect in time, a refusal, or a redirect for another sign-in: each raises, as in spotipy."""
+	with pytest.raises(error, match=message):
+		sign_in_with(monkeypatch, LocalServer(**redirect), state)
 
 
 def test_clearing_credentials(client: SpotifyClient) -> None:

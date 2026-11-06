@@ -21,8 +21,8 @@ import spotipy
 import urllib3
 from logHandler import log
 from requests.adapters import HTTPAdapter
-from spotipy.exceptions import SpotifyException
-from spotipy.oauth2 import CacheFileHandler, SpotifyPKCE
+from spotipy.exceptions import SpotifyException, SpotifyOauthError, SpotifyStateError
+from spotipy.oauth2 import CacheFileHandler, SpotifyPKCE, start_local_http_server
 from urllib3.util.retry import Retry
 
 from . import paths
@@ -304,6 +304,38 @@ def _describe_playing(item: Item, item_type: str | None, *, playing: bool) -> st
 	return message.format(track=item.get("name"), artists=artists, album=album)
 
 
+class SignInPKCE(SpotifyPKCE):
+	"""SpotifyPKCE that waits signInTimeoutSeconds for the browser to come back.
+
+	spotipy waits for Spotify's redirect with a socket's default timeout, and
+	NVDA sets that to 10 seconds for every socket: too short to sign in, above
+	all with a screen reader. So the listening socket gets a timeout of its own.
+	The rest is spotipy 2.26's own method, except that the server is closed
+	afterwards, which frees the port for the next try at once.
+	"""
+
+	def _get_auth_response_local_server(self, redirect_port: int) -> str:
+		server = start_local_http_server(redirect_port)
+		try:
+			server.socket.settimeout(conf_get("signInTimeoutSeconds"))
+			self._open_auth_url()
+			server.handle_request()
+		finally:
+			server.server_close()
+		remote_state = getattr(server, "state", None)
+		if self.state is not None and remote_state != self.state:
+			raise SpotifyStateError(self.state, remote_state)
+		code = getattr(server, "auth_code", None)
+		if code is not None:
+			return code
+		error = getattr(server, "error", None)
+		if error is not None:
+			message = f"Received error from OAuth server: {error}"
+			raise SpotifyOauthError(message)
+		message = "Server listening on localhost has not been accessed"
+		raise SpotifyOauthError(message)
+
+
 class SpotifyClient:
 	"""The add-on's connection to Spotify; get_client() returns the shared one."""
 
@@ -321,7 +353,7 @@ class SpotifyClient:
 		return CacheFileHandler(cache_path=str(_get_cache_path()))
 
 	def _get_auth_manager(self, *, open_browser: bool = False) -> SpotifyPKCE:
-		return SpotifyPKCE(
+		return SignInPKCE(
 			client_id=own_client_id() or SHARED_CLIENT_ID,
 			redirect_uri=redirect_uri(),
 			scope=" ".join(SCOPES),
@@ -330,11 +362,16 @@ class SpotifyClient:
 		)
 
 	def initialize(self) -> None:
-		"""Silently initializes the client on startup using cached tokens."""
+		"""Silently initializes the client on startup using cached tokens.
+
+		Only the saved token is read (and refreshed when it expired):
+		get_access_token would go on to a sign-in without one, and without a
+		browser spotipy asks for it on stdin, which NVDA does not have.
+		"""
 		log.info("Spotify: attempting silent initialization.")
 		auth_manager = self._get_auth_manager(open_browser=False)
 		try:
-			token_info = auth_manager.get_access_token(check_cache=True)
+			token_info = auth_manager.validate_token(auth_manager.cache_handler.get_cached_token())
 			if token_info:
 				self.client = _new_spotify(auth_manager)
 				log.info("Spotify: client successfully initialized from cache.")

@@ -155,6 +155,8 @@ _TABLE = (
 	Setting("requestBackoffFactor", 0.3, 0.0, 10.0, hidden=True),
 	# How long to hold requests back after a rate limit that does not say, in seconds.
 	Setting("rateLimitFallbackSeconds", 5, 1, 3600, hidden=True),
+	# How long Validate Credentials waits for the sign-in in the browser, in seconds.
+	Setting("signInTimeoutSeconds", 300, 30, 3600, hidden=True),
 	# Where lyrics come from (an lrclib.net API), and how long a request may take, in seconds.
 	Setting("lyricsServer", "https://lrclib.net/api", hidden=True),
 	Setting("lyricsTimeoutSeconds", 10, 1, 120, hidden=True),

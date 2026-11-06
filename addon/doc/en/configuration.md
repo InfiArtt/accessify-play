@@ -6,7 +6,7 @@ All of Accessify Play's settings are in NVDA's Settings dialog: open the NVDA me
 
 Press **Validate Credentials**. Your web browser opens a Spotify page asking you to allow Accessify Play to use your account; agree to it. Back in NVDA you will hear "Validation successful!".
 
-You only need to do this once. Accessify Play remembers the sign-in, and Spotify renews it automatically.
+You have five minutes to finish signing in in the browser. You only need to do this once. Accessify Play remembers the sign-in, and Spotify renews it automatically.
 
 If signing in fails, make sure you finished signing in in the browser and that you are connected to the internet, then press Validate Credentials again.
 
@@ -70,6 +70,7 @@ To change one, exit NVDA, open `nvda.ini` in NVDA's user configuration folder in
 * `requestRetries` (default `3`, 0 to 10): how often a request that failed because of a problem at Spotify is tried again.
 * `requestBackoffFactor` (default `0.3`, 0.0 to 10.0): how much longer each of those tries waits than the one before.
 * `rateLimitFallbackSeconds` (default `5`, 1 to 3600): how long, in seconds, Accessify Play sends nothing after Spotify limits requests without saying for how long.
+* `signInTimeoutSeconds` (default `300`, 30 to 3600): how long, in seconds, Validate Credentials waits for you to finish signing in in the browser.
 * `keepAliveMinSeconds` (default `5`, 1 to 300): the shortest Keep Alive Interval; shorter ones are raised to it.
 * `topAndRecentLimit` (default `50`, 1 to 50): how many songs Play My Top Tracks, Play Recently Played, Top Items and Recently Played fetch.
 * `artistTopTracksLimit` (default `10`, 1 to 50): how many popular songs the artist window shows. With your own Client ID, Spotify allows at most 10.

@@ -6,7 +6,7 @@ Semua pengaturan Accessify Play ada di dialog Settings NVDA: buka menu NVDA (`NV
 
 Tekan **Validate Credentials**. Browser web akan membuka halaman Spotify yang meminta izin agar Accessify Play boleh memakai akun Anda; setujui. Kembali di NVDA, akan terdengar "Validation successful!".
 
-Ini cukup dilakukan sekali. Accessify Play mengingat proses masuk ini, dan Spotify memperbaruinya secara otomatis.
+Anda punya waktu lima menit untuk menyelesaikan proses masuk di browser. Ini cukup dilakukan sekali. Accessify Play mengingat proses masuk ini, dan Spotify memperbaruinya secara otomatis.
 
 Jika gagal masuk, pastikan Anda sudah menyelesaikan proses masuk di browser dan terhubung ke internet, lalu tekan Validate Credentials lagi.
 
@@ -70,6 +70,7 @@ Untuk mengubahnya, keluar dari NVDA, buka `nvda.ini` di folder konfigurasi pengg
 * `requestRetries` (bawaan `3`, 0 sampai 10): berapa kali permintaan yang gagal karena masalah di Spotify dicoba lagi.
 * `requestBackoffFactor` (bawaan `0.3`, 0.0 sampai 10.0): seberapa lebih lama setiap percobaan menunggu dibanding sebelumnya.
 * `rateLimitFallbackSeconds` (bawaan `5`, 1 sampai 3600): berapa lama, dalam detik, Accessify Play tidak mengirim apa pun setelah Spotify membatasi permintaan tanpa menyebutkan lamanya.
+* `signInTimeoutSeconds` (bawaan `300`, 30 sampai 3600): berapa lama, dalam detik, Validate Credentials menunggu Anda menyelesaikan proses masuk di browser.
 * `keepAliveMinSeconds` (bawaan `5`, 1 sampai 300): Keep Alive Interval terpendek; nilai yang lebih pendek dinaikkan ke sini.
 * `topAndRecentLimit` (bawaan `50`, 1 sampai 50): berapa lagu yang diambil oleh Play My Top Tracks, Play Recently Played, Top Items, dan Recently Played.
 * `artistTopTracksLimit` (bawaan `10`, 1 sampai 50): berapa lagu populer yang ditampilkan jendela artis. Dengan Client ID sendiri, Spotify mengizinkan paling banyak 10.
