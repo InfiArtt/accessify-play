@@ -30,7 +30,7 @@ REAL_API = set(real_secrets.__all__) | {"DEFAULT_ENTROPY"}
 class BlockSecrets(importlib.abc.MetaPathFinder):
 	"""Make `import secrets` fail, as it does inside NVDA 2025."""
 
-	def find_spec(self, name: str, path: object = None, target: object = None) -> None:  # noqa: ARG002 - the finder interface
+	def find_spec(self, name: str, _path: object = None, _target: object = None) -> None:
 		"""Refuse secrets; leave every other module to the next finder."""
 		if name == "secrets":
 			raise ModuleNotFoundError(name=name)

@@ -501,13 +501,13 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
 	# The next three are layer keys, not commands of their own: NVDA lists a
 	# script with a docstring in Input Gestures, so they deliberately have none.
-	def script_commandLayerHelp(self, _gesture: inputCore.InputGesture) -> None:  # noqa: D102 - a docstring would list it in Input Gestures
+	def script_commandLayerHelp(self, _gesture: inputCore.InputGesture) -> None:  # noqa: D102 - see above
 		self.commandLayer.show_help()
 
-	def script_commandLayerCancel(self, _gesture: inputCore.InputGesture) -> None:  # noqa: D102 - a docstring would list it in Input Gestures
+	def script_commandLayerCancel(self, _gesture: inputCore.InputGesture) -> None:  # noqa: D102 - see above
 		self.commandLayer.finish(announce=True)
 
-	def script_showLayerEditor(self, _gesture: inputCore.InputGesture) -> None:  # noqa: D102 - a docstring would list it in Input Gestures
+	def script_showLayerEditor(self, _gesture: inputCore.InputGesture) -> None:  # noqa: D102 - see above
 		self.commandLayer.show_editor()
 
 	@scriptHandler.script(

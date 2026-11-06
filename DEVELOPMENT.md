@@ -15,7 +15,7 @@ pre-commit install
 The checks CI runs, in the same order:
 
 ```
-pre-commit run --all-files            # ruff check and ruff format, plus a few file checks
+pre-commit run --all-files            # ruff check, ruff format and flake8, plus a few file checks
 pyright                               # type checking of the add-on's code
 python -m pytest --cov                # the test suite; fails below 99% coverage
 scons && scons pot                    # build the .nvda-addon and the translation template
@@ -61,6 +61,7 @@ Bundled libraries are in `addon/lib` (see `addon/thirdPartyNotices.md`). User gu
 
 * **Tabs** for indentation, lines up to 110 characters, double quotes. `ruff format` takes care of it.
 * **pyright** checks the types of the add-on's code (`[tool.pyright]` in `pyproject.toml`). NVDA's modules and wx come from the fakes in `tests/fakes`, so a fake's signature should match the real one; `__builtins__.pyi` declares the `_` NVDA installs. Spotify's answers are `Item` (`dict[str, Any]`), so `.get()` gives `Any | None`: pass it on to parameters that accept `None`, or index (`item["id"]`) where the value is certain.
+* **flake8 passes too** (settings in `.flake8`), since the original project's contributing guide asks for it; ruff already covers everything it checks, so a ruff-clean change is normally flake8-clean.
 * **Every ruff rule is on** (`select = ["ALL"]` in `pyproject.toml`). The few exceptions are listed there with the reason for each; NVDA's own names (`script_*`, `event_*`, `makeSettings`, ...) are allowed. Fix a finding rather than silencing it; a `# noqa` needs a reason after it.
 * **Every module starts** with the licence header and `from __future__ import annotations` (ruff adds the import).
 * **Annotations and docstrings** on everything public. Docstrings say what a thing is for, in plain words.

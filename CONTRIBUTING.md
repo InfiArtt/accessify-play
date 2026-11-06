@@ -78,7 +78,7 @@ Once your changes are ready, it's time to create a PR.
 Our repository is protected by automated checks (GitHub Actions). Before your PR can be merged, it **must** meet these conditions:
 
 1.  **🤖 Lint, type checks and tests must pass**
-    ruff checks and formats the code (every rule is on; the exceptions are listed in `pyproject.toml`), pyright checks its types, and pytest runs the tests, which must cover at least 99% of the code. Run the same checks locally before pushing; [DEVELOPMENT.md](DEVELOPMENT.md) explains how, and how the code and tests are organised.
+    ruff checks and formats the code (every rule is on; the exceptions are listed in `pyproject.toml`), flake8 checks it as well (`.flake8`), pyright checks its types, and pytest runs the tests, which must cover at least 99% of the code. Run the same checks locally before pushing; [DEVELOPMENT.md](DEVELOPMENT.md) explains how, and how the code and tests are organised.
 
 2.  **🌿 Branch Must Be Up-to-Date**
     Your branch must be in sync with the `main` branch. If `main` has been updated while you were working, you'll need to update your branch before we can merge it.

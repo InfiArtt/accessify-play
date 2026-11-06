@@ -1,0 +1,27 @@
+[flake8]
+# The original project's contributing guide asks for flake8. ruff (pyproject.toml)
+# checks far more; these settings follow the same conventions: lines up to 110
+# characters and tabs for indentation, as in NVDA's own code.
+max-line-length = 110
+extend-ignore =
+	# indentation contains tabs
+	W191, E101,
+	# ruff format puts spaces around the colon of a slice with an expression in it
+	E203
+builtins = _, ngettext, pgettext, npgettext
+exclude =
+	.git,
+	__pycache__,
+	build,
+	# Third-party packages, kept exactly as released.
+	addon/lib,
+	# Build tooling from the NVDA add-on template, maintained by NV Access.
+	site_scons,
+	sconstruct,
+	# A verbatim copy of CPython's Lib/secrets.py.
+	addon/globalPlugins/accesifyPlay/_secrets_fallback.py
+per-file-ignores =
+	# Each store text is one line: every line break shows in the Add-on Store.
+	buildVars.py: E501
+	# These scripts set up the import path before importing what they try.
+	tests/isolated/*: E402, F811

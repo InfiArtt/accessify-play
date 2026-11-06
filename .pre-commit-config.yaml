@@ -11,3 +11,10 @@ repos:
     hooks:
       - id: ruff-check
       - id: ruff-format
+  # The original project's contributing guide asks for flake8; settings in .flake8.
+  - repo: https://github.com/PyCQA/flake8
+    rev: 7.5.0
+    hooks:
+      - id: flake8
+        # pre-commit names the files itself, so .flake8's exclude list is repeated here.
+        exclude: ^(addon/lib/|site_scons/|sconstruct$|addon/globalPlugins/accesifyPlay/_secrets_fallback\.py$)

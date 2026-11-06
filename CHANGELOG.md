@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### 🧹 Under the hood
+
+- **flake8 checks the code too**, with the other checks, as the original project's contributing guide asks (settings in `.flake8`).
+
 ## Version 2026.11.1
 
 Changes since 2026.11.0.
