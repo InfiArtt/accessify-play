@@ -1,5 +1,14 @@
 # Changelog
 
+## Version 2026.11.3
+
+Changes since 2026.11.2.
+
+### 🐛 Fixed
+
+- **Signing in had to be finished within 10 seconds**: Validate Credentials stopped waiting for the browser after 10 seconds, the limit NVDA gives every network connection, and signing in failed. It now waits five minutes, and `signInTimeoutSeconds` in `nvda.ini` changes that. Trying again straight after a failed sign-in works too.
+- **An error in NVDA's log at every start while not signed in** ("lost sys.stdin"): starting up tried to sign in, and spotipy asked for the sign-in on a command line NVDA does not have. Starting up now only reads a saved sign-in.
+
 ## Version 2026.11.2
 
 Changes since 2026.11.1.

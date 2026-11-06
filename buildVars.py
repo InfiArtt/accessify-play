@@ -33,11 +33,12 @@ addon_info = AddonInfo(
 		"""Accessify Play provides comprehensive NVDA control for Spotify playback on any Connect-enabled device. A Spotify Premium subscription is required for full functionality."""
 	),
 	# version
-	addon_version="2026.11.2",
+	addon_version="2026.11.3",
 	# Brief changelog for this version
 	# Translators: what's new content for the add-on version to be shown in the add-on store
 	addon_changelog=_("""
-- Fixed: signing in failed with "redirect_uri: Not matching configuration". The shared Client ID's sign-in address changed, and Accessify Play now uses the new one.
+- Fixed: signing in had to be finished within 10 seconds; it may now take five minutes.
+- Fixed: an error was written to NVDA's log at every start while not signed in.
 	"""),
 	# Authors
 	addon_author="Rafli I .<rafli08523717409@gmail.com>, Rexya <rexya2017@gmail.com>",
