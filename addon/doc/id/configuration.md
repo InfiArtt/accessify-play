@@ -19,7 +19,7 @@ Jika gagal masuk, pastikan Anda sudah menyelesaikan proses masuk di browser dan 
 Secara bawaan, semua orang masuk lewat satu Client ID Spotify yang dipakai bersama, jadi tidak ada yang perlu disiapkan. Spotify membatasi berapa banyak permintaan yang boleh dikirim satu Client ID, dan semua pengguna Client ID bersama berbagi batas itu. Jika Anda sering mendengar "Spotify is limiting requests at the moment", atau Client ID bersama suatu saat tidak bisa dipakai lagi, Anda bisa memakai Client ID sendiri:
 
 1. Tekan **Spotify Developer Dashboard** di pengaturan Accessify Play, lalu masuk dengan akun Spotify Anda.
-2. Buat aplikasi (Create app). Nama dan deskripsinya bebas. Di Redirect URIs tambahkan persis `http://127.0.0.1:5588/login`, dan di bagian API yang dipakai pilih **Web API**. Setujui ketentuan Spotify lalu simpan.
+2. Buat aplikasi (Create app). Nama dan deskripsinya bebas. Di Redirect URIs tambahkan persis `http://127.0.0.1:5588/login` (atau alamat yang tertera di **Redirect URI to add to your own Spotify app** di pengaturan Accessify Play, jika Anda mengubah port masuk), dan di bagian API yang dipakai pilih **Web API**. Setujui ketentuan Spotify lalu simpan.
 3. Buka pengaturan aplikasi itu dan salin **Client ID**-nya, 32 huruf dan angka.
 4. Tempelkan ke **Your own Spotify Client ID** di pengaturan Accessify Play, lalu tekan **Validate Credentials** untuk masuk dengannya.
 
@@ -40,6 +40,8 @@ Aplikasi yang Anda buat tunduk pada aturan Spotify sendiri untuk aplikasi develo
 * **Language**: bahasa pesan dan dialog Accessify Play. "Follow NVDA language (default)" mengikuti bahasa NVDA; Anda juga bisa memilih English atau Bahasa Indonesia apa pun bahasa NVDA. Perubahan berlaku setelah NVDA dimulai ulang.
 * **Announce track changes automatically**: bila dicentang, NVDA mengumumkan setiap lagu (atau episode) baru saat mulai diputar, dari mana pun lagu itu diputar.
 * **New playlists are public**: apakah Public playlist sudah dicentang saat Anda membuat playlist. Bawaannya dicentang.
+* **Sign-in port (1024 to 65535)**: port di komputer ini tempat halaman masuk Spotify mengembalikan browser Anda, bawaannya 5588. Ubah hanya jika port 5588 sudah dipakai program lain. Jika memakai Client ID sendiri, Redirect URI yang terdaftar di aplikasi Anda harus memakai port yang sama.
+* **Redirect URI to add to your own Spotify app (only needed with your own Client ID)**: hanya-baca. Alamat persis yang perlu ditambahkan di Redirect URIs aplikasi Anda di Spotify Developer Dashboard; alamat ini mengikuti port masuk. Anda bisa menyalinnya dari sini.
 * **Your own Spotify Client ID (optional, leave blank to use the shared one)**: lihat "Memakai Client ID sendiri" di atas.
 
 ## Tombol

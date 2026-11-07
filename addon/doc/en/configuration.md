@@ -19,7 +19,7 @@ If signing in fails, make sure you finished signing in in the browser and that y
 Out of the box, everyone signs in through the same shared Spotify Client ID, so nobody has to set anything up. Spotify limits how many requests one Client ID may send, and everyone using the shared one shares that limit. If you often hear "Spotify is limiting requests at the moment", or the shared Client ID ever stops working, you can use a Client ID of your own instead:
 
 1. Press **Spotify Developer Dashboard** in Accessify Play's settings, and sign in with your Spotify account.
-2. Create an app. Any name and description will do. Under Redirect URIs add exactly `http://127.0.0.1:5588/login`, and under the APIs it uses choose **Web API**. Accept Spotify's terms and save.
+2. Create an app. Any name and description will do. Under Redirect URIs add exactly `http://127.0.0.1:5588/login` (or the address shown in **Redirect URI to add to your own Spotify app** in Accessify Play's settings, if you changed the sign-in port), and under the APIs it uses choose **Web API**. Accept Spotify's terms and save.
 3. Open the app's settings and copy its **Client ID**, 32 letters and digits.
 4. Paste it into **Your own Spotify Client ID** in Accessify Play's settings, and press **Validate Credentials** to sign in with it.
 
@@ -40,6 +40,8 @@ Spotify's own rules for developer apps apply to an app you create. To go back to
 * **Language**: the language of Accessify Play's messages and dialogs. "Follow NVDA language (default)" uses NVDA's language; you can also choose English or Bahasa Indonesia regardless of NVDA's language. A change takes effect after restarting NVDA.
 * **Announce track changes automatically**: when checked, NVDA announces each new track (or episode) as it starts, wherever it was started from.
 * **New playlists are public**: whether Public playlist is checked when you create a playlist. Checked by default.
+* **Sign-in port (1024 to 65535)**: the port on this computer that Spotify's sign-in page sends your browser back to, 5588 by default. Change it only if another program already uses 5588. With your own Client ID, the Redirect URI registered on your app must use the same port.
+* **Redirect URI to add to your own Spotify app (only needed with your own Client ID)**: read-only. The exact address to add under Redirect URIs in your app in the Spotify Developer Dashboard; it follows the sign-in port. You can copy it from here.
 * **Your own Spotify Client ID (optional, leave blank to use the shared one)**: see "Using your own Client ID" above.
 
 ## Buttons

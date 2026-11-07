@@ -176,11 +176,7 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 		self.windowShortcutsButton = s_helper.addItem(wx.Button(self, label=_("Window Shortcuts...")))
 		self.windowShortcutsButton.Bind(wx.EVT_BUTTON, self.on_window_shortcuts)
 
-		# Translators: Label for an optional setting where users can enter the Client ID
-		# of a Spotify developer app of their own, instead of the shared one.
-		own_client_id_label = _("Your own Spotify Client ID (optional, leave blank to use the shared one):")
-		self.ownClientIDCtrl = s_helper.addLabeledControl(own_client_id_label, wx.TextCtrl)
-		self.ownClientIDCtrl.SetValue(conf_get("ownClientID"))
+		self._add_sign_in_settings(s_helper)
 
 		buttons_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
@@ -204,6 +200,38 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 
 		s_helper.addItem(buttons_sizer)
 		self.Layout()  # Ensure all elements are properly laid out
+
+	def _add_sign_in_settings(self, s_helper: guiHelper.BoxSizerHelper) -> None:
+		"""Add the sign-in port, the redirect URI it gives, and the own Client ID."""
+		self.redirectPortCtrl = self._add_spin(
+			s_helper,
+			"redirectPort",
+			# Translators: Label for a setting: the local port Spotify's sign-in page sends
+			# the browser back to.
+			_("Sign-in port ({minimum} to {maximum})"),
+		)
+		self.redirectPortCtrl.Bind(wx.EVT_SPINCTRL, self.on_redirect_port)
+		self.redirectPortCtrl.Bind(wx.EVT_TEXT, self.on_redirect_port)
+		self.redirectURICtrl = s_helper.addLabeledControl(
+			# Translators: Label for a read-only field showing the address to add under Redirect URIs
+			# in an own Spotify developer app. It follows the sign-in port.
+			_("Redirect URI to add to your own Spotify app (only needed with your own Client ID):"),
+			wx.TextCtrl,
+			# Multiline on purpose: wx leaves a single-line read-only field out of the Tab order,
+			# so screen reader users would only reach it with object navigation.
+			style=wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_NO_VSCROLL,
+		)
+		self.redirectURICtrl.SetValue(spotify_client.own_redirect_uri(self.redirectPortCtrl.GetValue()))
+
+		# Translators: Label for an optional setting where users can enter the Client ID
+		# of a Spotify developer app of their own, instead of the shared one.
+		own_client_id_label = _("Your own Spotify Client ID (optional, leave blank to use the shared one):")
+		self.ownClientIDCtrl = s_helper.addLabeledControl(own_client_id_label, wx.TextCtrl)
+		self.ownClientIDCtrl.SetValue(conf_get("ownClientID"))
+
+	def on_redirect_port(self, _evt: wx.Event) -> None:
+		"""Show the redirect URI for the port now in the field."""
+		self.redirectURICtrl.SetValue(spotify_client.own_redirect_uri(self.redirectPortCtrl.GetValue()))
 
 	def on_window_shortcuts(self, _evt: wx.Event) -> None:
 		"""Open the Window Shortcuts dialog; its changes are saved with the panel."""
@@ -232,10 +260,15 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 		return super().isValid()
 
 	def onSave(self) -> None:
-		"""Save the settings; sign in again when the client ID changed."""
-		if self._save_values():
+		"""Save the settings; sign in again when the client ID or the sign-in port changed."""
+		client_id_changed, port_changed = self._save_values()
+		if client_id_changed:
 			self.client.reset_session()
 			thread_manager.submit_task(self._sign_in_after_client_id_change, name="DialogTask", daemon=True)
+		elif port_changed:
+			# Same Client ID, same token: only the next browser sign-in uses the new port.
+			self.client.reset_session()
+			thread_manager.submit_task(self.client.initialize, name="DialogTask", daemon=True)
 
 	def _sign_in_after_client_id_change(self) -> None:
 		"""Use the token saved for the new Client ID, if it was signed in before."""
@@ -249,9 +282,10 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 			# the user still needs to sign in with it.
 			wx.CallAfter(ui.message, _("Client ID changed. Choose Validate Credentials to sign in."))
 
-	def _save_values(self) -> bool:
-		"""Store the panel's values. Returns whether the Client ID changed."""
+	def _save_values(self) -> tuple[bool, bool]:
+		"""Store the panel's values. Returns whether the Client ID and the sign-in port changed."""
 		spotify = config.conf["spotify"]
+		port_changed = self.redirectPortCtrl.GetValue() != conf_get("redirectPort")
 		for key, ctrl in self._spins.items():
 			spotify[key] = ctrl.GetValue()
 		for key, (ctrl, codes) in self._choices.items():
@@ -281,14 +315,14 @@ class SpotifySettingsPanel(settingsDialogs.SettingsPanel):
 			own_client_id = ""
 		changed = own_client_id != conf_get("ownClientID")
 		spotify["ownClientID"] = own_client_id
-		return changed
+		return changed, port_changed
 
 	def on_validate(self, _evt: wx.Event) -> None:
 		"""Save the settings and sign in to Spotify."""
 		if not self.isValid():
 			return
 		# Save current UI values to config.conf before validating
-		if self._save_values():
+		if any(self._save_values()):
 			self.client.reset_session()
 		ui.message(_("Validating credentials with Spotify..."))
 		thread_manager.submit_task(self.run_validation, name="DialogTask", daemon=True)

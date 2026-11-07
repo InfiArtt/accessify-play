@@ -16,7 +16,7 @@ import installTasks
 import pytest
 import wx
 
-MANIFEST = {"summary": "Accessify Play", "name": "AccessifyPlay", "version": "2026.11.0"}
+MANIFEST = {"summary": "Accessify Play", "name": "AccessifyPlay", "version": "1.13.0"}
 
 
 class Installer:
@@ -58,7 +58,7 @@ def test_install_shows_what_is_installed(installer: Installer, monkeypatch: pyte
 	(dialog,) = shown
 	assert dialog.GetTitle() == "Accessify Play Installation"
 	text = dialog.children[0].label
-	assert text.startswith("You are about to install Accessify Play version 2026.11.0.")
+	assert text.startswith("You are about to install Accessify Play version 1.13.0.")
 	assert "Spotify Premium" in text
 	assert installer.loaded == ["globalPlugins.accesifyPlay.donate"]
 	assert dialog.destroyed

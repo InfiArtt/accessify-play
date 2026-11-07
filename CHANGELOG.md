@@ -1,29 +1,32 @@
 # Changelog
 
-## Version 2026.11.3
+## Version 1.13.0
 
-Changes since 2026.11.2.
+Changes since 1.12.2. Most of this release was contributed by aradix85 ([#62](https://github.com/InfiArtt/accessify-play/pull/62)).
 
-### 🐛 Fixed
-
-- **Signing in had to be finished within 10 seconds**: Validate Credentials stopped waiting for the browser after 10 seconds, the limit NVDA gives every network connection, and signing in failed. It now waits five minutes, and `signInTimeoutSeconds` in `nvda.ini` changes that. Trying again straight after a failed sign-in works too.
-- **An error in NVDA's log at every start while not signed in** ("lost sys.stdin"): starting up tried to sign in, and spotipy asked for the sign-in on a command line NVDA does not have. Starting up now only reads a saved sign-in.
-
-## Version 2026.11.2
-
-Changes since 2026.11.1.
-
-### 🐛 Fixed
+### ⚠️ Signing in works again
 
 - **Signing in failed with "redirect_uri: Not matching configuration"**: the shared Client ID belongs to ncspot, which changed the sign-in address registered on it, so Spotify refused every sign-in. Accessify Play now uses the new address. Signing in with your own Client ID is unchanged.
+- **Signing in had to be finished within 10 seconds**: Validate Credentials stopped waiting for the browser after 10 seconds, the limit NVDA gives every network connection, and signing in failed. It now waits five minutes, and `signInTimeoutSeconds` in `nvda.ini` changes that. Trying again straight after a failed sign-in works too.
+- **New Sign-in port setting**: the port Spotify's sign-in sends the browser back to can be changed in the settings (5588 by default), for when another program already uses it.
+- **The Redirect URI to register is shown in the settings**: a read-only field before the Client ID shows the exact address to add to your own Spotify app, following the sign-in port.
+- **An error in NVDA's log at every start while not signed in** ("lost sys.stdin"): starting up tried to sign in, and spotipy asked for the sign-in on a command line NVDA does not have. Starting up now only reads a saved sign-in.
 
-### 🧹 Under the hood
+### 🎉 Search: switch the type without leaving the results
 
-- **flake8 checks the code too**, with the other checks, as the original project's contributing guide asks (settings in `.flake8`).
+- **`Ctrl+1` to `Ctrl+6` choose Song, Album, Artist, Playlist, Podcast or Audiobook**, and `Ctrl+Tab` / `Ctrl+PageDown` and `Ctrl+Shift+Tab` / `Ctrl+PageUp` go to the next or previous type. With text in the search field the search runs again at once, and the focus moves to the results.
+- **`Ctrl+F` goes back to the search field** with its text selected, ready to type over.
+- **Opening Search while it is already open** puts the focus in the search field.
+- **"No results found." is spoken**: the focus stays where it is in that case, so NVDA said nothing.
+- A quick switch can no longer show the results of the type you switched away from.
 
-## Version 2026.11.1
+### 🎉 Artist window: popular songs first, and playlists
 
-Changes since 2026.11.0.
+- **It opens on Top Tracks**, with the focus on the first song once it has loaded.
+- **New Playlists found by name tab**: playlists found by searching for the artist's name, so most are made by other listeners; Spotify's own, such as "This Is ...", come first. `Enter` opens one, and `Alt+P`, `Alt+Q` and `Alt+L` play, queue and copy it.
+- **The tabs switch like the types in Search**: `Ctrl+1` to `Ctrl+5` go to a tab with the focus in its list, and `Ctrl+Tab` / `Ctrl+PageDown` and `Ctrl+Shift+Tab` / `Ctrl+PageUp` go to the next or previous tab. The order is now Top Tracks, Albums and Singles, Playlists, All Tracks, Artist Info.
+- **Every list is named after its tab**, so NVDA says where you are.
+- **Top Tracks names the artists only when someone else is on the song**, instead of repeating the artist on every line.
 
 ### 🎉 The same lists, menus and keys in every window
 
@@ -72,6 +75,20 @@ New in Accessify Play's settings (NVDA menu, Preferences, Settings, Accessify Pl
 
 ### 🛠️ Bug fixes
 
+- **Play/Pause, volume, shuffle and repeat said they worked when Spotify refused**: "Paused", "Volume 55%" and so on were spoken even when the command failed. They now say why it failed.
+- **Play/Pause with no active device did nothing**. It now wakes your device and plays.
+- **Like/Unlike (`L`) on a podcast episode** looked the episode up as a song. It now saves it to Your Episodes.
+- **Volume on a device that does not report its volume** raised an error instead of saying so.
+- **Two quick presses of a playback command** could both get through, sending the command twice.
+- **An error every 5 seconds in the NVDA log** while Spotify reported nothing playing, such as between items.
+- **A timeout on a playback command was logged as an unexpected error**, with a full traceback.
+- **Shared links with a country in them** (`open.spotify.com/intl-nl/track/...`) were misread by Play from Link and the link details. They now work like any other link.
+- **Copying the lyrics** from the lyrics window gave no feedback. NVDA now says they were copied.
+- **Adding an album to a playlist stopped after 100 songs** when one of them was already in the playlist. The whole album is now added, skipping only the songs that are already there.
+- **A song without lyrics was reported as a connection problem** ("Could not load lyrics. Please check your internet connection."). It now says no lyrics were found, and the connection message is only for when lrclib.net can't be reached.
+- **A failed lyrics lookup was remembered**: after a network hiccup, the song kept saying it had no lyrics until NVDA restarted. Only successful lookups are kept now.
+- **All Tracks in the artist window stopped for good** when one album failed to load. The songs so far now stay, and "Load More" tries that album again.
+- **A context menu with nothing in it was never cleaned up**, leaving a small leak each time.
 - **The command layer editor offered to restart NVDA** after a change, although the new keys already worked. It no longer asks.
 - **Command descriptions in the layer's help and editor stayed in the words of the version that first saved your keys**. They now always follow the add-on, in the add-on's language.
 - **A playlist whose tracks could not be loaded**, in the Library, left an empty list; so did the artist window's albums. The list now says what went wrong, and an artist without albums says so.
@@ -92,56 +109,6 @@ New in Accessify Play's settings (NVDA menu, Preferences, Settings, Accessify Pl
 
 ### 🧹 Under the hood
 
-- **One table of settings** (`settings_spec.py`): the config spec, the defaults, and the ranges and labels of the settings panel are all made from it, so a limit is changed in one place. Tests check that the panel and the user guide match it.
-- **One table of commands** (`commands.py`) for the command layer's keys, names and descriptions, which used to be listed three times. `layerConfig.json` now keeps only your keys and whether the layer stays open.
-- **One test suite**: the older test scripts are ported to pytest or removed, including the checks of the translations, the user guides and the bundled libraries. `installTasks.py` is now tested and measured too.
-- Removed code that never ran: an install-time clean-up for an NVDA function that does not exist, and lists the Library could be handed ready-made, which only the tests used (they now go through the stand-in Spotify server).
-- **Links to the source, releases and issues point to this fork** (aradix85/accessify-play): in the add-on's manifest, the readme and the user guide.
-- **Type checking with pyright** runs with the other checks, and found a few places where missing details from Spotify could stop a window (a playlist or artist without a name, a song without an id).
-- **One way to give a window its shortcuts** (`_bind_shortcuts`), instead of an accelerator table written out in each window; the keys come from the settings, and menus show them.
-- **Every long list uses one paged list** (Search, the Library's tabs, Browse Categories and Featured Playlists included), and playing from any window goes through one helper that reports failures.
-- **One context menu, one Enter and one row format for every window**: `rows.py` writes the rows, and the windows' base class builds the context menu, opens items, decides what Enter does and queues, instead of each window keeping its own copy. The windows fetch your playlists for Add to Playlist in one way too.
-- Lyrics requests name the add-on's homepage from its manifest (`addon_url` in `buildVars.py`) instead of a fixed address, and the donation link is written once.
-
-## Version 2026.11.0
-
-Changes since 1.12.2. This build comes from the aradix85 fork. Its versions follow the date (year.month.number), so they never collide with the 1.x versions of the original add-on.
-
-### 🎉 Search: switch the type without leaving the results
-
-- **`Ctrl+1` to `Ctrl+6` choose Song, Album, Artist, Playlist, Podcast or Audiobook**, and `Ctrl+Tab` / `Ctrl+PageDown` and `Ctrl+Shift+Tab` / `Ctrl+PageUp` go to the next or previous type. With text in the search field the search runs again at once, and the focus moves to the results.
-- **`Ctrl+F` goes back to the search field** with its text selected, ready to type over.
-- **Opening Search while it is already open** puts the focus in the search field.
-- **"No results found." is spoken**: the focus stays where it is in that case, so NVDA said nothing.
-- A quick switch can no longer show the results of the type you switched away from.
-
-### 🎉 Artist window: popular songs first, and playlists
-
-- **It opens on Top Tracks**, with the focus on the first song once it has loaded.
-- **New Playlists tab**: playlists found by searching for the artist's name. `Enter` opens one, and `Alt+P`, `Alt+Q` and `Alt+L` play, queue and copy it.
-- **The tabs switch like the types in Search**: `Ctrl+1` to `Ctrl+5` go to a tab with the focus in its list, and `Ctrl+Tab` / `Ctrl+PageDown` and `Ctrl+Shift+Tab` / `Ctrl+PageUp` go to the next or previous tab. The order is now Top Tracks, Albums and Singles, Playlists, All Tracks, Artist Info.
-- **Every list is named after its tab**, so NVDA says where you are.
-- **Top Tracks names the artists only when someone else is on the song**, instead of repeating the artist on every line.
-
-### 🛠️ Bug fixes
-
-- **Play/Pause, volume, shuffle and repeat said they worked when Spotify refused**: "Paused", "Volume 55%" and so on were spoken even when the command failed. They now say why it failed.
-- **Play/Pause with no active device did nothing**. It now wakes your device and plays.
-- **Like/Unlike (`L`) on a podcast episode** looked the episode up as a song. It now saves it to Your Episodes.
-- **Volume on a device that does not report its volume** raised an error instead of saying so.
-- **Two quick presses of a playback command** could both get through, sending the command twice.
-- **An error every 5 seconds in the NVDA log** while Spotify reported nothing playing, such as between items.
-- **A timeout on a playback command was logged as an unexpected error**, with a full traceback.
-- **Shared links with a country in them** (`open.spotify.com/intl-nl/track/...`) were misread by Play from Link and the link details. They now work like any other link.
-- **Copying the lyrics** from the lyrics window gave no feedback. NVDA now says they were copied.
-- **Adding an album to a playlist stopped after 100 songs** when one of them was already in the playlist. The whole album is now added, skipping only the songs that are already there.
-- **A song without lyrics was reported as a connection problem** ("Could not load lyrics. Please check your internet connection."). It now says no lyrics were found, and the connection message is only for when lrclib.net can't be reached.
-- **A failed lyrics lookup was remembered**: after a network hiccup, the song kept saying it had no lyrics until NVDA restarted. Only successful lookups are kept now.
-- **All Tracks in the artist window stopped for good** when one album failed to load. The songs so far now stay, and "Load More" tries that album again.
-- **A context menu with nothing in it was never cleaned up**, leaving a small leak each time.
-
-### 🧹 Under the hood
-
 - **One way to save, remove, follow and unfollow**: Spotify's single /me/library endpoint (February 2026) replaces 21 separate per-type functions, and one "flip the state and say which way" helper replaces six copies of that logic.
 - **The playback commands share their code**: one guard instead of nine, and one helper each for next/previous, volume up/down and seek forward/back.
 - **One request handler**: the two request wrappers share their error handling and readiness check, and six copies of the same pagination loop became one.
@@ -154,8 +121,17 @@ Changes since 1.12.2. This build comes from the aradix85 fork. Its versions foll
 - **One clipboard helper**, built on NVDA's `api.copyToClip`, replaces three hand-written ones; **one set of add-to-playlist helpers** replaces four copies in four windows; the long context menus are split into small parts.
 - **Lyrics are fetched with requests**, already bundled for spotipy, instead of hand-built urllib requests; paths use pathlib; HTTP statuses use `http.HTTPStatus`. One lyrics lookup serves the lyrics window, the auto-reader and the preview.
 - **One paged list** fills playlists, episodes, chapters and the artist's All Tracks a page at a time, with the Load More row, instead of four copies of that code. The episode and chapter windows share one window class.
-- **A real test suite**: pytest drives every window and command against stand-ins for NVDA, wx and Spotify's Web API, and covers 98% of the code. CI fails if coverage drops below 90%. The older test scripts still run alongside it while their checks move over.
 - Hundreds of lines less code from the clean-up, the new features included, and dead code removed, such as error branches that could never run.
+- **One table of settings** (`settings_spec.py`): the config spec, the defaults, and the ranges and labels of the settings panel are all made from it, so a limit is changed in one place. Tests check that the panel and the user guide match it.
+- **One table of commands** (`commands.py`) for the command layer's keys, names and descriptions, which used to be listed three times. `layerConfig.json` now keeps only your keys and whether the layer stays open.
+- **A real test suite**: pytest drives every window and command against stand-ins for NVDA, wx and Spotify's Web API, and covers every line and branch; CI fails below 99%. It replaces `tests/run_tests.py`, and checks the translations, the user guides and the bundled libraries too.
+- Removed code that never ran: an install-time clean-up for an NVDA function that does not exist, and lists the Library could be handed ready-made, which only the tests used (they now go through the stand-in Spotify server).
+- **Type checking with pyright** runs with the other checks, and found a few places where missing details from Spotify could stop a window (a playlist or artist without a name, a song without an id).
+- **One way to give a window its shortcuts** (`_bind_shortcuts`), instead of an accelerator table written out in each window; the keys come from the settings, and menus show them.
+- **Every long list uses one paged list** (Search, the Library's tabs, Browse Categories and Featured Playlists included), and playing from any window goes through one helper that reports failures.
+- **One context menu, one Enter and one row format for every window**: `rows.py` writes the rows, and the windows' base class builds the context menu, opens items, decides what Enter does and queues, instead of each window keeping its own copy. The windows fetch your playlists for Add to Playlist in one way too.
+- Lyrics requests name the add-on's homepage from its manifest (`addon_url` in `buildVars.py`) instead of a fixed address, and the donation link is written once.
+- **flake8 checks the code too**, with the other checks, as the original project's contributing guide asks (settings in `.flake8`).
 
 ## Version 1.12.2
 

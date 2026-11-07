@@ -86,7 +86,7 @@ Bundled libraries are in `addon/lib` (see `addon/thirdPartyNotices.md`). User gu
 
 ## Releases
 
-The version is `addon_version` in `buildVars.py`. This fork numbers releases by date (`2026.11.0`: year, month, number), so they never collide with the original add-on's 1.x versions. To release:
+The version is `addon_version` in `buildVars.py`. Releases follow semantic versioning (`1.13.0`: major, minor, patch). To release:
 
 1. Set the new version in `buildVars.py`, and the short store changelog (`addon_changelog`) next to it.
 2. Rename `## Unreleased` in `CHANGELOG.md` to `## Version <version>`.

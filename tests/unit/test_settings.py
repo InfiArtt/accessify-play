@@ -205,3 +205,29 @@ def test_donate_link_that_will_not_open(monkeypatch: pytest.MonkeyPatch) -> None
 	monkeypatch.setattr(donate.webbrowser, "open", lambda _url: 1 / 0)
 	donate.open_donate_link()
 	assert gui.message_boxes[-1][0].endswith("https://www.paypal.com/paypalme/rafli23115")
+
+
+def test_the_redirect_uri_follows_the_sign_in_port(panel: SpotifySettingsPanel) -> None:
+	"""The read-only field shows what to register on an own app, for the port in the field."""
+	assert panel.redirectPortCtrl.GetValue() == 5588
+	assert panel.redirectURICtrl.GetValue() == "http://127.0.0.1:5588/login"
+	panel.redirectPortCtrl.SetValue(8888)
+	panel.redirectPortCtrl.fire(wx.EVT_SPINCTRL)
+	assert panel.redirectURICtrl.GetValue() == "http://127.0.0.1:8888/login"
+
+
+def test_a_new_sign_in_port_keeps_the_sign_in(
+	panel: SpotifySettingsPanel, sign_in: SignIn, spoken: list[str]
+) -> None:
+	"""Changing only the port saves it and reloads the same token, without a Client ID message."""
+	panel.redirectPortCtrl.SetValue(8888)
+	panel.onSave()
+	assert config.conf["spotify"]["redirectPort"] == 8888
+	assert sign_in.calls == ["reset", "initialize"]
+	assert spoken == []
+
+
+def test_saving_unchanged_settings_keeps_the_session(panel: SpotifySettingsPanel, sign_in: SignIn) -> None:
+	"""Nothing about signing in changed, so the session stays."""
+	panel.onSave()
+	assert sign_in.calls == []

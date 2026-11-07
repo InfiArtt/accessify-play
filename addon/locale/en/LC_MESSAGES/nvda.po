@@ -1859,6 +1859,18 @@ msgstr ""
 msgid "Announce track changes automatically:"
 msgstr ""
 
+#. Translators: Label for a setting: the local port Spotify's sign-in page sends
+#. the browser back to.
+#: addon/globalPlugins/accesifyPlay/dialogs/settings.py
+msgid "Sign-in port ({minimum} to {maximum})"
+msgstr ""
+
+#. Translators: Label for a read-only field showing the address to add under Redirect URIs
+#. in an own Spotify developer app. It follows the sign-in port.
+#: addon/globalPlugins/accesifyPlay/dialogs/settings.py
+msgid "Redirect URI to add to your own Spotify app (only needed with your own Client ID):"
+msgstr ""
+
 #. Translators: Label for an optional setting where users can enter the Client ID
 #. of a Spotify developer app of their own, instead of the shared one.
 #: addon/globalPlugins/accesifyPlay/dialogs/settings.py
@@ -2601,8 +2613,10 @@ msgstr ""
 msgid "Added to Your Episodes."
 msgstr ""
 
-#: addon/globalPlugins/accesifyPlay/dialogs/management.py:535
-msgid "Playlists"
+#. Translators: A tab in the artist window: playlists found by searching for the
+#. artist's name, made by Spotify or by anyone else.
+#: addon/globalPlugins/accesifyPlay/dialogs/artist.py
+msgid "Playlists found by name"
 msgstr ""
 
 #. Translators: Spoken when the search type is switched with a shortcut
@@ -2910,9 +2924,12 @@ msgstr ""
 #: buildVars.py:39
 msgid ""
 "\n"
-"- Fixed: signing in had to be finished within 10 seconds; it may now take "
-"five minutes.\n"
-"- Fixed: an error was written to NVDA's log at every start while not "
-"signed in.\n"
+"- Fixed: signing in failed with \"redirect_uri: Not matching configuration\", and had to be finished within 10 seconds.\n"
+"- New: a Sign-in port setting, and the Redirect URI for your own Client ID shown in the settings.\n"
+"- Search: Ctrl+1 to Ctrl+6 and Ctrl+Tab switch the type and search again; Ctrl+F returns to the search field.\n"
+"- Artist window: opens on Top Tracks, with a new Playlists found by name tab.\n"
+"- Every list has the same context menu, Enter and row format; long lists load a page at a time.\n"
+"- Every shortcut inside the windows can be changed (Window Shortcuts... in the settings), and there are new settings.\n"
+"- Many bug fixes; see the changelog for the full list.\n"
 "\t"
 msgstr ""

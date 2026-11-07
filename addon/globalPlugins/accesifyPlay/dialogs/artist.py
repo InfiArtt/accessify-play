@@ -82,7 +82,11 @@ class ArtistDiscographyDialog(AccessifyDialog):
 		# Tab order: what you most often want first, the profile last.
 		self.top_tracks_list, self.top_tracks_page_index = self._add_list_page(_("Top Tracks"))
 		self.albums_list, self.albums_page_index = self._add_list_page(_("Albums and Singles"))
-		self.playlists_list, self.playlists_page_index = self._add_list_page(_("Playlists"))
+		self.playlists_list, self.playlists_page_index = self._add_list_page(
+			# Translators: A tab in the artist window: playlists found by searching for the
+			# artist's name, made by Spotify or by anyone else.
+			_("Playlists found by name")
+		)
 		self.all_tracks_list, self.all_tracks_page_index = self._add_list_page(_("All Tracks"))
 		self.all_tracks = PagedList(
 			self.all_tracks_list,
@@ -203,7 +207,9 @@ class ArtistDiscographyDialog(AccessifyDialog):
 			wx.CallAfter(ui.message, playlist_results)
 		elif isinstance(playlist_results, dict):
 			found = (playlist_results.get("playlists") or {}).get("items") or []
-			self.playlists = [{"type": "playlist", **p} for p in found if p]
+			playlists = [{"type": "playlist", **p} for p in found if p]
+			# Spotify's own ("This Is ...") first; the rest keep Spotify's order.
+			self.playlists = sorted(playlists, key=lambda p: (p.get("owner") or {}).get("id") != "spotify")
 		wx.CallAfter(self._fill_playlists_list)
 
 	def _fill_top_tracks_list(self) -> None:

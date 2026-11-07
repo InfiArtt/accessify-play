@@ -93,6 +93,9 @@ _TABLE = (
 	# "auto" follows NVDA's language; otherwise a language the add-on has a catalogue for.
 	Setting("language", "auto"),
 	Setting("announceTrackChanges", default=False),
+	# The local port Spotify's sign-in redirects to. An own Client ID must have
+	# http://127.0.0.1:<port>/login registered; the shared one accepts any port.
+	Setting("redirectPort", 5588, 1024, 65535),
 	# Empty: the shared client ID. See spotify_client.own_client_id().
 	Setting("ownClientID", ""),
 	# What the sleep timer offers when it opens, and the longest timer it accepts, in minutes.

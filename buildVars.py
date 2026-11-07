@@ -33,19 +33,24 @@ addon_info = AddonInfo(
 		"""Accessify Play provides comprehensive NVDA control for Spotify playback on any Connect-enabled device. A Spotify Premium subscription is required for full functionality."""
 	),
 	# version
-	addon_version="2026.11.3",
+	addon_version="1.13.0",
 	# Brief changelog for this version
 	# Translators: what's new content for the add-on version to be shown in the add-on store
 	addon_changelog=_("""
-- Fixed: signing in had to be finished within 10 seconds; it may now take five minutes.
-- Fixed: an error was written to NVDA's log at every start while not signed in.
+- Fixed: signing in failed with "redirect_uri: Not matching configuration", and had to be finished within 10 seconds.
+- New: a Sign-in port setting, and the Redirect URI for your own Client ID shown in the settings.
+- Search: Ctrl+1 to Ctrl+6 and Ctrl+Tab switch the type and search again; Ctrl+F returns to the search field.
+- Artist window: opens on Top Tracks, with a new Playlists found by name tab.
+- Every list has the same context menu, Enter and row format; long lists load a page at a time.
+- Every shortcut inside the windows can be changed (Window Shortcuts... in the settings), and there are new settings.
+- Many bug fixes; see the changelog for the full list.
 	"""),
 	# Authors
 	addon_author="Rafli I .<rafli08523717409@gmail.com>, Rexya <rexya2017@gmail.com>",
 	# URL for the add-on documentation support
-	addon_url="https://github.com/aradix85/accessify-play",
+	addon_url="https://github.com/InfiArtt/accessify-play",
 	# URL for the add-on repository where the source code can be found
-	addon_sourceURL="https://github.com/aradix85/accessify-play",
+	addon_sourceURL="https://github.com/InfiArtt/accessify-play",
 	# Documentation file name
 	addon_docFileName="readme.html",
 	# Minimum NVDA version supported (e.g. "2019.3.0", minor version is optional)

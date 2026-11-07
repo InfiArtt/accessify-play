@@ -108,20 +108,20 @@ def test_language_setting_when_config_fails(monkeypatch: pytest.MonkeyPatch) -> 
 def test_chosen_language_is_used() -> None:
 	"""With Indonesian chosen, strings come from the Indonesian catalogue."""
 	config.conf["spotify"]["language"] = "id"
-	assert language._gettext("Playlists") == "Daftar Putar"
+	assert language._gettext("Show Lyrics") == "Tampilkan Lirik"
 
 
 @pytest.mark.usefixtures("compiled_locale")
 def test_auto_follows_nvda(monkeypatch: pytest.MonkeyPatch) -> None:
 	"""With the setting on auto, NVDA's language picks the catalogue."""
 	monkeypatch.setattr(languageHandler, "language", "id")
-	assert language._gettext("Playlists") == "Daftar Putar"
+	assert language._gettext("Show Lyrics") == "Tampilkan Lirik"
 
 
 def test_unknown_language_falls_back_to_the_original_text() -> None:
 	"""Without a catalogue for the language, the English text is shown."""
 	config.conf["spotify"]["language"] = "xx"
-	assert language._gettext("Playlists") == "Playlists"
+	assert language._gettext("Show Lyrics") == "Show Lyrics"
 	assert language._ngettext("one", "many", 2) == "many"
 	assert language._pgettext("menu", "Play") == "Play"
 	assert language._npgettext("menu", "one", "many", 1) == "one"

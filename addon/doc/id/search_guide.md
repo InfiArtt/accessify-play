@@ -54,7 +54,7 @@ Jendela diskografi terbuka di Top Tracks, dengan fokus pada lagu pertama setelah
 
 1. **Top Tracks**: lagu-lagu populer artis. `Enter` memutar sebuah lagu, lalu melanjutkan ke albumnya.
 2. **Albums and Singles**: `Enter` membuka lagu-lagu sebuah album.
-3. **Playlists**: playlist yang ditemukan dengan mencari nama artis, buatan Spotify atau orang lain. `Enter` membuka lagu-lagu sebuah playlist.
+3. **Playlists found by name**: playlist yang ditemukan dengan mencari nama artis, jadi bukan hanya milik artis itu: kebanyakan dibuat oleh pendengar lain. Playlist buatan Spotify sendiri, seperti "This Is ...", ditaruh paling atas. `Enter` membuka lagu-lagu sebuah playlist.
 4. **All Tracks**: semua lagu dari album dan single artis, tanpa duplikat, dimuat per halaman, masing-masing dengan albumnya. `Enter` memutar sebuah lagu, lalu melanjutkan ke albumnya. Jika sebuah album gagal dimuat, lagu yang sudah ada tetap ditampilkan dan "Load More" mencoba album itu lagi.
 5. **Artist Info**: pengikut, popularitas, genre, dan tautan artis.
 

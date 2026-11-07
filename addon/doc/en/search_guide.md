@@ -54,7 +54,7 @@ The discography window opens on Top Tracks, with the focus on the first song onc
 
 1. **Top Tracks**: popular songs by the artist. `Enter` plays one, continuing with its album.
 2. **Albums and Singles**: `Enter` opens an album's tracks.
-3. **Playlists**: playlists found by searching for the artist's name, made by Spotify or by anyone else. `Enter` opens a playlist's tracks.
+3. **Playlists found by name**: playlists found by searching for the artist's name, so not only the artist's own: most are made by other listeners. Spotify's own, such as "This Is ...", come first. `Enter` opens a playlist's tracks.
 4. **All Tracks**: every song from the artist's albums and singles, without duplicates, loaded page by page, each with its album. `Enter` plays a song, continuing with its album. If an album can't be loaded, the songs so far stay and "Load More" tries that album again.
 5. **Artist Info**: followers, popularity, genres and the artist's link.
 

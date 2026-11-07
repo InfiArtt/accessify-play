@@ -58,13 +58,13 @@ SCOPES = (
 #: The ncspot client ID: extended quota and PKCE, so nobody has to register an app.
 #: Its request limit is shared by everyone using it, which is why users may set their own.
 SHARED_CLIENT_ID = "d420a117a32841c2b3474932e49fb54b"
-#: The redirect URI registered on the shared client ID. ncspot 1.5.0 moved it
+#: The redirect path registered on the shared client ID. ncspot 1.5.0 moved it
 #: from /login to /ncspot_login, and Spotify refuses any other path with
 #: "redirect_uri: Not matching configuration". Spotify accepts any port on a
-#: loopback address, so the port is ours to choose.
-SHARED_REDIRECT_URI = "http://127.0.0.1:5588/ncspot_login"
-#: The redirect URI for an own client ID: the one the user guide says to register.
-OWN_REDIRECT_URI = "http://127.0.0.1:5588/login"
+#: loopback address, so the port is the redirectPort setting.
+SHARED_REDIRECT_PATH = "/ncspot_login"
+#: The redirect path for an own client ID: the one the user guide says to register.
+OWN_REDIRECT_PATH = "/login"
 
 # --- Spotify's own limits ---------------------------------------------------
 # What Spotify's Web API accepts, not preferences: asking for more fails. The
@@ -111,9 +111,19 @@ def own_client_id() -> str:
 	return value if is_valid_client_id(value) else ""
 
 
+def own_redirect_uri(port: int | None = None) -> str:
+	"""Return the redirect URI to register on an own client ID, for port or the redirectPort setting."""
+	return f"http://127.0.0.1:{port or conf_get('redirectPort')}{OWN_REDIRECT_PATH}"
+
+
 def redirect_uri() -> str:
-	"""Return the redirect URI registered on the client ID in use, own or shared."""
-	return OWN_REDIRECT_URI if own_client_id() else SHARED_REDIRECT_URI
+	"""Return the redirect URI registered on the client ID in use, own or shared.
+
+	The local sign-in server listens on the port in this URI.
+	"""
+	if own_client_id():
+		return own_redirect_uri()
+	return f"http://127.0.0.1:{conf_get('redirectPort')}{SHARED_REDIRECT_PATH}"
 
 
 def search_limit() -> int:

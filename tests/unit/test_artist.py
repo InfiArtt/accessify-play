@@ -48,7 +48,7 @@ PLAYLIST = {
 	"type": "playlist",
 	"name": "This Is A",
 	"uri": "spotify:playlist:p1",
-	"owner": {"display_name": "Spotify"},
+	"owner": {"id": "spotify", "display_name": "Spotify"},
 }
 MINE = [{"id": "m1", "name": "Mine"}]
 
@@ -84,7 +84,7 @@ def ready(client: SpotifyClient, server: SpotifyServer) -> SpotifyServer:
 	client.device_id = "laptop"
 	server.routes["GET", "search"] = searched(
 		{"tracks": {"items": [track(1, ME), track(2, [*ME, {"name": "B"}]), None]}},
-		{"playlists": {"items": [PLAYLIST, {"name": None}, None]}},
+		{"playlists": {"items": [{"name": None}, PLAYLIST, None]}},
 	)
 	server.routes["GET", "artists/ar1"] = PROFILE
 	server.routes["GET", "artists/ar1/albums"] = {"items": ALBUMS}
@@ -324,7 +324,17 @@ def test_enter_opens_albums_and_playlists(
 			],
 		),
 		# Spotify sent the owner without an id, so there is no one to follow.
-		(2, ["Play", "Add to Queue", "---", "View Tracks", "Follow/Unfollow Playlist"]),
+		(
+			2,
+			[
+				"Play",
+				"Add to Queue",
+				"---",
+				"View Tracks",
+				"Follow/Unfollow Playlist",
+				"Follow/Unfollow Owner: Spotify",
+			],
+		),
 		(
 			3,
 			[

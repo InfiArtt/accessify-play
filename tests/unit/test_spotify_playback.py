@@ -717,3 +717,18 @@ def test_mode_problems(client: SpotifyClient, now: SpotifyServer) -> None:
 	assert client.toggle_shuffle() == "Spotify does not allow that for what is playing now."
 	now.routes["GET", "me/player"] = spotify_error(500)
 	assert "having trouble" in client.cycle_repeat()
+
+
+@pytest.mark.usefixtures("pkce")
+@pytest.mark.parametrize(
+	("own", "uri"),
+	[
+		("0123456789abcdef0123456789abcdef", "http://127.0.0.1:8888/login"),
+		("", "http://127.0.0.1:8888/ncspot_login"),
+	],
+)
+def test_the_sign_in_port_is_a_setting(own: str, uri: str) -> None:
+	"""Both client IDs sign in on the port in settings."""
+	sc.config.conf["spotify"]["ownClientID"] = own
+	sc.config.conf["spotify"]["redirectPort"] = 8888
+	assert sc.SpotifyClient()._get_auth_manager().redirect_uri == uri

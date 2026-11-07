@@ -42,11 +42,11 @@ Anda bisa mengubah tombol-tombol di lapisan, dan juga memberi perintah mana pun 
 
 ## Pembaruan
 
-Accessify Play diperbarui lewat Add-on Store NVDA (menu NVDA, Tools, Add-on Store), yang memberi tahu Anda bila ada versi baru. Setiap rilis juga diterbitkan di [GitHub Releases](https://github.com/aradix85/accessify-play/releases).
+Accessify Play diperbarui lewat Add-on Store NVDA (menu NVDA, Tools, Add-on Store), yang memberi tahu Anda bila ada versi baru. Setiap rilis juga diterbitkan di [GitHub Releases](https://github.com/InfiArtt/accessify-play/releases).
 
 ## Dukungan dan lisensi
 
-Laporkan masalah dan ide di [GitHub](https://github.com/aradix85/accessify-play/issues). Jika add-on ini bermanfaat, Anda bisa mendukung pengembangannya lewat tombol **Donate** di pengaturan Accessify Play.
+Laporkan masalah dan ide di [GitHub](https://github.com/InfiArtt/accessify-play/issues). Jika add-on ini bermanfaat, Anda bisa mendukung pengembangannya lewat tombol **Donate** di pengaturan Accessify Play.
 
 Lirik berasal dari [lrclib.net](https://lrclib.net), basis data lirik gratis yang dikelola komunitas, dengan lirik berstatus domain publik (CC0).
 
